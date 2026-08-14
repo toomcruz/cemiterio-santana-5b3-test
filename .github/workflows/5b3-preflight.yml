@@ -1,0 +1,107 @@
+name: 5B.3-A Preflight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    name: 5B.3-A Preflight
+    runs-on: ubuntu-latest
+    env:
+      SUPPORT_VNEXT_VALIDATION_ENV: ${{ vars.SUPPORT_VNEXT_VALIDATION_ENV }}
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      CLASSIFIER_AUTHORITY_KEY_ID: ${{ secrets.CLASSIFIER_AUTHORITY_KEY_ID }}
+      CLASSIFIER_AUTHORITY_SECRET: ${{ secrets.CLASSIFIER_AUTHORITY_SECRET }}
+    steps:
+      - name: Checkout current commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 1
+
+      - name: Setup Deno 2.1.4
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.1.4
+
+      - name: Run isolated laboratory preflight
+        shell: bash
+        run: |
+          set -u
+          status_file="$(mktemp)"
+          trap 'rm -f "$status_file"' EXIT
+
+          fail_immediate() {
+            echo "5B.3-A BLOQUEADA — PRÉ-FLIGHT DO LABORATÓRIO FALHOU"
+            echo "ID: $1"
+            echo "STEP: $2"
+            echo "EXPECTED: $3"
+            echo "ACTUAL: $4"
+            echo "CORREÇÃO NECESSÁRIA: $5"
+            exit 1
+          }
+
+          record() {
+            printf '%s: %s\n' "$1" "$2" >> "$status_file"
+          }
+
+          run_check() {
+            local id="$1" step="$2" expected="$3" correction="$4"
+            shift 4
+            if "$@" >/dev/null 2>&1; then
+              record "$step" "PASS"
+            else
+              record "$step" "FAIL"
+              printf 'ID: %s\nSTEP: %s\nEXPECTED: %s\nACTUAL: FAIL\nCORREÇÃO NECESSÁRIA: %s\n' "$id" "$step" "$expected" "$correction" >&2
+            fi
+          }
+
+          [[ "${SUPPORT_VNEXT_VALIDATION_ENV:-}" == "ISOLATED_5B3" ]] || fail_immediate "5B3-ENV-01" "Environment guard" "ISOLATED_5B3" "valor ausente ou diferente" "configurar SUPPORT_VNEXT_VALIDATION_ENV=ISOLATED_5B3"
+          case "${SUPABASE_URL:-}" in
+            "https://qyrxpbvdmpftfcygsmws.supabase.co"|"https://qyrxpbvdmpftfcygsmws.supabase.co/") ;;
+            *) fail_immediate "5B3-ENV-02" "Expected Supabase project" "qyrxpbvdmpftfcygsmws" "projeto diferente ou ausente" "configurar SUPABASE_URL do laboratório" ;;
+          esac
+
+          for required in SUPABASE_SERVICE_ROLE_KEY DATABASE_URL CLASSIFIER_AUTHORITY_KEY_ID CLASSIFIER_AUTHORITY_SECRET; do
+            [[ -n "${!required:-}" ]] || fail_immediate "5B3-CONFIG-01" "Required configuration" "$required presente" "ausente" "configurar o GitHub Secret correspondente"
+          done
+
+          echo "commit SHA: ${GITHUB_SHA}"
+          echo "branch: ${GITHUB_REF_NAME}"
+          echo "migrations: $(find database/migrations -maxdepth 1 -type f -name '*.sql' | wc -l)"
+
+          run_check "5B3-DENO-01" "Deno version" "2.1.4" "corrigir setup do Deno" bash -c 'deno --version | head -n 1 | grep -Fx "deno 2.1.4"'
+          run_check "5B3-SHELL-01" "Shell scripts" "bash syntax valid" "corrigir sintaxe dos scripts" bash -c 'bash -n tests/postgres/run_all.sh && bash -n tests/postgres/run_concurrency.sh && bash -n tests/postgres/verify_static.sh && bash -n tests/postgres/verify_migration_manifest.sh'
+          run_check "5B3-STATIC-01" "Migration manifest" "migrations 0001–0014, sem lacunas ou duplicação" "corrigir manifesto/migrations" bash -c 'tests/postgres/verify_static.sh && tests/postgres/verify_migration_manifest.sh'
+          run_check "5B3-FMT-01" "Deno fmt" "comandos oficiais do pacote" "corrigir formatação Deno" deno fmt --check edge-functions contracts tests
+          run_check "5B3-LINT-01" "Deno lint" "comandos oficiais do pacote" "corrigir lint Deno" deno lint edge-functions contracts tests
+          run_check "5B3-CHECK-01" "Deno check" "edge-functions e contracts válidos" "corrigir type-check" bash -c 'deno check edge-functions/*/index.ts contracts/*.ts'
+          run_check "5B3-TEST-01" "Deno unit tests" "unitária/estática, sem P10 integration" deno test --allow-env --allow-read --no-net tests/unit tests/shadow
+          run_check "5B3-PG-01" "PostgreSQL client" "psql client disponível, sem servidor local" "instalar postgresql-client" bash -c 'command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null); psql --version >/dev/null'
+
+          probe="$(mktemp)"
+          if psql "$DATABASE_URL" -XAtqc 'select current_database();' >"$probe" 2>/dev/null && [[ -s "$probe" ]]; then record "PostgreSQL connectivity" "PASS"; else record "PostgreSQL connectivity" "FAIL"; fi
+          rm -f "$probe"
+
+          probe="$(mktemp)"
+          if psql "$DATABASE_URL" -XAtqc "select exists (select 1 from pg_namespace where nspname = 'support_vnext_shadow');" >"$probe" 2>/dev/null && [[ "$(tr -d '[:space:]' <"$probe")" == "f" ]]; then record "support_vnext_shadow absent" "PASS"; else record "support_vnext_shadow absent" "FAIL"; fi
+          rm -f "$probe"
+
+          record "Environment guard" "PASS"
+          record "Expected Supabase project" "PASS"
+          record "Service role configured" "PASS"
+          record "HMAC test configuration" "PASS"
+
+          echo
+          echo "5B.3-A PREFLIGHT"
+          cat "$status_file"
+          if grep -q ': FAIL$' "$status_file"; then
+            echo "5B.3-A BLOQUEADA — PRÉ-FLIGHT DO LABORATÓRIO FALHOU"
+            exit 1
+          fi
+          echo "5B.3-A PASS — LABORATÓRIO ISOLADO PRONTO PARA EXECUÇÃO DINÂMICA"
