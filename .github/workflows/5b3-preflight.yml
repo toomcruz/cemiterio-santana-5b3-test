@@ -50,15 +50,54 @@ jobs:
             printf '%s: %s\n' "$1" "$2" >> "$status_file"
           }
 
+          sanitize_diagnostic() {
+            sed -E \
+              -e 's#postgres(ql)?://[^[:space:]]+#postgresql://[REDACTED]#g' \
+              -e 's#https?://[^[:space:]]+#https://[REDACTED]#g' \
+              -e 's#(SUPABASE_SERVICE_ROLE_KEY|DATABASE_URL|CLASSIFIER_AUTHORITY_KEY_ID|CLASSIFIER_AUTHORITY_SECRET)=[^[:space:]]+#\\1=[REDACTED]#g' \
+              -e 's#(password|passwd|secret|token|apikey)[=:][^[:space:]]+#\\1=[REDACTED]#gi' \
+              | head -n 20
+          }
+
           run_check() {
-            local id="$1" step="$2" expected="$3" correction="$4"
-            shift 4
-            if "$@" >/dev/null 2>&1; then
+            local id="$1" step="$2" expected="$3" correction="$4" command_text="$5"
+            shift 5
+            local output_file rc
+            output_file="$(mktemp)"
+            if "$@" >"$output_file" 2>&1; then
+              rc=0
               record "$step" "PASS"
             else
+              rc=$?
               record "$step" "FAIL"
-              printf 'ID: %s\nSTEP: %s\nEXPECTED: %s\nACTUAL: FAIL\nCORREÇÃO NECESSÁRIA: %s\n' "$id" "$step" "$expected" "$correction" >&2
+              {
+                echo "ID: $id"
+                echo "STEP: $step"
+                echo "COMMAND: $command_text"
+                echo "EXIT CODE: $rc"
+                echo "EXPECTED: $expected"
+                echo "ACTUAL/ERROR CATEGORY: COMMAND_FAILURE"
+                echo "CORREÇÃO NECESSÁRIA: $correction"
+                echo "DIAGNOSTIC (sanitized):"
+                sanitize_diagnostic <"$output_file"
+              } >&2
             fi
+            rm -f "$output_file"
+          }
+
+          classify_pg_error() {
+            local diagnostic="$1"
+            local lower
+            lower="$(printf '%s' "$diagnostic" | tr '[:upper:]' '[:lower:]')"
+            case "$lower" in
+              *"could not translate host name"*|*"name or service not known"*|*"nodename nor servname"*) echo "DNS/HOST" ;;
+              *"password authentication failed"*|*"no password supplied"*|*"authentication failed"*) echo "AUTHENTICATION" ;;
+              *"ssl"*|*"certificate"*|*"tls"*) echo "SSL" ;;
+              *"connection refused"*|*"timeout"*|*"timed out"*|*"network is unreachable"*) echo "NETWORK" ;;
+              *"database"*|*"does not exist"*) echo "DATABASE" ;;
+              *"invalid connection option"*|*"invalid dsn"*|*"malformed"*) echo "FORMAT" ;;
+              *) echo "UNKNOWN" ;;
+            esac
           }
 
           [[ "${SUPPORT_VNEXT_VALIDATION_ENV:-}" == "ISOLATED_5B3" ]] || fail_immediate "5B3-ENV-01" "Environment guard" "ISOLATED_5B3" "valor ausente ou diferente" "configurar SUPPORT_VNEXT_VALIDATION_ENV=ISOLATED_5B3"
@@ -75,22 +114,57 @@ jobs:
           echo "branch: ${GITHUB_REF_NAME}"
           echo "migrations: $(find database/migrations -maxdepth 1 -type f -name '*.sql' | wc -l)"
 
-          run_check "5B3-DENO-01" "Deno version" "2.1.4" "corrigir setup do Deno" bash -c 'deno --version | head -n 1 | grep -Fx "deno 2.1.4"'
-          run_check "5B3-SHELL-01" "Shell scripts" "bash syntax valid" "corrigir sintaxe dos scripts" bash -c 'bash -n tests/postgres/run_all.sh && bash -n tests/postgres/run_concurrency.sh && bash -n tests/postgres/verify_static.sh && bash -n tests/postgres/verify_migration_manifest.sh'
-          run_check "5B3-STATIC-01" "Migration manifest" "migrations 0001–0014, sem lacunas ou duplicação" "corrigir manifesto/migrations" bash -c 'tests/postgres/verify_static.sh && tests/postgres/verify_migration_manifest.sh'
-          run_check "5B3-FMT-01" "Deno fmt" "comandos oficiais do pacote" "corrigir formatação Deno" deno fmt --check edge-functions contracts tests
-          run_check "5B3-LINT-01" "Deno lint" "comandos oficiais do pacote" "corrigir lint Deno" deno lint edge-functions contracts tests
-          run_check "5B3-CHECK-01" "Deno check" "edge-functions e contracts válidos" "corrigir type-check" bash -c 'deno check edge-functions/*/index.ts contracts/*.ts'
-          run_check "5B3-TEST-01" "Deno unit tests" "unitária/estática, sem P10 integration" deno test --allow-env --allow-read --no-net tests/unit tests/shadow
-          run_check "5B3-PG-01" "PostgreSQL client" "psql client disponível, sem servidor local" "instalar postgresql-client" bash -c 'command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null); psql --version >/dev/null'
+          run_check "5B3-DENO-01" "Deno version" "2.1.4" "corrigir setup do Deno" "deno --version; semantic version extraction" bash -c '[[ "$(deno --version | awk "$1 == \"deno\" { print $2; exit }")" == "2.1.4" ]]'
+          run_check "5B3-SHELL-01" "Shell scripts" "bash syntax valid" "corrigir sintaxe dos scripts" "bash -n four preflight scripts" bash -c 'bash -n tests/postgres/run_all.sh && bash -n tests/postgres/run_concurrency.sh && bash -n tests/postgres/verify_static.sh && bash -n tests/postgres/verify_migration_manifest.sh'
+          run_check "5B3-STATIC-01" "Static package verification" "static verifier exit code 0" "corrigir falha real do verificador estático" "tests/postgres/verify_static.sh" tests/postgres/verify_static.sh
+          run_check "5B3-MANIFEST-01" "Migration manifest" "migrations 0001–0014, sem lacunas ou duplicação" "corrigir manifesto/migrations" "tests/postgres/verify_migration_manifest.sh" tests/postgres/verify_migration_manifest.sh
+          run_check "5B3-FMT-01" "Deno fmt" "exit code 0" "corrigir formatação real reportada pelo Deno" "deno fmt --check edge-functions contracts tests" deno fmt --check edge-functions contracts tests
+          run_check "5B3-LINT-01" "Deno lint" "exit code 0" "corrigir lint real reportado pelo Deno" "deno lint edge-functions contracts tests" deno lint edge-functions contracts tests
+          run_check "5B3-CHECK-01" "Deno check" "exit code 0 nos entrypoints do shadow-static.yml" "corrigir type-check real reportado pelo Deno" "deno check edge-functions/*/index.ts contracts/*.ts" bash -c 'deno check edge-functions/*/index.ts contracts/*.ts'
+          run_check "5B3-TEST-01" "Deno unit tests" "exit code 0 para tests/unit e tests/shadow" "corrigir teste unitário/estático real reportado pelo Deno" "deno test --allow-env --allow-read --no-net tests/unit tests/shadow" deno test --allow-env --allow-read --no-net tests/unit tests/shadow
+          run_check "5B3-PG-01" "PostgreSQL client" "psql client disponível, sem servidor local" "instalar somente postgresql-client" "psql --version" bash -c 'command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null); psql --version >/dev/null'
 
-          probe="$(mktemp)"
-          if psql "$DATABASE_URL" -XAtqc 'select current_database();' >"$probe" 2>/dev/null && [[ -s "$probe" ]]; then record "PostgreSQL connectivity" "PASS"; else record "PostgreSQL connectivity" "FAIL"; fi
-          rm -f "$probe"
+          pg_probe="$(mktemp)"
+          if psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc 'select 1' >"$pg_probe" 2>&1; then
+            record "PostgreSQL connectivity" "PASS"
+            pg_connected=true
+          else
+            pg_rc=$?
+            pg_diag="$(cat "$pg_probe")"
+            pg_category="$(classify_pg_error "$pg_diag")"
+            record "PostgreSQL connectivity" "FAIL"
+            pg_connected=false
+            {
+              echo "ID: 5B3-DB-01"
+              echo "STEP: PostgreSQL connectivity"
+              echo 'COMMAND: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc "select 1"'
+              echo "EXIT CODE: $pg_rc"
+              echo "EXPECTED: PostgreSQL responde"
+              echo "ACTUAL/ERROR CATEGORY: $pg_category"
+              echo "CORREÇÃO NECESSÁRIA: revisar somente a categoria $pg_category na configuração do laboratório"
+            } >&2
+          fi
+          rm -f "$pg_probe"
 
-          probe="$(mktemp)"
-          if psql "$DATABASE_URL" -XAtqc "select exists (select 1 from pg_namespace where nspname = 'support_vnext_shadow');" >"$probe" 2>/dev/null && [[ "$(tr -d '[:space:]' <"$probe")" == "f" ]]; then record "support_vnext_shadow absent" "PASS"; else record "support_vnext_shadow absent" "FAIL"; fi
-          rm -f "$probe"
+          if [[ "$pg_connected" == true ]]; then
+            schema_probe="$(mktemp)"
+            if psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc "select exists (select 1 from pg_namespace where nspname = 'support_vnext_shadow')" >"$schema_probe" 2>/dev/null; then
+              schema_exists="$(tr -d '[:space:]' <"$schema_probe")"
+              if [[ "$schema_exists" == "f" ]]; then
+                record "support_vnext_shadow absent" "PASS"
+              else
+                record "support_vnext_shadow absent" "FAIL"
+                printf '%s\\n' 'ID: 5B3A-DB-NOT-CLEAN' 'STEP: support_vnext_shadow absent' 'COMMAND: pg_namespace existence query' 'EXIT CODE: 0' 'EXPECTED: schema ausente' 'ACTUAL/ERROR CATEGORY: DATABASE_NOT_CLEAN' 'CORREÇÃO NECESSÁRIA: usar laboratório descartável limpo; não executar DROP SCHEMA' >&2
+              fi
+            else
+              record "support_vnext_shadow absent" "FAIL"
+              printf '%s\\n' 'ID: 5B3-DB-02' 'STEP: support_vnext_shadow absent' 'COMMAND: pg_namespace existence query' 'EXIT CODE: non-zero' 'EXPECTED: consulta concluída' 'ACTUAL/ERROR CATEGORY: DATABASE' 'CORREÇÃO NECESSÁRIA: revisar conectividade/permissão do laboratório' >&2
+            fi
+            rm -f "$schema_probe"
+          else
+            record "support_vnext_shadow absent" "NOT EXECUTED"
+            printf '%s\\n' 'ID: 5B3-DB-DEPENDENCY-01' 'STEP: support_vnext_shadow absent' 'COMMAND: not executed' 'EXIT CODE: N/A' 'EXPECTED: somente após connectivity PASS' 'ACTUAL/ERROR CATEGORY: DATABASE CONNECTION FAILED' 'CORREÇÃO NECESSÁRIA: corrigir PostgreSQL connectivity e executar novamente' >&2
+          fi
 
           record "Environment guard" "PASS"
           record "Expected Supabase project" "PASS"
