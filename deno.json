@@ -1,0 +1,17 @@
+{
+  "tasks": {
+    "test:unit": "deno test --allow-read tests/unit",
+    "test:shadow": "deno test --allow-read tests/shadow",
+    "test:integration": "deno test --allow-read tests/integration",
+    "test": "deno test --allow-read tests/unit tests/shadow tests/integration"
+  },
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true
+  },
+  "fmt": {
+    "lineWidth": 120,
+    "singleQuote": false
+  }
+}
