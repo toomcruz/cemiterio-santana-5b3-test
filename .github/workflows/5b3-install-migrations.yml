@@ -1,0 +1,210 @@
+name: 5B.3-B Install Migrations
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    name: Install 0001-0014 in isolated Supabase
+    runs-on: ubuntu-latest
+    env:
+      SUPPORT_VNEXT_VALIDATION_ENV: ${{ vars.SUPPORT_VNEXT_VALIDATION_ENV }}
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      APPROVED_BASE_COMMIT: 53615f9ca8556c43fc9f874664ab8ed5b8b4bb1d
+
+    steps:
+      - name: Checkout selected commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+
+      - name: Install PostgreSQL client and ripgrep
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client ripgrep >/dev/null
+          psql --version
+          rg --version
+
+      - name: Guard, manifest, static verification, and migration inventory
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          fail() {
+            printf '5B.3-B BLOCKED — %s\n' "$1" >&2
+            exit 1
+          }
+
+          [[ "${SUPPORT_VNEXT_VALIDATION_ENV:-}" == "ISOLATED_5B3" ]] || \
+            fail "environment guard failed"
+
+          case "${SUPABASE_URL:-}" in
+            *qyrxpbvdmpftfcygsmws*) ;;
+            *) fail "expected isolated Supabase project guard failed" ;;
+          esac
+
+          current_commit="${GITHUB_SHA:?GITHUB_SHA is required}"
+          branch="${GITHUB_REF_NAME:?GITHUB_REF_NAME is required}"
+          printf 'COMMIT SHA: %s\n' "$current_commit"
+          printf 'BRANCH: %s\n' "$branch"
+
+          git cat-file -e "${APPROVED_BASE_COMMIT}^{commit}" || \
+            fail "approved base commit is unavailable"
+
+          mapfile -t migration_files < <(
+            find database/migrations -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort
+          )
+          [[ "${#migration_files[@]}" -eq 14 ]] || \
+            fail "expected 14 migration files, found ${#migration_files[@]}"
+
+          printf 'MIGRATION COUNT: %s\n' "${#migration_files[@]}"
+          for index in "${!migration_files[@]}"; do
+            expected_number="$(printf '%04d' "$((index + 1))")"
+            file="${migration_files[$index]}"
+            [[ "$file" == "${expected_number}"_* ]] || \
+              fail "migration order/gap at ${file}"
+            printf 'MIGRATION FILE: %s\n' "$file"
+
+            base_hash="$(git show "${APPROVED_BASE_COMMIT}:database/migrations/${file}" | sha256sum | awk '{print $1}')"
+            current_hash="$(sha256sum "database/migrations/${file}" | awk '{print $1}')"
+            [[ "$base_hash" == "$current_hash" ]] || \
+              fail "migration bytes differ from approved base: ${file}"
+            printf 'MIGRATION SHA256: %s %s\n' "$file" "$current_hash"
+          done
+
+          bash tests/postgres/verify_migration_manifest.sh
+          bash tests/postgres/verify_static.sh
+
+      - name: Database guard and isolated connection introspection
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          [[ -n "${DATABASE_URL:-}" ]] || {
+            printf '5B.3-B BLOCKED — DATABASE_URL is not configured\n' >&2
+            exit 1
+          }
+
+          tmp_dir="$(mktemp -d)"
+          trap 'rm -rf "$tmp_dir"' EXIT
+
+          sanitize() {
+            sed -En \
+              -e 's#(postgres(ql)?://)[^[:space:]]+#\1[REDACTED]#g' \
+              -e 's#(password|passwd|secret|token|apikey)[=:][^[:space:]]+#\1=[REDACTED]#gi' \
+              -e '1,20p' "$1"
+          }
+
+          set +e
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            'select current_database(); select current_user; select version();' \
+            >"$tmp_dir/probe.out" 2>"$tmp_dir/probe.err"
+          probe_rc=$?
+          set -e
+          if [[ "$probe_rc" -ne 0 ]]; then
+            printf '5B.3-B BLOCKED — database connection failed\n' >&2
+            printf 'ERROR CATEGORY: AUTHENTICATION/NETWORK/DATABASE (sanitized)\n' >&2
+            sanitize "$tmp_dir/probe.err" >&2
+            exit "$probe_rc"
+          fi
+          printf 'DATABASE INTROSPECTION: PASS\n'
+          sanitize "$tmp_dir/probe.out"
+
+          schema_exists="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select exists (select 1 from pg_namespace where nspname = 'support_vnext_shadow');")"
+          [[ "$schema_exists" == "f" ]] || \
+            fail "support_vnext_shadow already exists"
+          printf 'support_vnext_shadow absent: PASS\n'
+
+      - name: Apply migrations in order
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          tmp_dir="$(mktemp -d)"
+          trap 'rm -rf "$tmp_dir"' EXIT
+
+          mapfile -t migration_files < <(
+            find database/migrations -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort
+          )
+          for file in "${migration_files[@]}"; do
+            migration="${file:0:4}"
+            sha256="$(sha256sum "database/migrations/${file}" | awk '{print $1}')"
+            start="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            log_file="$tmp_dir/${migration}.log"
+            printf 'MIGRATION: %s\n' "$migration"
+            printf 'FILE: %s\n' "$file"
+            printf 'SHA256: %s\n' "$sha256"
+            printf 'START: %s\n' "$start"
+
+            set +e
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -X \
+              -f "database/migrations/${file}" >"$log_file" 2>&1
+            rc=$?
+            set -e
+
+            printf 'EXIT CODE: %s\n' "$rc"
+            if [[ "$rc" -ne 0 ]]; then
+              sqlstate="$(grep -Eio 'SQLSTATE[^[:alnum:]]*[0-9A-Z]{5}' "$log_file" | sed -n '1p' || true)"
+              [[ -n "$sqlstate" ]] || sqlstate="unavailable"
+              printf 'RESULT: FAIL\n'
+              printf 'SQLSTATE: %s\n' "$sqlstate"
+              printf 'ERROR: '
+              sed -En \
+                -e 's#(postgres(ql)?://)[^[:space:]]+#\1[REDACTED]#g' \
+                -e 's#(password|passwd|secret|token|apikey)[=:][^[:space:]]+#\1=[REDACTED]#gi' \
+                -e '/ERROR:|FATAL:|DETAIL:|HINT:/p' "$log_file" | sed -n '1,20p'
+              printf '5B.3-B BLOCKED NA MIGRATION %s\n' "$migration"
+              exit "$rc"
+            fi
+            printf 'RESULT: PASS\n'
+          done
+
+      - name: Read-only post-install inventory
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          psql_read() {
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc "$1"
+          }
+
+          schema_exists="$(psql_read "select exists (select 1 from pg_namespace where nspname = 'support_vnext_shadow');")"
+          [[ "$schema_exists" == "t" ]] || {
+            printf '5B.3-B BLOCKED — support_vnext_shadow was not created\n' >&2
+            exit 1
+          }
+
+          printf 'SCHEMAS\n'
+          psql_read "select nspname from pg_namespace where nspname = 'support_vnext_shadow';"
+          printf 'TABLES\n'
+          psql_read "select table_name from information_schema.tables where table_schema = 'support_vnext_shadow' order by table_name;"
+          printf 'VIEWS\n'
+          psql_read "select table_name from information_schema.views where table_schema = 'support_vnext_shadow' order by table_name;"
+          printf 'TRIGGERS\n'
+          psql_read "select trigger_schema || '.' || event_object_table || ':' || trigger_name from information_schema.triggers where trigger_schema = 'support_vnext_shadow' order by 1;"
+          printf 'FUNCTIONS_AND_PROCEDURES\n'
+          psql_read "select n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'support_vnext_shadow' and p.prokind in ('f','p') order by 1;"
+          printf 'POLICIES\n'
+          psql_read "select schemaname || '.' || tablename || ':' || policyname from pg_policies where schemaname = 'support_vnext_shadow' order by 1;"
+          printf 'OWNERS\n'
+          psql_read "select n.nspname || '.' || c.relname || ':' || r.rolname from pg_class c join pg_namespace n on n.oid = c.relnamespace join pg_roles r on r.oid = c.relowner where n.nspname = 'support_vnext_shadow' order by 1;"
+          printf 'GRANTS\n'
+          psql_read "select grantee || ':' || table_name || ':' || privilege_type from information_schema.role_table_grants where table_schema = 'support_vnext_shadow' order by 1;"
+          printf 'MIGRATION_HISTORY_CANDIDATES\n'
+          psql_read "select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'support_vnext_shadow' and c.relkind in ('r','v','m') and (c.relname ilike '%migration%' or c.relname ilike '%release%') order by 1;"
+
+          table_count="$(psql_read "select count(*) from information_schema.tables where table_schema = 'support_vnext_shadow';")"
+          view_count="$(psql_read "select count(*) from information_schema.views where table_schema = 'support_vnext_shadow';")"
+          function_count="$(psql_read "select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'support_vnext_shadow' and p.prokind in ('f','p');")"
+          printf 'OBJECT COUNTS: tables=%s views=%s functions_procedures=%s\n' "$table_count" "$view_count" "$function_count"
+          printf '5B.3-B PASS — MIGRATIONS 0001–0014 INSTALLED IN ISOLATED LABORATORY\n'
+          printf 'COMMIT SHA: %s\n' "$GITHUB_SHA"
+          printf 'PROJECT REF: qyrxpbvdmpftfcygsmws\n'
+          printf 'MIGRATIONS: 14/14 PASS\n'
+          printf 'MANUAL CORRECTIONS: none\n'
