@@ -1,0 +1,128 @@
+name: 5B.3 Dynamic Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Digite RUN_DYNAMIC_5B3 para executar P00/P01-P15"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: 5b3-isolated-lab
+  cancel-in-progress: false
+
+jobs:
+  dynamic-validation:
+    name: P00/P01-P15 dynamic validation
+    runs-on: ubuntu-latest
+    env:
+      SUPPORT_VNEXT_VALIDATION_ENV: ISOLATED_5B3
+      SUPPORT_VNEXT_TEST_ENV: "1"
+      EXPECTED_PROJECT_REF: qyrxpbvdmpftcygsmws
+      PACKAGE_PIN: dc7bf2798f88b5956f28d1c381bc083b3849dfdf
+    steps:
+      - name: Validate explicit confirmation
+        shell: bash
+        env:
+          CONFIRMATION_INPUT: ${{ inputs.confirmation }}
+        run: |
+          set -Eeuo pipefail
+          [[ "$CONFIRMATION_INPUT" == "RUN_DYNAMIC_5B3" ]] || { echo "5B.3-C BLOCKED — invalid explicit confirmation" >&2; exit 1; }
+          echo "CONFIRMATION: PASS" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Checkout tested commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install tools
+        run: |
+          set -Eeuo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client ripgrep
+          curl -fsSL https://deno.land/install.sh | sh -s -- -y
+          echo "$HOME/.deno/bin" >> "$GITHUB_PATH"
+
+      - name: Static gate
+        run: |
+          set -Eeuo pipefail
+          bash tests/postgres/verify_migration_manifest.sh
+          bash tests/postgres/verify_static.sh
+          bash -n tests/postgres/run_all.sh tests/postgres/run_concurrency.sh
+          deno fmt --check edge-functions contracts tests
+          deno lint edge-functions contracts tests
+          deno check edge-functions/*/index.ts contracts/*.ts
+          deno test --allow-env --allow-read tests/unit tests/shadow
+          [[ -f tests/postgres/p00_uuid_array_validator.sql ]] && echo "STATIC TEST A: PASS"
+          [[ -f tests/postgres/p15_privileges.sql ]] && echo "STATIC TEST B: PASS"
+
+      - name: Pre-dynamic guard and identity
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        run: |
+          set -Eeuo pipefail
+          [[ "$SUPPORT_VNEXT_VALIDATION_ENV" == ISOLATED_5B3 ]] || { echo "environment guard"; exit 1; }
+          [[ "$SUPABASE_URL" == *"$EXPECTED_PROJECT_REF"* ]] || { echo "project guard"; exit 1; }
+          q() { psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -At -c "$1"; }
+          db="$(q 'select current_database();')"; user="$(q 'select current_user;')"
+          addr="$(q "select coalesce(inet_server_addr()::text, 'local');")"; port="$(q 'select inet_server_port();')"; ver="$(q 'show server_version;')"
+          [[ "$(q "select count(*) from pg_namespace where nspname='support_vnext_shadow';")" == 1 ]] || { echo "5B.3-C BLOCKED — schema absent"; exit 1; }
+          [[ "$(q "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='support_vnext_shadow' and p.proname in ('get_runtime_decision_rules','store_shadow_decision','confirm_request_transaction');")" == 3 ]] || { echo "fundamental objects incomplete"; exit 1; }
+          printf '%s\n' "$db" "$user" "$addr" "$port" "$ver" > "$RUNNER_TEMP/identity"
+          fp="$(sha256sum "$RUNNER_TEMP/identity" | awk '{print $1}')"
+          printf 'DATABASE FINGERPRINT: %s\nSHADOW_ONLY: PASS\n' "$fp" | tee "$GITHUB_STEP_SUMMARY" "$GITHUB_WORKSPACE/5b3-dynamic-validation-evidence.txt"
+
+      - name: P00 mandatory gate
+        env:
+          TEST_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -Eeuo pipefail
+          shopt -s nullglob
+          files=(tests/postgres/p00_*.sql)
+          [[ -n "${files[*]-}" ]] || { echo "P00 FAIL"; exit 1; }
+          for f in "${files[@]}"; do psql "$TEST_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f "$f"; done
+          echo "P00: PASS" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: P01-P09 and P11-P15
+        env:
+          TEST_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -Eeuo pipefail
+          root=tests/postgres
+          one() { psql "$TEST_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f "$root/$2"; echo "$1: PASS" | tee -a "$GITHUB_STEP_SUMMARY"; }
+          conc() { CASE_SQL="$PWD/$root/$2" DATABASE_URL_A="$TEST_DATABASE_URL" DATABASE_URL_B="$TEST_DATABASE_URL" SUPPORT_VNEXT_TEST_ENV=1 "$root/run_concurrency.sh"; echo "$1 CONCURRENCY: PASS" | tee -a "$GITHUB_STEP_SUMMARY"; }
+          conc P01 p01_release_overlap.sql
+          one P02 p02_published_update.sql; one P03 p03_published_delete.sql; one P04 p04_content_insert_update_delete.sql
+          one P05 p05_source_link_insert.sql; one P06 p06_final_states.sql; one P07 p07_explicit_rebind.sql; one P08 p08_hash_integrity.sql
+          conc P09 p09_session_concurrency.sql
+          conc P11 p11_confirm_concurrency.sql
+          one P12 p12_inbound_reuse.sql; one P13 p13_confirmation_rejections.sql; one P14 p14_complaint_closed.sql; one P15 p15_privileges.sql
+
+      - name: P10 integration
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -Eeuo pipefail
+          deno test --allow-env --allow-net --ignored tests/integration/p10_a_confirmar_integration_test.ts
+          echo "P10 INTEGRATION: PASS" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Dynamic summary
+        if: always()
+        run: |
+          if [[ "${{ job.status }}" == success ]]; then echo "FINAL: 5B.3 DYNAMIC VALIDATION PASS" | tee -a "$GITHUB_STEP_SUMMARY"; else echo "FINAL: 5B.3 BLOCKED" | tee -a "$GITHUB_STEP_SUMMARY"; fi
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 5b3-dynamic-validation-evidence
+          path: 5b3-dynamic-validation-evidence.txt
+          if-no-files-found: warn
