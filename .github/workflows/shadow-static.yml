@@ -60,9 +60,9 @@ jobs:
 
           scheme='postgresql://'
           fake_user='user'
-          fake_password='fake-secret'
+          fake_value='fake-secret'
           fake_host='@db.example.test:5432/db'
-          printf '%s%s:%s%s\n' "$scheme" "$fake_user" "$fake_password" "$fake_host" >"$test_dir/postgres.txt"
+          printf '%s%s:%s%s\n' "$scheme" "$fake_user" "$fake_value" "$fake_host" >"$test_dir/postgres.txt"
           assert_scan B SECRET "$test_dir"
 
           service_name='SUPABASE_'
