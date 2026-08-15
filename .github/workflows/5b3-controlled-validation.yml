@@ -6,9 +6,7 @@ on:
       confirmation:
         description: "Digite RESET_AND_INSTALL_5B3 para autorizar reset e instalação"
         required: true
-        type: string
-
-permissions:
+        type: stringpermissions:
   contents: read
 
 concurrency:
