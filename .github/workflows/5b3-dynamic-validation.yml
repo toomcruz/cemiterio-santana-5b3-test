@@ -90,7 +90,7 @@ jobs:
           for f in "${files[@]}"; do psql "$TEST_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f "$f"; done
           echo "P00: PASS" | tee -a "$GITHUB_STEP_SUMMARY"
 
-      - name: P01-P09 and P11-P15
+      - name: P01-P09
         env:
           TEST_DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
@@ -102,8 +102,7 @@ jobs:
           one P02 p02_published_update.sql; one P03 p03_published_delete.sql; one P04 p04_content_insert_update_delete.sql
           one P05 p05_source_link_insert.sql; one P06 p06_final_states.sql; one P07 p07_explicit_rebind.sql; one P08 p08_hash_integrity.sql
           conc P09 p09_session_concurrency.sql
-          conc P11 p11_confirm_concurrency.sql
-          one P12 p12_inbound_reuse.sql; one P13 p13_confirmation_rejections.sql; one P14 p14_complaint_closed.sql; one P15 p15_privileges.sql
+
 
       - name: P10 integration
         env:
@@ -113,6 +112,17 @@ jobs:
           set -Eeuo pipefail
           deno test --allow-env --allow-net --ignored tests/integration/p10_a_confirmar_integration_test.ts
           echo "P10 INTEGRATION: PASS" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: P11-P15
+        env:
+          TEST_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -Eeuo pipefail
+          root=tests/postgres
+          one() { psql "$TEST_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f "$root/$2"; echo "$1: PASS" | tee -a "$GITHUB_STEP_SUMMARY"; }
+          conc() { CASE_SQL="$PWD/$root/$2" DATABASE_URL_A="$TEST_DATABASE_URL" DATABASE_URL_B="$TEST_DATABASE_URL" SUPPORT_VNEXT_TEST_ENV=1 "$root/run_concurrency.sh"; echo "$1 CONCURRENCY: PASS" | tee -a "$GITHUB_STEP_SUMMARY"; }
+          conc P11 p11_confirm_concurrency.sql
+          one P12 p12_inbound_reuse.sql; one P13 p13_confirmation_rejections.sql; one P14 p14_complaint_closed.sql; one P15 p15_privileges.sql
 
       - name: Dynamic summary
         if: always()
