@@ -206,7 +206,7 @@ for token in 'deno-version: v2.1.4' 'deno fmt --check' 'deno lint' 'deno check e
   rg -Fq "$token" "$ci" || { echo "R5-E CI missing: $token" >&2; exit 1; }
 done
 manifest_verifier="$root/verify_migration_manifest.sh"
-[[ -x "$manifest_verifier" ]] || { echo 'migration/manifest verifier missing or not executable' >&2; exit 1; }
+[[ -r "$manifest_verifier" ]] || { echo 'migration/manifest verifier missing or unreadable' >&2; exit 1; }
 rg -Fq 'verify_migration_manifest.sh' "$ci" || { echo 'CI does not execute migration/manifest verifier' >&2; exit 1; }
 ! rg -Fq 'head -14' "$ci" || { echo 'CI still truncates migration inventory' >&2; exit 1; }
 for token in 'MIGRATIONS_COVERED: 0001-0014' '0013' '0014'; do

@@ -127,7 +127,7 @@ jobs:
           run_check "5B3-FMT-01" "Deno fmt" "exit code 0" "corrigir formatação real reportada pelo Deno" "deno fmt --check edge-functions contracts tests" deno fmt --check edge-functions contracts tests
           run_check "5B3-LINT-01" "Deno lint" "exit code 0" "corrigir lint real reportado pelo Deno" "deno lint edge-functions contracts tests" deno lint edge-functions contracts tests
           run_check "5B3-CHECK-01" "Deno check" "exit code 0 nos entrypoints do shadow-static.yml" "corrigir type-check real reportado pelo Deno" "deno check edge-functions/*/index.ts contracts/*.ts" bash -c 'deno check edge-functions/*/index.ts contracts/*.ts'
-          run_check "5B3-TEST-01" "Deno unit tests" "exit code 0 para tests/unit e tests/shadow" "corrigir teste unitário/estático real reportado pelo Deno" "deno test --allow-env --allow-read tests/unit tests/shadow" deno test --allow-env --allow-read --no-net tests/unit tests/shadow
+          run_check "5B3-TEST-01" "Deno unit tests" "exit code 0 para tests/unit e tests/shadow" "corrigir teste unitário/estático real reportado pelo Deno" "deno test --allow-env --allow-read tests/unit tests/shadow" deno test --allow-env --allow-read tests/unit tests/shadow
           run_check "5B3-PG-01" "PostgreSQL client" "psql client disponível, sem servidor local" "instalar somente postgresql-client" "psql --version" bash -c 'command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null); psql --version >/dev/null'
 
           pg_probe="$(mktemp)"
