@@ -217,4 +217,11 @@ for token in 'oid::regprocedure' 'to_regprocedure(function_identity)' 'p15_expec
 done
 ! rg -Fq 'continue-on-error' "$ci" || { echo 'R5-E CI masks failures with continue-on-error' >&2; exit 1; }
 ! rg -Fq '|| true' "$ci" || { echo 'R5-E CI masks failures with || true' >&2; exit 1; }
+# 5B.3-C inbound_messages source contract hardening
+inbound_source_migration="$root/../../database/migrations/0015_5b3c_fix_inbound_source_contract.sql"
+[[ -s "$inbound_source_migration" ]] || { echo 'inbound source contract migration missing' >&2; exit 1; }
+for token in 'inbound_message_id,session_id,topic_id,release_id,message_digest,content_hash,source' SHADOW_INBOUND content_hash; do
+  rg -Fq "$token" "$inbound_source_migration" || { echo "inbound source contract migration missing: $token" >&2; exit 1; }
+done
+
 echo 'P01–P15 static structure PASS'
