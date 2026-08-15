@@ -87,7 +87,7 @@ jobs:
           # A-H: expected creator-membership predicate, including expected BLOCK results.
           assert_case A PASS membership_row_expected postgres bootstrap_superuser true true false false
           assert_case B PASS membership_row_expected postgres different_superuser true true false false
-          assert_case C BLOCK creator_set_passes 4 4 0 1 4
+          assert_case C BLOCK creator_set_passes 4 4 0 2 4
           assert_case D BLOCK creator_set_passes 4 4 0 1 3
           assert_case E BLOCK creator_set_passes 5 4 1 1 4
           assert_case F BLOCK membership_row_expected postgres bootstrap_superuser true false false false
