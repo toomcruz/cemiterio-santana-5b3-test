@@ -73,23 +73,24 @@ function validPlan(message: string): DecisionPlan {
 
 function restWithRules(rules: Array<Record<string, unknown>>): Parameters<typeof decide>[1] {
   return {
-    rpc: async <T>(name: string, args?: Record<string, unknown>): Promise<T> => {
-      if (name === "get_runtime_decision_rules") return rules as T;
-      if (name === "store_shadow_decision") return undefined as T;
-      throw new Error(`Unexpected RPC ${name} ${JSON.stringify(args)}`);
+    rpc: <T>(name: string, args?: Record<string, unknown>): Promise<T> => {
+      if (name === "get_runtime_decision_rules") return Promise.resolve(rules as T);
+      if (name === "store_shadow_decision") return Promise.resolve(undefined as T);
+      return Promise.reject(new Error(`Unexpected RPC ${name} ${JSON.stringify(args)}`));
     },
   } as unknown as Parameters<typeof decide>[1];
 }
 
-Deno.test("P10 decision engine produces A_CONFIRMAR from a real empty resolver result", async () => {
-  const plan = await decide(input, restWithRules([]));
-  assertEquals(plan.outcome, "A_CONFIRMAR");
-  assertEquals(plan.reason_codes, ["NO_MATCHING_PUBLISHED_RULE"]);
-  assertEquals(plan.response_plan, null);
-  assertEquals(plan.request_plan, null);
-  assertEquals(plan.document_plan, null);
-  assertEquals(plan.handoff_plan, null);
-  assertEquals(plan.actions.includes("CRIAR_SOLICITACAO"), false);
+Deno.test("P10 decision engine produces A_CONFIRMAR from a real empty resolver result", () => {
+  return decide(input, restWithRules([])).then((plan) => {
+    assertEquals(plan.outcome, "A_CONFIRMAR");
+    assertEquals(plan.reason_codes, ["NO_MATCHING_PUBLISHED_RULE"]);
+    assertEquals(plan.response_plan, null);
+    assertEquals(plan.request_plan, null);
+    assertEquals(plan.document_plan, null);
+    assertEquals(plan.handoff_plan, null);
+    assertEquals(plan.actions.includes("CRIAR_SOLICITACAO"), false);
+  });
 });
 
 Deno.test("P10 conflict reaches A_CONFIRMAR through production decision engine", async () => {
@@ -121,7 +122,7 @@ Deno.test("P10 renderer rejects the real A_CONFIRMAR context", async () => {
   let rejected = false;
   try {
     await render({ decision_id: ids.decision, technical: { channel: "WHATSAPP" } }, {
-      rpc: async <T>(): Promise<T> => ({ outcome: "A_CONFIRMAR" } as T),
+      rpc: <T>(): Promise<T> => Promise.resolve({ outcome: "A_CONFIRMAR" } as T),
     } as never);
   } catch {
     rejected = true;

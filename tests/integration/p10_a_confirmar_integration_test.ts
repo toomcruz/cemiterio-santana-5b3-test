@@ -75,7 +75,7 @@ Deno.test({ name: "P10 integration: database rules -> engine -> renderer/proposa
       duplicate: false,
     },
   }, {
-    rpc: async (name: string) =>
+    rpc: (name: string) =>
       name === "get_runtime_decision_rules" ? rules : (() => {
         throw new Error(`unexpected RPC ${name}`);
       })(),

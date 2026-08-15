@@ -2,7 +2,11 @@ import { HttpProblem } from "./http.ts";
 
 const SHADOW_SCHEMA = "support_vnext_shadow";
 
-export class SupabaseRest {
+export interface RpcClient {
+  rpc<T>(name: string, body: unknown): Promise<T>;
+}
+
+export class SupabaseRest implements RpcClient {
   private readonly url: string;
   private readonly key: string;
 

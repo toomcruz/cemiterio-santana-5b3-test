@@ -202,7 +202,7 @@ for token in valid_decision_plan valid_fact_refs inbound_classifications_code_st
 done
 ci="$root/../../.github/workflows/shadow-static.yml"
 [[ -s "$ci" ]] || { echo 'R5-E CI workflow missing' >&2; exit 1; }
-for token in 'deno-version: v2.1.4' 'deno fmt --check' 'deno lint' 'deno check edge-functions/*/index.ts' 'deno test --allow-env --allow-read --no-net tests' 'bash -n tests/postgres/run_all.sh' 'tests/postgres/verify_static.sh'; do
+for token in 'deno-version: v2.1.4' 'deno fmt --check' 'deno lint' 'deno check edge-functions/*/index.ts' 'deno test --allow-env --allow-read tests/unit tests/shadow' 'bash -n tests/postgres/run_all.sh' 'tests/postgres/verify_static.sh'; do
   rg -Fq "$token" "$ci" || { echo "R5-E CI missing: $token" >&2; exit 1; }
 done
 manifest_verifier="$root/verify_migration_manifest.sh"

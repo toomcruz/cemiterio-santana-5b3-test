@@ -1,6 +1,7 @@
 import { assertEquals } from "../fixtures/assert.ts";
 import { resolveShadowFeature } from "../../edge-functions/_shared/flags.ts";
-Deno.test("flag resolution never returns ENABLED", async () => {
-  const r: any = { rpc: async () => ({ mode: "OFF" }) };
-  assertEquals(await resolveShadowFeature(r, "x", []), "OFF");
+import type { RpcOnly } from "../fixtures/rpc.ts";
+Deno.test("flag resolution never returns ENABLED", () => {
+  const r: RpcOnly = { rpc: <T>(): Promise<T> => Promise.resolve({ mode: "OFF" } as T) };
+  return resolveShadowFeature(r, "x", []).then((mode) => assertEquals(mode, "OFF"));
 });

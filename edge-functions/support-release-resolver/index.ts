@@ -1,5 +1,5 @@
 import { assertMethod, assertString, json, parseJson, problem } from "../_shared/http.ts";
-import { SupabaseRest } from "../_shared/rest.ts";
+import { type RpcClient, SupabaseRest } from "../_shared/rest.ts";
 import { requireInternalShadowAccess, requireShadowOnly } from "../_shared/security.ts";
 export interface ReleaseResolverInput {
   conversation_id: string;
@@ -7,7 +7,7 @@ export interface ReleaseResolverInput {
   requested_session_id?: string;
 }
 /** Server selects release; optional session id is only an idempotency key for a new session. */
-export async function resolveRelease(i: ReleaseResolverInput, r: SupabaseRest) {
+export async function resolveRelease(i: ReleaseResolverInput, r: RpcClient) {
   return await r.rpc("resolve_shadow_session", {
     p_conversation_id: assertString(i.conversation_id, "conversation_id"),
     p_scope_code: assertString(i.scope_code, "scope_code"),

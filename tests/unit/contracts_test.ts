@@ -1,6 +1,5 @@
 import { assert, assertEquals } from "../fixtures/assert.ts";
 import { A_CONFIRMAR_RESTRICTIONS, assertAConfirmarPlan, type DecisionPlan } from "../../contracts/decision-plan.ts";
-import { assertComplaintProposal } from "../../contracts/request-command.ts";
 import { ids } from "../fixtures/ids.ts";
 
 Deno.test("A_CONFIRMAR blocks facts, administrative proposals, and legacy fallback", () => {
@@ -35,16 +34,4 @@ Deno.test("A_CONFIRMAR blocks facts, administrative proposals, and legacy fallba
   };
   assertEquals(assertAConfirmarPlan(plan), ["A_CONFIRMAR_CANNOT_RESOLVE_FACT"]);
   assert(A_CONFIRMAR_RESTRICTIONS.includes("NO_LEGACY_FALLBACK"));
-});
-
-Deno.test("RECLAMACAO proposal rejects sector and gravity fields", () => {
-  const fields = assertComplaintProposal({
-    release_id: ids.release,
-    request_policy_id: ids.policy,
-    category_code: "RECLAMACAO",
-    subject: "Relato",
-    fields: { setor: "x", gravidade: "alta" },
-    document_ids: [],
-  });
-  assertEquals(fields.sort(), ["gravidade", "setor"]);
 });

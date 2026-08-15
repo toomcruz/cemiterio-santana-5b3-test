@@ -1,6 +1,6 @@
 import type { RequestCommandInput, RequestCommandResult } from "../../contracts/request-command.ts";
 import { assertMethod, assertString, HttpProblem, json, parseJson, problem } from "../_shared/http.ts";
-import { SupabaseRest } from "../_shared/rest.ts";
+import { type RpcClient, SupabaseRest } from "../_shared/rest.ts";
 import { requireInternalShadowAccess, requireShadowOnly } from "../_shared/security.ts";
 function one<T>(value: T | T[]): T {
   if (Array.isArray(value)) {
@@ -12,7 +12,7 @@ function one<T>(value: T | T[]): T {
 /** RPC-only façade: no request fact is authoritative outside the database transaction. */
 export async function executeRequestCommand(
   input: RequestCommandInput,
-  rest: SupabaseRest,
+  rest: RpcClient,
 ): Promise<RequestCommandResult> {
   if (!input.shadow_only) throw new HttpProblem(403, "SHADOW_ONLY_REQUIRED", "Live request execution is unavailable");
   const actor = input.actor_id ?? "support-request-command-shadow";

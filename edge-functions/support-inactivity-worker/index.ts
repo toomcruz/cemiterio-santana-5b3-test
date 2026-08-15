@@ -1,5 +1,5 @@
 import { assertMethod, assertString, json, parseJson, problem } from "../_shared/http.ts";
-import { SupabaseRest } from "../_shared/rest.ts";
+import { type RpcClient, SupabaseRest } from "../_shared/rest.ts";
 import { requireInternalShadowAccess, requireShadowOnly } from "../_shared/security.ts";
 type Input = {
   action: "SCHEDULE" | "CANCEL" | "RUN_DUE";
@@ -9,7 +9,7 @@ type Input = {
   shadow_only: boolean;
 };
 /** Time and policy are database-authoritative; worker only requests work. No outbound provider client exists. */
-export async function runInactivityWorker(i: Input, rest: SupabaseRest) {
+export async function runInactivityWorker(i: Input, rest: RpcClient) {
   if (!i.shadow_only) throw new Error("SHADOW_ONLY_REQUIRED");
   if (i.action === "SCHEDULE") {
     return await rest.rpc("schedule_inactivity_transaction_v2", {

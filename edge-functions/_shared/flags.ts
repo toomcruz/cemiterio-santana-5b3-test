@@ -1,10 +1,10 @@
-import { SupabaseRest } from "./rest.ts";
+import type { RpcClient } from "./rest.ts";
 export type FeatureTarget = {
   target_type: "CONVERSATION_ID" | "PHONE_HASH" | "SERVICE_CODE" | "COMPONENT" | "RELEASE_ID" | "GLOBAL";
   target_value?: string;
 };
 export async function resolveShadowFeature(
-  rest: SupabaseRest,
+  rest: RpcClient,
   flagKey: string,
   candidates: FeatureTarget[],
 ): Promise<"OFF" | "SHADOW_ONLY"> {
@@ -20,7 +20,7 @@ export async function resolveShadowFeature(
   return r.mode;
 }
 export async function requireShadowFeature(
-  rest: SupabaseRest,
+  rest: RpcClient,
   key: string,
   candidates: FeatureTarget[],
 ): Promise<void> {

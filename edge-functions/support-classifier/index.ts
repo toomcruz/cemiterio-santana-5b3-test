@@ -69,15 +69,15 @@ function detectLocation(text: string, input: ClassifierInput, evidences: Classif
   return null;
 }
 
-export async function classifyDeterministically(input: ClassifierInput): Promise<ClassifierOutput> {
+export function classifyDeterministically(input: ClassifierInput): Promise<ClassifierOutput> {
   const text = input.message_batch.text.trim();
   const evidences: ClassifierEvidence[] = [];
   if (input.release_id !== input.state.release_id || input.release_id !== input.taxonomy.release_id) {
-    return blocked(input, "RELEASE_MISMATCH", evidences);
+    return Promise.resolve(blocked(input, "RELEASE_MISMATCH", evidences));
   }
-  if (input.technical_signals.duplicate) return blocked(input, "DUPLICATE_INBOUND", evidences);
+  if (input.technical_signals.duplicate) return Promise.resolve(blocked(input, "DUPLICATE_INBOUND", evidences));
   if (input.technical_signals.human_active || input.state.automation_mode === "HUMAN_ACTIVE") {
-    return blocked(input, "HUMAN_ACTIVE", evidences);
+    return Promise.resolve(blocked(input, "HUMAN_ACTIVE", evidences));
   }
 
   const pending = input.state.pending_confirmation;
@@ -156,7 +156,7 @@ export async function classifyDeterministically(input: ClassifierInput): Promise
     message_role === "UNKNOWN" || (message_role === "NEW_TOPIC" && !complaintSignal && serviceCandidates.length === 0)
   ) ambiguityCodes = ["NO_CONFIDENT_SERVICE_OR_INTENT"];
 
-  return {
+  return Promise.resolve({
     schema_version: "1.0",
     correlation_id: input.correlation_id,
     release_id: input.release_id,
@@ -174,7 +174,7 @@ export async function classifyDeterministically(input: ClassifierInput): Promise
     document_signal: input.message_batch.attachments.length ? "TECHNICAL_DOCUMENT" : "NONE",
     ambiguity_codes: ambiguityCodes,
     evidence: evidences,
-  };
+  });
 }
 
 function blocked(input: ClassifierInput, code: string, evidenceList: ClassifierEvidence[]): ClassifierOutput {
@@ -199,9 +199,9 @@ function blocked(input: ClassifierInput, code: string, evidenceList: ClassifierE
   };
 }
 
-async function maybeEnrichWithModel(input: ClassifierInput, output: ClassifierOutput): Promise<ClassifierOutput> {
+function maybeEnrichWithModel(output: ClassifierOutput): Promise<ClassifierOutput> {
   // Model transport is absent from this package. MODEL_EVIDENCE_SUMMARY cannot be produced here.
-  return output;
+  return Promise.resolve(output);
 }
 
 function numericAnswerAllowed(text: string, schema: Record<string, unknown>): boolean {
@@ -253,7 +253,7 @@ if (import.meta.main) {
         { target_type: "RELEASE_ID", target_value: input.release_id },
         { target_type: "COMPONENT", target_value: "support-classifier" },
       ]);
-      output = await maybeEnrichWithModel(input, output);
+      output = await maybeEnrichWithModel(output);
       const errors = validateClassifierOutput(output, input.taxonomy);
       if (errors.length) {
         output = {

@@ -1,13 +1,19 @@
 import { assertMethod, assertString, HttpProblem, json, parseJson, problem } from "../_shared/http.ts";
-import { SupabaseRest } from "../_shared/rest.ts";
+import { type RpcClient, SupabaseRest } from "../_shared/rest.ts";
+import type { ResponsePlan } from "../../contracts/decision-plan.ts";
 import { requireInternalShadowAccess, requireShadowOnly } from "../_shared/security.ts";
 export interface RendererInput {
   decision_id: string;
   technical: { channel: "WHATSAPP" };
 }
+type RendererDecisionContext = {
+  decision_id: string;
+  outcome: string;
+  response_plan: ResponsePlan | null;
+};
 /** The database re-reads a persisted decision. Gemini is hard-disabled in this shadow package. */
-export async function render(input: RendererInput, rest: SupabaseRest) {
-  const c = await rest.rpc<any>("get_renderer_decision_context", {
+export async function render(input: RendererInput, rest: RpcClient) {
+  const c = await rest.rpc<RendererDecisionContext>("get_renderer_decision_context", {
     p_decision_id: assertString(input.decision_id, "decision_id"),
   });
   const p = c.response_plan;

@@ -10,27 +10,27 @@ export class FakeRest {
     return this;
   }
 
-  async select<T>(table: string, query: Query = {}): Promise<T[]> {
+  select<T>(table: string, query: Query = {}): Promise<T[]> {
     this.calls.push({ method: "select", table, query });
-    return (this.rows.get(table) ?? []) as T[];
+    return Promise.resolve((this.rows.get(table) ?? []) as T[]);
   }
 
-  async selectOne<T>(table: string, query: Query): Promise<T | null> {
+  selectOne<T>(table: string, query: Query): Promise<T | null> {
     this.calls.push({ method: "selectOne", table, query });
-    return ((this.rows.get(table) ?? [])[0] ?? null) as T | null;
+    return Promise.resolve(((this.rows.get(table) ?? [])[0] ?? null) as T | null);
   }
 
-  async insert<T>(table: string, body: unknown): Promise<T[]> {
+  insert<T>(table: string, body: unknown): Promise<T[]> {
     this.calls.push({ method: "insert", table, body });
     const rows = this.rows.get(table) ?? [];
     rows.push(body);
     this.rows.set(table, rows);
-    return [body as T];
+    return Promise.resolve([body as T]);
   }
 
-  async update<T>(table: string, query: Query, body: unknown): Promise<T[]> {
+  update<T>(table: string, query: Query, body: unknown): Promise<T[]> {
     this.calls.push({ method: "update", table, query, body });
-    return [];
+    return Promise.resolve([]);
   }
 
   async rpc<T>(name: string, body: unknown): Promise<T> {

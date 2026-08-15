@@ -94,6 +94,7 @@ function restWithRules(rules: RuntimeRule[]): Parameters<typeof decide>[1] {
   const rest = {
     rpc: <T>(name: string): Promise<T> => {
       if (name === "get_runtime_decision_rules") return Promise.resolve(rules as unknown as T);
+      if (name === "store_shadow_decision") return Promise.resolve(undefined as T);
       throw new Error(`Unexpected RPC: ${name}`);
     },
   };
