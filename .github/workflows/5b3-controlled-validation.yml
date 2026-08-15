@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       confirmation:
+        description: "Digite RESET_AND_INSTALL_5B3 para autorizar reset e instalação"
+        required: true
+        type: string
     name: Validate explicit confirmation
     runs-on: ubuntu-latest
     steps:
