@@ -108,10 +108,18 @@ jobs:
             "select rolname || ':LOGIN=' || rolcanlogin || ':SUPERUSER=' || rolsuper from pg_roles where rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') order by 1;"
           printf 'ROLE MEMBERSHIPS\n'
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
-            "select parent.rolname || '<-' || member.rolname from pg_auth_members m join pg_roles parent on parent.oid=m.roleid join pg_roles member on member.oid=m.member where parent.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') or member.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') order by 1;"
+            "select parent.rolname || '<-' || member.rolname || ':admin=' || m.admin_option::text || ':inherit=' || m.inherit_option::text || ':set=' || m.set_option::text from pg_auth_members m join pg_roles parent on parent.oid=m.roleid join pg_roles member on member.oid=m.member where parent.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') or member.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') order by 1;"
           printf 'ROLE OWNERSHIP OUTSIDE PACKAGE SCHEMA\n'
+          ownership_rows="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "with owned as (select r.rolname as role_name,n.nspname::text as schema_name,c.relname::text as object_name,'pg_class'::text as object_type from pg_roles r join pg_class c on c.relowner=r.oid join pg_namespace n on n.oid=c.relnamespace union all select r.rolname,n.nspname::text,p.proname::text,'pg_proc'::text from pg_roles r join pg_proc p on p.proowner=r.oid join pg_namespace n on n.oid=p.pronamespace union all select r.rolname,n.nspname::text,t.typname::text,'pg_type'::text from pg_roles r join pg_type t on t.typowner=r.oid join pg_namespace n on n.oid=t.typnamespace union all select r.rolname,n.nspname::text,n.nspname::text,'pg_namespace'::text from pg_roles r join pg_namespace n on n.nspowner=r.oid union all select r.rolname,null::text,d.datname::text,'pg_database'::text from pg_roles r join pg_database d on d.datdba=r.oid union all select r.rolname,null::text,ts.spcname::text,'pg_tablespace'::text from pg_roles r join pg_tablespace ts on ts.spcowner=r.oid) select role_name || ':' || object_type || ':' || coalesce(schema_name || '.', '') || object_name from owned where schema_name is null or schema_name <> 'support_vnext_shadow' order by 1;")"
+          if [[ -n "$ownership_rows" ]]; then
+            printf '%s\n' "$ownership_rows"
+          else
+            printf 'NONE\n'
+          fi
+          printf 'ROLE SHARED DEPENDENCIES\n'
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
-            "select r.rolname || ':' || coalesce(n.nspname,'<shared>') || '.' || coalesce(c.relname,'<object>') from pg_roles r left join pg_class c on c.relowner=r.oid left join pg_namespace n on n.oid=c.relnamespace where r.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and (c.oid is null or n.nspname <> 'support_vnext_shadow') order by 1;"
+            "select r.rolname || ':deptype=' || d.deptype::text || ':classid=' || d.classid::text || ':objid=' || d.objid::text || ':refclassid=' || d.refclassid::text || ':refobjid=' || d.refobjid::text from pg_shdepend d join pg_roles r on r.oid=d.refobjid where r.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') order by 1;"
           printf 'ROLE TABLE GRANTS OUTSIDE PACKAGE SCHEMA\n'
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
             "select grantee || ':' || table_schema || '.' || table_name || ':' || privilege_type from information_schema.role_table_grants where grantee in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and table_schema <> 'support_vnext_shadow' order by 1;"
@@ -127,7 +135,7 @@ jobs:
             "select table_name from information_schema.tables where table_schema='public' order by 1;"
 
           external_owners="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
-            "select count(*) from pg_roles r join pg_class c on c.relowner=r.oid join pg_namespace n on n.oid=c.relnamespace where r.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and n.nspname <> 'support_vnext_shadow';")"
+            "with owned as (select r.rolname as role_name,n.nspname::text as schema_name from pg_roles r join pg_class c on c.relowner=r.oid join pg_namespace n on n.oid=c.relnamespace union all select r.rolname,n.nspname::text from pg_roles r join pg_proc p on p.proowner=r.oid join pg_namespace n on n.oid=p.pronamespace union all select r.rolname,n.nspname::text from pg_roles r join pg_type t on t.typowner=r.oid join pg_namespace n on n.oid=t.typnamespace union all select r.rolname,n.nspname::text from pg_roles r join pg_namespace n on n.nspowner=r.oid union all select r.rolname,null::text from pg_roles r join pg_database d on d.datdba=r.oid union all select r.rolname,null::text from pg_roles r join pg_tablespace ts on ts.spcowner=r.oid) select count(*) from owned where schema_name is null or schema_name <> 'support_vnext_shadow';")"
           memberships="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
             "select count(*) from pg_auth_members m join pg_roles parent on parent.oid=m.roleid join pg_roles member on member.oid=m.member where parent.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') or member.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin');")"
           external_table_grants="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
@@ -137,7 +145,10 @@ jobs:
           external_schema_grants="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
             "select count(*) from information_schema.role_usage_grants where grantee in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and object_schema <> 'support_vnext_shadow';")"
           [[ "$external_owners" == "0" ]] || fail "package role owns an external object"
-          [[ "$memberships" == "0" ]] || fail "package role has an unexpected membership"
+          if [[ "$memberships" != "0" ]]; then
+            printf 'MEMBERSHIP CLASSIFICATION: UNEXPECTED_EXTERNAL_MEMBERSHIP\n' >&2
+            fail "UNEXPECTED_EXTERNAL_MEMBERSHIP: migration 0001-0006 grants no role membership"
+          fi
           [[ "$external_table_grants" == "0" ]] || fail "package role has external table grants"
           [[ "$external_routine_grants" == "0" ]] || fail "package role has external routine grants"
           [[ "$external_schema_grants" == "0" ]] || fail "package role has external schema grants"
