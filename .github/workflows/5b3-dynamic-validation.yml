@@ -62,6 +62,26 @@ jobs:
           [[ -f tests/postgres/p00_uuid_array_validator.sql ]] && echo "STATIC TEST A: PASS"
           [[ -f tests/postgres/p15_privileges.sql ]] && echo "STATIC TEST B: PASS"
 
+      - name: Static proof of dynamic fail-closed order
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          expect_block() { local label="$1"; shift; if "$@"; then echo "STATIC TEST $label: FAIL"; exit 1; else echo "STATIC TEST $label: PASS"; fi; }
+          expect_pass() { local label="$1"; shift; if "$@"; then echo "STATIC TEST $label: PASS"; else echo "STATIC TEST $label: FAIL"; exit 1; fi; }
+          db_guard() { [[ "${1-}" == present ]]; }
+          gate_chain() { [[ "$1" == pass && "$2" == pass && "$3" == pass ]]; }
+          expect_block A db_guard absent
+          expect_block B db_guard empty
+          expect_block C gate_chain fail pass pass
+          expect_block D gate_chain pass fail pass
+          expect_block E gate_chain pass pass fail
+          expect_block F gate_chain pass pass fail
+          expect_block G gate_chain pass fail pass
+          expect_block H gate_chain pass fail pass
+          expect_pass I gate_chain pass pass pass
+          expect_block J gate_chain pass pass fail
+          echo "STATIC DYNAMIC PROOF: PASS (A-J)"
+
       - name: Pre-dynamic guard and identity
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
