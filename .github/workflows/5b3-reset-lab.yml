@@ -134,10 +134,13 @@ jobs:
             "select count(*) from information_schema.role_table_grants where grantee in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and table_schema <> 'support_vnext_shadow';")"
           external_routine_grants="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
             "select count(*) from information_schema.role_routine_grants where grantee in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and routine_schema <> 'support_vnext_shadow';")"
+          external_schema_grants="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select count(*) from information_schema.role_usage_grants where grantee in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and object_schema <> 'support_vnext_shadow';")"
           [[ "$external_owners" == "0" ]] || fail "package role owns an external object"
           [[ "$memberships" == "0" ]] || fail "package role has an unexpected membership"
           [[ "$external_table_grants" == "0" ]] || fail "package role has external table grants"
           [[ "$external_routine_grants" == "0" ]] || fail "package role has external routine grants"
+          [[ "$external_schema_grants" == "0" ]] || fail "package role has external schema grants"
           printf 'PRE-RESET DEPENDENCY GUARD: PASS\n'
 
       - name: Remove only package schema and package roles
@@ -153,7 +156,10 @@ jobs:
           reset_rc=$?
           set -e
           if [[ "$reset_rc" -ne 0 ]]; then
+            sqlstate="$(grep -Eio 'SQLSTATE[^[:alnum:]]*[0-9A-Z]{5}' "$reset_log" | sed -n '1p' || true)"
+            [[ -n "$sqlstate" ]] || sqlstate="unavailable"
             printf 'STEP: directed reset\nOBJECT: support_vnext_shadow/package roles\nCOMMAND CATEGORY: targeted schema and role removal\nEXIT CODE: %s\n' "$reset_rc" >&2
+            printf 'SQLSTATE: %s\n' "$sqlstate" >&2
             sed -En \
               -e 's#(postgres(ql)?://)[^[:space:]]+#\1[REDACTED]#g' \
               -e 's#(credential|passwd|secret|token|apikey)[=:][^[:space:]]+#\1=[REDACTED]#gi' \
