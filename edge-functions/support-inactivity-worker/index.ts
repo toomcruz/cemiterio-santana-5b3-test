@@ -12,12 +12,16 @@ type Input = {
 export async function runInactivityWorker(i: Input, rest: SupabaseRest) {
   if (!i.shadow_only) throw new Error("SHADOW_ONLY_REQUIRED");
   if (i.action === "SCHEDULE") {
-    return rest.rpc("schedule_inactivity_transaction_v2", { p_session_id: assertString(i.session_id, "session_id") });
+    return await rest.rpc("schedule_inactivity_transaction_v2", {
+      p_session_id: assertString(i.session_id, "session_id"),
+    });
   }
   if (i.action === "CANCEL") {
-    return rest.rpc("cancel_inactivity_transaction_v2", { p_session_id: assertString(i.session_id, "session_id") });
+    return await rest.rpc("cancel_inactivity_transaction_v2", {
+      p_session_id: assertString(i.session_id, "session_id"),
+    });
   }
-  return rest.rpc("run_due_inactivity_jobs_v2", {
+  return await rest.rpc("run_due_inactivity_jobs_v2", {
     p_worker: i.worker_id ?? "shadow-worker",
     p_limit: Math.min(Math.max(i.max_jobs ?? 50, 1), 200),
   });

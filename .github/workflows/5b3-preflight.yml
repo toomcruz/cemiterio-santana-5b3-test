@@ -114,14 +114,20 @@ jobs:
           echo "branch: ${GITHUB_REF_NAME}"
           echo "migrations: $(find database/migrations -maxdepth 1 -type f -name '*.sql' | wc -l)"
 
-          run_check "5B3-DENO-01" "Deno version" "2.1.4" "corrigir setup do Deno" "deno --version; semantic version extraction" bash -c '[[ "$(deno --version | awk "$1 == \"deno\" { print $2; exit }")" == "2.1.4" ]]'
+          if ! command -v rg >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq ripgrep >/dev/null
+          fi
+          rg --version >/dev/null
+
+          run_check "5B3-DENO-01" "Deno version" "2.1.4" "corrigir setup do Deno" "deno --version; semantic version extraction" bash -c '[[ "$(deno --version | sed -n "1p" | cut -d" " -f2)" == "2.1.4" ]]'
           run_check "5B3-SHELL-01" "Shell scripts" "bash syntax valid" "corrigir sintaxe dos scripts" "bash -n four preflight scripts" bash -c 'bash -n tests/postgres/run_all.sh && bash -n tests/postgres/run_concurrency.sh && bash -n tests/postgres/verify_static.sh && bash -n tests/postgres/verify_migration_manifest.sh'
-          run_check "5B3-STATIC-01" "Static package verification" "static verifier exit code 0" "corrigir falha real do verificador estático" "tests/postgres/verify_static.sh" tests/postgres/verify_static.sh
+          run_check "5B3-STATIC-01" "Static package verification" "static verifier exit code 0" "corrigir falha real do verificador estático" "bash tests/postgres/verify_static.sh" bash tests/postgres/verify_static.sh
           run_check "5B3-MANIFEST-01" "Migration manifest" "migrations 0001–0014, sem lacunas ou duplicação" "corrigir manifesto/migrations" "bash tests/postgres/verify_migration_manifest.sh" bash tests/postgres/verify_migration_manifest.sh
           run_check "5B3-FMT-01" "Deno fmt" "exit code 0" "corrigir formatação real reportada pelo Deno" "deno fmt --check edge-functions contracts tests" deno fmt --check edge-functions contracts tests
           run_check "5B3-LINT-01" "Deno lint" "exit code 0" "corrigir lint real reportado pelo Deno" "deno lint edge-functions contracts tests" deno lint edge-functions contracts tests
           run_check "5B3-CHECK-01" "Deno check" "exit code 0 nos entrypoints do shadow-static.yml" "corrigir type-check real reportado pelo Deno" "deno check edge-functions/*/index.ts contracts/*.ts" bash -c 'deno check edge-functions/*/index.ts contracts/*.ts'
-          run_check "5B3-TEST-01" "Deno unit tests" "exit code 0 para tests/unit e tests/shadow" "corrigir teste unitário/estático real reportado pelo Deno" "deno test --allow-env --allow-read --no-net tests/unit tests/shadow" deno test --allow-env --allow-read --no-net tests/unit tests/shadow
+          run_check "5B3-TEST-01" "Deno unit tests" "exit code 0 para tests/unit e tests/shadow" "corrigir teste unitário/estático real reportado pelo Deno" "deno test --allow-env --allow-read tests/unit tests/shadow" deno test --allow-env --allow-read --no-net tests/unit tests/shadow
           run_check "5B3-PG-01" "PostgreSQL client" "psql client disponível, sem servidor local" "instalar somente postgresql-client" "psql --version" bash -c 'command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null); psql --version >/dev/null'
 
           pg_probe="$(mktemp)"

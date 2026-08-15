@@ -8,7 +8,7 @@ export interface ReleaseResolverInput {
 }
 /** Server selects release; optional session id is only an idempotency key for a new session. */
 export async function resolveRelease(i: ReleaseResolverInput, r: SupabaseRest) {
-  return r.rpc("resolve_shadow_session", {
+  return await r.rpc("resolve_shadow_session", {
     p_conversation_id: assertString(i.conversation_id, "conversation_id"),
     p_scope_code: assertString(i.scope_code, "scope_code"),
     p_requested_session_id: i.requested_session_id ?? null,

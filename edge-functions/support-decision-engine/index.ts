@@ -61,6 +61,31 @@ const COMPOSABLE_FIELDS = [
   "validation_requirements",
 ] as const;
 
+function mergeField(plan: Partial<DecisionPlan>, rule: Rule, key: typeof COMPOSABLE_FIELDS[number]): void {
+  switch (key) {
+    case "response_plan":
+      if (plan.response_plan === undefined) plan.response_plan = rule.then_plan.response_plan;
+      break;
+    case "request_plan":
+      if (plan.request_plan === undefined) plan.request_plan = rule.then_plan.request_plan;
+      break;
+    case "document_plan":
+      if (plan.document_plan === undefined) plan.document_plan = rule.then_plan.document_plan;
+      break;
+    case "handoff_plan":
+      if (plan.handoff_plan === undefined) plan.handoff_plan = rule.then_plan.handoff_plan;
+      break;
+    case "state_patch":
+      if (plan.state_patch === undefined) plan.state_patch = rule.then_plan.state_patch;
+      break;
+    case "validation_requirements":
+      if (plan.validation_requirements === undefined) {
+        plan.validation_requirements = rule.then_plan.validation_requirements;
+      }
+      break;
+  }
+}
+
 /** Compatible rules may add distinct allowed plan sections; contradictory values are a real conflict. */
 function mergeCompatible(input: DecisionInput, rules: Rule[]): DecisionPlan | null {
   const base = rules[0]?.then_plan;
@@ -73,7 +98,7 @@ function mergeCompatible(input: DecisionInput, rules: Rule[]): DecisionPlan | nu
       if (current !== undefined && next !== undefined && JSON.stringify(current) !== JSON.stringify(next)) {
         return null;
       }
-      if (current === undefined) plan[key] = next;
+      if (current === undefined) mergeField(plan, rule, key);
     }
     const currentActions = Array.isArray(plan.actions) ? plan.actions : [];
     const nextActions = Array.isArray(rule.then_plan.actions) ? rule.then_plan.actions : [];

@@ -11,9 +11,11 @@ jobs:
       - run: deno fmt --check edge-functions contracts tests
       - run: deno lint edge-functions contracts tests
       - run: deno check edge-functions/*/index.ts contracts/*.ts
-      - run: deno test --allow-env --allow-read --no-net tests
-      - run: tests/postgres/verify_migration_manifest.sh
-      - run: test -x tests/postgres/run_all.sh && test -x tests/postgres/run_concurrency.sh && test -x tests/postgres/verify_static.sh && test -x tests/postgres/verify_migration_manifest.sh && bash -n tests/postgres/run_all.sh tests/postgres/run_concurrency.sh tests/postgres/verify_static.sh tests/postgres/verify_migration_manifest.sh && tests/postgres/verify_static.sh
+      - run: deno test --allow-env --allow-read tests/unit tests/shadow
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ripgrep >/dev/null
+      - run: rg --version
+      - run: bash tests/postgres/verify_migration_manifest.sh
+      - run: bash -n tests/postgres/run_all.sh tests/postgres/run_concurrency.sh tests/postgres/verify_static.sh tests/postgres/verify_migration_manifest.sh && bash tests/postgres/verify_static.sh
       - run: '! rg -ni "TODO|IMPLEMENTAR|EXECUTAR MANUALMENTE|SIMULAR|select .+instruction" tests/postgres/p*.sql tests/postgres/run_*.sh'
       - run: '! rg -n "(postgres(ql)?://[^$[:space:]]+:[^$[:space:]]+@|SUPABASE_SERVICE_ROLE_KEY=|password=)" tests/postgres .github/workflows'
       - run: '! rg -n "support-flow-context|support-hybrid-router" edge-functions contracts && ! rg -n "service_\\*" edge-functions contracts'
