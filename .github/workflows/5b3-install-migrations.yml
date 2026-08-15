@@ -120,6 +120,9 @@ jobs:
           fi
           printf 'DATABASE INTROSPECTION: PASS\n'
           sanitize "$tmp_dir/probe.out"
+          identity_probe="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc "select current_database() || '|user=' || current_user || '|addr=' || coalesce(inet_server_addr()::text, 'local') || '|port=' || inet_server_port()::text || '|version=' || split_part(version(), ' ', 2);")"
+          [[ "$identity_probe" == *"|user="* ]] || fail "database identity result malformed"
+          printf 'DATABASE IDENTITY: %s\n' "$identity_probe"
 
           schema_exists="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
             "select exists (select 1 from pg_namespace where nspname = 'support_vnext_shadow');")"
