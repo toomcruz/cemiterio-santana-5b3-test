@@ -69,13 +69,13 @@ jobs:
             expected_number="$(printf '%04d' "$((index + 1))")"
             file="${migration_files[$index]}"
             [[ "$file" == "${expected_number}"_* ]] || \
-              fail "migration order/gap at ${file}"
+              fail "migration order/gap at $file"
             printf 'MIGRATION FILE: %s\n' "$file"
 
             base_hash="$(git show "${APPROVED_BASE_COMMIT}:database/migrations/${file}" | sha256sum | awk '{print $1}')"
             current_hash="$(sha256sum "database/migrations/${file}" | awk '{print $1}')"
             [[ "$base_hash" == "$current_hash" ]] || \
-              fail "migration bytes differ from approved base: ${file}"
+              fail "migration bytes differ from approved base: $file"
             printf 'MIGRATION SHA256: %s %s\n' "$file" "$current_hash"
           done
 
@@ -87,9 +87,13 @@ jobs:
         run: |
           set -Eeuo pipefail
 
-          [[ -n "${DATABASE_URL:-}" ]] || {
-            printf '5B.3-B BLOCKED — DATABASE_URL is not configured\n' >&2
+          fail() {
+            printf '5B.3-B BLOCKED — %s\n' "$1" >&2
             exit 1
+          }
+
+          [[ -n "${DATABASE_URL:-}" ]] || {
+            fail "DATABASE_URL is not configured"
           }
 
           tmp_dir="$(mktemp -d)"
