@@ -99,8 +99,7 @@ jobs:
           IDENTITY_FINGERPRINT: ${{ needs.database-identity-gate.outputs.identity_match }}
         run: |
           set -Eeuo pipefail
-          evidence_dir="$(mktemp -d)"
-          trap 'rm -rf "$evidence_dir"' EXIT
+          evidence_file="$GITHUB_WORKSPACE/5b3-controlled-validation-evidence.txt"
           {
             printf '5B.3 CONTROLLED VALIDATION\n'
             printf 'RUN ID: %s\n' "${{ github.run_id }}"
@@ -119,16 +118,16 @@ jobs:
             printf 'POST-INSTALL: included in installer result\n'
             printf 'DATABASE FINGERPRINT MATCH: %s\n' "$IDENTITY_FINGERPRINT"
             printf 'TIMESTAMP UTC: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          } | tee "$evidence_dir/evidence.txt" >> "$GITHUB_STEP_SUMMARY"
+          } | tee "$evidence_file" >> "$GITHUB_STEP_SUMMARY"
           if [[ "$SHADOW_RESULT" == success && "$RESET_RESULT" == success && "$PREFLIGHT_RESULT" == success && "$IDENTITY_RESULT" == success && "$INSTALL_RESULT" == success ]]; then
-            printf 'FINAL: 5B.3 INSTALLATION STAGE PASS\n' | tee -a "$GITHUB_STEP_SUMMARY" "$evidence_dir/evidence.txt"
+            printf 'FINAL: 5B.3 INSTALLATION STAGE PASS\n' | tee -a "$GITHUB_STEP_SUMMARY" "$evidence_file"
           else
-            printf 'FINAL: 5B.3 BLOCKED\n' | tee -a "$GITHUB_STEP_SUMMARY" "$evidence_dir/evidence.txt"
+            printf 'FINAL: 5B.3 BLOCKED\n' | tee -a "$GITHUB_STEP_SUMMARY" "$evidence_file"
           fi
 
       - name: Upload evidence artifact
         uses: actions/upload-artifact@v4
         with:
           name: 5b3-controlled-validation-evidence
-          path: evidence.txt
+          path: 5b3-controlled-validation-evidence.txt
           if-no-files-found: error
