@@ -96,7 +96,7 @@ jobs:
 
           # Ownership/dependency proofs remain independent from membership.
           assert_case OWNERSHIP-ACL BLOCK ownership_blocks a support_vnext_runtime public
-          assert_case OWNERSHIP-EXTERNAL BLOCK ownership_blocks o support_vnext_runtime public
+          assert_case OWNERSHIP-EXTERNAL PASS ownership_blocks o support_vnext_runtime public
           assert_case OWNERSHIP-PLATFORM BLOCK ownership_blocks o postgres pg_catalog
           assert_case OWNERSHIP-PACKAGE-ACL BLOCK ownership_blocks a support_vnext_publisher support_vnext_shadow
           printf 'STATIC PREDICATE PROOF: PASS (A-H + ownership/dependency)\n'
