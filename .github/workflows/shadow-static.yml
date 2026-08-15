@@ -9,6 +9,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.0'
+      - name: Install pinned actionlint
+        run: go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+      - name: Validate all GitHub workflows with actionlint
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mapfile -t workflow_files < <(find .github/workflows -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) -print | sort)
+          ((${#workflow_files[@]} > 0))
+          "$HOME/go/bin/actionlint" "${workflow_files[@]}"
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.1.4
