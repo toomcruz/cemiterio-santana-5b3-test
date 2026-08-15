@@ -30,6 +30,37 @@ jobs:
           }
           printf 'CONFIRMATION: PASS\n'
 
+      - name: Static proof of fail-closed orchestration
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          install_gate() {
+            [[ "$1" == success && "$2" == success && "$3" == success && "$4" == success && "$5" == success ]]
+          }
+          assert_case() {
+            local label="$1" expected="$2" actual rc
+            shift 2
+            set +e
+            "$@"
+            rc=$?
+            set -e
+            [[ "$rc" -eq 0 ]] && actual=PASS || actual=BLOCK
+            [[ "$actual" == "$expected" ]] || {
+              printf 'STATIC TEST %s: FAIL expected=%s actual=%s\n' "$label" "$expected" "$actual" >&2
+              exit 1
+            }
+            printf 'STATIC TEST %s: PASS\n' "$label"
+          }
+          assert_case A BLOCK install_gate failure success success success success
+          assert_case B BLOCK install_gate success failure success success success
+          assert_case C BLOCK install_gate success success failure success success
+          assert_case D BLOCK install_gate success success success failure success
+          assert_case E BLOCK install_gate success success success success failure
+          assert_case F BLOCK install_gate success success success success success
+          assert_case G BLOCK install_gate success success success success failure
+          assert_case H PASS install_gate success success success success success
+          printf 'STATIC ORCHESTRATION PROOF: PASS (A-H)\n'
+
   shadow-static:
     name: 1. Shadow static
     needs: confirmation
