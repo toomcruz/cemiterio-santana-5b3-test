@@ -2,6 +2,8 @@ name: 5B.3-BR Reset Isolated Lab
 
 on:
   workflow_dispatch:
+  workflow_call:
+
 
 permissions:
   contents: read
@@ -10,6 +12,8 @@ jobs:
   reset:
     name: Controlled reset of partial laboratory
     runs-on: ubuntu-latest
+    outputs:
+      database_identity_fingerprint: ${{ steps.post_reset.outputs.database_identity_fingerprint }}
     env:
       SUPPORT_VNEXT_VALIDATION_ENV: ${{ vars.SUPPORT_VNEXT_VALIDATION_ENV }}
       SUPABASE_URL: ${{ vars.SUPABASE_URL }}
@@ -309,6 +313,7 @@ jobs:
           printf 'DIRECTED RESET: PASS\n'
 
       - name: Read-only post-reset verification
+        id: post_reset
         shell: bash
         run: |
           set -Eeuo pipefail
