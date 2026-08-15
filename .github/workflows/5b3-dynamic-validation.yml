@@ -22,7 +22,7 @@ jobs:
     env:
       SUPPORT_VNEXT_VALIDATION_ENV: ISOLATED_5B3
       SUPPORT_VNEXT_TEST_ENV: "1"
-      EXPECTED_PROJECT_REF: qyrxpbvdmpftcygsmws
+      EXPECTED_PROJECT_REF: qyrxpbvdmpftfcygsmws
       PACKAGE_PIN: dc7bf2798f88b5956f28d1c381bc083b3849dfdf
     steps:
       - name: Validate explicit confirmation

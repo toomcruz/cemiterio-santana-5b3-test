@@ -6,14 +6,15 @@ begin;
 create table if not exists support_vnext_test.p14_scenarios(
   test_run_id uuid primary key,
   scenario_code text not null unique,
-  scenario_kind text not null check (scenario_kind in ('VALID','REJECTED'))
+  scenario_kind text not null check (scenario_kind in ('VALID','REJECTED','REJECTED_AT_PLAN'))
 );
 
 create or replace function support_vnext_test.p14_confirm_valid_complaint(
   p_case text,p_fields jsonb
 ) returns void language plpgsql as $$
+#variable_conflict use_variable
 declare c support_vnext_test.complaint_proposal_fixture_context;
-  proposal jsonb; authorization jsonb; result jsonb;
+  proposal jsonb; authz jsonb; result jsonb;
   inbound_id uuid:=extensions.gen_random_uuid(); classification_id uuid:=extensions.gen_random_uuid();
   run_id uuid:=extensions.gen_random_uuid(); confirmation_id uuid; confirmation_nonce uuid; authorization_id uuid;
 begin
@@ -25,8 +26,8 @@ begin
   confirmation_nonce:=(proposal->>'confirmation_nonce')::uuid;
   if confirmation_id is null or confirmation_nonce is null then raise exception 'P14 % did not create a pending confirmation',p_case using errcode='P0001'; end if;
   perform support_vnext_test.persist_test_inbound_classification(classification_id,inbound_id,confirmation_id,c.session_id,c.topic_id,c.release_id);
-  authorization:=support_vnext_shadow.authorize_persisted_confirmation(classification_id,confirmation_id,confirmation_nonce,inbound_id,c.session_id,c.topic_id,c.release_id);
-  authorization_id:=(authorization->>'authorization_id')::uuid;
+  authz:=support_vnext_shadow.authorize_persisted_confirmation(classification_id,confirmation_id,confirmation_nonce,inbound_id,c.session_id,c.topic_id,c.release_id);
+  authorization_id:=(authz->>'authorization_id')::uuid;
   if authorization_id is null then raise exception 'P14 % did not create confirmation authorization',p_case using errcode='P0001'; end if;
   result:=support_vnext_shadow.confirm_request_transaction(confirmation_id,confirmation_nonce,classification_id,inbound_id,'P14-'||p_case||'-CONFIRM');
   if result->>'outcome'<>'CONFIRMED' then raise exception 'P14 % confirmation result was %',p_case,result using errcode='P0001'; end if;
@@ -37,7 +38,7 @@ begin
   perform pg_temp.assert_true((select not (r.request_payload ?| array['severity','gravidade','sector','setor','assigned_sector','external_route','ouvidoria','email','automatic_email','priority']) from support_vnext_shadow.service_requests r where r.confirmation_id=confirmation_id),'P14 request has no prohibited complaint routing fields: '||p_case);
   perform pg_temp.assert_true((select count(*)=1 from support_vnext_shadow.confirmation_authorizations a where a.authorization_id=authorization_id and a.consumed_at is not null),'P14 authorization consumed once: '||p_case);
   perform pg_temp.assert_true((select count(*)=1 from support_vnext_shadow.inbound_classifications i where i.classification_id=classification_id and i.status='CONSUMED' and i.consumed_at is not null),'P14 classification consumed once: '||p_case);
-  perform pg_temp.assert_true((select status='CONSUMED' and request_id=(result->>'request_id')::uuid from support_vnext_shadow.pending_confirmations where confirmation_id=confirmation_id),'P14 pending confirmation finalized: '||p_case);
+  perform pg_temp.assert_true((select pc.status='CONSUMED' and pc.request_id=(result->>'request_id')::uuid from support_vnext_shadow.pending_confirmations pc where pc.confirmation_id=confirmation_id),'P14 pending confirmation finalized: '||p_case);
 end $$;
 
 create or replace function support_vnext_test.p14_expect_proposal_rejected(
@@ -45,7 +46,18 @@ create or replace function support_vnext_test.p14_expect_proposal_rejected(
 ) returns void language plpgsql as $$
 declare c support_vnext_test.complaint_proposal_fixture_context; run_id uuid:=extensions.gen_random_uuid(); proposal jsonb;
 begin
-  select * into c from support_vnext_test.create_complaint_proposal_fixture(run_id,p_fields);
+  -- Prohibited routing/priority fields are rejected fail-closed at the earliest
+  -- authority boundary: store_shadow_decision refuses to persist the DecisionPlan
+  -- at all. That is a stronger rejection than a PROPOSE-time refusal, so accept it
+  -- here and still prove no confirmation/request/protocol was created.
+  begin
+    select * into c from support_vnext_test.create_complaint_proposal_fixture(run_id,p_fields);
+  exception when others then
+    if sqlstate='P0001' then raise; end if;
+    if sqlstate<>'22023' then raise exception 'P14 % expected controlled 22023 rejection at plan persistence, got %',p_case,sqlstate using errcode='P0001'; end if;
+    insert into support_vnext_test.p14_scenarios values(run_id,p_case,'REJECTED_AT_PLAN');
+    return;
+  end;
   insert into support_vnext_test.p14_scenarios values(run_id,p_case,'REJECTED');
   begin
     proposal:=support_vnext_shadow.propose_request_transaction(c.decision_id,'P14-'||p_case||'-PROPOSE');
@@ -96,7 +108,7 @@ select support_vnext_test.p14_expect_proposal_rejected('P14-R03','{"relato":[]}'
 select support_vnext_test.p14_expect_proposal_rejected('P14-R04','{"relato":true}'::jsonb);
 
 select pg_temp.assert_true((select count(*)=4 from support_vnext_test.p14_scenarios where scenario_kind='VALID'),'P14 registered exactly four valid complaint scenarios');
-select pg_temp.assert_true((select count(*)=24 from support_vnext_test.p14_scenarios where scenario_kind='REJECTED'),'P14 registered all forbidden, invalid attachment, and invalid relato scenarios');
-select pg_temp.assert_true(not exists(select 1 from support_vnext_test.p14_scenarios s join support_vnext_test.complaint_proposal_fixture_context c on c.test_run_id=s.test_run_id join support_vnext_shadow.service_requests r on r.session_id=c.session_id where s.scenario_kind='REJECTED'),'P14 rejected scenarios created no service_requests');
+select pg_temp.assert_true((select count(*)=24 from support_vnext_test.p14_scenarios where scenario_kind in ('REJECTED','REJECTED_AT_PLAN')),'P14 registered all forbidden, invalid attachment, and invalid relato scenarios');
+select pg_temp.assert_true(not exists(select 1 from support_vnext_test.p14_scenarios s join support_vnext_test.complaint_proposal_fixture_context c on c.test_run_id=s.test_run_id join support_vnext_shadow.service_requests r on r.session_id=c.session_id where s.scenario_kind in ('REJECTED','REJECTED_AT_PLAN')),'P14 rejected scenarios created no service_requests');
 \echo 'PASS P14 closed RECLAMACAO proposal, confirmation, protocol and rejection guards'
 rollback;

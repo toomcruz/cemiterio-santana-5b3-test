@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   install:
-    name: Install 0001-0015 in isolated Supabase
+    name: Install 0001-0019 in isolated Supabase
     runs-on: ubuntu-latest
     env:
       SUPPORT_VNEXT_VALIDATION_ENV: ${{ vars.SUPPORT_VNEXT_VALIDATION_ENV }}
@@ -63,8 +63,8 @@ jobs:
           mapfile -t migration_files < <(
             find database/migrations -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort
           )
-          [[ "${#migration_files[@]}" -eq 15 ]] || \
-            fail "expected 15 migration files, found ${#migration_files[@]}"
+          [[ "${#migration_files[@]}" -eq 19 ]] || \
+            fail "expected 19 migration files, found ${#migration_files[@]}"
 
           printf 'MIGRATION COUNT: %s\n' "${#migration_files[@]}"
           for index in "${!migration_files[@]}"; do
@@ -218,7 +218,7 @@ jobs:
           view_count="$(psql_read "select count(*) from information_schema.views where table_schema = 'support_vnext_shadow';")"
           function_count="$(psql_read "select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'support_vnext_shadow' and p.prokind in ('f','p');")"
           printf 'OBJECT COUNTS: tables=%s views=%s functions_procedures=%s\n' "$table_count" "$view_count" "$function_count"
-          printf '5B.3-B PASS — MIGRATIONS 0001–0014 INSTALLED IN ISOLATED LABORATORY\n'
+          printf '5B.3-B PASS — MIGRATIONS 0001–0019 INSTALLED IN ISOLATED LABORATORY\n'
           printf 'COMMIT SHA: %s\n' "$GITHUB_SHA"
           printf 'PROJECT REF: qyrxpbvdmpftfcygsmws\n'
           printf 'MIGRATIONS: 15/15 PASS\n'

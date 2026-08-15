@@ -13,7 +13,7 @@ insert into support_vnext_test.p00_classifier_contract_scenarios(scenario_code) 
 select extensions.gen_random_uuid() as test_run_id \gset
 select support_vnext_test.create_confirmation_fixture(:'test_run_id'::uuid,false,false);
 select * from support_vnext_test.confirmation_fixture_context where test_run_id=:'test_run_id'::uuid \gset
-select support_vnext_test.ensure_classifier_authority() \gset authority_
+select * from support_vnext_test.ensure_classifier_authority() \gset authority_
 select support_vnext_shadow.persist_shadow_inbound_message(:'inbound_message_id'::uuid,:'session_id'::uuid,:'topic_id'::uuid,:'release_id'::uuid,'support_vnext_test inbound '||:'inbound_message_id');
 
 -- AUTH-01: service_role-shaped caller has no authority key/assertion and cannot fabricate affirmative.
@@ -23,7 +23,7 @@ select pg_temp.assert_true((select count(*)=0 from support_vnext_shadow.inbound_
 select pg_temp.expect_error(format($q$select support_vnext_shadow.persist_inbound_classification(gen_random_uuid(),%L::uuid,%L::uuid,%L::uuid,%L::uuid,%L::uuid,'CONFIRMATION_AFFIRMATIVE','OK','DETERMINISTIC','runtime',%L::uuid,gen_random_uuid(),repeat('0',64))$q$,:'inbound_message_id',:'confirmation_id',:'session_id',:'topic_id',:'release_id',:'authority_authority_key_id'),'22023');
 -- AUTH-03: assertion material for inbound A cannot be used for inbound B.
 select extensions.gen_random_uuid() as inbound_b \gset
-select support_vnext_shadow.persist_shadow_inbound_message(:'inbound_b'::uuid,:'session_id'::uuid,:'topic_id'::uuid,:'release_id'::uuid,'different inbound B');
+select support_vnext_shadow.persist_shadow_inbound_message(:'inbound_b'::uuid,:'session_id'::uuid,:'topic_id'::uuid,:'release_id'::uuid,'support_vnext_test inbound '||:'inbound_b');
 select content_hash as content_hash_a from support_vnext_shadow.inbound_messages where inbound_message_id=:'inbound_message_id'::uuid \gset
 select extensions.gen_random_uuid() as authority_nonce \gset
 select support_vnext_shadow.classifier_assertion_material(:'inbound_message_id'::uuid,:'content_hash_a'::char(64),:'confirmation_id'::uuid,:'session_id'::uuid,:'topic_id'::uuid,:'release_id'::uuid,'CONFIRMATION_AFFIRMATIVE','OK','support-vnext-test-classifier-v1',:'authority_nonce'::uuid) as material \gset
