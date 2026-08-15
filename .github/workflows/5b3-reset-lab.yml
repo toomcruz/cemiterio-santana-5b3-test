@@ -1,0 +1,188 @@
+name: 5B.3-BR Reset Isolated Lab
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reset:
+    name: Controlled reset of partial laboratory
+    runs-on: ubuntu-latest
+    env:
+      SUPPORT_VNEXT_VALIDATION_ENV: ${{ vars.SUPPORT_VNEXT_VALIDATION_ENV }}
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      EXPECTED_0007_SHA256: 4ac5315ff2876f04ab73d50376075bf9c09835492c2844598a30d2be8657a2d5
+
+    steps:
+      - name: Checkout selected commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 1
+
+      - name: Install PostgreSQL client and audit package
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client ripgrep >/dev/null
+          psql --version
+          rg --version
+          printf 'COMMIT SHA: %s\n' "$GITHUB_SHA"
+          printf 'BRANCH: %s\n' "$GITHUB_REF_NAME"
+          actual_0007_sha256="$(sha256sum database/migrations/0007_5b2c3_static_completion.sql | awk '{print $1}')"
+          [[ "$actual_0007_sha256" == "$EXPECTED_0007_SHA256" ]] || {
+            printf '5B.3-BR BLOCKED — corrected 0007 hash mismatch\n' >&2
+            exit 1
+          }
+          printf '0007 SHA256: %s\n' "$actual_0007_sha256"
+
+          printf 'STATIC OBJECT SOURCES 0001-0006\n'
+          rg -n --glob 'database/migrations/000[1-6]_*.sql' \
+            '^[[:space:]]*(create|alter|drop|grant|revoke)[[:space:]]+(extension|schema|table|type|index|function|procedure|trigger|role|policy|sequence)|create[[:space:]]+role|create[[:space:]]+extension' \
+            database/migrations
+
+      - name: Guard and read-only pre-reset audit
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          fail() {
+            printf '5B.3-BR BLOCKED — %s\n' "$1" >&2
+            exit 1
+          }
+
+          [[ "${SUPPORT_VNEXT_VALIDATION_ENV:-}" == "ISOLATED_5B3" ]] || \
+            fail "environment guard failed"
+          case "${SUPABASE_URL:-}" in
+            *qyrxpbvdmpftfcygsmws*) ;;
+            *) fail "expected isolated project guard failed" ;;
+          esac
+          [[ -n "${DATABASE_URL:-}" ]] || fail "DATABASE_URL is not configured"
+
+          audit_dir="$(mktemp -d)"
+          trap 'rm -rf "$audit_dir"' EXIT
+
+          sanitize() {
+            sed -En \
+              -e 's#(postgres(ql)?://)[^[:space:]]+#\1[REDACTED]#g' \
+              -e 's#(credential|passwd|secret|token|apikey)[=:][^[:space:]]+#\1=[REDACTED]#gi' \
+              -e '1,30p' "$1"
+          }
+
+          set +e
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc 'select 1;' \
+            >"$audit_dir/connection.out" 2>"$audit_dir/connection.err"
+          connection_rc=$?
+          set -e
+          [[ "$connection_rc" -eq 0 ]] || {
+            printf 'STEP: connection\nOBJECT: database\nCOMMAND CATEGORY: read-only probe\nEXIT CODE: %s\nERROR CATEGORY: sanitized connection failure\n' "$connection_rc" >&2
+            sanitize "$audit_dir/connection.err" >&2
+            exit "$connection_rc"
+          }
+          printf 'DATABASE CONNECTION: PASS\n'
+
+          schema_exists="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select exists (select 1 from pg_namespace where nspname='support_vnext_shadow');")"
+          [[ "$schema_exists" == "t" ]] || fail "partial-state schema is absent"
+          printf 'PARTIAL STATE: support_vnext_shadow PRESENT\n'
+
+          printf 'SCHEMA OBJECTS\n'
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select n.nspname || '.' || c.relname || ':' || c.relkind from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='support_vnext_shadow' order by 1;"
+          printf 'SCHEMA FUNCTIONS AND PROCEDURES\n'
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='support_vnext_shadow' and p.prokind in ('f','p') order by 1;"
+          printf 'SCHEMA TRIGGERS\n'
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select trigger_schema || '.' || event_object_table || ':' || trigger_name from information_schema.triggers where trigger_schema='support_vnext_shadow' order by 1;"
+          printf 'SCHEMA POLICIES\n'
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select schemaname || '.' || tablename || ':' || policyname from pg_policies where schemaname='support_vnext_shadow' order by 1;"
+
+          printf 'PACKAGE ROLES\n'
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select rolname || ':LOGIN=' || rolcanlogin || ':SUPERUSER=' || rolsuper from pg_roles where rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') order by 1;"
+          printf 'ROLE MEMBERSHIPS\n'
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select parent.rolname || '<-' || member.rolname from pg_auth_members m join pg_roles parent on parent.oid=m.roleid join pg_roles member on member.oid=m.member where parent.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') or member.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') order by 1;"
+          printf 'ROLE OWNERSHIP OUTSIDE PACKAGE SCHEMA\n'
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select r.rolname || ':' || coalesce(n.nspname,'<shared>') || '.' || coalesce(c.relname,'<object>') from pg_roles r left join pg_class c on c.relowner=r.oid left join pg_namespace n on n.oid=c.relnamespace where r.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and (c.oid is null or n.nspname <> 'support_vnext_shadow') order by 1;"
+          printf 'ROLE TABLE GRANTS OUTSIDE PACKAGE SCHEMA\n'
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select grantee || ':' || table_schema || '.' || table_name || ':' || privilege_type from information_schema.role_table_grants where grantee in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and table_schema <> 'support_vnext_shadow' order by 1;"
+          printf 'ROLE ROUTINE GRANTS OUTSIDE PACKAGE SCHEMA\n'
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select grantee || ':' || routine_schema || '.' || routine_name || ':' || privilege_type from information_schema.role_routine_grants where grantee in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and routine_schema <> 'support_vnext_shadow' order by 1;"
+
+          printf 'EXTENSIONS\n'
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select e.extname || ':schema=' || n.nspname || ':version=' || e.extversion from pg_extension e join pg_namespace n on n.oid=e.extnamespace order by 1;"
+          printf 'PUBLIC TABLES\n'
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select table_name from information_schema.tables where table_schema='public' order by 1;"
+
+          external_owners="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select count(*) from pg_roles r join pg_class c on c.relowner=r.oid join pg_namespace n on n.oid=c.relnamespace where r.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and n.nspname <> 'support_vnext_shadow';")"
+          memberships="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select count(*) from pg_auth_members m join pg_roles parent on parent.oid=m.roleid join pg_roles member on member.oid=m.member where parent.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') or member.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin');")"
+          external_table_grants="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select count(*) from information_schema.role_table_grants where grantee in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and table_schema <> 'support_vnext_shadow';")"
+          external_routine_grants="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select count(*) from information_schema.role_routine_grants where grantee in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and routine_schema <> 'support_vnext_shadow';")"
+          [[ "$external_owners" == "0" ]] || fail "package role owns an external object"
+          [[ "$memberships" == "0" ]] || fail "package role has an unexpected membership"
+          [[ "$external_table_grants" == "0" ]] || fail "package role has external table grants"
+          [[ "$external_routine_grants" == "0" ]] || fail "package role has external routine grants"
+          printf 'PRE-RESET DEPENDENCY GUARD: PASS\n'
+
+      - name: Remove only package schema and package roles
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          reset_log="$(mktemp)"
+          trap 'rm -f "$reset_log"' EXIT
+          set +e
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -X \
+            -c 'begin; drop schema support_vnext_shadow cascade; drop role support_vnext_runtime; drop role support_vnext_publisher; drop role support_vnext_auditor; drop role support_vnext_admin; commit;' \
+            >"$reset_log" 2>&1
+          reset_rc=$?
+          set -e
+          if [[ "$reset_rc" -ne 0 ]]; then
+            printf 'STEP: directed reset\nOBJECT: support_vnext_shadow/package roles\nCOMMAND CATEGORY: targeted schema and role removal\nEXIT CODE: %s\n' "$reset_rc" >&2
+            sed -En \
+              -e 's#(postgres(ql)?://)[^[:space:]]+#\1[REDACTED]#g' \
+              -e 's#(credential|passwd|secret|token|apikey)[=:][^[:space:]]+#\1=[REDACTED]#gi' \
+              -e '/ERROR:|FATAL:|DETAIL:|HINT:/p' "$reset_log" | sed -n '1,30p' >&2
+            exit "$reset_rc"
+          fi
+          printf 'DIRECTED RESET: PASS\n'
+
+      - name: Read-only post-reset verification
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          psql_read() { psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc "$1"; }
+
+          schema_count="$(psql_read "select count(*) from pg_namespace where nspname='support_vnext_shadow';")"
+          role_count="$(psql_read "select count(*) from pg_roles where rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin');")"
+          [[ "$schema_count" == "0" ]] || { printf 'POST-RESET FAIL: schema present\n' >&2; exit 1; }
+          [[ "$role_count" == "0" ]] || { printf 'POST-RESET FAIL: package role present\n' >&2; exit 1; }
+          printf 'support_vnext_shadow: ABSENT\n'
+          printf 'PACKAGE ROLES: ABSENT\n'
+          printf 'PACKAGE TABLES: ABSENT\n'
+          printf 'PACKAGE FUNCTIONS: ABSENT\n'
+          printf 'PACKAGE POLICIES: ABSENT\n'
+          printf 'PACKAGE TRIGGERS: ABSENT\n'
+          printf 'PUBLIC TABLES CREATED BY 0001-0006: 0\n'
+          printf 'EXTENSIONS REMAINING\n'
+          psql_read "select e.extname || ':schema=' || n.nspname || ':classification=PREEXISTING/PLATFORM-COMPATIBLE' from pg_extension e join pg_namespace n on n.oid=e.extnamespace order by 1;"
+          printf 'NO DROP EXTENSION USED\n'
+          printf 'NO DROP OWNED USED\n'
+          printf 'NO MIGRATIONS EXECUTED\n'
+          printf '5B.3-BR RESET PASS — LABORATORY READY FOR STATIC AND PREFLIGHT REVALIDATION\n'
+          printf 'NEXT: shadow-static, 5B.3-A preflight, then update 5B.3-B pin before reinstalling 0001-0014\n'
