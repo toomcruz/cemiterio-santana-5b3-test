@@ -206,7 +206,7 @@ jobs:
           name: 5b3-controlled-validation-evidence
           path: 5b3-controlled-validation-evidence.txt
           if-no-files-found: error
-\r'* || "$confirmation" == *      - name: Static proof of fail-closed orchestration
+      - name: Static proof of fail-closed orchestration
         shell: bash
         run: |
           set -Eeuo pipefail
