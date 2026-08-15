@@ -7,6 +7,16 @@ on:
         description: "Digite RESET_AND_INSTALL_5B3 para autorizar reset e instalação"
         required: true
         type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: 5b3-isolated-lab
+  cancel-in-progress: false
+
+jobs:
+  confirmation:
     name: Validate explicit confirmation
     runs-on: ubuntu-latest
     steps:
