@@ -1,0 +1,134 @@
+name: 5B.3 Controlled Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Digite RESET_AND_INSTALL_5B3 para autorizar reset e instalação"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: 5b3-isolated-lab
+  cancel-in-progress: false
+
+jobs:
+  confirmation:
+    name: Validate explicit confirmation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate confirmation
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "${{ inputs.confirmation }}" == "RESET_AND_INSTALL_5B3" ]] || {
+            printf '5B.3 BLOCKED — invalid confirmation\n' >&2
+            exit 1
+          }
+          printf 'CONFIRMATION: PASS\n'
+
+  shadow-static:
+    name: 1. Shadow static
+    needs: confirmation
+    uses: ./.github/workflows/shadow-static.yml
+    secrets: inherit
+
+  reset:
+    name: 2. Controlled reset
+    needs: shadow-static
+    uses: ./.github/workflows/5b3-reset-lab.yml
+    secrets: inherit
+
+  preflight:
+    name: 3. Preflight
+    needs: reset
+    uses: ./.github/workflows/5b3-preflight.yml
+    secrets: inherit
+
+  database-identity-gate:
+    name: 4. Database identity gate
+    needs: [reset, preflight]
+    runs-on: ubuntu-latest
+    outputs:
+      identity_match: ${{ steps.compare.outputs.identity_match }}
+    steps:
+      - name: Compare reset and preflight fingerprints
+        id: compare
+        shell: bash
+        env:
+          RESET_FINGERPRINT: ${{ needs.reset.outputs.database_identity_fingerprint }}
+          PREFLIGHT_FINGERPRINT: ${{ needs.preflight.outputs.database_identity_fingerprint }}
+        run: |
+          set -Eeuo pipefail
+          [[ -n "$RESET_FINGERPRINT" && -n "$PREFLIGHT_FINGERPRINT" ]] || {
+            printf '5B.3 BLOCKED — database identity fingerprint missing\n' >&2
+            exit 1
+          }
+          if [[ "$RESET_FINGERPRINT" != "$PREFLIGHT_FINGERPRINT" ]]; then
+            printf '5B.3 BLOCKED — DATABASE IDENTITY MISMATCH\n' >&2
+            exit 1
+          fi
+          printf 'DATABASE IDENTITY: PASS\n'
+          printf 'database_identity_fingerprint=%s\n' "$RESET_FINGERPRINT" >> "$GITHUB_OUTPUT"
+          printf 'identity_match=true\n' >> "$GITHUB_OUTPUT"
+
+  install:
+    name: 5. Install migrations 0001-0014
+    needs: database-identity-gate
+    uses: ./.github/workflows/5b3-install-migrations.yml
+    secrets: inherit
+
+  final-summary:
+    name: 6. Final summary and evidence
+    if: always()
+    needs: [confirmation, shadow-static, reset, preflight, database-identity-gate, install]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write summary and evidence
+        shell: bash
+        env:
+          CONFIRMATION_RESULT: ${{ needs.confirmation.result }}
+          SHADOW_RESULT: ${{ needs.shadow-static.result }}
+          RESET_RESULT: ${{ needs.reset.result }}
+          PREFLIGHT_RESULT: ${{ needs.preflight.result }}
+          IDENTITY_RESULT: ${{ needs.database-identity-gate.result }}
+          INSTALL_RESULT: ${{ needs.install.result }}
+          IDENTITY_FINGERPRINT: ${{ needs.database-identity-gate.outputs.identity_match }}
+        run: |
+          set -Eeuo pipefail
+          evidence_dir="$(mktemp -d)"
+          trap 'rm -rf "$evidence_dir"' EXIT
+          {
+            printf '5B.3 CONTROLLED VALIDATION\n'
+            printf 'RUN ID: %s\n' "${{ github.run_id }}"
+            printf 'GITHUB SHA: %s\n' "${{ github.sha }}"
+            printf 'PACKAGE PIN: dc7bf2798f88b5956f28d1c381bc083b3849dfdf\n'
+            printf '0007 SHA256: 4ac5315ff2876f04ab73d50376075bf9c09835492c2844598a30d2be8657a2d5\n'
+            printf '0008 SHA256: d3447339b379c41e888362d38e178091bdda953c6da95fa4ff4fb3a8b1a44bfb\n'
+            printf '0012 SHA256: 9531f9dbf77702af930da2c0990ad2eece8c992258cc0e571af557dffcd7df16\n'
+            printf 'CONFIRMATION: %s\n' "$CONFIRMATION_RESULT"
+            printf 'SHADOW STATIC: %s\n' "$SHADOW_RESULT"
+            printf 'RESET: %s\n' "$RESET_RESULT"
+            printf 'POST-RESET: included in reset result\n'
+            printf 'PREFLIGHT: %s\n' "$PREFLIGHT_RESULT"
+            printf 'DATABASE IDENTITY: %s\n' "$IDENTITY_RESULT"
+            printf 'MIGRATIONS 0001-0014: %s\n' "$INSTALL_RESULT"
+            printf 'POST-INSTALL: included in installer result\n'
+            printf 'DATABASE FINGERPRINT MATCH: %s\n' "$IDENTITY_FINGERPRINT"
+            printf 'TIMESTAMP UTC: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } | tee "$evidence_dir/evidence.txt" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$SHADOW_RESULT" == success && "$RESET_RESULT" == success && "$PREFLIGHT_RESULT" == success && "$IDENTITY_RESULT" == success && "$INSTALL_RESULT" == success ]]; then
+            printf 'FINAL: 5B.3 INSTALLATION STAGE PASS\n' | tee -a "$GITHUB_STEP_SUMMARY" "$evidence_dir/evidence.txt"
+          else
+            printf 'FINAL: 5B.3 BLOCKED\n' | tee -a "$GITHUB_STEP_SUMMARY" "$evidence_dir/evidence.txt"
+          fi
+
+      - name: Upload evidence artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: 5b3-controlled-validation-evidence
+          path: evidence.txt
+          if-no-files-found: error
