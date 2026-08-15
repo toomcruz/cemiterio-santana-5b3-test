@@ -7,10 +7,10 @@ import { ids } from "../fixtures/ids.ts";
 import { stateFixture } from "../fixtures/state.ts";
 
 /**
- * Prepared for 5B.3 only. It intentionally remains ignored by static CI: the
- * isolated database must provide the fixture IDs and service-role endpoint.
- * Execute there with Deno 2.1.4 using:
- * deno test --allow-env --allow-net --ignored tests/integration/p10_a_confirmar_integration_test.ts
+ * Prepared for 5B.3 only. It stays skipped unless P10_INTEGRATION=1 is set,
+ * because it needs the isolated database fixture IDs and the service-role
+ * endpoint. Execute there with Deno 2.1.4 using:
+ * P10_INTEGRATION=1 deno test --allow-env --allow-net tests/integration/p10_a_confirmar_integration_test.ts
  */
 async function expectAConfirmarReject(
   label: string,
@@ -35,7 +35,10 @@ async function expectAConfirmarReject(
   throw new Error(`${label} unexpectedly succeeded`);
 }
 
-Deno.test({ name: "P10 integration: database rules -> engine -> renderer/proposal", ignore: true }, async () => {
+Deno.test({
+  name: "P10 integration: database rules -> engine -> renderer/proposal",
+  ignore: Deno.env.get("P10_INTEGRATION") !== "1",
+}, async () => {
   const rest = new SupabaseRest();
   const releaseId = Deno.env.get("P10_RELEASE_ID") ?? ids.release;
   const sessionId = Deno.env.get("P10_SESSION_ID") ?? ids.session;

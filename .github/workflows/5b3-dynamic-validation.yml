@@ -184,7 +184,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           [[ "$SUPABASE_URL" == "$EXPECTED_SUPABASE_URL" ]] || { echo "5B.3-C BLOCKED — P10 endpoint is not the isolated project"; exit 1; }
-          deno test --allow-env --allow-net --ignored tests/integration/p10_a_confirmar_integration_test.ts
+          P10_INTEGRATION=1 deno test --allow-env --allow-net tests/integration/p10_a_confirmar_integration_test.ts
           echo "P10 INTEGRATION: PASS" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: P11-P15
