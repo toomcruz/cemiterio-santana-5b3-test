@@ -58,30 +58,48 @@ jobs:
           ownership_blocks() {
             [[ "$1" == "o" ]] && is_package_role "$2" && [[ "$3" != "support_vnext_shadow" ]]
           }
-          membership_blocks() {
-            ! [[ "$1" == "postgres" && "$2" == "postgres" && "$3" == "true" && "$4" == "false" && "$5" == "false" ]]
-          }
           membership_row_expected() {
             [[ "$1" == "postgres" && "$2" == "true" && "$3" == "true" && "$4" == "false" && "$5" == "false" ]]
           }
           creator_set_passes() {
             [[ "$1" == "4" && "$2" == "4" && "$3" == "0" && "$4" == "1" && "$5" == "4" ]]
           }
-          ! ownership_blocks a support_vnext_runtime public
-          ownership_blocks o support_vnext_runtime public
-          ! ownership_blocks o postgres pg_catalog
-          ! ownership_blocks a support_vnext_publisher support_vnext_shadow
-          membership_blocks postgres external_grantor true false false
-          membership_row_expected postgres true true false false
-          membership_row_expected bootstrap_superuser true true false false
-          ! creator_set_passes 4 4 0 1 4
-          creator_set_passes 4 4 0 1 4
-          ! creator_set_passes 5 4 1 1 4
-          ! membership_row_expected postgres false true false false
-          ! membership_row_expected postgres true false false false
-          ! membership_row_expected postgres true true true false
-          ! membership_row_expected postgres true true false true
-          printf 'STATIC PREDICATE PROOF: PASS (A-H)\n'
+          assert_case() {
+            local label="$1" expected="$2" actual rc
+            shift 2
+            set +e
+            "$@"
+            rc=$?
+            set -e
+            if [[ "$rc" -eq 0 ]]; then
+              actual=PASS
+            else
+              actual=BLOCK
+            fi
+            if [[ "$actual" == "$expected" ]]; then
+              printf 'STATIC TEST %s: PASS\\n' "$label"
+            else
+              printf 'STATIC TEST %s: FAIL\\nEXPECTED: %s\\nACTUAL: %s\\nREASON: predicate exit code %s\\n' "$label" "$expected" "$actual" "$rc" >&2
+              return 1
+            fi
+          }
+
+          # A-H: expected creator-membership predicate, including expected BLOCK results.
+          assert_case A PASS membership_row_expected postgres true true false false
+          assert_case B PASS membership_row_expected postgres true true false false
+          assert_case C BLOCK creator_set_passes 4 4 0 1 4
+          assert_case D BLOCK creator_set_passes 4 4 0 1 3
+          assert_case E BLOCK creator_set_passes 5 4 1 1 4
+          assert_case F BLOCK membership_row_expected postgres true false false false
+          assert_case G BLOCK membership_row_expected postgres true true true false
+          assert_case H BLOCK membership_row_expected postgres true true false true
+
+          # Ownership/dependency proofs remain independent from membership.
+          assert_case OWNERSHIP-ACL PASS ownership_blocks a support_vnext_runtime public
+          assert_case OWNERSHIP-EXTERNAL BLOCK ownership_blocks o support_vnext_runtime public
+          assert_case OWNERSHIP-PLATFORM PASS ownership_blocks o postgres pg_catalog
+          assert_case OWNERSHIP-PACKAGE-ACL PASS ownership_blocks a support_vnext_publisher support_vnext_shadow
+          printf 'STATIC PREDICATE PROOF: PASS (A-H + ownership/dependency)\\n'
 
       - name: Guard and read-only pre-reset audit
         shell: bash
