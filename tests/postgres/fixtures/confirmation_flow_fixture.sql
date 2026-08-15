@@ -9,10 +9,10 @@ declare r support_vnext_test.classifier_authority_fixture_context;
 begin
  select * into r from support_vnext_test.classifier_authority_fixture_context limit 1;
  if found then return r; end if;
- r.authority_key_id:=extensions.gen_random_uuid(); r.verifier_secret:='test-only-classifier-authority-not-for-runtime';
+ r.authority_key_id:=extensions.gen_random_uuid(); r.verifier_secret:='test-only-classifier-authority-not-for-runtime'; r.created_at:=timestamptz '2000-01-01 00:00:00+00';
  insert into support_vnext_shadow.classifier_authorities(authority_key_id,authority_name,verifier_secret,created_by)
  values(r.authority_key_id,'support-vnext-test-classifier',r.verifier_secret,'support_vnext_test');
- insert into support_vnext_test.classifier_authority_fixture_context select r.*;
+ insert into support_vnext_test.classifier_authority_fixture_context (authority_key_id,verifier_secret,created_at) values (r.authority_key_id,r.verifier_secret,r.created_at);
  return r;
 end $$;
 
@@ -96,5 +96,5 @@ begin
  end if;
  perform support_vnext_test.persist_test_inbound_classification(r.classification_id,r.inbound_message_id,r.confirmation_id,r.session_id,r.topic_id,r.release_id);
  auth:=support_vnext_shadow.authorize_persisted_confirmation(r.classification_id,r.confirmation_id,r.confirmation_nonce,r.inbound_message_id,r.session_id,r.topic_id,r.release_id); r.authorization_id:=(auth->>'authorization_id')::uuid;
- insert into support_vnext_test.confirmation_fixture_context select r.*; return r;
+ insert into support_vnext_test.confirmation_fixture_context (test_run_id,release_id,intent_id,service_id,template_id,request_policy_id,conversation_id,session_id,topic_id,decision_id,confirmation_id,confirmation_nonce,inbound_message_id,classification_id,authorization_id,created_at) values (r.test_run_id,r.release_id,r.intent_id,r.service_id,r.template_id,r.request_policy_id,r.conversation_id,r.session_id,r.topic_id,r.decision_id,r.confirmation_id,r.confirmation_nonce,r.inbound_message_id,r.classification_id,r.authorization_id,r.created_at); return r;
 end $$;
