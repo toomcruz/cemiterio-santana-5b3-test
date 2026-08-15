@@ -1,8 +1,9 @@
-name: shadow-static
 on:
+  workflow_dispatch:
   push:
   pull_request:
   workflow_call:
+
 jobs:
   static:
     runs-on: ubuntu-latest
