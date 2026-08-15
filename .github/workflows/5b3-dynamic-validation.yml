@@ -168,6 +168,14 @@ jobs:
           conc P09 p09_session_concurrency.sql
 
 
+      - name: Seed P10 integration fixture
+        env:
+          TEST_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -Eeuo pipefail
+          psql "$TEST_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f tests/postgres/fixtures/p10_integration_fixture.sql
+          echo "P10 FIXTURE: PASS" | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: P10 integration
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

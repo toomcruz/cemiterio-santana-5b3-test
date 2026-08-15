@@ -345,4 +345,11 @@ jobs:
           printf 'external package ownership: NONE\n'
           printf 'unexpected package dependencies: NONE\n'
           printf 'PRESERVED EXTENSIONS: pgcrypto, btree_gist\n'
+
+          # Same probe string and digest as the preflight job, so the caller can
+          # prove reset and preflight targeted one and the same database.
+          identity_fingerprint="$(printf '%s' "$identity" | sha256sum | awk '{print $1}')"
+          printf 'DATABASE IDENTITY FINGERPRINT: %s\n' "$identity_fingerprint"
+          printf 'database_identity_fingerprint=%s\n' "$identity_fingerprint" >> "$GITHUB_OUTPUT"
+
           printf '5B.3-BR PASS — LABORATÓRIO ISOLADO COMPROVADAMENTE LIMPO\n'
