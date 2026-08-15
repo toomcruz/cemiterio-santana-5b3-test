@@ -133,6 +133,9 @@ jobs:
           pg_probe="$(mktemp)"
           if psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc 'select 1' >"$pg_probe" 2>&1; then
             record "PostgreSQL connectivity" "PASS"
+            identity_probe="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc "select current_database() || '|user=' || current_user || '|addr=' || coalesce(inet_server_addr()::text, 'local') || '|port=' || inet_server_port()::text || '|version=' || split_part(version(), ' ', 2);")"
+            [[ "$identity_probe" == *"|user="* ]] || fail_immediate "5B3-DB-03" "Database identity" "identity fields" "malformed result" "revisar introspecção read-only"
+            echo "DATABASE IDENTITY: $identity_probe"
             pg_connected=true
           else
             pg_rc=$?
