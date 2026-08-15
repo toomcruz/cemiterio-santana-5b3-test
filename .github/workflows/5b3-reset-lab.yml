@@ -77,9 +77,9 @@ jobs:
               actual=BLOCK
             fi
             if [[ "$actual" == "$expected" ]]; then
-              printf 'STATIC TEST %s: PASS\\n' "$label"
+              printf 'STATIC TEST %s: PASS\n' "$label"
             else
-              printf 'STATIC TEST %s: FAIL\\nEXPECTED: %s\\nACTUAL: %s\\nREASON: predicate exit code %s\\n' "$label" "$expected" "$actual" "$rc" >&2
+              printf 'STATIC TEST %s: FAIL\nEXPECTED: %s\nACTUAL: %s\nREASON: predicate exit code %s\n' "$label" "$expected" "$actual" "$rc" >&2
               return 1
             fi
           }
@@ -99,7 +99,7 @@ jobs:
           assert_case OWNERSHIP-EXTERNAL BLOCK ownership_blocks o support_vnext_runtime public
           assert_case OWNERSHIP-PLATFORM PASS ownership_blocks o postgres pg_catalog
           assert_case OWNERSHIP-PACKAGE-ACL PASS ownership_blocks a support_vnext_publisher support_vnext_shadow
-          printf 'STATIC PREDICATE PROOF: PASS (A-H + ownership/dependency)\\n'
+          printf 'STATIC PREDICATE PROOF: PASS (A-H + ownership/dependency)\n'
 
       - name: Guard and read-only pre-reset audit
         shell: bash
