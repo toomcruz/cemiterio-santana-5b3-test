@@ -6,9 +6,7 @@ on:
       confirmation:
         description: "Digite RUN_DYNAMIC_5B3 para executar P00/P01-P15"
         required: true
-        type: string
-
-permissions:
+        type: stringpermissions:
   contents: read
 
 concurrency:
