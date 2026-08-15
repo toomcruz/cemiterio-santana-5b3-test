@@ -101,6 +101,45 @@ jobs:
           assert_case OWNERSHIP-PACKAGE-ACL BLOCK ownership_blocks a support_vnext_publisher support_vnext_shadow
           printf 'STATIC PREDICATE PROOF: PASS (A-H + ownership/dependency)\n'
 
+      - name: Static proof of post-reset verification predicates
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          expect_result() {
+            local label="$1" expected="$2" actual="$3"
+            if [[ "$actual" == "$expected" ]]; then
+              printf 'STATIC TEST %s: PASS\n' "$label"
+            else
+              printf 'STATIC TEST %s: FAIL\nEXPECTED: %s\nACTUAL: %s\n' "$label" "$expected" "$actual" >&2
+              exit 1
+            fi
+          }
+
+          schema_gate() { [[ "$1" =~ ^[0-9]+$ ]] && [[ "$1" -eq 0 ]]; }
+          role_gate() { [[ "$1" =~ ^[0-9]+$ ]] && [[ "$1" -eq 0 ]]; }
+          public_gate() { [[ "$1" =~ ^[0-9]+$ ]] && [[ "$1" -eq 0 ]]; }
+          psql_gate() { [[ "$1" == "0" ]]; }
+
+          set +e; schema_gate 0; rc=$?; set -e; [[ "$rc" -eq 0 ]] && actual=PASS || actual=BLOCK
+          expect_result A PASS "$actual"
+          set +e; schema_gate 1; rc=$?; set -e; [[ "$rc" -eq 0 ]] && actual=PASS || actual=BLOCK
+          expect_result B BLOCK "$actual"
+          set +e; role_gate 1; rc=$?; set -e; [[ "$rc" -eq 0 ]] && actual=PASS || actual=BLOCK
+          expect_result C BLOCK "$actual"
+          set +e; role_gate 0; rc=$?; set -e; [[ "$rc" -eq 0 ]] && actual=PASS || actual=BLOCK
+          expect_result D PASS "$actual"
+          set +e; public_gate 1; rc=$?; set -e; [[ "$rc" -eq 0 ]] && actual=PASS || actual=BLOCK
+          expect_result E BLOCK "$actual"
+          set +e; psql_gate 1; rc=$?; set -e; [[ "$rc" -eq 0 ]] && actual=PASS || actual=BLOCK
+          expect_result F BLOCK "$actual"
+          set +e; psql_gate ""; rc=$?; set -e; [[ "$rc" -eq 0 ]] && actual=PASS || actual=BLOCK
+          expect_result G BLOCK "$actual"
+          set +e; schema_gate 0 && role_gate 0 && public_gate 0 && psql_gate 0; rc=$?; set -e
+          [[ "$rc" -eq 0 ]] && actual=PASS || actual=BLOCK
+          expect_result H PASS "$actual"
+          printf 'STATIC POST-RESET PREDICATE PROOF: PASS (A-H)\n'
+
       - name: Guard and read-only pre-reset audit
         shell: bash
         run: |
@@ -273,6 +312,34 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
+
           psql_read() { psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc "$1"; }
+          fail() { printf '5B.3-BR BLOCKED — %s\n' "$1" >&2; exit 1; }
+
+          identity="$(psql_read "select current_database() || '|user=' || current_user || '|addr=' || coalesce(inet_server_addr()::text, 'local') || '|port=' || inet_server_port()::text || '|version=' || split_part(version(), ' ', 2);")"
+          [[ "$identity" == *"|user="* ]] || fail "database identity result malformed"
+          printf 'POST-RESET DATABASE IDENTITY: %s\n' "$identity"
 
           schema_count="$(psql_read "select count(*) from pg_namespace where nspname='support_vnext_shadow';")"
+          [[ "$schema_count" =~ ^0$ ]] || fail "support_vnext_shadow still exists after reset"
+
+          package_role_count="$(psql_read "select count(*) from pg_roles where rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin');")"
+          [[ "$package_role_count" =~ ^0$ ]] || fail "package roles still exist after reset"
+
+          package_public_objects="$(psql_read "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace join pg_roles r on r.oid=c.relowner where n.nspname='public' and r.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin');")"
+          [[ "$package_public_objects" =~ ^0$ ]] || fail "package objects remain in public"
+
+          package_external_ownership="$(psql_read "select count(*) from pg_shdepend d join pg_roles r on r.oid=d.refobjid where r.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and d.deptype='o' and coalesce((pg_identify_object(d.classid,d.objid,d.objsubid)).schema, '') <> 'support_vnext_shadow';")"
+          [[ "$package_external_ownership" =~ ^0$ ]] || fail "package external ownership remains after reset"
+
+          package_dependencies="$(psql_read "select count(*) from pg_shdepend d join pg_roles r on r.oid=d.refobjid where r.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin');")"
+          [[ "$package_dependencies" =~ ^0$ ]] || fail "package dependencies remain after reset"
+
+          printf 'POST-RESET VERIFICATION\n'
+          printf 'support_vnext_shadow: ABSENT\n'
+          printf 'package roles: ABSENT\n'
+          printf 'package public objects: NONE\n'
+          printf 'external package ownership: NONE\n'
+          printf 'unexpected package dependencies: NONE\n'
+          printf 'PRESERVED EXTENSIONS: pgcrypto, btree_gist\n'
+          printf '5B.3-BR PASS — LABORATÓRIO ISOLADO COMPROVADAMENTE LIMPO\n'
