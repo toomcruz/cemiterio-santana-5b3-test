@@ -28,11 +28,11 @@ jobs:
       - name: Validate explicit confirmation
         shell: bash
         env:
-          CONFIRMATION_INPUT: \${{ github.event.inputs.confirmation }}
+          CONFIRMATION_INPUT: ${{ github.event.inputs.confirmation }}
         run: |
           set -Eeuo pipefail
           confirmation="$CONFIRMATION_INPUT"
-          confirmation_len="\${#confirmation}"
+          confirmation_len="${#confirmation}"
           has_cr=false
           has_lf=false
           has_edge_space=false
