@@ -17,7 +17,85 @@ jobs:
       - run: bash tests/postgres/verify_migration_manifest.sh
       - run: bash -n tests/postgres/run_all.sh tests/postgres/run_concurrency.sh tests/postgres/verify_static.sh tests/postgres/verify_migration_manifest.sh && bash tests/postgres/verify_static.sh
       - run: '! rg -ni "TODO|IMPLEMENTAR|EXECUTAR MANUALMENTE|SIMULAR|select .+instruction" tests/postgres/p*.sql tests/postgres/run_*.sh'
-      - run: '! rg -n "(postgres(ql)?://[^$[:space:]]+:[^$[:space:]]+@|SUPABASE_SERVICE_ROLE_KEY=|password=)" tests/postgres .github/workflows'
+      - name: Secret scan with controlled exit-code tests
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          secret_scan() {
+            local space_class='[[:space:]]'
+            local postgres_prefix='postgres'
+            local postgres_suffix='(ql)?://'
+            local service_prefix='SUPABASE_'
+            local service_suffix='SERVICE_ROLE_KEY='
+            local password_prefix='pass'
+            local password_suffix='word='
+            local pattern="(${postgres_prefix}${postgres_suffix}[^$"${space_class}]+:[^$"${space_class}]+@|${service_prefix}${service_suffix}|${password_prefix}${password_suffix})"
+            rg -ni --hidden --glob '!.git' -- "$pattern" "$@"
+          }
+
+          assert_scan() {
+            local label="$1" expected="$2" target="$3" rc
+            set +e
+            secret_scan "$target" >/tmp/5b3-secret-scan.out 2>/tmp/5b3-secret-scan.err
+            rc=$?
+            set -e
+            case "$expected:$rc" in
+              NONE:1|SECRET:0)
+                printf 'SECRET SCAN TEST %s: PASS\\n' "$label"
+                ;;
+              *)
+                printf 'SECRET SCAN TEST %s: FAIL\\nEXPECTED: %s\\nEXIT CODE: %s\\n' "$label" "$expected" "$rc" >&2
+                sed -n '1,20p' /tmp/5b3-secret-scan.err >&2
+                exit 1
+                ;;
+            esac
+          }
+
+          test_dir="$(mktemp -d)"
+          trap 'rm -rf "$test_dir" /tmp/5b3-secret-scan.out /tmp/5b3-secret-scan.err' EXIT
+
+          printf '%s\\n' 'ordinary documentation without credentials' >"$test_dir/clean.txt"
+          assert_scan A NONE "$test_dir"
+
+          scheme='postgresql://'
+          fake_user='user'
+          fake_password='fake-secret'
+          fake_host='@db.example.test:5432/db'
+          printf '%s%s:%s%s\\n' "$scheme" "$fake_user" "$fake_password" "$fake_host" >"$test_dir/postgres.txt"
+          assert_scan B SECRET "$test_dir"
+
+          service_name='SUPABASE_'
+          service_suffix='SERVICE_ROLE_KEY='
+          printf '%s%sfake-service-role\\n' "$service_name" "$service_suffix" >"$test_dir/service.txt"
+          assert_scan C SECRET "$test_dir"
+
+          password_name='pass'
+          password_suffix='word='
+          printf '%s%sfake-secret\\n' "$password_name" "$password_suffix" >"$test_dir/password.txt"
+          assert_scan D SECRET "$test_dir"
+
+          set +e
+          secret_scan tests/postgres .github/workflows >/tmp/5b3-secret-scan.out 2>/tmp/5b3-secret-scan.err
+          scan_rc=$?
+          set -e
+          case "$scan_rc" in
+            1)
+              printf 'SECRET SCAN TEST E: PASS\\n'
+              ;;
+            0)
+              printf 'SECRET SCAN TEST E: FAIL\\nEXPECTED: no repository match\\nACTUAL: scanner found a match\\n' >&2
+              sed -n '1,20p' /tmp/5b3-secret-scan.out >&2
+              exit 1
+              ;;
+            *)
+              printf 'SECRET SCAN TEST E: FAIL\\nEXPECTED: scanner exit 1\\nACTUAL: exit %s\\n' "$scan_rc" >&2
+              sed -n '1,20p' /tmp/5b3-secret-scan.err >&2
+              exit 1
+              ;;
+          esac
+
+          printf 'SECRET SCAN: PASS\\n'
       - run: '! rg -n "support-flow-context|support-hybrid-router" edge-functions contracts && ! rg -n "service_\\*" edge-functions contracts'
       - run: '! rg -ni "fetch\\([^)]*(wapi|gemini)|https?://[^[:space:]]*(wapi|gemini)|SUPPORT_VNEXT_MODE.{0,40}ENABLED" edge-functions'
       - run: rg -q "p_classification_id" edge-functions/support-request-command/index.ts database/migrations/0008_5b2c4_final_static_blockers.sql
