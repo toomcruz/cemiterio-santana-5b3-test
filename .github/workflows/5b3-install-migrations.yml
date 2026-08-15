@@ -160,6 +160,12 @@ jobs:
                 -e 's#(postgres(ql)?://)[^[:space:]]+#\1[REDACTED]#g' \
                 -e 's#(password|passwd|secret|token|apikey)[=:][^[:space:]]+#\1=[REDACTED]#gi' \
                 -e '/ERROR:|FATAL:|DETAIL:|HINT:/p' "$log_file" | sed -n '1,20p'
+              printf 'OBJECTS INSTALLED BEFORE FAILURE\n'
+              set +e
+              psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+                "select n.nspname || '.' || c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'support_vnext_shadow' order by 1;" \
+                2>/dev/null
+              set -e
               printf '5B.3-B BLOCKED NA MIGRATION %s\n' "$migration"
               exit "$rc"
             fi
