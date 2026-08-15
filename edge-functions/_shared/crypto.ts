@@ -26,7 +26,9 @@ export async function sha256(value: string): Promise<string> {
 
 export async function hmacSha256(secret: string, value: string): Promise<string> {
   const bytes = new TextEncoder();
-  const key = await crypto.subtle.importKey("raw", bytes.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const key = await crypto.subtle.importKey("raw", bytes.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, [
+    "sign",
+  ]);
   const signature = await crypto.subtle.sign("HMAC", key, bytes.encode(value));
   return [...new Uint8Array(signature)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }

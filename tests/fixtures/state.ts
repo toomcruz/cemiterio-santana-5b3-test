@@ -20,7 +20,14 @@ export function stateFixture(overrides: Partial<ConversationStateSnapshot> = {})
       status: "WAITING_INPUT",
       collected_data: {},
       collected_field_names: [],
-      pending_question: { question_id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", question_code: "ESCOLHER_OPCAO", expected_answer_schema: { type: "integer" }, asked_at: "2026-08-14T12:00:00.000Z", expires_at: null, status: "OPEN" },
+      pending_question: {
+        question_id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+        question_code: "ESCOLHER_OPCAO",
+        expected_answer_schema: { type: "integer" },
+        asked_at: "2026-08-14T12:00:00.000Z",
+        expires_at: null,
+        status: "OPEN",
+      },
     },
     queued_topic_ids: [],
     pending_confirmation: null,
@@ -35,8 +42,12 @@ export function stateFixture(overrides: Partial<ConversationStateSnapshot> = {})
 export function batchFixture(text: string, overrides: Partial<MessageBatch> = {}): MessageBatch {
   return {
     batch_id: "ffffffff-ffff-4fff-8fff-ffffffffffff",
-    message_ids: [ids.message], text, attachments: [], received_at: "2026-08-14T12:00:10.000Z",
-    is_first_inbound_of_session: false, quiet_seconds: 7,
+    message_ids: [ids.message],
+    text,
+    attachments: [],
+    received_at: "2026-08-14T12:00:10.000Z",
+    is_first_inbound_of_session: false,
+    quiet_seconds: 7,
     ...overrides,
   };
 }

@@ -19,4 +19,9 @@ export interface ConfirmationAuthorizationInput {
   topic_id: string;
   release_id: string;
 }
-export interface ConfirmationAuthorizationResult { authorization_id:string; classification_id:string; classification_hash:string; status:"AUTHORIZED"; }
+export interface ConfirmationAuthorizationResult {
+  authorization_id: string;
+  classification_id: string;
+  classification_hash: string;
+  status: "AUTHORIZED";
+}

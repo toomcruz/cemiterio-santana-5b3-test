@@ -1,4 +1,4 @@
-import type { MessageBatch, ConversationStateSnapshot } from "./state.ts";
+import type { ConversationStateSnapshot, MessageBatch } from "./state.ts";
 
 export const CLASSIFIER_MESSAGE_ROLES = [
   "NEW_TOPIC",
@@ -93,12 +93,18 @@ export function validateClassifierOutput(output: ClassifierOutput, taxonomy: Tax
   const intentCodes = new Set(taxonomy.intents.map((item) => item.code));
   const serviceCodes = new Set(taxonomy.services.map((item) => item.code));
   for (const item of output.intent_candidates) {
-    if (!intentCodes.has(item.code) || item.confidence < 0 || item.confidence > 1) errors.push("INVALID_INTENT_CANDIDATE");
+    if (!intentCodes.has(item.code) || item.confidence < 0 || item.confidence > 1) {
+      errors.push("INVALID_INTENT_CANDIDATE");
+    }
   }
   for (const item of output.service_candidates) {
-    if (!serviceCodes.has(item.code) || item.confidence < 0 || item.confidence > 1) errors.push("INVALID_SERVICE_CANDIDATE");
+    if (!serviceCodes.has(item.code) || item.confidence < 0 || item.confidence > 1) {
+      errors.push("INVALID_SERVICE_CANDIDATE");
+    }
   }
-  if (output.message_role === "CONFIRMATION_AFFIRMATIVE" && !output.evidence.some((e) => e.kind === "PENDING_QUESTION")) {
+  if (
+    output.message_role === "CONFIRMATION_AFFIRMATIVE" && !output.evidence.some((e) => e.kind === "PENDING_QUESTION")
+  ) {
     errors.push("CONFIRMATION_WITHOUT_PENDING_CONTEXT");
   }
   return [...new Set(errors)];

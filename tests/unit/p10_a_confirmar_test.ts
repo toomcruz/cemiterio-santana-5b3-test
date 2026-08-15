@@ -93,8 +93,22 @@ Deno.test("P10 decision engine produces A_CONFIRMAR from a real empty resolver r
 });
 
 Deno.test("P10 conflict reaches A_CONFIRMAR through production decision engine", async () => {
-  const first = { decision_rule_id: "00000000-0000-4000-8000-000000000001", rule_code: "P10_A", priority: 10, stop_processing: false, when_expression: {}, then_plan: validPlan("a") };
-  const second = { decision_rule_id: "00000000-0000-4000-8000-000000000002", rule_code: "P10_B", priority: 10, stop_processing: false, when_expression: {}, then_plan: validPlan("b") };
+  const first = {
+    decision_rule_id: "00000000-0000-4000-8000-000000000001",
+    rule_code: "P10_A",
+    priority: 10,
+    stop_processing: false,
+    when_expression: {},
+    then_plan: validPlan("a"),
+  };
+  const second = {
+    decision_rule_id: "00000000-0000-4000-8000-000000000002",
+    rule_code: "P10_B",
+    priority: 10,
+    stop_processing: false,
+    when_expression: {},
+    then_plan: validPlan("b"),
+  };
   const forward = await decide(input, restWithRules([first, second]));
   const reverse = await decide(input, restWithRules([second, first]));
   assertEquals(forward.outcome, "A_CONFIRMAR");

@@ -34,6 +34,8 @@ export function assertMethod(request: Request, method = "POST"): void {
 }
 
 export function assertString(value: unknown, name: string): string {
-  if (typeof value !== "string" || value.trim() === "") throw new HttpProblem(400, "INVALID_INPUT", `${name} is required`);
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new HttpProblem(400, "INVALID_INPUT", `${name} is required`);
+  }
   return value.trim();
 }

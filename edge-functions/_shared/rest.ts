@@ -9,7 +9,9 @@ export class SupabaseRest {
   constructor() {
     this.url = Deno.env.get("SUPABASE_URL") ?? "";
     this.key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    if (!this.url || !this.key) throw new HttpProblem(503, "SUPABASE_UNCONFIGURED", "Supabase runtime secrets are not configured");
+    if (!this.url || !this.key) {
+      throw new HttpProblem(503, "SUPABASE_UNCONFIGURED", "Supabase runtime secrets are not configured");
+    }
   }
 
   private headers(extra: HeadersInit = {}): HeadersInit {
@@ -18,7 +20,8 @@ export class SupabaseRest {
       authorization: `Bearer ${this.key}`,
       accept: "application/json",
       "accept-profile": SHADOW_SCHEMA,
-      "content-profile": SHADOW_SCHEMA, "content-type": "application/json",
+      "content-profile": SHADOW_SCHEMA,
+      "content-type": "application/json",
       ...extra,
     };
   }
@@ -31,7 +34,11 @@ export class SupabaseRest {
     const text = await response.text();
     const payload = text ? safeJson(text) : null;
     if (!response.ok) {
-      throw new HttpProblem(502, "SUPABASE_REST_ERROR", typeof payload === "object" && payload ? JSON.stringify(payload) : text || response.statusText);
+      throw new HttpProblem(
+        502,
+        "SUPABASE_REST_ERROR",
+        typeof payload === "object" && payload ? JSON.stringify(payload) : text || response.statusText,
+      );
     }
     return payload as T;
   }
