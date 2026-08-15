@@ -170,7 +170,7 @@ jobs:
           name: 5b3-dynamic-validation-evidence
           path: 5b3-dynamic-validation-evidence.txt
           if-no-files-found: warn
-\r'* || "$project_url" == *          db="$(q 'select current_database();')"; user="$(q 'select current_user;')"
+          db="$(q 'select current_database();')"; user="$(q 'select current_user;')"
           addr="$(q "select coalesce(inet_server_addr()::text, 'local');")"; port="$(q 'select inet_server_port();')"; ver="$(q 'show server_version;')"
           [[ "$(q "select count(*) from pg_namespace where nspname='support_vnext_shadow';")" == 1 ]] || { echo "5B.3-C BLOCKED — schema absent"; exit 1; }
           [[ "$(q "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='support_vnext_shadow' and p.proname in ('get_runtime_decision_rules','store_shadow_decision','confirm_request_transaction');")" == 3 ]] || { echo "fundamental objects incomplete"; exit 1; }
