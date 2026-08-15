@@ -53,14 +53,22 @@ end $$;
 
 -- The classifier creates confirmation evidence only when a pending confirmation is present.
 create or replace function support_vnext_shadow.persist_confirmation_classification(
-  p_classification_id uuid,p_confirmation_id uuid,p_inbound_message_id uuid,p_session_id uuid,
+  -- Keep the input parameter names established by 0006. PostgreSQL does not
+  -- permit CREATE OR REPLACE to rename input parameters of the same signature.
+  p_confirmation_id uuid,p_confirmation_nonce uuid,p_inbound_message_id uuid,p_session_id uuid,
   p_topic_id uuid,p_release_id uuid
 ) returns jsonb
 language plpgsql security definer set search_path=pg_catalog,support_vnext_shadow,extensions as $$
 declare c support_vnext_shadow.pending_confirmations; s support_vnext_shadow.conversation_sessions;
         t support_vnext_shadow.conversation_topics; h char(64);
+        v_classification_id uuid := p_confirmation_id;
+        v_pending_confirmation_id uuid := p_confirmation_nonce;
 begin
-  select * into c from support_vnext_shadow.pending_confirmations where confirmation_id=p_confirmation_id for share;
+  -- The positional contract of this transitional overload is unchanged from
+  -- 0007: its first value is the classification id and its second value is
+  -- the pending confirmation id. The local aliases keep that behavior while
+  -- preserving the authoritative 0006 parameter names.
+  select * into c from support_vnext_shadow.pending_confirmations where confirmation_id=v_pending_confirmation_id for share;
   select * into s from support_vnext_shadow.conversation_sessions where session_id=p_session_id for share;
   select * into t from support_vnext_shadow.conversation_topics where topic_id=p_topic_id for share;
   if c.confirmation_id is null or s.session_id is null or t.topic_id is null or c.status<>'PENDING' or c.expires_at<=now() or c.session_id<>p_session_id
@@ -68,15 +76,15 @@ begin
     raise exception 'invalid pending confirmation for classifier evidence' using errcode='22023';
   end if;
   h:=support_vnext_shadow.canonical_jsonb_sha256(jsonb_build_object(
-    'classification_id',p_classification_id,'inbound_message_id',p_inbound_message_id,
+    'classification_id',v_classification_id,'inbound_message_id',p_inbound_message_id,
     'session_id',p_session_id,'topic_id',p_topic_id,'release_id',p_release_id,
     'classification_code','CONFIRMATION_AFFIRMATIVE','classification_status','OK','source','DETERMINISTIC'));
   insert into support_vnext_shadow.inbound_classifications(
     classification_id,inbound_message_id,confirmation_id,session_id,topic_id,release_id,
     classification_code,classification_status,source,classification_hash
-  ) values (p_classification_id,p_inbound_message_id,p_confirmation_id,p_session_id,p_topic_id,p_release_id,
+  ) values (v_classification_id,p_inbound_message_id,v_pending_confirmation_id,p_session_id,p_topic_id,p_release_id,
     'CONFIRMATION_AFFIRMATIVE','OK','DETERMINISTIC',h);
-  return jsonb_build_object('classification_id',p_classification_id,'classification_hash',h,'status','PERSISTED');
+  return jsonb_build_object('classification_id',v_classification_id,'classification_hash',h,'status','PERSISTED');
 end $$;
 
 create or replace function support_vnext_shadow.authorize_persisted_confirmation(
