@@ -71,7 +71,6 @@ end $$;
 -- C4-02: remove the bypass overload, leaving only confirmation with classifier evidence.
 revoke all on function support_vnext_shadow.confirm_request_transaction(uuid,uuid,uuid,text) from public,anon,authenticated,service_role,support_vnext_runtime;
 drop function if exists support_vnext_shadow.confirm_request_transaction(uuid,uuid,uuid,text);
-revoke all on function support_vnext_shadow.persist_confirmation_classification(uuid,uuid,uuid,uuid,uuid,uuid) from public,anon,authenticated,service_role,support_vnext_runtime;
 
 -- C4-03: deep closed schema helpers. JSON is permitted only in enumerated typed positions.
 create or replace function support_vnext_shadow.json_array_of_strings(p jsonb) returns boolean language sql immutable as $$
