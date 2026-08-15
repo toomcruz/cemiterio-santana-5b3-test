@@ -28,7 +28,7 @@ jobs:
       - name: Validate explicit confirmation
         shell: bash
         env:
-          CONFIRMATION_INPUT: ${{ github.event.inputs.confirmation }}
+          CONFIRMATION_INPUT: ${{ inputs.confirmation }}
         run: |
           set -Eeuo pipefail
           confirmation="$CONFIRMATION_INPUT"
@@ -55,10 +55,18 @@ jobs:
       - name: Initialize failure evidence
         if: always()
         shell: bash
+        env:
+          CONFIRMATION_INPUT: ${{ inputs.confirmation }}
         run: |
           set -Eeuo pipefail
           evidence="$GITHUB_WORKSPACE/5b3-dynamic-validation-evidence.txt"
-          printf 'RUN ID: %s\nGITHUB SHA: %s\nCONFIRMATION: validated in prior step\nBLOCKING GATE: not yet determined\nTIMESTAMP UTC: %s\n' "$GITHUB_RUN_ID" "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$evidence"
+          confirmation_status=FAIL
+          blocking_gate="Validate explicit confirmation"
+          if [[ "$CONFIRMATION_INPUT" == "RUN_DYNAMIC_5B3" ]]; then
+            confirmation_status=PASS
+            blocking_gate="not yet determined"
+          fi
+          printf 'RUN ID: %s\nGITHUB SHA: %s\nCONFIRMATION: %s\nBLOCKING GATE: %s\nTIMESTAMP UTC: %s\n' "$GITHUB_RUN_ID" "$GITHUB_SHA" "$confirmation_status" "$blocking_gate" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$evidence"
 
       - name: Checkout tested commit
         uses: actions/checkout@v4
@@ -164,8 +172,10 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          EXPECTED_SUPABASE_URL: https://qyrxpbvdmpftfcygsmws.supabase.co
         run: |
           set -Eeuo pipefail
+          [[ "$SUPABASE_URL" == "$EXPECTED_SUPABASE_URL" ]] || { echo "5B.3-C BLOCKED — P10 endpoint is not the isolated project"; exit 1; }
           deno test --allow-env --allow-net --ignored tests/integration/p10_a_confirmar_integration_test.ts
           echo "P10 INTEGRATION: PASS" | tee -a "$GITHUB_STEP_SUMMARY"
 
