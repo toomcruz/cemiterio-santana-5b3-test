@@ -104,6 +104,7 @@ jobs:
             "https://qyrxpbvdmpftfcygsmws.supabase.co"|"https://qyrxpbvdmpftfcygsmws.supabase.co/") project_exact=true ;;
           esac
           project_len="$(printf '%s' "$project_url" | wc -c | tr -d ' ')"
+          printf 'PROJECT URL LENGTH: %s\n' "$project_len"
           project_has_crlf=false
           [[ "$project_url" == *$'\r'* || "$project_url" == *$'\n'* ]] && project_has_crlf=true
           [[ "$project_exact" == true && "$project_has_crlf" == false ]] || { echo "5B.3-C BLOCKED — PROJECT REF MISMATCH"; exit 1; }
