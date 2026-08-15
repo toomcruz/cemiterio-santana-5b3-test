@@ -28,15 +28,30 @@ jobs:
       - name: Validate explicit confirmation
         shell: bash
         env:
-          CONFIRMATION_INPUT: ${{ github.event.inputs.confirmation }}
+          CONFIRMATION_INPUT: \${{ github.event.inputs.confirmation }}
         run: |
           set -Eeuo pipefail
           confirmation="$CONFIRMATION_INPUT"
-          confirmation_len="${#confirmation}"
+          confirmation_len="\${#confirmation}"
           has_cr=false
           has_lf=false
           has_edge_space=false
-          [[ "$confirmation" == *
+          [[ "$confirmation" == *$'\r'* ]] && has_cr=true
+          [[ "$confirmation" == *$'\n'* ]] && has_lf=true
+          case "$confirmation" in
+            " "*|*" ") has_edge_space=true ;;
+          esac
+          printf 'CONFIRMATION INPUT DEFINED: %s\nCONFIRMATION INPUT LENGTH: %s\nCONFIRMATION INPUT EXACT MATCH: %s\nCONFIRMATION INPUT CR: %s\nCONFIRMATION INPUT LF: %s\nCONFIRMATION INPUT EDGE SPACE: %s\n' \
+            "$([[ -n "$confirmation" ]] && echo YES || echo NO)" \
+            "$confirmation_len" \
+            "$([[ "$confirmation" == "RUN_DYNAMIC_5B3" ]] && echo YES || echo NO)" \
+            "$has_cr" "$has_lf" "$has_edge_space"
+          if [[ "$confirmation" != "RUN_DYNAMIC_5B3" ]]; then
+            echo "5B.3-C BLOCKED — invalid explicit confirmation" >&2
+            exit 1
+          fi
+          echo "CONFIRMATION: PASS" | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: Initialize failure evidence
         if: always()
         shell: bash
