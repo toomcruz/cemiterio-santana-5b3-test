@@ -45,6 +45,29 @@ jobs:
             '^[[:space:]]*(create|alter|drop|grant|revoke)[[:space:]]+(extension|schema|table|type|index|function|procedure|trigger|role|policy|sequence)|create[[:space:]]+role|create[[:space:]]+extension' \
             database/migrations
 
+      - name: Static proof of ownership and dependency predicates
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          is_package_role() {
+            case "$1" in
+              support_vnext_runtime|support_vnext_publisher|support_vnext_auditor|support_vnext_admin) return 0 ;;
+              *) return 1 ;;
+            esac
+          }
+          ownership_blocks() {
+            [[ "$1" == "o" ]] && is_package_role "$2" && [[ "$3" != "support_vnext_shadow" ]]
+          }
+          membership_blocks() {
+            ! [[ "$1" == "postgres" && "$2" == "postgres" && "$3" == "true" && "$4" == "false" && "$5" == "false" ]]
+          }
+          ! ownership_blocks a support_vnext_runtime public
+          ownership_blocks o support_vnext_runtime public
+          ! ownership_blocks o postgres pg_catalog
+          ! ownership_blocks a support_vnext_publisher support_vnext_shadow
+          membership_blocks postgres external_grantor true false false
+          printf 'STATIC PREDICATE PROOF: PASS (A-E)\n'
+
       - name: Guard and read-only pre-reset audit
         shell: bash
         run: |
@@ -143,8 +166,8 @@ jobs:
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
             "select table_name from information_schema.tables where table_schema='public' order by 1;"
 
-          external_owners="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
-            "with owned as (select r.rolname as role_name,n.nspname::text as schema_name from pg_roles r join pg_class c on c.relowner=r.oid join pg_namespace n on n.oid=c.relnamespace union all select r.rolname,n.nspname::text from pg_roles r join pg_proc p on p.proowner=r.oid join pg_namespace n on n.oid=p.pronamespace union all select r.rolname,n.nspname::text from pg_roles r join pg_type t on t.typowner=r.oid join pg_namespace n on n.oid=t.typnamespace union all select r.rolname,n.nspname::text from pg_roles r join pg_namespace n on n.nspowner=r.oid union all select r.rolname,null::text from pg_roles r join pg_database d on d.datdba=r.oid union all select r.rolname,null::text from pg_roles r join pg_tablespace ts on ts.spcowner=r.oid) select count(*) from owned where schema_name is null or schema_name <> 'support_vnext_shadow';")"
+          package_external_ownership="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "with owners as (select r.rolname,(pg_identify_object(d.classid,d.objid,d.objsubid)).schema as object_schema from pg_shdepend d join pg_roles r on r.oid=d.refobjid where r.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and d.deptype='o') select count(*) from owners where object_schema is distinct from 'support_vnext_shadow';")"
           expected_memberships="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
             "select count(*) from pg_auth_members m join pg_roles parent on parent.oid=m.roleid join pg_roles member on member.oid=m.member join pg_roles grantor on grantor.oid=m.grantor where member.rolname='postgres' and grantor.rolname='postgres' and parent.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and m.admin_option is true and m.inherit_option is false and m.set_option is false;")"
           unexpected_memberships="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
@@ -155,12 +178,18 @@ jobs:
             "select count(*) from information_schema.role_routine_grants where grantee in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and routine_schema <> 'support_vnext_shadow';")"
           external_schema_grants="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
             "select count(*) from information_schema.role_usage_grants where grantee in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and object_schema <> 'support_vnext_shadow';")"
-          [[ "$external_owners" == "0" ]] || fail "package role owns an external object"
+          package_external_acl=$((external_table_grants + external_routine_grants + external_schema_grants))
+          package_unexpected_dependency="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select count(*) from pg_shdepend d join pg_roles r on r.oid=d.refobjid where r.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and d.deptype not in ('o','a','i','r');")"
+          if [[ "$package_external_ownership" == "0" ]]; then printf 'EXTERNAL PACKAGE OWNERSHIP: NONE\n'; else printf 'EXTERNAL PACKAGE OWNERSHIP: BLOCKED (%s)\n' "$package_external_ownership"; fi
+          if [[ "$package_external_acl" == "0" ]]; then printf 'EXPECTED PACKAGE ACLS: PASS\n'; else printf 'EXPECTED PACKAGE ACLS: BLOCKED (%s external)\n' "$package_external_acl"; fi
+          if [[ "$expected_memberships" == "4" && "$unexpected_memberships" == "0" ]]; then printf 'EXPECTED CREATOR MEMBERSHIPS: PASS\n'; else printf 'EXPECTED CREATOR MEMBERSHIPS: BLOCKED\n'; fi
+          if [[ "$package_unexpected_dependency" == "0" ]]; then printf 'UNEXPECTED DEPENDENCIES: NONE\n'; else printf 'UNEXPECTED DEPENDENCIES: BLOCKED (%s)\n' "$package_unexpected_dependency"; fi
+          [[ "$package_external_ownership" == "0" ]] || fail "package role has real external ownership"
+          [[ "$package_external_acl" == "0" ]] || fail "package role has unexplained external ACL"
           [[ "$expected_memberships" == "4" ]] || fail "EXPECTED_POSTGRESQL_CREATOR_MEMBERSHIP count mismatch"
           [[ "$unexpected_memberships" == "0" ]] || fail "UNEXPECTED_EXTERNAL_MEMBERSHIP detected"
-          [[ "$external_table_grants" == "0" ]] || fail "package role has external table grants"
-          [[ "$external_routine_grants" == "0" ]] || fail "package role has external routine grants"
-          [[ "$external_schema_grants" == "0" ]] || fail "package role has external schema grants"
+          [[ "$package_unexpected_dependency" == "0" ]] || fail "UNEXPECTED_DEPENDENCY detected"
           printf 'PRE-RESET DEPENDENCY GUARD: PASS\n'
 
       - name: Remove only package schema and package roles
