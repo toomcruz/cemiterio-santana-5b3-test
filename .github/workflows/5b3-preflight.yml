@@ -149,7 +149,7 @@ jobs:
             {
               echo "ID: 5B3-DB-01"
               echo "STEP: PostgreSQL connectivity"
-              echo 'COMMAND: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc "select 1"'
+              echo "COMMAND: psql \"\$DATABASE_URL\" -v ON_ERROR_STOP=1 -XAtc \"select 1\""
               echo "EXIT CODE: $pg_rc"
               echo "EXPECTED: PostgreSQL responde"
               echo "ACTUAL/ERROR CATEGORY: $pg_category"
