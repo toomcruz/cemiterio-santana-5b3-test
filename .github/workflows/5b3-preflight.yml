@@ -2,6 +2,8 @@ name: 5B.3-A Preflight
 
 on:
   workflow_dispatch:
+  workflow_call:
+
 
 permissions:
   contents: read
@@ -10,6 +12,8 @@ jobs:
   preflight:
     name: 5B.3-A Preflight
     runs-on: ubuntu-latest
+    outputs:
+      database_identity_fingerprint: ${{ steps.preflight.outputs.database_identity_fingerprint }}
     env:
       SUPPORT_VNEXT_VALIDATION_ENV: ${{ vars.SUPPORT_VNEXT_VALIDATION_ENV }}
       SUPABASE_URL: ${{ vars.SUPABASE_URL }}
@@ -30,6 +34,7 @@ jobs:
           deno-version: v2.1.4
 
       - name: Run isolated laboratory preflight
+        id: preflight
         shell: bash
         run: |
           set -u
@@ -187,4 +192,7 @@ jobs:
             echo "5B.3-A BLOQUEADA — PRÉ-FLIGHT DO LABORATÓRIO FALHOU"
             exit 1
           fi
+          identity_fingerprint="$(printf '%s' "$identity_probe" | sha256sum | awk '{print $1}')"
+          echo "DATABASE IDENTITY FINGERPRINT: $identity_fingerprint"
+          echo "database_identity_fingerprint=$identity_fingerprint" >> "$GITHUB_OUTPUT"
           echo "5B.3-A PASS — LABORATÓRIO ISOLADO PRONTO PARA EXECUÇÃO DINÂMICA"
