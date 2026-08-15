@@ -61,12 +61,27 @@ jobs:
           membership_blocks() {
             ! [[ "$1" == "postgres" && "$2" == "postgres" && "$3" == "true" && "$4" == "false" && "$5" == "false" ]]
           }
+          membership_row_expected() {
+            [[ "$1" == "postgres" && "$2" == "true" && "$3" == "true" && "$4" == "false" && "$5" == "false" ]]
+          }
+          creator_set_passes() {
+            [[ "$1" == "4" && "$2" == "4" && "$3" == "0" && "$4" == "1" && "$5" == "4" ]]
+          }
           ! ownership_blocks a support_vnext_runtime public
           ownership_blocks o support_vnext_runtime public
           ! ownership_blocks o postgres pg_catalog
           ! ownership_blocks a support_vnext_publisher support_vnext_shadow
           membership_blocks postgres external_grantor true false false
-          printf 'STATIC PREDICATE PROOF: PASS (A-E)\n'
+          membership_row_expected postgres true true false false
+          membership_row_expected bootstrap_superuser true true false false
+          ! creator_set_passes 4 4 0 1 4
+          creator_set_passes 4 4 0 1 4
+          ! creator_set_passes 5 4 1 1 4
+          ! membership_row_expected postgres false true false false
+          ! membership_row_expected postgres true false false false
+          ! membership_row_expected postgres true true true false
+          ! membership_row_expected postgres true true false true
+          printf 'STATIC PREDICATE PROOF: PASS (A-H)\n'
 
       - name: Guard and read-only pre-reset audit
         shell: bash
@@ -108,6 +123,10 @@ jobs:
           }
           printf 'DATABASE CONNECTION: PASS\n'
 
+          printf 'CURRENT USER CREATOR AUDIT\n'
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select current_user || ':SUPERUSER=' || r.rolsuper::text || ':CREATEROLE=' || r.rolcreaterole::text from pg_roles r where r.rolname=current_user;"
+
           schema_exists="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
             "select exists (select 1 from pg_namespace where nspname='support_vnext_shadow');")"
           [[ "$schema_exists" == "t" ]] || fail "partial-state schema is absent"
@@ -134,7 +153,7 @@ jobs:
             "select parent.rolname || '<-' || member.rolname || ':grantor=' || grantor.rolname || ':admin=' || m.admin_option::text || ':inherit=' || m.inherit_option::text || ':set=' || m.set_option::text from pg_auth_members m join pg_roles parent on parent.oid=m.roleid join pg_roles member on member.oid=m.member join pg_roles grantor on grantor.oid=m.grantor where parent.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') or member.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') order by 1;"
           printf 'ROLE MEMBERSHIP CLASSIFICATION\n'
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
-            "select parent.rolname || '<-' || member.rolname || ':EXPECTED_POSTGRESQL_CREATOR_MEMBERSHIP' from pg_auth_members m join pg_roles parent on parent.oid=m.roleid join pg_roles member on member.oid=m.member join pg_roles grantor on grantor.oid=m.grantor where member.rolname='postgres' and grantor.rolname='postgres' and parent.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and m.admin_option is true and m.inherit_option is false and m.set_option is false order by 1;"
+            "select parent.rolname || '<-' || member.rolname || ':GRANTOR=' || grantor.rolname || ':GRANTOR_SUPERUSER=' || grantor.rolsuper::text || ':EXPECTED_POSTGRESQL_CREATOR_MEMBERSHIP' from pg_auth_members m join pg_roles parent on parent.oid=m.roleid join pg_roles member on member.oid=m.member join pg_roles grantor on grantor.oid=m.grantor where member.rolname='postgres' and parent.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') order by 1;"
           printf 'ROLE OWNERSHIP OUTSIDE PACKAGE SCHEMA\n'
           ownership_rows="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
             "with owned as (select r.rolname as role_name,n.nspname::text as schema_name,c.relname::text as object_name,'pg_class'::text as object_type from pg_roles r join pg_class c on c.relowner=r.oid join pg_namespace n on n.oid=c.relnamespace union all select r.rolname,n.nspname::text,p.proname::text,'pg_proc'::text from pg_roles r join pg_proc p on p.proowner=r.oid join pg_namespace n on n.oid=p.pronamespace union all select r.rolname,n.nspname::text,t.typname::text,'pg_type'::text from pg_roles r join pg_type t on t.typowner=r.oid join pg_namespace n on n.oid=t.typnamespace union all select r.rolname,n.nspname::text,n.nspname::text,'pg_namespace'::text from pg_roles r join pg_namespace n on n.nspowner=r.oid union all select r.rolname,null::text,d.datname::text,'pg_database'::text from pg_roles r join pg_database d on d.datdba=r.oid union all select r.rolname,null::text,ts.spcname::text,'pg_tablespace'::text from pg_roles r join pg_tablespace ts on ts.spcowner=r.oid) select role_name || ':' || object_type || ':' || coalesce(schema_name || '.', '') || object_name from owned where schema_name is null or schema_name <> 'support_vnext_shadow' order by 1;")"
@@ -168,10 +187,17 @@ jobs:
 
           package_external_ownership="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
             "with owners as (select r.rolname,(pg_identify_object(d.classid,d.objid,d.objsubid)).schema as object_schema from pg_shdepend d join pg_roles r on r.oid=d.refobjid where r.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and d.deptype='o') select count(*) from owners where object_schema is distinct from 'support_vnext_shadow';")"
+          total_package_memberships="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select count(*) from pg_auth_members m join pg_roles parent on parent.oid=m.roleid join pg_roles member on member.oid=m.member where parent.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') or member.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin');")"
           expected_memberships="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
-            "select count(*) from pg_auth_members m join pg_roles parent on parent.oid=m.roleid join pg_roles member on member.oid=m.member join pg_roles grantor on grantor.oid=m.grantor where member.rolname='postgres' and grantor.rolname='postgres' and parent.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and m.admin_option is true and m.inherit_option is false and m.set_option is false;")"
-          unexpected_memberships="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
-            "select count(*) from pg_auth_members m join pg_roles parent on parent.oid=m.roleid join pg_roles member on member.oid=m.member join pg_roles grantor on grantor.oid=m.grantor where (parent.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') or member.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin')) and not (member.rolname='postgres' and grantor.rolname='postgres' and parent.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and m.admin_option is true and m.inherit_option is false and m.set_option is false);")"
+            "select count(*) from pg_auth_members m join pg_roles parent on parent.oid=m.roleid join pg_roles member on member.oid=m.member join pg_roles grantor on grantor.oid=m.grantor where member.rolname='postgres' and parent.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and grantor.rolsuper is true and m.admin_option is true and m.inherit_option is false and m.set_option is false;")"
+          unexpected_memberships=$((total_package_memberships - expected_memberships))
+          creator_grantor="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select string_agg(distinct grantor.rolname, ',' order by grantor.rolname) from pg_auth_members m join pg_roles parent on parent.oid=m.roleid join pg_roles member on member.oid=m.member join pg_roles grantor on grantor.oid=m.grantor where member.rolname='postgres' and parent.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and m.admin_option is true and m.inherit_option is false and m.set_option is false;")"
+          creator_grantor_count="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select count(distinct m.grantor) from pg_auth_members m join pg_roles parent on parent.oid=m.roleid join pg_roles member on member.oid=m.member where member.rolname='postgres' and parent.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and m.admin_option is true and m.inherit_option is false and m.set_option is false;")"
+          creator_grantor_superuser_count="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select count(*) from pg_auth_members m join pg_roles parent on parent.oid=m.roleid join pg_roles member on member.oid=m.member join pg_roles grantor on grantor.oid=m.grantor where member.rolname='postgres' and parent.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and grantor.rolsuper is true and m.admin_option is true and m.inherit_option is false and m.set_option is false;")"
           external_table_grants="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
             "select count(*) from information_schema.role_table_grants where grantee in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and table_schema <> 'support_vnext_shadow';")"
           external_routine_grants="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
@@ -183,12 +209,20 @@ jobs:
             "select count(*) from pg_shdepend d join pg_roles r on r.oid=d.refobjid where r.rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin') and d.deptype not in ('o','a','i','r');")"
           if [[ "$package_external_ownership" == "0" ]]; then printf 'EXTERNAL PACKAGE OWNERSHIP: NONE\n'; else printf 'EXTERNAL PACKAGE OWNERSHIP: BLOCKED (%s)\n' "$package_external_ownership"; fi
           if [[ "$package_external_acl" == "0" ]]; then printf 'EXPECTED PACKAGE ACLS: PASS\n'; else printf 'EXPECTED PACKAGE ACLS: BLOCKED (%s external)\n' "$package_external_acl"; fi
-          if [[ "$expected_memberships" == "4" && "$unexpected_memberships" == "0" ]]; then printf 'EXPECTED CREATOR MEMBERSHIPS: PASS\n'; else printf 'EXPECTED CREATOR MEMBERSHIPS: BLOCKED\n'; fi
+          printf 'CREATOR MEMBERSHIP TOTAL: %s\n' "$total_package_memberships"
+          printf 'CREATOR MEMBERSHIP EXPECTED: %s\n' "$expected_memberships"
+          printf 'CREATOR MEMBERSHIP UNEXPECTED: %s\n' "$unexpected_memberships"
+          printf 'CREATOR MEMBERSHIP GRANTOR: %s\n' "$creator_grantor"
+          printf 'CREATOR MEMBERSHIP GRANTOR SUPERUSER: %s\n' "$creator_grantor_superuser_count"
+          if [[ "$expected_memberships" == "4" && "$unexpected_memberships" == "0" && "$creator_grantor_count" == "1" && "$creator_grantor_superuser_count" == "4" ]]; then printf 'EXPECTED CREATOR MEMBERSHIPS: PASS\n'; else printf 'EXPECTED CREATOR MEMBERSHIPS: BLOCKED\n'; fi
           if [[ "$package_unexpected_dependency" == "0" ]]; then printf 'UNEXPECTED DEPENDENCIES: NONE\n'; else printf 'UNEXPECTED DEPENDENCIES: BLOCKED (%s)\n' "$package_unexpected_dependency"; fi
           [[ "$package_external_ownership" == "0" ]] || fail "package role has real external ownership"
           [[ "$package_external_acl" == "0" ]] || fail "package role has unexplained external ACL"
-          [[ "$expected_memberships" == "4" ]] || fail "EXPECTED_POSTGRESQL_CREATOR_MEMBERSHIP count mismatch"
+          [[ "$total_package_memberships" == "4" ]] || fail "TOTAL_PACKAGE_MEMBERSHIPS count mismatch"
+          [[ "$expected_memberships" == "4" ]] || fail "EXPECTED_CREATOR_MEMBERSHIPS count mismatch"
           [[ "$unexpected_memberships" == "0" ]] || fail "UNEXPECTED_EXTERNAL_MEMBERSHIP detected"
+          [[ "$creator_grantor_count" == "1" ]] || fail "creator grantors differ"
+          [[ "$creator_grantor_superuser_count" == "4" ]] || fail "creator grantor is not uniformly superuser"
           [[ "$package_unexpected_dependency" == "0" ]] || fail "UNEXPECTED_DEPENDENCY detected"
           printf 'PRE-RESET DEPENDENCY GUARD: PASS\n'
 
@@ -224,20 +258,3 @@ jobs:
           psql_read() { psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc "$1"; }
 
           schema_count="$(psql_read "select count(*) from pg_namespace where nspname='support_vnext_shadow';")"
-          role_count="$(psql_read "select count(*) from pg_roles where rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin');")"
-          [[ "$schema_count" == "0" ]] || { printf 'POST-RESET FAIL: schema present\n' >&2; exit 1; }
-          [[ "$role_count" == "0" ]] || { printf 'POST-RESET FAIL: package role present\n' >&2; exit 1; }
-          printf 'support_vnext_shadow: ABSENT\n'
-          printf 'PACKAGE ROLES: ABSENT\n'
-          printf 'PACKAGE TABLES: ABSENT\n'
-          printf 'PACKAGE FUNCTIONS: ABSENT\n'
-          printf 'PACKAGE POLICIES: ABSENT\n'
-          printf 'PACKAGE TRIGGERS: ABSENT\n'
-          printf 'PUBLIC TABLES CREATED BY 0001-0006: 0\n'
-          printf 'EXTENSIONS REMAINING\n'
-          psql_read "select e.extname || ':schema=' || n.nspname || ':classification=PREEXISTING/PLATFORM-COMPATIBLE' from pg_extension e join pg_namespace n on n.oid=e.extnamespace order by 1;"
-          printf 'NO DROP EXTENSION USED\n'
-          printf 'NO DROP OWNED USED\n'
-          printf 'NO MIGRATIONS EXECUTED\n'
-          printf '5B.3-BR RESET PASS — LABORATORY READY FOR STATIC AND PREFLIGHT REVALIDATION\n'
-          printf 'NEXT: shadow-static, 5B.3-A preflight, then update 5B.3-B pin before reinstalling 0001-0014\n'
