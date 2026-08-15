@@ -178,7 +178,7 @@ jobs:
 
       - name: P10 integration
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           EXPECTED_SUPABASE_URL: https://qyrxpbvdmpftfcygsmws.supabase.co
         run: |
