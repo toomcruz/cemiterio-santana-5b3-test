@@ -92,7 +92,7 @@ jobs:
 
           printf 'SCHEMA OBJECTS\n'
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
-            "select n.nspname || '.' || c.relname || ':' || c.relkind from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='support_vnext_shadow' order by 1;"
+            "select n.nspname || '.' || c.relname || ':' || c.relkind::text from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='support_vnext_shadow' order by 1;"
           printf 'SCHEMA FUNCTIONS AND PROCEDURES\n'
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
             "select n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='support_vnext_shadow' and p.prokind in ('f','p') order by 1;"
