@@ -1,12 +1,10 @@
-name: 5B.3-BR Reset Isolated Lab
-
 on:
   workflow_dispatch:
   workflow_call:
-
-
-permissions:
-  contents: read
+    outputs:
+      database_identity_fingerprint:
+        description: "Non-secret database identity fingerprint"
+        value: ${{ jobs.reset.outputs.database_identity_fingerprint }}
 
 jobs:
   reset:
