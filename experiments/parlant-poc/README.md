@@ -120,12 +120,13 @@ titular), **5** (restos ja exumados) e **6** (assinatura derivada do conjuge sob
 - **Testes automatizados** cobrem regra, rastro, API e os cenarios exigidos no motor
   deterministico. A qualidade das frases do Gemini e avaliada manualmente e pelo smoke do CI.
 - **Extracao offline de nome do falecido** e heuristica simples (parentesco + primeiro nome).
-- **Modelo Gemini**: o adaptador padrao do Parlant usa `gemini-2.5-pro` em tarefas grandes, e a
-  API responde `404 ... no longer available to new users` para chaves novas. A POC usa um NLP
-  service proprio (`agent/nlp.py`) restrito a `gemini-2.5-flash-lite` (com `gemini-2.5-flash`
-  disponivel via `POC_GEMINI_MODEL=flash`).
-- **Free tier do Gemini**: a chave da POC tem poucos requests por minuto (5/min no Flash, 15/min
-  no Flash-Lite) e o Parlant avalia todas as entidades no start, em paralelo. Por isso
-  `agent/nlp.py` aplica um throttle proprio (`POC_GEMINI_RPM` ajusta) e espera o `retryDelay`
-  em caso de `429`. Consequencia pratica: **a primeira subida leva minutos**. Com chave paga,
-  suba o RPM e o start volta a ser rapido.
+- **Modelo Gemini**: a chave da POC so tem acesso a `gemini-2.5-flash`. Tanto `gemini-2.5-pro`
+  (usado pelo adaptador padrao do Parlant em tarefas grandes) quanto `gemini-2.5-flash-lite`
+  respondem `404 ... no longer available to new users`. Por isso `agent/nlp.py` fixa um modelo
+  unico (`POC_GEMINI_MODEL` troca) e nunca usa `pro`.
+- **Free tier do Gemini**: sao 5 requests/minuto no `gemini-2.5-flash`, e o Parlant avalia todas
+  as entidades no start, em paralelo. `agent/nlp.py` espaca as chamadas (`POC_GEMINI_RPM` ajusta)
+  e espera o `retryDelay` em caso de `429`. Consequencia pratica: **a primeira subida leva
+  varios minutos** e o laboratorio fica lento entre turnos. Com chave paga, suba o RPM
+  (`POC_GEMINI_RPM=60`) e o comportamento volta ao normal — essa e a principal limitacao
+  operacional encontrada.

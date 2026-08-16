@@ -79,11 +79,21 @@ jobs:
           fi
           echo "Secret PARLANT presente (valor nao exibido)."
 
+      - name: Listar modelos disponiveis para a chave da POC (so nomes)
+        env:
+          GEMINI_API_KEY: ${{ secrets.PARLANT }}
+        run: |
+          set -Eeuo pipefail
+          curl -sS -H "x-goog-api-key: ${GEMINI_API_KEY}" \
+            "https://generativelanguage.googleapis.com/v1beta/models" \
+            | python -c "import json,sys; d=json.load(sys.stdin); print('\n'.join(sorted(m['name'] for m in d.get('models', []))))"
+
       - name: Smoke do agente real (Parlant + Gemini)
         env:
           # A chave da POC entra na aplicacao apenas com este nome.
           GEMINI_API_KEY: ${{ secrets.PARLANT }}
           LAB_PORT: "8801"
           # Free tier: o throttle da POC espaca as chamadas (ver agent/nlp.py).
-          POC_GEMINI_RPM: "14"
+          # Free tier: 5 req/min no gemini-2.5-flash (throttle em agent/nlp.py).
+          POC_GEMINI_RPM: "5"
         run: python scripts/smoke_parlant.py

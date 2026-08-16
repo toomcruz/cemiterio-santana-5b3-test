@@ -146,13 +146,26 @@ def test_tools_registram_rastro_para_a_pagina():
     assert store.sessions() == []
 
 
-def test_nlp_service_da_poc_nao_usa_gemini_pro():
-    """A chave nova da POC recebe 404 em `gemini-2.5-pro`; so a familia Flash e usada."""
+def test_nlp_service_da_poc_nao_usa_gemini_pro(monkeypatch):
+    """A chave da POC recebe 404 em `gemini-2.5-pro` e em `flash-lite`."""
     from santana_parlant_poc.agent import nlp
 
     assert set(nlp.MODEL_BY_SIZE) == set(nlp.ModelSize)
-    for tamanho, classe in nlp.MODEL_BY_SIZE.items():
-        assert "Pro" not in classe.__name__, (tamanho, classe.__name__)
+    monkeypatch.delenv("POC_GEMINI_MODEL", raising=False)
+    assert nlp.configured_model() == "gemini-2.5-flash"
+
+    monkeypatch.setenv("POC_GEMINI_MODEL", "gemini-2.5-pro")
+    with pytest.raises(ValueError):
+        nlp.configured_model()
+
+
+def test_rpm_do_free_tier_pode_ser_sobrescrito(monkeypatch):
+    from santana_parlant_poc.agent import nlp
+
+    monkeypatch.delenv("POC_GEMINI_RPM", raising=False)
+    assert nlp.configured_rpm("gemini-2.5-flash") == 5
+    monkeypatch.setenv("POC_GEMINI_RPM", "60")
+    assert nlp.configured_rpm("gemini-2.5-flash") == 60
 
 
 def test_rate_limiter_espaca_chamadas():
