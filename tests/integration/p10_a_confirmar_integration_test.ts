@@ -108,8 +108,15 @@ Deno.test({
   const base = Deno.env.get("SUPABASE_URL")! + "/rest/v1/";
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const headers = { apikey: key, authorization: `Bearer ${key}`, "accept-profile": "support_vnext_shadow" };
-  const requests = await fetch(`${base}service_requests?session_id=eq.${sessionId}&select=id,protocol`, { headers })
-    .then((r) => r.json());
+  const requests = await fetch(
+    `${base}service_requests?session_id=eq.${sessionId}&select=request_id,protocol`,
+    { headers },
+  ).then((r) => r.json());
+  // PostgREST answers errors with an object, which would make length undefined and
+  // silently weaken the assertions below.
+  if (!Array.isArray(requests)) {
+    throw new Error(`service_requests query failed: ${JSON.stringify(requests)}`);
+  }
   assertEquals(requests.length, 0);
   assertEquals(requests.filter((r: { protocol?: unknown }) => r.protocol != null).length, 0);
 });
