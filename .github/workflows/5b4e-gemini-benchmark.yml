@@ -1,0 +1,57 @@
+name: 5B.4-E Gemini controlled benchmark
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: 5b4e-gemini-benchmark
+  cancel-in-progress: false
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.1.4
+      - name: Require benchmark secret
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ -n "${GEMINI_API_KEY:-}" ]] || { echo "5B.4-E BLOCKED — repository secret GEMINI_API_KEY is unavailable" >&2; exit 1; }
+      - name: Preserve baseline gates
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          deno fmt --check santana-conversation-domain .github/workflows
+          deno lint santana-conversation-domain
+          deno test --allow-read santana-conversation-domain/runtime/tests
+          deno test --allow-read santana-conversation-domain/benchmark
+          bash tests/postgres/verify_migration_manifest.sh
+          bash tests/postgres/verify_static.sh
+      - name: Run controlled Gemini benchmark
+        shell: bash
+        run: deno task benchmark:gemini
+      - name: Publish aggregate metrics only
+        if: always()
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ -f benchmark-report.json ]] || exit 0
+          cp benchmark-report.json "$RUNNER_TEMP/benchmark-report.json"
+          cat "$RUNNER_TEMP/benchmark-report.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload aggregate benchmark report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 5b4e-gemini-benchmark-report
+          path: benchmark-report.json
+          if-no-files-found: ignore

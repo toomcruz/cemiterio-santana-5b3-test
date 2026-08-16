@@ -13,6 +13,8 @@ export interface LlmProvider {
   readonly model: string;
   createRequest(prompt: string): { url: string; headers: Readonly<Record<string, string>>; body: string };
   extractText(responseBody: string): string;
+  /** Optional, provider-specific accounting extracted after the response is received. */
+  usageFromResponse?(responseBody: string): { input_tokens: number; output_tokens: number } | null;
 }
 
 export interface AdapterObservation {
