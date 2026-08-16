@@ -1,0 +1,182 @@
+{
+  "artifact": "santana-conversation-domain/questions",
+  "version": "v1",
+  "phase": "5B.4-A",
+  "priority_order": [
+    {
+      "rank": 1,
+      "priority_class": "FLOW_BRANCH",
+      "description": "Fato que bifurca o fluxo."
+    },
+    {
+      "rank": 2,
+      "priority_class": "PREREQUISITE",
+      "description": "Pre-requisito obrigatorio."
+    },
+    {
+      "rank": 3,
+      "priority_class": "BLOCKING_UNCERTAINTY",
+      "description": "Incerteza ou conflito que bloqueia a proxima decisao."
+    },
+    {
+      "rank": 4,
+      "priority_class": "DEPENDENCY",
+      "description": "Dependencia derivada da ramificacao escolhida."
+    },
+    {
+      "rank": 5,
+      "priority_class": "NEXT_ACTION_DATA",
+      "description": "Dado necessario a proxima acao."
+    },
+    {
+      "rank": 6,
+      "priority_class": "ADMINISTRATIVE",
+      "description": "Dado administrativo."
+    }
+  ],
+  "selection_rules": {
+    "ask_first_the_fact_that_changes_the_next_decision": true,
+    "never_repeat_confirmed_active_fact": true,
+    "re_ask_when_confidence_in": [
+      "UNCERTAIN",
+      "CONFLICTING"
+    ],
+    "conflict_resolution_precedes_new_facts": true,
+    "skip_facts_not_relevant_under_current_branch": true,
+    "waiting_goal_does_not_produce_user_question": true,
+    "parallel_question_does_not_replace_pending_question": true,
+    "tie_break": "ordem de declaracao em goals.v1.json required_facts",
+    "authoritative_fact_is_never_asked_to_user": true,
+    "authoritative_gap_sets_goal_waiting": true
+  },
+  "questions": [
+    {
+      "question_code": "Q_SURVIVING_SPOUSE",
+      "fact_code": "surviving_spouse_status",
+      "text": "O esposo ou companheiro do falecido esta vivo?"
+    },
+    {
+      "question_code": "Q_REMAINS_STATUS",
+      "fact_code": "remains_status",
+      "text": "Os restos mortais ainda estao sepultados ou ja foram exumados?"
+    },
+    {
+      "question_code": "Q_TRANSPORT_DESTINATION",
+      "fact_code": "transport_destination",
+      "text": "Para onde o transporte deve ser feito?"
+    },
+    {
+      "question_code": "Q_DESTINATION_GRAVE_REFERENCE",
+      "fact_code": "destination_grave_reference",
+      "text": "Qual e o jazigo da familia que sera o destino?"
+    },
+    {
+      "question_code": "Q_TRANSPORT_DATE",
+      "fact_code": "transport_date_preference",
+      "text": "Ha uma data pretendida para o transporte?"
+    },
+    {
+      "question_code": "Q_EXHUMATION_PURPOSE",
+      "fact_code": "exhumation_purpose",
+      "text": "Qual e a finalidade da exumacao?"
+    },
+    {
+      "question_code": "Q_BURIAL_REFERENCE",
+      "fact_code": "burial_reference",
+      "text": "Qual o nome do falecido e o local do sepultamento?"
+    },
+    {
+      "question_code": "Q_RECADASTRO_STATUS",
+      "fact_code": "recadastro_status",
+      "text": "O recadastro da concessao ja foi feito?"
+    },
+    {
+      "question_code": "Q_CONCESSION_REFERENCE",
+      "fact_code": "concession_reference",
+      "text": "Qual e a identificacao da concessao?"
+    },
+    {
+      "question_code": "Q_RECADASTRO_HOLDER_DOCUMENT",
+      "fact_code": "recadastro_holder_document",
+      "text": "Qual o documento do titular da concessao?"
+    },
+    {
+      "question_code": "Q_CONCESSION_PURPOSE",
+      "fact_code": "concession_purpose",
+      "text": "O processo de concessao e novo, transferencia ou renovacao?"
+    },
+    {
+      "question_code": "Q_COMMERCIAL_ITEM",
+      "fact_code": "commercial_item",
+      "text": "Qual item voce precisa?"
+    },
+    {
+      "question_code": "Q_COMMERCIAL_STAGE",
+      "fact_code": "commercial_stage",
+      "text": "Voce quer um orcamento ou ja existe um pedido?"
+    },
+    {
+      "question_code": "Q_COMMERCIAL_DELIVERY",
+      "fact_code": "commercial_delivery_status",
+      "text": "O item ja foi instalado?"
+    },
+    {
+      "question_code": "Q_COMPLAINT_DESCRIPTION",
+      "fact_code": "complaint_description",
+      "text": "Pode descrever o que aconteceu?"
+    },
+    {
+      "question_code": "Q_OSSUARY_INFO",
+      "fact_code": "ossuary_information_request",
+      "text": "O que voce gostaria de saber sobre o ossuario?"
+    },
+    {
+      "question_code": "Q_SERVICE_HOURS",
+      "fact_code": "service_hours_request",
+      "text": "Sobre qual atendimento voce quer saber o horario?"
+    },
+    {
+      "question_code": "Q_OTHER_SUBJECT",
+      "fact_code": "other_subject_description",
+      "text": "Sobre qual assunto voce precisa de ajuda?"
+    },
+    {
+      "question_code": "Q_REQUESTER_DOCUMENT",
+      "fact_code": "requester_document",
+      "text": "Qual o seu documento de identificacao?"
+    }
+  ],
+  "conflict_questions": [
+    {
+      "question_code": "Q_CONFLICT_CONFIRM",
+      "applies_to": "any_fact_with_confidence_CONFLICTING",
+      "text": "Registrei uma informacao diferente antes. Qual valor esta correto?"
+    }
+  ],
+  "authoritative_resolutions": [
+    {
+      "fact_code": "destination_grave_situation",
+      "action_code": "ACTION_VERIFY_GRAVE_SITUATION",
+      "executor": "SYSTEM_OR_HUMAN",
+      "note": "Verificacao obrigatoria da situacao/dados do jazigo pela Administracao antes da continuidade."
+    },
+    {
+      "fact_code": "destination_grave_authorization",
+      "action_code": "ACTION_COLLECT_GRAVE_AUTHORIZATION",
+      "executor": "HUMAN",
+      "note": "Autorizacao do concessionario ou do Administrador Provisorio."
+    },
+    {
+      "fact_code": "exhumation_authorization",
+      "action_code": "ACTION_COLLECT_EXHUMATION_AUTHORIZATION",
+      "executor": "HUMAN",
+      "note": "Assinaturas conforme required_authorization_signatory."
+    },
+    {
+      "fact_code": "recadastro_status",
+      "action_code": "ACTION_VERIFY_RECADASTRO",
+      "executor": "SYSTEM_OR_HUMAN",
+      "note": "Encaminhar/abrir solicitacao para a Administracao verificar o recadastro; nao presumir OK nem PENDENTE."
+    }
+  ]
+}

@@ -1,0 +1,141 @@
+{
+  "artifact": "santana-conversation-domain/conversation-events",
+  "version": "v1",
+  "phase": "5B.4-A",
+  "description": "Catalogo determinista de eventos conversacionais e seus efeitos sobre conversation, case, goal stack e facts.",
+  "events": [
+    {
+      "event_kind": "ANSWER",
+      "description": "Resposta a pending_question. Fatos adicionais na mesma mensagem sao tratados como COMPLEMENT.",
+      "effects": [
+        "record_facts(source=USER_EXPLICIT, confidence=CONFIRMED)",
+        "clear_pending_question_when_answered",
+        "evaluate_relations"
+      ],
+      "conflict_rule": "Valor diferente para fato ACTIVE ja CONFIRMADO nao substitui: marca CONFLICTING."
+    },
+    {
+      "event_kind": "CORRECTION",
+      "description": "Correcao explicita de um fato anterior.",
+      "effects": [
+        "supersede_fact(reason=USER_CORRECTION)",
+        "record_facts(source=USER_CORRECTION, confidence=CONFIRMED)",
+        "invalidate_derived_conclusions",
+        "recompute_affected_dependencies",
+        "evaluate_relations"
+      ]
+    },
+    {
+      "event_kind": "COMPLEMENT",
+      "description": "Informacao adicional espontanea, inclusive antes de ser perguntada.",
+      "effects": [
+        "record_facts(source=USER_EXPLICIT, confidence=CONFIRMED)",
+        "preserve_pending_question",
+        "evaluate_relations"
+      ]
+    },
+    {
+      "event_kind": "PARALLEL_QUESTION",
+      "description": "Pergunta paralela do usuario sobre outro assunto informativo.",
+      "effects": [
+        "park_pending_question",
+        "push_goal(informational)",
+        "suspend_parent=false"
+      ],
+      "invariants": [
+        "pending_question nao e destruida nem substituida",
+        "goal-base permanece ACTIVE apos a resposta informativa"
+      ]
+    },
+    {
+      "event_kind": "CHANGE_OF_MIND",
+      "description": "Mudanca de decisao sobre um fato ja informado.",
+      "effects": [
+        "supersede_fact(reason=CHANGE_OF_MIND)",
+        "record_facts(source=USER_EXPLICIT, confidence=CONFIRMED)",
+        "recompute_affected_dependencies_only",
+        "evaluate_relations"
+      ],
+      "invariants": [
+        "fatos nao dependentes do fato alterado permanecem ACTIVE"
+      ]
+    },
+    {
+      "event_kind": "NEW_GOAL",
+      "description": "Novo objetivo real; cria novo case quando o sujeito e diferente.",
+      "effects": [
+        "create_case_when_subject_differs",
+        "push_goal",
+        "suspend_parent_when_requested",
+        "abandon_current_when_requested"
+      ],
+      "invariants": [
+        "nunca reutiliza facts de outro case"
+      ]
+    },
+    {
+      "event_kind": "COMPLAINT",
+      "description": "Reclamacao/ocorrencia sobre o assunto-base.",
+      "effects": [
+        "ensure_base_goal",
+        "attach_overlay_goal(GOAL_RECLAMACAO)",
+        "base_goal_remains_active"
+      ],
+      "forbidden": [
+        "automatic_severity_classification",
+        "replace_base_goal"
+      ]
+    },
+    {
+      "event_kind": "HUMAN_REQUEST",
+      "description": "Pedido de atendimento humano.",
+      "effects": [
+        "set_handoff_requested",
+        "build_handoff_model",
+        "preserve_pending_question"
+      ],
+      "integration": "NONE_IN_THIS_PHASE"
+    },
+    {
+      "event_kind": "SOCIAL",
+      "description": "Interacao social sem conteudo operacional.",
+      "effects": [
+        "log_only"
+      ],
+      "invariants": [
+        "nao altera facts, goals nem pending_question"
+      ]
+    },
+    {
+      "event_kind": "UNCERTAIN",
+      "description": "Usuario declara desconhecimento ou duvida sobre um fato.",
+      "effects": [
+        "record_facts(confidence=UNCERTAIN)",
+        "evaluate_relations"
+      ],
+      "invariants": [
+        "nao presumir valor",
+        "incerteza bloqueadora tem prioridade 3"
+      ]
+    }
+  ],
+  "authoritative_signal": {
+    "description": "Entrada autoritativa da Administracao ou de documento. Nao e um evento conversacional e nao entra no event_log conversacional.",
+    "entrypoint": "applyAuthoritativeSignal",
+    "accepted_sources": [
+      "SYSTEM",
+      "DOCUMENT"
+    ],
+    "effects": [
+      "record_facts(authoritative=true, confidence=CONFIRMED)",
+      "resolve_pending_action",
+      "reactivate_waiting_goal",
+      "evaluate_relations"
+    ],
+    "forbidden": [
+      "origem de usuario",
+      "extracao de LLM",
+      "inferencia"
+    ]
+  }
+}

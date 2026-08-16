@@ -1,0 +1,76 @@
+{
+  "artifact": "santana-conversation-domain/topics",
+  "version": "v1",
+  "phase": "5B.4-A",
+  "deployment": "NONE",
+  "description": "Assuntos principais do atendimento do Cemiterio Santana. Servicos, produtos e subtipos (translado, jazigo, lapide, zeladoria, ossuario, cinzas) NAO sao topicos principais: existem como goals, facts, entidades ou capacidades internas.",
+  "topics": [
+    {
+      "topic_code": "EXUMACAO",
+      "display_name": "Exumacao",
+      "layer": "BASE",
+      "primary_goal": "GOAL_EXUMACAO",
+      "capabilities": ["EXUMACAO_ADMINISTRATIVA", "DESTINO_OSSUARIO", "DESTINO_CINZAS"],
+      "entities": ["DECEASED", "GRAVE"]
+    },
+    {
+      "topic_code": "RECADASTRO",
+      "display_name": "Recadastro",
+      "layer": "BASE",
+      "primary_goal": "GOAL_RECADASTRO",
+      "capabilities": ["ATUALIZACAO_TITULARIDADE", "ATUALIZACAO_CONTATO"],
+      "entities": ["CONCESSION", "HOLDER"]
+    },
+    {
+      "topic_code": "TRANSPORTE",
+      "display_name": "Transporte de Falecidos e Restos Mortais",
+      "layer": "BASE",
+      "primary_goal": "GOAL_TRANSPORTE",
+      "capabilities": ["TRANSLADO_INTERNO", "TRANSLADO_EXTERNO", "TRANSPORTE_RESTOS_MORTAIS"],
+      "entities": ["DECEASED", "GRAVE"]
+    },
+    {
+      "topic_code": "CONCESSAO",
+      "display_name": "Processo de Concessao",
+      "layer": "BASE",
+      "primary_goal": "GOAL_CONCESSAO",
+      "capabilities": ["CONCESSAO_NOVA", "TRANSFERENCIA_CONCESSAO", "RENOVACAO_CONCESSAO"],
+      "entities": ["CONCESSION", "GRAVE", "HOLDER"]
+    },
+    {
+      "topic_code": "COMERCIAL",
+      "display_name": "Comercial",
+      "layer": "BASE",
+      "primary_goal": "GOAL_COMERCIAL",
+      "capabilities": ["LAPIDE", "JAZIGO", "OSSUARIO", "CINZAS", "ZELADORIA"],
+      "entities": ["GRAVE", "PRODUCT", "ORDER"]
+    },
+    {
+      "topic_code": "RECLAMACOES",
+      "display_name": "Reclamacoes e Ocorrencias",
+      "layer": "OVERLAY",
+      "primary_goal": "GOAL_RECLAMACAO",
+      "overlay_rules": {
+        "requires_base_goal": true,
+        "creates_base_goal_when_absent": true,
+        "replaces_base_goal": false,
+        "automatic_severity_classification": false
+      },
+      "capabilities": ["REGISTRO_OCORRENCIA", "ACOMPANHAMENTO_OCORRENCIA"],
+      "entities": ["CASE"]
+    },
+    {
+      "topic_code": "OUTROS_ASSUNTOS",
+      "display_name": "Outros Assuntos",
+      "layer": "BASE",
+      "fallback": true,
+      "primary_goal": "GOAL_OUTROS_ASSUNTOS",
+      "capabilities": ["INFORMACAO_GERAL"],
+      "entities": []
+    }
+  ],
+  "informational_goals": {
+    "description": "Perguntas paralelas informativas nao sao topicos e nao criam case.",
+    "goals": ["GOAL_INFO_OSSUARIO", "GOAL_INFO_HORARIO"]
+  }
+}
