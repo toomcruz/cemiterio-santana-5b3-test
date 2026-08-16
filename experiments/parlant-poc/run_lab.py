@@ -38,6 +38,7 @@ async def _run_parlant(port: int) -> None:
     import parlant.sdk as p
 
     from santana_parlant_poc.agent.build import build_agent
+    from santana_parlant_poc.agent.nlp import gemini_flash_only
 
     state = LabState(mode=MODE_PARLANT, parlant_port=port)
 
@@ -48,7 +49,7 @@ async def _run_parlant(port: int) -> None:
 
     async with p.Server(
         port=port,
-        nlp_service=p.NLPServices.gemini,
+        nlp_service=gemini_flash_only,
         session_store="transient",
         customer_store="transient",
         configure_api=configure_api,

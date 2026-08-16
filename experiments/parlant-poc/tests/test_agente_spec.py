@@ -144,3 +144,12 @@ def test_tools_registram_rastro_para_a_pagina():
     assert rastro["tool_calls"][0]["tool"] == "registrar_fato"
     STORE.reset(session)
     assert store.sessions() == []
+
+
+def test_nlp_service_da_poc_nao_usa_gemini_pro():
+    """A chave nova da POC recebe 404 em `gemini-2.5-pro`; so a familia Flash e usada."""
+    from santana_parlant_poc.agent import nlp
+
+    assert set(nlp.MODEL_BY_SIZE) == set(nlp.ModelSize)
+    for tamanho, classe in nlp.MODEL_BY_SIZE.items():
+        assert "Pro" not in classe.__name__, (tamanho, classe.__name__)

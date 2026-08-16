@@ -120,3 +120,7 @@ titular), **5** (restos ja exumados) e **6** (assinatura derivada do conjuge sob
 - **Testes automatizados** cobrem regra, rastro, API e os cenarios exigidos no motor
   deterministico. A qualidade das frases do Gemini e avaliada manualmente e pelo smoke do CI.
 - **Extracao offline de nome do falecido** e heuristica simples (parentesco + primeiro nome).
+- **Modelo Gemini**: o adaptador padrao do Parlant usa `gemini-2.5-pro` em tarefas grandes, e a
+  API responde `404 ... no longer available to new users` para chaves novas. A POC usa um NLP
+  service proprio (`agent/nlp.py`) restrito a familia Flash (`gemini-2.5-flash` /
+  `gemini-2.5-flash-lite`).
