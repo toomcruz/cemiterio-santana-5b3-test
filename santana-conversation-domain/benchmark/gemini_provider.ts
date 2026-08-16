@@ -4,11 +4,22 @@ import type { NetworkBoundary, NetworkRequest } from "../runtime/adapter/network
 const GEMINI_API_ROOT = "https://generativelanguage.googleapis.com/v1beta/models";
 
 const STABLE_FLASH_PREFERENCE = [
-  "gemini-3.6-flash",
-  "gemini-3.5-flash",
   "gemini-2.5-flash",
   "gemini-2.5-flash-lite",
+  "gemini-flash-latest",
+  "gemini-flash-lite-latest",
 ] as const;
+
+/** Model ids carrying these markers are not stable enough for a controlled benchmark. */
+const UNSTABLE_MODEL_MARKERS = ["preview", "exp", "thinking", "tuning", "live", "image", "tts", "native-audio"];
+
+const MAX_DISCOVERED_CANDIDATES = 6;
+
+/**
+ * `json_schema` uses the newer `responseJsonSchema` field ($ref/$defs aware); `openapi` uses the
+ * long-standing `responseSchema` field, which needs a dereferenced OpenAPI-subset schema.
+ */
+export type GeminiSchemaMode = "json_schema" | "openapi";
 
 export interface GeminiModelSummary {
   id: string;
@@ -35,11 +46,21 @@ export function classifyGeminiError(status: number, responseBody: string, scope:
   return status >= 500 ? "PROVIDER_HTTP_5XX" : `PROVIDER_HTTP_${status}`;
 }
 
+/**
+ * Picks the Gemini Flash models this credential can actually call, preferring the documented
+ * stable ids and then falling back to any other stable Flash id the API itself reported.
+ * A specific id being absent never invalidates the credential.
+ */
 export function selectStableFlashModels(models: readonly GeminiModelSummary[]): string[] {
-  const available = new Set(
-    models.filter((model) => model.supports_generate_content).map((model) => model.id),
-  );
-  return STABLE_FLASH_PREFERENCE.filter((model) => available.has(model));
+  const available = models.filter((model) => model.supports_generate_content).map((model) => model.id);
+  const availableSet = new Set(available);
+  const preferred = STABLE_FLASH_PREFERENCE.filter((model) => availableSet.has(model));
+  const discovered = available
+    .filter((model) => model.startsWith("gemini-") && model.includes("flash"))
+    .filter((model) => !UNSTABLE_MODEL_MARKERS.some((marker) => model.includes(marker)))
+    .filter((model) => !preferred.includes(model as typeof STABLE_FLASH_PREFERENCE[number]))
+    .sort((a, b) => b.localeCompare(a));
+  return [...preferred, ...discovered].slice(0, MAX_DISCOVERED_CANDIDATES);
 }
 
 export async function listGeminiModels(
@@ -86,6 +107,7 @@ export class GeminiBenchmarkProvider implements LlmProvider {
     readonly model: string,
     private readonly apiKey: string,
     private readonly responseSchema: Record<string, unknown>,
+    private readonly schemaMode: GeminiSchemaMode = "json_schema",
   ) {}
 
   createRequest(prompt: string): { url: string; headers: Readonly<Record<string, string>>; body: string } {
@@ -96,7 +118,9 @@ export class GeminiBenchmarkProvider implements LlmProvider {
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
           responseMimeType: "application/json",
-          responseJsonSchema: this.responseSchema,
+          ...(this.schemaMode === "openapi"
+            ? { responseSchema: this.responseSchema }
+            : { responseJsonSchema: this.responseSchema }),
           temperature: 0,
         },
       }),
@@ -112,12 +136,13 @@ export class GeminiBenchmarkProvider implements LlmProvider {
     return text;
   }
 
-  usageFromResponse(responseBody: string): { input_tokens: number; output_tokens: number; total_tokens: number } | null {
-    const usage =
-      (JSON.parse(responseBody) as {
-        usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number };
-      })
-        .usageMetadata;
+  usageFromResponse(
+    responseBody: string,
+  ): { input_tokens: number; output_tokens: number; total_tokens: number } | null {
+    const usage = (JSON.parse(responseBody) as {
+      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number };
+    })
+      .usageMetadata;
     if (!usage || typeof usage.promptTokenCount !== "number" || typeof usage.candidatesTokenCount !== "number") {
       return null;
     }
