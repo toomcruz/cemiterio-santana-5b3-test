@@ -103,7 +103,14 @@ async function writeAndExit(report: Record<string, unknown>, status: number): Pr
     "benchmark-report.json",
     JSON.stringify(report, null, 2) + "\n",
   );
-  console.log(JSON.stringify({ model: report.model, discovery: report.discovery, connectivity: report.connectivity }));
+  console.log(
+    JSON.stringify({
+      model: report.model,
+      discovery: report.discovery,
+      connectivity: report.connectivity,
+      schema_compatibility: report.schema_compatibility,
+    }),
+  );
   Deno.exit(status);
 }
 
@@ -148,61 +155,6 @@ if (!candidates.length) {
   }, 1);
 }
 
-const connectivitySchema = {
-  type: "object",
-  properties: { ok: { type: "boolean" } },
-  required: ["ok"],
-  additionalProperties: false,
-};
-const connectivityAttempts: { model: string; outcome: string }[] = [];
-let selectedModel: string | undefined;
-for (const candidate of candidates) {
-  const probeProvider = new GeminiBenchmarkProvider(candidate, apiKey, connectivitySchema);
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30_000);
-    const response = await fetchBoundary(
-      probeProvider.createRequest("Return only the requested JSON object."),
-      controller.signal,
-    );
-    clearTimeout(timeout);
-    if (response.status < 200 || response.status >= 300) {
-      connectivityAttempts.push({
-        model: candidate,
-        outcome: probeProvider.classifyErrorResponse(response.status, response.body),
-      });
-      continue;
-    }
-    const parsed = JSON.parse(probeProvider.extractText(response.body)) as { ok?: unknown };
-    if (typeof parsed.ok !== "boolean" || !probeProvider.usageFromResponse(response.body)) {
-      connectivityAttempts.push({ model: candidate, outcome: "STRUCTURED_OUTPUT_MISMATCH" });
-      continue;
-    }
-    connectivityAttempts.push({ model: candidate, outcome: "SUCCESS" });
-    selectedModel = candidate;
-    break;
-  } catch {
-    connectivityAttempts.push({ model: candidate, outcome: "PROVIDER_CONNECTIVITY_PARSE_OR_NETWORK_ERROR" });
-  }
-}
-if (!selectedModel) {
-  await writeAndExit({
-    benchmark_version: "5B.4-E.1/1.1.0",
-    corpus_size: corpus.length,
-    model: null,
-    discovery: {
-      status: "available_but_no_structured_output_model",
-      available_model_ids: availableModels.map((model) => model.id),
-      generate_content_model_ids: availableModels.filter((model) => model.supports_generate_content).map((model) =>
-        model.id
-      ),
-      stable_flash_candidates: candidates,
-    },
-    connectivity: { status: "failed", attempts: connectivityAttempts },
-    safe_to_recommend: false,
-  }, 1);
-}
-
 /**
  * Pins the authoritative message_id of the case being interpreted. The id comes from our own
  * input, never from the model, so constraining it removes the only field the provider has no
@@ -214,53 +166,84 @@ function schemaForMessage(variant: Record<string, unknown>, messageId: string): 
   return { ...variant, properties };
 }
 
-// `writeAndExit` never returns, so past this point a model has been verified end to end.
-const model: string = selectedModel!;
-
+const connectivitySchema = {
+  type: "object",
+  properties: { ok: { type: "boolean" } },
+  required: ["ok"],
+  additionalProperties: false,
+};
 const schemaVariants: { mode: GeminiSchemaMode; schema: Record<string, unknown> }[] = [
   { mode: "json_schema", schema: geminiSchema(schema) as Record<string, unknown> },
   { mode: "openapi", schema: openApiSchema(schema) as Record<string, unknown> },
 ];
-const schemaAttempts: { mode: GeminiSchemaMode; outcome: string }[] = [];
-let provider: GeminiBenchmarkProvider | undefined;
-for (const variant of schemaVariants) {
-  const candidateProvider = new GeminiBenchmarkProvider(model, apiKey, variant.schema, variant.mode);
+
+async function probe(candidateProvider: GeminiBenchmarkProvider, prompt: string): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30_000);
-    const response = await fetchBoundary(
-      candidateProvider.createRequest(buildPrompt(corpus[0]!.input)),
-      controller.signal,
-    );
-    clearTimeout(timeout);
+    const response = await fetchBoundary(candidateProvider.createRequest(prompt), controller.signal);
     if (response.status < 200 || response.status >= 300) {
-      schemaAttempts.push({
-        mode: variant.mode,
-        outcome: candidateProvider.classifyErrorResponse(response.status, response.body),
-      });
-      continue;
+      return candidateProvider.classifyErrorResponse(response.status, response.body);
     }
     JSON.parse(candidateProvider.extractText(response.body));
-    schemaAttempts.push({ mode: variant.mode, outcome: "SUCCESS" });
-    provider = candidateProvider;
-    break;
+    return candidateProvider.usageFromResponse(response.body) ? "SUCCESS" : "USAGE_METADATA_MISSING";
   } catch {
-    schemaAttempts.push({ mode: variant.mode, outcome: "JSON_PARSE_ERROR" });
+    return "PROVIDER_PROBE_PARSE_OR_NETWORK_ERROR";
+  } finally {
+    clearTimeout(timeout);
   }
 }
-if (!provider) {
+
+// A candidate is only selected once it answers a minimal call AND accepts the real interpretation
+// schema, so a model that connects but cannot honour the contract falls through to the next one.
+const connectivityAttempts: { model: string; outcome: string }[] = [];
+const schemaAttempts: { model: string; mode: GeminiSchemaMode; outcome: string }[] = [];
+const pinnedModel = Deno.env.get("BENCHMARK_GEMINI_MODEL");
+const orderedCandidates = pinnedModel ? [pinnedModel] : candidates;
+let selectedModel: string | undefined;
+let selectedVariant: { mode: GeminiSchemaMode; schema: Record<string, unknown> } | undefined;
+for (const candidate of orderedCandidates) {
+  const connectivity = await probe(
+    new GeminiBenchmarkProvider(candidate, apiKey, connectivitySchema),
+    "Return only the requested JSON object.",
+  );
+  connectivityAttempts.push({ model: candidate, outcome: connectivity });
+  if (connectivity !== "SUCCESS") continue;
+  for (const variant of schemaVariants) {
+    const outcome = await probe(
+      new GeminiBenchmarkProvider(candidate, apiKey, variant.schema, variant.mode),
+      buildPrompt(corpus[0]!.input),
+    );
+    schemaAttempts.push({ model: candidate, mode: variant.mode, outcome });
+    if (outcome !== "SUCCESS") continue;
+    selectedModel = candidate;
+    selectedVariant = variant;
+    break;
+  }
+  if (selectedModel) break;
+}
+if (!selectedModel || !selectedVariant) {
   await writeAndExit({
     benchmark_version: "5B.4-E.1/1.1.0",
     corpus_size: corpus.length,
-    model: selectedModel,
-    discovery: { status: "success", stable_flash_candidates: candidates },
-    connectivity: { status: "success", attempts: connectivityAttempts },
+    model: null,
+    discovery: {
+      status: "no_model_passed_connectivity_and_schema",
+      available_model_ids: availableModels.map((model) => model.id),
+      generate_content_model_ids: availableModels.filter((model) => model.supports_generate_content).map((model) =>
+        model.id
+      ),
+      stable_flash_candidates: candidates,
+    },
+    connectivity: { status: "failed", attempts: connectivityAttempts },
     schema_compatibility: { status: "failed", attempts: schemaAttempts },
     safe_to_recommend: false,
   }, 1);
 }
-const selectedSchemaMode = schemaAttempts[schemaAttempts.length - 1]!.mode;
-const selectedVariant = schemaVariants.find((variant) => variant.mode === selectedSchemaMode)!;
+// `writeAndExit` never returns, so past this point a model and a schema mode are both verified.
+const model: string = selectedModel!;
+const verifiedVariant = selectedVariant!;
+const selectedSchemaMode = verifiedVariant.mode;
 
 /** Free-tier Gemini enforces a per-minute request budget; pace and retry instead of burning the run. */
 const minIntervalMs = Number(Deno.env.get("BENCHMARK_MIN_INTERVAL_MS") ?? "6000");
@@ -315,7 +298,7 @@ for (const testCase of corpus) {
   const caseProvider = new GeminiBenchmarkProvider(
     model,
     apiKey,
-    schemaForMessage(selectedVariant.schema, testCase.input.message_id),
+    schemaForMessage(verifiedVariant.schema, testCase.input.message_id),
     selectedSchemaMode,
   );
   const adapter = new ControlledLlmAdapter({
