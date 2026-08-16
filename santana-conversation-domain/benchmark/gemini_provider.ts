@@ -2,7 +2,9 @@ import type { LlmProvider } from "../runtime/adapter/adapter.ts";
 
 const GEMINI_API_ROOT = "https://generativelanguage.googleapis.com/v1beta/models";
 
-export const GEMINI_MODEL = "gemini-2.5-flash";
+// The configured key returned PROVIDER_MODEL_NOT_FOUND for gemini-2.5-flash.
+// Flash-Lite is the documented structured-output alternative used for this bounded benchmark.
+export const GEMINI_MODEL = "gemini-2.5-flash-lite";
 
 /**
  * Provider implementation used only by the manually-dispatched benchmark.
@@ -54,6 +56,8 @@ export class GeminiBenchmarkProvider implements LlmProvider {
   classifyErrorResponse(status: number, responseBody: string): string {
     try {
       const code = (JSON.parse(responseBody) as { error?: { status?: unknown } }).error?.status;
+      if (code === "NOT_FOUND") return "PROVIDER_MODEL_NOT_FOUND";
+      if (code === "RESOURCE_EXHAUSTED") return "PROVIDER_QUOTA";
       if (typeof code === "string" && /^[A-Z_]+$/.test(code)) return `PROVIDER_${code}`;
     } catch {
       // The aggregate HTTP category below is intentionally sufficient and safe.

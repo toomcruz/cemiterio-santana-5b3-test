@@ -11,8 +11,8 @@ import { factDef } from "../engine/catalog.ts";
 const schema = JSON.parse(
   Deno.readTextFileSync(new URL("../runtime/interpretation.schema.json", import.meta.url)),
 ) as Record<string, unknown>;
-const INPUT_USD_PER_MILLION = 0.30;
-const OUTPUT_USD_PER_MILLION = 2.50;
+const INPUT_USD_PER_MILLION = 0.10;
+const OUTPUT_USD_PER_MILLION = 0.40;
 
 function geminiSchema(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(geminiSchema);
