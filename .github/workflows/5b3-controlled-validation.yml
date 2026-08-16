@@ -236,4 +236,3 @@ jobs:
           assert_case G BLOCK install_gate success success failure success failure
           assert_case H PASS install_gate success success success success success
           printf 'STATIC ORCHESTRATION PROOF: PASS (A-H)\n'
-

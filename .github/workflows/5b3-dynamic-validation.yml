@@ -167,7 +167,6 @@ jobs:
           one P05 p05_source_link_insert.sql; one P06 p06_final_states.sql; one P07 p07_explicit_rebind.sql; one P08 p08_hash_integrity.sql
           conc P09 p09_session_concurrency.sql
 
-
       - name: P10 SQL resolver boundary
         env:
           TEST_DATABASE_URL: ${{ secrets.DATABASE_URL }}
