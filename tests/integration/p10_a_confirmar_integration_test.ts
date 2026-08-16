@@ -21,7 +21,16 @@ async function expectAConfirmarReject(
     await operation();
   } catch (error) {
     if (!(error instanceof HttpProblem)) throw new Error(`${label} failed with a non-domain error`);
-    if (expected === "A_CONFIRMAR_NO_FACTS" && error.code !== expected) {
+    // get_renderer_decision_context refuses an A_CONFIRMAR decision in the database
+    // ("Decision cannot render facts"), so the guard usually fires before the renderer
+    // reaches its own A_CONFIRMAR_NO_FACTS branch. Both are the same fail-closed
+    // outcome — no factual rendering — so accept either, and nothing else.
+    if (
+      expected === "A_CONFIRMAR_NO_FACTS" &&
+      error.code !== expected &&
+      (error.code !== "SUPABASE_REST_ERROR" ||
+        !error.message.toLowerCase().includes("decision cannot render facts"))
+    ) {
       throw new Error(`${label} rejected with ${error.code}, expected ${expected}`);
     }
     if (
