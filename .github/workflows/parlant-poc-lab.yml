@@ -8,9 +8,6 @@ on:
     branches:
       - "lab/**"
       - "claude/parlant-poc-**"
-    paths:
-      - "experiments/parlant-poc/**"
-      - ".github/workflows/parlant-poc-lab.yml"
   workflow_dispatch:
     inputs:
       run_gemini_smoke:
