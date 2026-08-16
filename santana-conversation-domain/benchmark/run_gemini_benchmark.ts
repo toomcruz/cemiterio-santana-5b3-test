@@ -1,14 +1,21 @@
-import { type AdapterObservation, ControlledLlmAdapter } from "../runtime/adapter/adapter.ts";
 import { factDef } from "../engine/catalog.ts";
+import { type AdapterObservation, ControlledLlmAdapter } from "../runtime/adapter/adapter.ts";
 import { fetchBoundary } from "../runtime/adapter/network.ts";
 import { toConversationEvents } from "../runtime/interpreter/bridge.ts";
 import { assertNoAuthorityEscalation } from "../runtime/interpreter/guard.ts";
 import type { Interpretation } from "../runtime/interpreter/types.ts";
-import { assertStrictInterpretation } from "../runtime/adapter/schema.ts";
 import { loadBenchmarkCorpus } from "./corpus.ts";
-import { GeminiBenchmarkProvider, GeminiProviderError, listGeminiModels, selectStableFlashModels } from "./gemini_provider.ts";
+import { assertStrictInterpretation } from "../runtime/adapter/schema.ts";
+import {
+  GeminiBenchmarkProvider,
+  GeminiProviderError,
+  listGeminiModels,
+  selectStableFlashModels,
+} from "./gemini_provider.ts";
 
-const schema = JSON.parse(Deno.readTextFileSync(new URL("../runtime/interpretation.schema.json", import.meta.url))) as Record<string, unknown>;
+const schema = JSON.parse(
+  Deno.readTextFileSync(new URL("../runtime/interpretation.schema.json", import.meta.url)),
+) as Record<string, unknown>;
 
 function geminiSchema(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(geminiSchema);
@@ -33,7 +40,10 @@ function percentile(values: number[], p: number): number {
   return sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * p) - 1)]!;
 }
 
-function sameFacts(actual: Interpretation, expected: { fact_code: string; value: unknown }[] = []): [number, number, number] {
+function sameFacts(
+  actual: Interpretation,
+  expected: { fact_code: string; value: unknown }[] = [],
+): [number, number, number] {
   const want = new Set(expected.map((fact) => `${fact.fact_code}:${JSON.stringify(fact.value)}`));
   const got = new Set(actual.facts.map((fact) => `${fact.fact_code}:${JSON.stringify(fact.value)}`));
   return [[...got].filter((fact) => want.has(fact)).length, got.size, want.size];
@@ -46,7 +56,10 @@ function pricingFor(model: string): { input: number; output: number } | null {
 }
 
 async function writeAndExit(report: Record<string, unknown>, status: number): Promise<never> {
-  await Deno.writeTextFile("benchmark-report.json", JSON.stringify(report, null, 2) + "\n");
+  await Deno.writeTextFile(
+    "benchmark-report.json",
+    JSON.stringify(report, null, 2) + "\n",
+  );
   console.log(JSON.stringify({ model: report.model, discovery: report.discovery, connectivity: report.connectivity }));
   Deno.exit(status);
 }
@@ -65,18 +78,38 @@ try {
   availableModels = await listGeminiModels(apiKey, fetchBoundary, new AbortController().signal);
 } catch (error) {
   const category = error instanceof GeminiProviderError ? error.category : "PROVIDER_MODELS_LIST_NETWORK_ERROR";
-  await writeAndExit({ benchmark_version: "5B.4-E.1/1.1.0", corpus_size: corpus.length, model: null, discovery: { status: "failed", rejection_category: category }, connectivity: { status: "not_run" }, safe_to_recommend: false }, 1);
+  await writeAndExit({
+    benchmark_version: "5B.4-E.1/1.1.0",
+    corpus_size: corpus.length,
+    model: null,
+    discovery: { status: "failed", rejection_category: category },
+    connectivity: { status: "not_run" },
+    safe_to_recommend: false,
+  }, 1);
 }
 const candidates = selectStableFlashModels(availableModels);
 if (!candidates.length) {
   await writeAndExit({
-    benchmark_version: "5B.4-E.1/1.1.0", corpus_size: corpus.length, model: null,
-    discovery: { status: "no_compatible_stable_flash_model", available_model_ids: availableModels.map((model) => model.id), generate_content_model_ids: availableModels.filter((model) => model.supports_generate_content).map((model) => model.id) },
+    benchmark_version: "5B.4-E.1/1.1.0",
+    corpus_size: corpus.length,
+    model: null,
+    discovery: {
+      status: "no_compatible_stable_flash_model",
+      available_model_ids: availableModels.map((model) => model.id),
+      generate_content_model_ids: availableModels.filter((model) => model.supports_generate_content).map((model) =>
+        model.id
+      ),
+    },
     connectivity: { status: "not_run" }, safe_to_recommend: false,
   }, 1);
 }
 
-const connectivitySchema = { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"], additionalProperties: false };
+const connectivitySchema = {
+  type: "object",
+  properties: { ok: { type: "boolean" } },
+  required: ["ok"],
+  additionalProperties: false,
+};
 const connectivityAttempts: { model: string; outcome: string }[] = [];
 let selectedModel: string | undefined;
 for (const candidate of candidates) {
@@ -84,7 +117,10 @@ for (const candidate of candidates) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30_000);
-    const response = await fetchBoundary(probeProvider.createRequest("Return only the requested JSON object."), controller.signal);
+    const response = await fetchBoundary(
+      probeProvider.createRequest("Return only the requested JSON object."),
+      controller.signal,
+    );
     clearTimeout(timeout);
     if (response.status < 200 || response.status >= 300) {
       connectivityAttempts.push({ model: candidate, outcome: probeProvider.classifyErrorResponse(response.status, response.body) });
@@ -104,9 +140,19 @@ for (const candidate of candidates) {
 }
 if (!selectedModel) {
   await writeAndExit({
-    benchmark_version: "5B.4-E.1/1.1.0", corpus_size: corpus.length, model: null,
-    discovery: { status: "available_but_no_structured_output_model", available_model_ids: availableModels.map((model) => model.id), generate_content_model_ids: availableModels.filter((model) => model.supports_generate_content).map((model) => model.id), stable_flash_candidates: candidates },
-    connectivity: { status: "failed", attempts: connectivityAttempts }, safe_to_recommend: false,
+    benchmark_version: "5B.4-E.1/1.1.0",
+    corpus_size: corpus.length,
+    model: null,
+    discovery: {
+      status: "available_but_no_structured_output_model",
+      available_model_ids: availableModels.map((model) => model.id),
+      generate_content_model_ids: availableModels.filter((model) => model.supports_generate_content).map((model) =>
+        model.id
+      ),
+      stable_flash_candidates: candidates,
+    },
+    connectivity: { status: "failed", attempts: connectivityAttempts },
+    safe_to_recommend: false,
   }, 1);
 }
 
