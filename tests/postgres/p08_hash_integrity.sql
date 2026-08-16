@@ -7,7 +7,7 @@ select gen_random_uuid() as source_a \gset
 insert into support_vnext_shadow.knowledge_source(source_id,logical_source_id,source_version,source_type,title,authority_level,content_hash,created_by) values(:'source_a'::uuid,gen_random_uuid(),1,'MANUAL','P08 source A','HISTORICAL',repeat('c',64),'fixture');
 insert into support_vnext_shadow.ruleset_source_link(release_id,source_id,purpose_code,created_by) values(:'release_a'::uuid,:'source_a'::uuid,'FACT','fixture');
 select support_vnext_shadow.refresh_draft_release_content_hash(:'release_a'::uuid,'fixture');
-select content_hash as p08_hash_a \gset from support_vnext_shadow.support_ruleset_release where release_id=:'release_a'::uuid;
+select content_hash as p08_hash_a from support_vnext_shadow.support_ruleset_release where release_id=:'release_a'::uuid \gset
 select pg_temp.assert_true(:'p08_hash_a'=support_vnext_shadow.compute_release_content_hash(:'release_a'::uuid),'P08-B intact snapshot validates');
 select pg_temp.assert_true(support_vnext_shadow.compute_release_content_hash(:'release_a'::uuid)=support_vnext_shadow.compute_release_content_hash(:'release_a'::uuid),'P08-G repeated calculation is deterministic');
 select support_vnext_shadow.publish_ruleset_release(:'release_a'::uuid,'fixture');

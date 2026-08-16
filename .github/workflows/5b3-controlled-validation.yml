@@ -151,7 +151,7 @@ jobs:
           printf 'identity_match=true\n' >> "$GITHUB_OUTPUT"
 
   install:
-    name: 5. Install migrations 0001-0014
+    name: 5. Install migrations 0001-0019
     needs: database-identity-gate
     uses: ./.github/workflows/5b3-install-migrations.yml
     secrets: inherit
@@ -189,7 +189,7 @@ jobs:
             printf 'POST-RESET: included in reset result\n'
             printf 'PREFLIGHT: %s\n' "$PREFLIGHT_RESULT"
             printf 'DATABASE IDENTITY: %s\n' "$IDENTITY_RESULT"
-            printf 'MIGRATIONS 0001-0014: %s\n' "$INSTALL_RESULT"
+            printf 'MIGRATIONS 0001-0019: %s\n' "$INSTALL_RESULT"
             printf 'POST-INSTALL: included in installer result\n'
             printf 'DATABASE FINGERPRINT MATCH: %s\n' "$IDENTITY_FINGERPRINT"
             printf 'TIMESTAMP UTC: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -232,8 +232,8 @@ jobs:
           assert_case C BLOCK install_gate success success failure success success
           assert_case D BLOCK install_gate success success success failure success
           assert_case E BLOCK install_gate success success success success failure
-          assert_case F BLOCK install_gate success success success success success
-          assert_case G BLOCK install_gate success success success success failure
+          assert_case F BLOCK install_gate failure failure success success success
+          assert_case G BLOCK install_gate success success failure success failure
           assert_case H PASS install_gate success success success success success
           printf 'STATIC ORCHESTRATION PROOF: PASS (A-H)\n'
 

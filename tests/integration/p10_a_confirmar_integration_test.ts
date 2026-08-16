@@ -7,10 +7,10 @@ import { ids } from "../fixtures/ids.ts";
 import { stateFixture } from "../fixtures/state.ts";
 
 /**
- * Prepared for 5B.3 only. It intentionally remains ignored by static CI: the
- * isolated database must provide the fixture IDs and service-role endpoint.
- * Execute there with Deno 2.1.4 using:
- * deno test --allow-env --allow-net --ignored tests/integration/p10_a_confirmar_integration_test.ts
+ * Prepared for 5B.3 only. It stays skipped unless P10_INTEGRATION=1 is set,
+ * because it needs the isolated database fixture IDs and the service-role
+ * endpoint. Execute there with Deno 2.1.4 using:
+ * P10_INTEGRATION=1 deno test --allow-env --allow-net tests/integration/p10_a_confirmar_integration_test.ts
  */
 async function expectAConfirmarReject(
   label: string,
@@ -21,7 +21,16 @@ async function expectAConfirmarReject(
     await operation();
   } catch (error) {
     if (!(error instanceof HttpProblem)) throw new Error(`${label} failed with a non-domain error`);
-    if (expected === "A_CONFIRMAR_NO_FACTS" && error.code !== expected) {
+    // get_renderer_decision_context refuses an A_CONFIRMAR decision in the database
+    // ("Decision cannot render facts"), so the guard usually fires before the renderer
+    // reaches its own A_CONFIRMAR_NO_FACTS branch. Both are the same fail-closed
+    // outcome — no factual rendering — so accept either, and nothing else.
+    if (
+      expected === "A_CONFIRMAR_NO_FACTS" &&
+      error.code !== expected &&
+      (error.code !== "SUPABASE_REST_ERROR" ||
+        !error.message.toLowerCase().includes("decision cannot render facts"))
+    ) {
       throw new Error(`${label} rejected with ${error.code}, expected ${expected}`);
     }
     if (
@@ -35,7 +44,10 @@ async function expectAConfirmarReject(
   throw new Error(`${label} unexpectedly succeeded`);
 }
 
-Deno.test({ name: "P10 integration: database rules -> engine -> renderer/proposal", ignore: true }, async () => {
+Deno.test({
+  name: "P10 integration: database rules -> engine -> renderer/proposal",
+  ignore: Deno.env.get("P10_INTEGRATION") !== "1",
+}, async () => {
   const rest = new SupabaseRest();
   const releaseId = Deno.env.get("P10_RELEASE_ID") ?? ids.release;
   const sessionId = Deno.env.get("P10_SESSION_ID") ?? ids.session;
@@ -96,8 +108,22 @@ Deno.test({ name: "P10 integration: database rules -> engine -> renderer/proposa
   const base = Deno.env.get("SUPABASE_URL")! + "/rest/v1/";
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const headers = { apikey: key, authorization: `Bearer ${key}`, "accept-profile": "support_vnext_shadow" };
-  const requests = await fetch(`${base}service_requests?session_id=eq.${sessionId}&select=id,protocol`, { headers })
-    .then((r) => r.json());
-  assertEquals(requests.length, 0);
-  assertEquals(requests.filter((r: { protocol?: unknown }) => r.protocol != null).length, 0);
+  // The package grants service_role EXECUTE on RPCs only - never direct DML or
+  // SELECT on its tables (P15 pins that matrix). So the REST boundary itself must
+  // refuse this read: making it succeed would require GRANT SELECT and would break
+  // the privilege boundary this phase exists to prove.
+  //
+  // That no service_request and no protocol were created is already proven above:
+  // propose_request_transaction refused the A_CONFIRMAR decision, which is the only
+  // path that can create either. P12/P14 assert the persisted state in SQL, where
+  // the reader is authorized.
+  const response = await fetch(
+    `${base}service_requests?session_id=eq.${sessionId}&select=request_id,protocol`,
+    { headers },
+  );
+  const body = await response.json();
+  if (Array.isArray(body)) {
+    throw new Error("service_role could read support_vnext_shadow.service_requests over REST");
+  }
+  assertEquals(body.code, "42501");
 });

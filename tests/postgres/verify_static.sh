@@ -209,7 +209,7 @@ manifest_verifier="$root/verify_migration_manifest.sh"
 [[ -r "$manifest_verifier" ]] || { echo 'migration/manifest verifier missing or unreadable' >&2; exit 1; }
 rg -Fq 'verify_migration_manifest.sh' "$ci" || { echo 'CI does not execute migration/manifest verifier' >&2; exit 1; }
 ! rg -Fq 'head -14' "$ci" || { echo 'CI still truncates migration inventory' >&2; exit 1; }
-for token in 'MIGRATIONS_COVERED: 0001-0014' '0013' '0014'; do
+for token in 'MIGRATIONS_COVERED: 0001-0019' '0013' '0014' '0015' '0016' '0017' '0018' '0019'; do
   rg -Fq "$token" "$root/../../docs/runtime-object-manifest.md" || { echo "manifest cumulative migration coverage missing: $token" >&2; exit 1; }
 done
 for token in 'oid::regprocedure' 'to_regprocedure(function_identity)' 'p15_expected_functions' 'function_identity text primary key' 'classification' 'PUBLISHER_RPC' 'RUNTIME_RPC' 'INTERNAL_HELPER' 'unclassified function overload' 'expected_public' 'expected_anon' 'expected_authenticated' 'expected_service_role' 'expected_publisher' 'expected_auditor' 'has_function_privilege' 'expected function missing' 'SELECT matrix' 'INSERT matrix' 'UPDATE matrix' 'DELETE matrix' 'unclassified table'; do
@@ -220,7 +220,14 @@ done
 # 5B.3-C inbound_messages source contract hardening
 inbound_source_migration="$root/../../database/migrations/0015_5b3c_fix_inbound_source_contract.sql"
 [[ -s "$inbound_source_migration" ]] || { echo 'inbound source contract migration missing' >&2; exit 1; }
-for token in 'inbound_message_id,session_id,topic_id,release_id,message_digest,content_hash,source' SHADOW_INBOUND content_hash; do
+inbound_source_migration_compact="$(tr -d ' \t\n' < "$inbound_source_migration")"
+for token in 'inbound_message_id,session_id,topic_id,release_id,message_digest,content_hash,source' "'SHADOW_INBOUND'" 'content_hash'; do
+  case "$inbound_source_migration_compact" in
+    *"$token"*) ;;
+    *) echo "inbound source contract migration missing: $token" >&2; exit 1 ;;
+  esac
+done
+for token in 'insert into support_vnext_shadow.inbound_messages' 'create or replace function support_vnext_shadow.persist_shadow_inbound_message'; do
   rg -Fq "$token" "$inbound_source_migration" || { echo "inbound source contract migration missing: $token" >&2; exit 1; }
 done
 

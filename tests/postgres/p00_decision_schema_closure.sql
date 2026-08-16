@@ -65,7 +65,7 @@ end $$;
 do $$
 declare
   release_a uuid:=extensions.gen_random_uuid(); release_b uuid:=extensions.gen_random_uuid(); release_c uuid:=extensions.gen_random_uuid();
-  seq_a integer; seq_b integer; seq_c integer; high_plan jsonb; low_plan jsonb; conflict_a jsonb; conflict_b jsonb;
+  seq_a integer; seq_b integer; seq_c integer; high_plan jsonb; low_plan jsonb; conflict_a jsonb; conflict_b jsonb; conflict_c_a jsonb; conflict_c_b jsonb;
   rules_a jsonb; rules_b jsonb; rules_c jsonb; normalized_a jsonb; normalized_c jsonb; r uuid;
 begin
   select coalesce(max(release_sequence),0)+1 into seq_a from support_vnext_shadow.support_ruleset_release;
@@ -76,8 +76,12 @@ begin
   end loop;
   high_plan:=jsonb_build_object('schema_version','1.0','release_id',release_a::text,'outcome','PERMITTED','actions',jsonb_build_array('RESPONDER'),'response_plan',null,'state_patch',jsonb_build_object('expected_state_version',1,'operations','[]'::jsonb),'request_plan',null,'document_plan',null,'handoff_plan',null,'reason_codes',jsonb_build_array('HIGH'),'validation_requirements','{}'::jsonb);
   low_plan:=high_plan || jsonb_build_object('reason_codes',jsonb_build_array('LOW'));
-  conflict_a:=high_plan || jsonb_build_object('reason_codes',jsonb_build_array('CONFLICT_A'),'response_plan',jsonb_build_object('mode','DETERMINISTIC','template_variables',jsonb_build_object('message','a'),'allowed_fact_refs','[]'::jsonb,'asset_ids','[]'::jsonb,'max_questions',0));
-  conflict_b:=high_plan || jsonb_build_object('reason_codes',jsonb_build_array('CONFLICT_B'),'response_plan',jsonb_build_object('mode','DETERMINISTIC','template_variables',jsonb_build_object('message','b'),'allowed_fact_refs','[]'::jsonb,'asset_ids','[]'::jsonb,'max_questions',0));
+  -- then_plan.release_id must match the owning DecisionRule release; build one
+  -- conflicting pair per release instead of reusing release_a's plan.
+  conflict_a:=high_plan || jsonb_build_object('release_id',release_b::text,'reason_codes',jsonb_build_array('CONFLICT_A'),'response_plan',jsonb_build_object('mode','DETERMINISTIC','template_variables',jsonb_build_object('message','a'),'allowed_fact_refs','[]'::jsonb,'asset_ids','[]'::jsonb,'max_questions',0));
+  conflict_b:=high_plan || jsonb_build_object('release_id',release_b::text,'reason_codes',jsonb_build_array('CONFLICT_B'),'response_plan',jsonb_build_object('mode','DETERMINISTIC','template_variables',jsonb_build_object('message','b'),'allowed_fact_refs','[]'::jsonb,'asset_ids','[]'::jsonb,'max_questions',0));
+  conflict_c_a:=conflict_a || jsonb_build_object('release_id',release_c::text);
+  conflict_c_b:=conflict_b || jsonb_build_object('release_id',release_c::text);
   perform pg_temp.expect_error(format($q$insert into support_vnext_shadow.decision_rule(decision_rule_id,release_id,logical_rule_id,rule_code,priority,when_expression,then_plan,reason_code,record_status,created_by) values (extensions.gen_random_uuid(),%L::uuid,extensions.gen_random_uuid(),'RULE_N03',1,'{}'::jsonb,'{}'::jsonb,'INVALID','PUBLISHED','p00')$q$,release_a),'22023');
   perform pg_temp.assert_true(true,'RULE-N03 persisted DecisionRule with incomplete then_plan is rejected by trigger');
   insert into support_vnext_shadow.decision_rule(decision_rule_id,release_id,logical_rule_id,rule_code,priority,when_expression,then_plan,reason_code,record_status,created_by) values
@@ -85,8 +89,8 @@ begin
     (extensions.gen_random_uuid(),release_a,extensions.gen_random_uuid(),'RULE_HIGH',20,'{}'::jsonb,high_plan,'HIGH','PUBLISHED','p00'),
     (extensions.gen_random_uuid(),release_b,extensions.gen_random_uuid(),'RULE_CONFLICT_A',20,'{}'::jsonb,conflict_a,'A','PUBLISHED','p00'),
     (extensions.gen_random_uuid(),release_b,extensions.gen_random_uuid(),'RULE_CONFLICT_B',20,'{}'::jsonb,conflict_b,'B','PUBLISHED','p00'),
-    (extensions.gen_random_uuid(),release_c,extensions.gen_random_uuid(),'RULE_CONFLICT_B',20,'{}'::jsonb,conflict_b,'B','PUBLISHED','p00'),
-    (extensions.gen_random_uuid(),release_c,extensions.gen_random_uuid(),'RULE_CONFLICT_A',20,'{}'::jsonb,conflict_a,'A','PUBLISHED','p00');
+    (extensions.gen_random_uuid(),release_c,extensions.gen_random_uuid(),'RULE_CONFLICT_B',20,'{}'::jsonb,conflict_c_b,'B','PUBLISHED','p00'),
+    (extensions.gen_random_uuid(),release_c,extensions.gen_random_uuid(),'RULE_CONFLICT_A',20,'{}'::jsonb,conflict_c_a,'A','PUBLISHED','p00');
   foreach r in array array[release_a,release_b,release_c] loop
     perform support_vnext_shadow.refresh_draft_release_content_hash(r,'p00');
     update support_vnext_shadow.support_ruleset_release set status='APPROVED',approved_at=now(),approved_by='p00',updated_by='p00' where release_id=r;
@@ -97,8 +101,8 @@ begin
   rules_c:=support_vnext_shadow.get_runtime_decision_rules(release_c,'TESTE',null,null);
   perform pg_temp.assert_true(rules_a->0->>'rule_code'='RULE_HIGH' and rules_a->1->>'rule_code'='RULE_LOW','RULE-07 resolver real ordena prioridade superior antes da inferior');
   perform pg_temp.assert_true(jsonb_array_length(rules_b)=2 and (rules_b->0->'then_plan') is distinct from (rules_b->1->'then_plan'),'RULE-08 resolver real entrega conjunto conflitante de mesma prioridade ao decision engine');
-  select jsonb_agg(jsonb_build_object('rule_code',e->>'rule_code','priority',e->'priority','then_plan',e->'then_plan') order by e->>'rule_code') into normalized_a from jsonb_array_elements(rules_b) e;
-  select jsonb_agg(jsonb_build_object('rule_code',e->>'rule_code','priority',e->'priority','then_plan',e->'then_plan') order by e->>'rule_code') into normalized_c from jsonb_array_elements(rules_c) e;
+  select jsonb_agg(jsonb_build_object('rule_code',e->>'rule_code','priority',e->'priority','then_plan',(e->'then_plan') - 'release_id') order by e->>'rule_code') into normalized_a from jsonb_array_elements(rules_b) e;
+  select jsonb_agg(jsonb_build_object('rule_code',e->>'rule_code','priority',e->'priority','then_plan',(e->'then_plan') - 'release_id') order by e->>'rule_code') into normalized_c from jsonb_array_elements(rules_c) e;
   perform pg_temp.assert_true(normalized_a=normalized_c and rules_b->0->>'rule_code'=rules_c->0->>'rule_code','RULE-09 resolver real é independente da ordem de INSERT');
 exception when others then
   raise exception 'decision resolver closure test failed: %',sqlerrm using errcode='P0001';

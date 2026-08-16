@@ -22,7 +22,7 @@ jobs:
     env:
       SUPPORT_VNEXT_VALIDATION_ENV: ISOLATED_5B3
       SUPPORT_VNEXT_TEST_ENV: "1"
-      EXPECTED_PROJECT_REF: qyrxpbvdmpftcygsmws
+      EXPECTED_PROJECT_REF: qyrxpbvdmpftfcygsmws
       PACKAGE_PIN: dc7bf2798f88b5956f28d1c381bc083b3849dfdf
     steps:
       - name: Validate explicit confirmation
@@ -168,16 +168,13 @@ jobs:
           conc P09 p09_session_concurrency.sql
 
 
-      - name: P10 integration
+      - name: P10 SQL resolver boundary
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          EXPECTED_SUPABASE_URL: https://qyrxpbvdmpftfcygsmws.supabase.co
+          TEST_DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           set -Eeuo pipefail
-          [[ "$SUPABASE_URL" == "$EXPECTED_SUPABASE_URL" ]] || { echo "5B.3-C BLOCKED — P10 endpoint is not the isolated project"; exit 1; }
-          deno test --allow-env --allow-net --ignored tests/integration/p10_a_confirmar_integration_test.ts
-          echo "P10 INTEGRATION: PASS" | tee -a "$GITHUB_STEP_SUMMARY"
+          psql "$TEST_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f tests/postgres/p10_a_confirmar.sql
+          echo "P10 SQL: PASS" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: P11-P15
         env:
@@ -189,6 +186,25 @@ jobs:
           conc() { CASE_SQL="$PWD/$root/$2" DATABASE_URL_A="$TEST_DATABASE_URL" DATABASE_URL_B="$TEST_DATABASE_URL" SUPPORT_VNEXT_TEST_ENV=1 "$root/run_concurrency.sh"; echo "$1 CONCURRENCY: PASS" | tee -a "$GITHUB_STEP_SUMMARY"; }
           conc P11 p11_confirm_concurrency.sql
           one P12 p12_inbound_reuse.sql; one P13 p13_confirmation_rejections.sql; one P14 p14_complaint_closed.sql; one P15 p15_privileges.sql
+
+      - name: Seed P10 integration fixture
+        env:
+          TEST_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -Eeuo pipefail
+          psql "$TEST_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f tests/postgres/fixtures/p10_integration_fixture.sql
+          echo "P10 FIXTURE: PASS" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: P10 integration
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          EXPECTED_SUPABASE_URL: https://qyrxpbvdmpftfcygsmws.supabase.co
+        run: |
+          set -Eeuo pipefail
+          [[ "$SUPABASE_URL" == "$EXPECTED_SUPABASE_URL" ]] || { echo "5B.3-C BLOCKED — P10 endpoint is not the isolated project"; exit 1; }
+          P10_INTEGRATION=1 deno test --allow-env --allow-net tests/integration/p10_a_confirmar_integration_test.ts
+          echo "P10 INTEGRATION: PASS" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Dynamic summary
         if: always()

@@ -142,7 +142,27 @@ jobs:
           expect_result H PASS "$actual"
           printf 'STATIC POST-RESET PREDICATE PROOF: PASS (A-H)\n'
 
+      - name: Detect laboratory state
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          schema_exists="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select exists (select 1 from pg_namespace where nspname='support_vnext_shadow');")"
+          role_count="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -XAtc \
+            "select count(*) from pg_roles where rolname in ('support_vnext_runtime','support_vnext_publisher','support_vnext_auditor','support_vnext_admin');")"
+          if [[ "$schema_exists" == "f" && "$role_count" == "0" ]]; then
+            # Reset is idempotent: an already-clean laboratory is the desired end
+            # state, so skip the destructive path. The post-reset verification
+            # below still proves cleanliness in full and emits the fingerprint.
+            printf 'LABORATORY STATE: ALREADY CLEAN — destructive reset skipped\n'
+            printf 'ALREADY_CLEAN=true\n' >> "$GITHUB_ENV"
+          else
+            printf 'LABORATORY STATE: PACKAGE ARTIFACTS PRESENT — controlled reset required\n'
+            printf 'ALREADY_CLEAN=false\n' >> "$GITHUB_ENV"
+          fi
+
       - name: Guard and read-only pre-reset audit
+        if: env.ALREADY_CLEAN != 'true'
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -286,6 +306,7 @@ jobs:
           printf 'PRE-RESET DEPENDENCY GUARD: PASS\n'
 
       - name: Remove only package schema and package roles
+        if: env.ALREADY_CLEAN != 'true'
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -345,4 +366,11 @@ jobs:
           printf 'external package ownership: NONE\n'
           printf 'unexpected package dependencies: NONE\n'
           printf 'PRESERVED EXTENSIONS: pgcrypto, btree_gist\n'
+
+          # Same probe string and digest as the preflight job, so the caller can
+          # prove reset and preflight targeted one and the same database.
+          identity_fingerprint="$(printf '%s' "$identity" | sha256sum | awk '{print $1}')"
+          printf 'DATABASE IDENTITY FINGERPRINT: %s\n' "$identity_fingerprint"
+          printf 'database_identity_fingerprint=%s\n' "$identity_fingerprint" >> "$GITHUB_OUTPUT"
+
           printf '5B.3-BR PASS — LABORATÓRIO ISOLADO COMPROVADAMENTE LIMPO\n'

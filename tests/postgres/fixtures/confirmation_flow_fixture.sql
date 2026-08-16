@@ -7,11 +7,33 @@ create or replace function support_vnext_test.ensure_classifier_authority()
 returns support_vnext_test.classifier_authority_fixture_context language plpgsql as $$
 declare r support_vnext_test.classifier_authority_fixture_context;
 begin
- select * into r from support_vnext_test.classifier_authority_fixture_context limit 1;
+ -- support_vnext_test survives the controlled reset while support_vnext_shadow is
+ -- dropped, so a cached key can outlive its classifier_authorities row. Only reuse
+ -- the cache when the authority still exists and is usable by the RPC guard
+ -- (active, inside its validity window); otherwise re-provision it.
+ select c.* into r
+   from support_vnext_test.classifier_authority_fixture_context c
+   join support_vnext_shadow.classifier_authorities a on a.authority_key_id = c.authority_key_id
+  where a.active and a.valid_from <= now() and (a.valid_to is null or a.valid_to > now())
+    and a.verifier_secret = c.verifier_secret
+  limit 1;
  if found then return r; end if;
- r.authority_key_id:=extensions.gen_random_uuid(); r.verifier_secret:='test-only-classifier-authority-not-for-runtime'; r.created_at:=timestamptz '2000-01-01 00:00:00+00';
- insert into support_vnext_shadow.classifier_authorities(authority_key_id,authority_name,verifier_secret,created_by)
- values(r.authority_key_id,'support-vnext-test-classifier',r.verifier_secret,'support_vnext_test');
+
+ delete from support_vnext_test.classifier_authority_fixture_context;
+ r.verifier_secret:='test-only-classifier-authority-not-for-runtime'; r.created_at:=timestamptz '2000-01-01 00:00:00+00';
+ -- authority_name is UNIQUE; adopt an existing test authority instead of colliding.
+ select authority_key_id into r.authority_key_id
+   from support_vnext_shadow.classifier_authorities
+  where authority_name='support-vnext-test-classifier';
+ if r.authority_key_id is null then
+   r.authority_key_id:=extensions.gen_random_uuid();
+   insert into support_vnext_shadow.classifier_authorities(authority_key_id,authority_name,verifier_secret,created_by)
+   values(r.authority_key_id,'support-vnext-test-classifier',r.verifier_secret,'support_vnext_test');
+ else
+   update support_vnext_shadow.classifier_authorities
+      set verifier_secret=r.verifier_secret, active=true, valid_from=now()-interval '1 minute', valid_to=null
+    where authority_key_id=r.authority_key_id;
+ end if;
  insert into support_vnext_test.classifier_authority_fixture_context (authority_key_id,verifier_secret,created_at) values (r.authority_key_id,r.verifier_secret,r.created_at);
  return r;
 end $$;
@@ -60,7 +82,7 @@ begin
  insert into support_vnext_shadow.knowledge_service(service_id,release_id,logical_service_id,service_code,public_name,internal_name,availability_status,scope_summary,record_status,created_by) values(r.service_id,r.release_id,extensions.gen_random_uuid(),'TEST_SERVICE','Teste','Teste','ACTIVE','fixture','PUBLISHED','fixture');
  insert into support_vnext_shadow.knowledge_intent(intent_id,release_id,logical_intent_id,intent_code,display_name,visibility,intent_kind,description,record_status,created_by) values(r.intent_id,r.release_id,extensions.gen_random_uuid(),'RECLAMACAO_INTERNA','Teste','INTERNAL','COMPLAINT','fixture','PUBLISHED','fixture');
  insert into support_vnext_shadow.knowledge_message_template(template_id,release_id,logical_template_id,template_code,template_kind,render_mode,body,record_status,created_by) values(r.template_id,r.release_id,extensions.gen_random_uuid(),'TEST_SUBJECT','REQUEST','DETERMINISTIC','Solicitação de teste','PUBLISHED','fixture');
- insert into support_vnext_shadow.decision_request_policy(request_policy_id,release_id,policy_code,scope_intent_id,scope_service_id,request_category_code,subject_template_id,confirmation_template_id,confirmation_expiry_policy,required_data_schema,allow_create,protocol_scope,protocol_prefix,record_status,created_by) values(r.request_policy_id,r.release_id,'TEST_REQUEST',r.intent_id,r.service_id,'RECLAMACAO',r.template_id,r.template_id,'{"seconds":600}','{"properties":{"relato":{"type":"string"},"attachment_ids":{"type":"uuid_array"}},"required":[]}',true,'TEST_'||p_test_run_id::text,'TST','PUBLISHED','fixture');
+ insert into support_vnext_shadow.decision_request_policy(request_policy_id,release_id,policy_code,scope_intent_id,scope_service_id,request_category_code,subject_template_id,confirmation_template_id,confirmation_expiry_policy,required_data_schema,allow_create,protocol_scope,protocol_prefix,record_status,created_by) values(r.request_policy_id,r.release_id,'TEST_REQUEST',r.intent_id,r.service_id,'RECLAMACAO',r.template_id,r.template_id,'{"seconds":600}','{"properties":{"relato":{"type":"string"},"attachment_ids":{"type":"uuid_array"}},"required":[]}',true,'TEST_SHARED_PROTOCOL_SCOPE','TST','PUBLISHED','fixture');
  perform support_vnext_shadow.refresh_draft_release_content_hash(r.release_id,'fixture');
  update support_vnext_shadow.support_ruleset_release set status='APPROVED' where release_id=r.release_id;
  perform support_vnext_shadow.publish_ruleset_release(r.release_id,'fixture');
@@ -73,6 +95,7 @@ begin
 end $$;
 
 drop function if exists support_vnext_test.create_confirmation_fixture(uuid,boolean);
+drop function if exists support_vnext_test.create_confirmation_fixture(uuid,boolean,boolean);
 create function support_vnext_test.create_confirmation_fixture(p_test_run_id uuid, p_complaint boolean default false, p_prepare_evidence boolean default true)
 returns support_vnext_test.confirmation_fixture_context language plpgsql as $$
 declare r support_vnext_test.confirmation_fixture_context; n int; plan jsonb; proposal jsonb; auth jsonb;
@@ -84,7 +107,7 @@ begin
  insert into support_vnext_shadow.knowledge_service(service_id,release_id,logical_service_id,service_code,public_name,internal_name,availability_status,scope_summary,record_status,created_by) values(r.service_id,r.release_id,extensions.gen_random_uuid(),'TEST_SERVICE','Teste','Teste','ACTIVE','fixture','PUBLISHED','fixture');
  insert into support_vnext_shadow.knowledge_intent(intent_id,release_id,logical_intent_id,intent_code,display_name,visibility,intent_kind,description,record_status,created_by) values(r.intent_id,r.release_id,extensions.gen_random_uuid(),case when p_complaint then 'RECLAMACAO_INTERNA' else 'TEST_INTENT' end,'Teste',case when p_complaint then 'INTERNAL' else 'SYSTEM' end,case when p_complaint then 'COMPLAINT' else 'SYSTEM' end,'fixture','PUBLISHED','fixture');
  insert into support_vnext_shadow.knowledge_message_template(template_id,release_id,logical_template_id,template_code,template_kind,render_mode,body,record_status,created_by) values(r.template_id,r.release_id,extensions.gen_random_uuid(),'TEST_SUBJECT','REQUEST','DETERMINISTIC','Solicitação de teste','PUBLISHED','fixture');
- insert into support_vnext_shadow.decision_request_policy(request_policy_id,release_id,policy_code,scope_intent_id,scope_service_id,request_category_code,subject_template_id,confirmation_template_id,confirmation_expiry_policy,required_data_schema,allow_create,protocol_scope,protocol_prefix,record_status,created_by) values(r.request_policy_id,r.release_id,'TEST_REQUEST',r.intent_id,r.service_id,case when p_complaint then 'RECLAMACAO' else 'TEST' end,r.template_id,r.template_id,'{"seconds":600}','{"properties":{"relato":{"type":"string"},"attachment_ids":{"type":"uuid_array"}},"required":[]}',true,'TEST_'||p_test_run_id::text,'TST','PUBLISHED','fixture');
+ insert into support_vnext_shadow.decision_request_policy(request_policy_id,release_id,policy_code,scope_intent_id,scope_service_id,request_category_code,subject_template_id,confirmation_template_id,confirmation_expiry_policy,required_data_schema,allow_create,protocol_scope,protocol_prefix,record_status,created_by) values(r.request_policy_id,r.release_id,'TEST_REQUEST',r.intent_id,r.service_id,case when p_complaint then 'RECLAMACAO' else 'TEST' end,r.template_id,r.template_id,'{"seconds":600}','{"properties":{"relato":{"type":"string"},"attachment_ids":{"type":"uuid_array"}},"required":[]}',true,'TEST_SHARED_PROTOCOL_SCOPE','TST','PUBLISHED','fixture');
  perform support_vnext_shadow.refresh_draft_release_content_hash(r.release_id,'fixture'); update support_vnext_shadow.support_ruleset_release set status='APPROVED' where release_id=r.release_id; perform support_vnext_shadow.publish_ruleset_release(r.release_id,'fixture');
  insert into support_vnext_shadow.conversation_sessions(session_id,conversation_id,release_id,last_inbound_at) values(r.session_id,r.conversation_id,r.release_id,now());
  insert into support_vnext_shadow.conversation_topics(topic_id,session_id,intent_id,service_id) values(r.topic_id,r.session_id,r.intent_id,r.service_id);

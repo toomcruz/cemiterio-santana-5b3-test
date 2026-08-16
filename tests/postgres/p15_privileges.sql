@@ -54,7 +54,7 @@ insert into p15_expected_functions values
 ('support_vnext_shadow.closed_object(jsonb,text[])','INTERNAL_HELPER',false,false,false,false,false,false),
 ('support_vnext_shadow.json_array_of_strings(jsonb)','INTERNAL_HELPER',false,false,false,false,false,false),
 ('support_vnext_shadow.json_uuid_array(jsonb)','INTERNAL_HELPER',false,false,false,false,false,false),
-('support_vnext_shadow.json_has_forbidden_key(jsonb,text[])','INTERNAL_HELPER',false,false,false,false,false,false),
+('support_vnext_shadow.json_has_forbidden_key(jsonb)','INTERNAL_HELPER',false,false,false,false,false,false),
 ('support_vnext_shadow.jsonb_contains_forbidden_key(jsonb,text[])','INTERNAL_HELPER',false,false,false,false,false,false),
 ('support_vnext_shadow.is_valid_uuid_string(text)','INTERNAL_HELPER',false,false,false,false,false,false),
 ('support_vnext_shadow.is_uuid_text(text)','INTERNAL_HELPER',false,false,false,false,false,false),

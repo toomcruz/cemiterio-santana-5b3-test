@@ -1,8 +1,8 @@
 # Manifesto de objetos runtime C4
 
-MIGRATIONS_COVERED: 0001-0015
+MIGRATIONS_COVERED: 0001-0019
 
-O manifesto descreve o estado cumulativo das migrations `0001`–`0015`. Ele é usado
+O manifesto descreve o estado cumulativo das migrations `0001`–`0019`. Ele é usado
 na 5B.3 para comparar instalação e remoção. Nenhum item abaixo reativa legado.
 
 | Migration | Objetos criados/alterados | Uso | Rollback operacional | Rollback físico |
@@ -23,6 +23,10 @@ na 5B.3 para comparar instalação e remoção. Nenhum item abaixo reativa legad
 | 0014 | recria os validadores fail-closed `valid_scalar_value`, `valid_template_variables`, `valid_fact_refs`, `valid_question_schema`, `valid_plan_field_values`, `valid_state_patch_operation`, `valid_state_patch`, `valid_response_plan`, `valid_request_plan`, `valid_document_plan`, `valid_handoff_plan`, `valid_validation_requirements`, `valid_decision_plan`, `valid_decision_rule_when`, `validate_decision_rule_shape` e `validate_decision_rule_scope` | rejeita campos ausentes, NULL e tipos inválidos | sem efeito operacional separado; fachadas continuam SHADOW_ONLY | todas as funções/triggers são removidas por `DROP SCHEMA support_vnext_shadow CASCADE` |
 
 | 0015 | runtime compatibility hardening for inbound persistence: finalizes source=SHADOW_INBOUND on persist_shadow_inbound_message | preserves inbound contract and shadow-only provenance | revoke EXECUTE | removed with schema |
+| 0016 | `valid_plan_field_values` rejects package-owned identity/state-control keys em `allowed_fields` e `proposal_field_values` | impede rebind de release/sessão/tópico por DecisionPlan | sem efeito operacional separado | removida com o schema |
+| 0017 | `publish_ruleset_release` e `transition_ruleset_release` limpam os GUCs `controlled_publish`/`controlled_transition` logo após o UPDATE controlado | impede bypass do guard de estado final no resto da transação | revoke EXECUTE | removidas com o schema |
+| 0018 | retira os overloads legados `persist_inbound_classification(8 args)` e `propose_request_transaction(13 args)` | elimina caminhos de escrita sem fronteira de autoridade | sem efeito operacional separado | removidos com o schema |
+| 0019 | `revoke all on all functions/routines in schema support_vnext_shadow from public` | fecha o EXECUTE default do PUBLIC criado por 0011/0013/0014 | revoke PUBLIC | removidas com o schema |
 
 ## Modalidades
 

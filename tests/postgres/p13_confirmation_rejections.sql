@@ -18,7 +18,7 @@ end $$;
 create or replace function support_vnext_test.p13_new_closed_topic(p_session_id uuid,p_intent_id uuid,p_service_id uuid) returns uuid language plpgsql as $$
 declare topic uuid:=extensions.gen_random_uuid();
 begin
-  insert into support_vnext_shadow.conversation_topics(topic_id,session_id,intent_id,service_id,status,closed_at) values(topic,p_session_id,p_intent_id,p_service_id,'CLOSED',now());
+  insert into support_vnext_shadow.conversation_topics(topic_id,session_id,intent_id,service_id,status,closed_at) values(topic,p_session_id,p_intent_id,p_service_id,'COMPLETED',now());
   return topic;
 end $$;
 
@@ -27,7 +27,7 @@ select extensions.gen_random_uuid() as test_run_id \gset a_
 select support_vnext_test.create_confirmation_fixture(:'a_test_run_id'::uuid,false);
 select * from support_vnext_test.confirmation_fixture_context where test_run_id=:'a_test_run_id'::uuid \gset a_
 insert into support_vnext_test.p13_invalid_scenarios values(:'a_test_run_id'::uuid,'P13-A');
-update support_vnext_shadow.pending_confirmations set expires_at=now()-interval '1 second' where confirmation_id=:'a_confirmation_id'::uuid;
+update support_vnext_shadow.pending_confirmations set created_at=now()-interval '10 minutes', expires_at=now()-interval '1 second' where confirmation_id=:'a_confirmation_id'::uuid;
 select support_vnext_test.p13_expect_rejected(:'a_confirmation_id'::uuid,:'a_confirmation_nonce'::uuid,:'a_classification_id'::uuid,:'a_inbound_message_id'::uuid,'A expired');
 select support_vnext_test.p13_assert_no_request(:'a_confirmation_id'::uuid,'A expired');
 
@@ -91,7 +91,7 @@ select extensions.gen_random_uuid() as other_topic_id \gset g_
 select extensions.gen_random_uuid() as other_inbound_id \gset g_
 select extensions.gen_random_uuid() as other_classification_id \gset g_
 insert into support_vnext_shadow.conversation_sessions(session_id,conversation_id,release_id,last_inbound_at) values(:'g_other_session_id'::uuid,extensions.gen_random_uuid(),:'g_release_id'::uuid,now());
-insert into support_vnext_shadow.conversation_topics(topic_id,session_id,intent_id,service_id,status,closed_at) values(:'g_other_topic_id'::uuid,:'g_other_session_id'::uuid,:'g_intent_id'::uuid,:'g_service_id'::uuid,'CLOSED',now());
+insert into support_vnext_shadow.conversation_topics(topic_id,session_id,intent_id,service_id,status,closed_at) values(:'g_other_topic_id'::uuid,:'g_other_session_id'::uuid,:'g_intent_id'::uuid,:'g_service_id'::uuid,'COMPLETED',now());
 select support_vnext_test.persist_test_inbound_classification(:'g_other_classification_id'::uuid,:'g_other_inbound_id'::uuid,null,:'g_other_session_id'::uuid,:'g_other_topic_id'::uuid,:'g_release_id'::uuid,'OTHER','OK');
 select support_vnext_test.p13_expect_rejected(:'g_confirmation_id'::uuid,:'g_confirmation_nonce'::uuid,:'g_other_classification_id'::uuid,:'g_other_inbound_id'::uuid,'G different session');
 select support_vnext_test.p13_assert_no_request(:'g_confirmation_id'::uuid,'G different session');
