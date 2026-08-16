@@ -13,7 +13,9 @@ export function buildPrompt(input: InterpreterInput): string {
       "Never infer prices, required documents, permissions, authorization, succession rights, or official rules.",
       "Ambiguity, conflict, multiple subjects, or low confidence must set needs_clarification=true.",
     ],
-    fact_codes: factsDoc.facts.filter((f) => f.ai_extractable && !f.authoritative_only && !f.deterministic_rule).map((f) => ({
+    fact_codes: factsDoc.facts.filter((f) => f.ai_extractable && !f.authoritative_only && !f.deterministic_rule).map((
+      f,
+    ) => ({
       code: f.fact_code,
       values: f.allowed_values,
     })),

@@ -1,8 +1,8 @@
 # Adapter controlado de LLM (5B.4-D)
 
 O adapter provider-agnostic está implementado em `adapter/`, atrás de feature flag desligada por padrão. Nenhum provedor
-real foi configurado: a auditoria do ambiente não encontrou credencial, e os testes usam exclusivamente uma fronteira
-de rede injetada. Adapter `santana-llm-adapter/1.0.0`; prompt `santana-llm-prompt/1.0.0`.
+real foi configurado: a auditoria do ambiente não encontrou credencial, e os testes usam exclusivamente uma fronteira de
+rede injetada. Adapter `santana-llm-adapter/1.0.0`; prompt `santana-llm-prompt/1.0.0`.
 
 ## Onde o LLM entra
 
@@ -22,10 +22,9 @@ mensagem ──▶ Interpreter (mock hoje | LLM amanhã) ──▶ Interpretatio
                                         diffTransition() ──▶ conv_apply_transition (0020)
 ```
 
-O adapter implementa a assinatura assíncrona:
-`interpret(input: InterpreterInput): Promise<Interpretation>`. Tudo depois dele já existe e já é testado — inclusive
-contra proposta maliciosa (o teste “fato fora do catálogo e origem proibida” injeta uma interpretação envenenada e prova
-que a guarda a descarta).
+O adapter implementa a assinatura assíncrona: `interpret(input: InterpreterInput): Promise<Interpretation>`. Tudo depois
+dele já existe e já é testado — inclusive contra proposta maliciosa (o teste “fato fora do catálogo e origem proibida”
+injeta uma interpretação envenenada e prova que a guarda a descarta).
 
 ## O que o LLM poderá fazer
 
