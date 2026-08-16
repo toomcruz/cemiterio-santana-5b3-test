@@ -16,7 +16,7 @@ jobs:
       SUPPORT_VNEXT_VALIDATION_ENV: ${{ vars.SUPPORT_VNEXT_VALIDATION_ENV }}
       SUPABASE_URL: ${{ vars.SUPABASE_URL }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      APPROVED_BASE_COMMIT: 5110732217ae20ae0a777cf7234b47f5f38563c5
+      APPROVED_BASE_COMMIT: 52e502111675cf10cbb2a6adf10a93d28a6e3bf3
 
     steps:
       - name: Checkout selected commit
