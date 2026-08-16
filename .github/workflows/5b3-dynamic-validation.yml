@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: "Digite RUN_DYNAMIC_5B3 para executar P00/P01-P15 e P23-P25"
+        description: "Digite RUN_DYNAMIC_5B3 para executar P00/P01-P15 e P23-P26"
         required: true
         type: string
 
