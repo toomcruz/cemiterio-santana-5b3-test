@@ -142,13 +142,40 @@ export function validateCatalogs(): string[] {
       }
     }
   }
-  // Todo fato exigido por algum goal precisa de uma pergunta declarada.
+  // Todo fato exigido por algum goal precisa de uma pergunta ao usuario OU de uma
+  // resolucao autoritativa declarada; fatos derivados sao resolvidos por relacao.
   const questionFacts = new Set(questionsDoc.questions.map((q) => q.fact_code));
+  const resolutionFacts = new Set(questionsDoc.authoritative_resolutions.map((r) => r.fact_code));
   for (const goal of goalsDoc.goals) {
     for (const code of goal.required_facts) {
-      if (!questionFacts.has(code)) {
-        errors.push(`fato ${code} exigido por ${goal.goal_code} nao tem pergunta declarada`);
+      const fact = factsDoc.facts.find((f) => f.fact_code === code);
+      if (fact?.derived) continue;
+      if (!questionFacts.has(code) && !resolutionFacts.has(code)) {
+        errors.push(`fato ${code} exigido por ${goal.goal_code} nao tem pergunta nem resolucao autoritativa`);
       }
+    }
+  }
+  // Fatos autoritativos nao podem ser perguntados ao usuario nem aceitar origem de usuario.
+  for (const fact of factsDoc.facts) {
+    if (!fact.authoritative_only) continue;
+    if (questionFacts.has(fact.fact_code)) {
+      errors.push(`fato autoritativo ${fact.fact_code} nao pode ter pergunta ao usuario`);
+    }
+    if (!resolutionFacts.has(fact.fact_code)) {
+      errors.push(`fato autoritativo ${fact.fact_code} nao declara resolucao autoritativa`);
+    }
+    if (fact.ai_extractable) errors.push(`fato autoritativo ${fact.fact_code} nao pode ser ai_extractable`);
+    for (const src of fact.allowed_sources) {
+      if (src === "USER_EXPLICIT" || src === "USER_CORRECTION") {
+        errors.push(`fato autoritativo ${fact.fact_code} nao pode aceitar origem ${src}`);
+      }
+    }
+  }
+  // Valores que exigem sinal autoritativo precisam de acao de resolucao declarada.
+  for (const fact of factsDoc.facts) {
+    const gated = [...(fact.authoritative_values ?? []), ...(fact.blocking_values ?? [])];
+    if (gated.length > 0 && !resolutionFacts.has(fact.fact_code)) {
+      errors.push(`fato ${fact.fact_code} tem valores controlados sem resolucao autoritativa`);
     }
   }
   return errors;

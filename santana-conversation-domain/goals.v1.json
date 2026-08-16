@@ -2,12 +2,25 @@
   "artifact": "santana-conversation-domain/goals",
   "version": "v1",
   "phase": "5B.4-A",
-  "goal_status": ["ACTIVE", "SUSPENDED", "WAITING", "RESOLVED", "ABANDONED"],
-  "stack_operations": ["push_goal", "suspend_parent", "resolve_child", "pop_goal", "resume_parent", "abandon_goal"],
+  "goal_status": [
+    "ACTIVE",
+    "SUSPENDED",
+    "WAITING",
+    "RESOLVED",
+    "ABANDONED"
+  ],
+  "stack_operations": [
+    "push_goal",
+    "suspend_parent",
+    "resolve_child",
+    "pop_goal",
+    "resume_parent",
+    "abandon_goal"
+  ],
   "status_semantics": {
     "ACTIVE": "Objetivo em foco; consome a proxima pergunta.",
     "SUSPENDED": "Objetivo pausado por um subfluxo; retorna quando o filho resolve.",
-    "WAITING": "Objetivo bloqueado por verificacao externa/humana; nao consome pergunta ao usuario.",
+    "WAITING": "Objetivo bloqueado por verificacao/autorizacao autoritativa externa; nao consome pergunta ao usuario e mantem uma acao pendente.",
     "RESOLVED": "Objetivo concluido no escopo conversacional.",
     "ABANDONED": "Objetivo descartado pelo usuario; nao retorna automaticamente."
   },
@@ -32,54 +45,82 @@
       "topic_code": "EXUMACAO",
       "creates_case": true,
       "case_subject": "DECEASED",
-      "required_facts": ["exhumation_purpose", "exhumation_authorization", "burial_reference", "requester_document"]
+      "required_facts": [
+        "exhumation_purpose",
+        "surviving_spouse_status",
+        "required_authorization_signatory",
+        "exhumation_authorization",
+        "burial_reference",
+        "requester_document"
+      ]
     },
     {
       "goal_code": "GOAL_RECADASTRO",
       "topic_code": "RECADASTRO",
       "creates_case": false,
-      "required_facts": ["concession_reference", "recadastro_holder_document"]
+      "required_facts": [
+        "concession_reference",
+        "recadastro_holder_document"
+      ]
     },
     {
       "goal_code": "GOAL_CONCESSAO",
       "topic_code": "CONCESSAO",
       "creates_case": true,
       "case_subject": "CONCESSION",
-      "required_facts": ["concession_purpose", "recadastro_status", "concession_reference", "requester_document"]
+      "required_facts": [
+        "concession_purpose",
+        "recadastro_status",
+        "concession_reference",
+        "requester_document"
+      ]
     },
     {
       "goal_code": "GOAL_COMERCIAL",
       "topic_code": "COMERCIAL",
       "creates_case": true,
       "case_subject": "ORDER",
-      "required_facts": ["commercial_item", "commercial_stage", "commercial_delivery_status", "requester_document"]
+      "required_facts": [
+        "commercial_item",
+        "commercial_stage",
+        "commercial_delivery_status",
+        "requester_document"
+      ]
     },
     {
       "goal_code": "GOAL_RECLAMACAO",
       "topic_code": "RECLAMACOES",
       "overlay": true,
       "creates_case": false,
-      "required_facts": ["complaint_description"]
+      "required_facts": [
+        "complaint_description"
+      ]
     },
     {
       "goal_code": "GOAL_INFO_OSSUARIO",
       "topic_code": "EXUMACAO",
       "informational": true,
       "creates_case": false,
-      "required_facts": ["ossuary_information_request"]
+      "required_facts": [
+        "ossuary_information_request"
+      ]
     },
     {
       "goal_code": "GOAL_INFO_HORARIO",
       "topic_code": "OUTROS_ASSUNTOS",
       "informational": true,
       "creates_case": false,
-      "required_facts": ["service_hours_request"]
+      "required_facts": [
+        "service_hours_request"
+      ]
     },
     {
       "goal_code": "GOAL_OUTROS_ASSUNTOS",
       "topic_code": "OUTROS_ASSUNTOS",
       "creates_case": false,
-      "required_facts": ["other_subject_description"]
+      "required_facts": [
+        "other_subject_description"
+      ]
     }
   ]
 }

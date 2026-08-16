@@ -54,6 +54,13 @@ export interface FactDef {
   allowed_sources: FactSource[];
   ai_extractable: boolean;
   human_rule_note?: string;
+  // 5B.4-A.1: fatos autoritativos nunca sao confirmados por declaracao do usuario,
+  // extracao de LLM ou inferencia; exigem sinal de SYSTEM/DOCUMENT.
+  authoritative_only?: boolean;
+  authoritative_values?: FactValue[];
+  blocking_values?: FactValue[];
+  resolution_action?: string;
+  deterministic_rule?: boolean;
 }
 
 export interface GoalDef {
@@ -90,6 +97,10 @@ export interface RelationEffect {
   reason?: string;
   action_code?: string;
   executor?: "SYSTEM" | "HUMAN" | "SYSTEM_OR_HUMAN";
+  authoritative?: boolean;
+  dependency_code?: string;
+  scope?: string;
+  note?: string;
 }
 
 export interface RelationDef {
@@ -122,6 +133,7 @@ interface TopicsDoc {
 }
 interface FactsDoc {
   fact_sources: FactSource[];
+  authoritative_signal_policy: { accepted_sources: FactSource[]; actions: string[] };
   confidence_states: Confidence[];
   facts: FactDef[];
   ai_boundary: { ai_may: string[]; ai_may_not: string[] };
@@ -134,10 +146,22 @@ interface GoalsDoc {
 interface RelationsDoc {
   relations: RelationDef[];
 }
+export interface AuthoritativeResolution {
+  fact_code: string;
+  action_code: string;
+  executor: "SYSTEM" | "HUMAN" | "SYSTEM_OR_HUMAN";
+  note: string;
+}
+
+export interface QuestionsDocPublic {
+  authoritative_resolutions: AuthoritativeResolution[];
+}
+
 interface QuestionsDoc {
   priority_order: { rank: number; priority_class: PriorityClass }[];
   questions: QuestionDef[];
   conflict_questions: { question_code: string }[];
+  authoritative_resolutions: AuthoritativeResolution[];
 }
 interface EventsDoc {
   events: { event_kind: EventKind; description: string; effects: string[] }[];
@@ -178,4 +202,22 @@ export function questionForFact(code: string): QuestionDef {
   return q;
 }
 
+export const AUTHORITATIVE_SOURCES: FactSource[] = factsDoc.authoritative_signal_policy.accepted_sources;
+
 export const CONFLICT_QUESTION_CODE = "Q_CONFLICT_CONFIRM";
+
+const resolutionIndex = new Map<string, AuthoritativeResolution>(
+  questionsDoc.authoritative_resolutions.map((r) => [r.fact_code, r]),
+);
+
+export function authoritativeResolution(code: string): AuthoritativeResolution | null {
+  return resolutionIndex.get(code) ?? null;
+}
+
+// Um fato exige sinal autoritativo quando e autoritativo por definicao ou quando
+// o valor apresentado esta na lista de valores que so um sinal externo confirma.
+export function requiresAuthoritativeSignal(code: string, value: FactValue): boolean {
+  const def = factDef(code);
+  if (def.authoritative_only) return true;
+  return (def.authoritative_values ?? []).includes(value);
+}

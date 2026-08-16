@@ -2,7 +2,12 @@
   "artifact": "santana-conversation-domain/relations",
   "version": "v1",
   "phase": "5B.4-A",
-  "relation_kinds": ["PREREQUISITE", "DEPENDENCY", "SCOPED_CHECK", "OVERLAY"],
+  "relation_kinds": [
+    "PREREQUISITE",
+    "DEPENDENCY",
+    "SCOPED_CHECK",
+    "OVERLAY"
+  ],
   "relations": [
     {
       "relation_code": "REL_CONCESSAO_REQUIRES_RECADASTRO",
@@ -12,20 +17,43 @@
       "description": "Recadastro e pre-requisito obrigatorio da Concessao.",
       "when": {
         "goal_code": "GOAL_CONCESSAO",
-        "goal_status_in": ["ACTIVE", "SUSPENDED", "WAITING"],
-        "conditions": [{ "fact": "recadastro_status", "equals": "PENDENTE" }]
+        "goal_status_in": [
+          "ACTIVE",
+          "SUSPENDED",
+          "WAITING"
+        ],
+        "conditions": [
+          {
+            "fact": "recadastro_status",
+            "equals": "PENDENTE"
+          }
+        ]
       },
       "effects": [
         {
           "op": "assert_derived_fact",
           "fact_code": "recadastro_required",
           "value": true,
-          "from": ["recadastro_status"]
+          "from": [
+            "recadastro_status"
+          ]
         },
-        { "op": "push_goal", "goal_code": "GOAL_RECADASTRO", "suspend_parent": true, "return_to_parent": true }
+        {
+          "op": "push_goal",
+          "goal_code": "GOAL_RECADASTRO",
+          "suspend_parent": true,
+          "return_to_parent": true
+        }
       ],
       "on_child_resolved": [
-        { "op": "record_fact", "fact_code": "recadastro_status", "value": "OK", "source": "SYSTEM" }
+        {
+          "op": "record_fact",
+          "fact_code": "recadastro_status",
+          "value": "OK",
+          "source": "SYSTEM",
+          "authoritative": true,
+          "note": "Sinal autoritativo de conclusao do subfluxo de Recadastro."
+        }
       ]
     },
     {
@@ -33,27 +61,31 @@
       "kind": "PREREQUISITE",
       "from_goal": "GOAL_CONCESSAO",
       "to_goal": "GOAL_RECADASTRO",
-      "description": "Situacao de recadastro desconhecida e incerteza bloqueadora: nao presumir OK nem PENDENTE.",
+      "description": "Municipe nao sabe se o jazigo esta recadastrado: encaminhar/abrir solicitacao para a Administracao verificar. Nao presumir OK nem PENDENTE.",
       "when": {
         "goal_code": "GOAL_CONCESSAO",
-        "goal_status_in": ["ACTIVE", "WAITING"],
-        "conditions": [{ "fact": "recadastro_status", "equals": "DESCONHECIDO" }]
+        "goal_status_in": [
+          "ACTIVE",
+          "WAITING"
+        ],
+        "conditions": [
+          {
+            "fact": "recadastro_status",
+            "equals": "DESCONHECIDO"
+          }
+        ]
       },
       "effects": [
         {
           "op": "assert_derived_fact",
           "fact_code": "recadastro_verification_required",
           "value": true,
-          "from": ["recadastro_status"]
-        },
-        {
-          "op": "set_goal_status",
-          "goal_code": "GOAL_CONCESSAO",
-          "status": "WAITING",
-          "reason": "RECADASTRO_VERIFICATION"
-        },
-        { "op": "require_action", "action_code": "ACTION_VERIFY_RECADASTRO", "executor": "SYSTEM_OR_HUMAN" }
-      ]
+          "from": [
+            "recadastro_status"
+          ]
+        }
+      ],
+      "engine_rule": "O bloqueio (goal WAITING) e a acao ACTION_VERIFY_RECADASTRO sao produzidos pela regra generica de fato autoritativo/bloqueador declarada em facts.v1.json e questions.v1.json."
     },
     {
       "relation_code": "REL_TRANSPORTE_REQUIRES_EXUMACAO",
@@ -63,18 +95,40 @@
       "description": "Restos ainda sepultados tornam a Exumacao dependencia do Transporte.",
       "when": {
         "goal_code": "GOAL_TRANSPORTE",
-        "goal_status_in": ["ACTIVE", "SUSPENDED"],
-        "conditions": [{ "fact": "remains_status", "equals": "SEPULTADO" }]
+        "goal_status_in": [
+          "ACTIVE",
+          "SUSPENDED"
+        ],
+        "conditions": [
+          {
+            "fact": "remains_status",
+            "equals": "SEPULTADO"
+          }
+        ]
       },
       "effects": [
-        { "op": "assert_derived_fact", "fact_code": "exumacao_required", "value": true, "from": ["remains_status"] },
+        {
+          "op": "assert_derived_fact",
+          "fact_code": "exumacao_required",
+          "value": true,
+          "from": [
+            "remains_status"
+          ]
+        },
         {
           "op": "assert_derived_fact",
           "fact_code": "exhumation_purpose",
           "value": "TRANSPORTE",
-          "from": ["remains_status"]
+          "from": [
+            "remains_status"
+          ]
         },
-        { "op": "push_goal", "goal_code": "GOAL_EXUMACAO", "suspend_parent": true, "return_to_parent": true }
+        {
+          "op": "push_goal",
+          "goal_code": "GOAL_EXUMACAO",
+          "suspend_parent": true,
+          "return_to_parent": true
+        }
       ]
     },
     {
@@ -82,16 +136,38 @@
       "kind": "DEPENDENCY",
       "from_goal": "GOAL_TRANSPORTE",
       "to_goal": "GOAL_EXUMACAO",
-      "description": "Restos ja exumados: nao iniciar Exumacao.",
+      "description": "Restos ja exumados: a dependencia EXUMAR_RESTOS fica satisfeita/inaplicavel NESTE case enquanto o fato estiver ativo e confirmado. Nao ha proibicao global nem permanente.",
       "when": {
         "goal_code": "GOAL_TRANSPORTE",
-        "goal_status_in": ["ACTIVE", "SUSPENDED"],
-        "conditions": [{ "fact": "remains_status", "equals": "EXUMADO" }]
+        "goal_status_in": [
+          "ACTIVE",
+          "SUSPENDED"
+        ],
+        "conditions": [
+          {
+            "fact": "remains_status",
+            "equals": "EXUMADO"
+          }
+        ]
       },
       "effects": [
-        { "op": "assert_derived_fact", "fact_code": "exumacao_required", "value": false, "from": ["remains_status"] },
-        { "op": "forbid_goal", "goal_code": "GOAL_EXUMACAO" }
-      ]
+        {
+          "op": "assert_derived_fact",
+          "fact_code": "exumacao_required",
+          "value": false,
+          "from": [
+            "remains_status"
+          ]
+        },
+        {
+          "op": "satisfy_dependency",
+          "dependency_code": "EXUMAR_RESTOS",
+          "goal_code": "GOAL_EXUMACAO",
+          "scope": "CASE",
+          "reason": "DEPENDENCY_SATISFIED"
+        }
+      ],
+      "recalculation": "Se remains_status for corrigido/superseded, ou em um novo case, a dependencia e recalculada do zero."
     },
     {
       "relation_code": "REL_TRANSPORTE_JAZIGO_FAMILIA_CHECK",
@@ -101,8 +177,16 @@
       "description": "Destino em jazigo da familia exige verificar situacao do jazigo e autorizacao DENTRO do mesmo goal: nao cria novo atendimento nem novo case.",
       "when": {
         "goal_code": "GOAL_TRANSPORTE",
-        "goal_status_in": ["ACTIVE", "SUSPENDED"],
-        "conditions": [{ "fact": "transport_destination", "equals": "JAZIGO_FAMILIA" }]
+        "goal_status_in": [
+          "ACTIVE",
+          "SUSPENDED"
+        ],
+        "conditions": [
+          {
+            "fact": "transport_destination",
+            "equals": "JAZIGO_FAMILIA"
+          }
+        ]
       },
       "effects": [
         {
@@ -114,7 +198,10 @@
           ]
         }
       ],
-      "forbidden_effects": ["push_goal", "create_case"]
+      "forbidden_effects": [
+        "push_goal",
+        "create_case"
+      ]
     },
     {
       "relation_code": "REL_RECLAMACAO_OVERLAY",
@@ -129,6 +216,73 @@
         "automatic_severity_classification": false
       },
       "example": "Lapide comprada e nao instalada => assunto-base GOAL_COMERCIAL (commercial_item=LAPIDE) + overlay GOAL_RECLAMACAO."
+    },
+    {
+      "relation_code": "REL_EXUMACAO_SIGNATORY_SPOUSE_ALIVE",
+      "kind": "PREREQUISITE",
+      "from_goal": "GOAL_EXUMACAO",
+      "to_goal": null,
+      "description": "Conjuge/companheiro vivo: ele autoriza e assina, e o concessionario ou Administrador Provisorio assina como responsavel pelo jazigo.",
+      "when": {
+        "goal_code": "GOAL_EXUMACAO",
+        "goal_status_in": [
+          "ACTIVE",
+          "SUSPENDED",
+          "WAITING"
+        ],
+        "conditions": [
+          {
+            "fact": "surviving_spouse_status",
+            "equals": "VIVO"
+          }
+        ]
+      },
+      "effects": [
+        {
+          "op": "assert_derived_fact",
+          "fact_code": "required_authorization_signatory",
+          "value": "CONJUGE_E_RESPONSAVEL_JAZIGO",
+          "from": [
+            "surviving_spouse_status"
+          ]
+        }
+      ],
+      "llm_delegable": false
+    },
+    {
+      "relation_code": "REL_EXUMACAO_SIGNATORY_NO_SPOUSE",
+      "kind": "PREREQUISITE",
+      "from_goal": "GOAL_EXUMACAO",
+      "to_goal": null,
+      "description": "Sem conjuge/companheiro sobrevivente: assina o concessionario ou o Administrador Provisorio, como responsavel pelo jazigo.",
+      "when": {
+        "goal_code": "GOAL_EXUMACAO",
+        "goal_status_in": [
+          "ACTIVE",
+          "SUSPENDED",
+          "WAITING"
+        ],
+        "conditions": [
+          {
+            "fact": "surviving_spouse_status",
+            "in": [
+              "FALECIDO",
+              "INEXISTENTE"
+            ]
+          }
+        ]
+      },
+      "effects": [
+        {
+          "op": "assert_derived_fact",
+          "fact_code": "required_authorization_signatory",
+          "value": "RESPONSAVEL_JAZIGO",
+          "from": [
+            "surviving_spouse_status"
+          ]
+        }
+      ],
+      "llm_delegable": false
     }
   ]
 }

@@ -2,9 +2,22 @@
   "artifact": "santana-conversation-domain/facts",
   "version": "v1",
   "phase": "5B.4-A",
-  "fact_sources": ["USER_EXPLICIT", "USER_CORRECTION", "DOCUMENT", "SYSTEM", "DERIVED_RULE"],
-  "confidence_states": ["CONFIRMED", "UNCERTAIN", "CONFLICTING"],
-  "fact_status": ["ACTIVE", "SUPERSEDED"],
+  "fact_sources": [
+    "USER_EXPLICIT",
+    "USER_CORRECTION",
+    "DOCUMENT",
+    "SYSTEM",
+    "DERIVED_RULE"
+  ],
+  "confidence_states": [
+    "CONFIRMED",
+    "UNCERTAIN",
+    "CONFLICTING"
+  ],
+  "fact_status": [
+    "ACTIVE",
+    "SUPERSEDED"
+  ],
   "supersession_reasons": [
     "USER_CORRECTION",
     "CHANGE_OF_MIND",
@@ -19,7 +32,12 @@
     "case_scoped_facts_never_copied": true
   },
   "ai_boundary": {
-    "ai_may": ["EXTRACT_CANDIDATE_FACT", "IDENTIFY_EVENT", "SUMMARIZE", "DRAFT_ANSWER"],
+    "ai_may": [
+      "EXTRACT_CANDIDATE_FACT",
+      "IDENTIFY_EVENT",
+      "SUMMARIZE",
+      "DRAFT_ANSWER"
+    ],
     "ai_may_not": [
       "DEFINE_OFFICIAL_RULE",
       "DEFINE_REQUIRED_DOCUMENTS",
@@ -36,9 +54,18 @@
       "display_name": "Situacao dos restos mortais",
       "scope": "CASE",
       "value_type": "ENUM",
-      "allowed_values": ["SEPULTADO", "EXUMADO", "DESCONHECIDO"],
+      "allowed_values": [
+        "SEPULTADO",
+        "EXUMADO",
+        "DESCONHECIDO"
+      ],
       "priority_class": "FLOW_BRANCH",
-      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION", "DOCUMENT", "SYSTEM"],
+      "allowed_sources": [
+        "USER_EXPLICIT",
+        "USER_CORRECTION",
+        "DOCUMENT",
+        "SYSTEM"
+      ],
       "ai_extractable": true
     },
     {
@@ -46,9 +73,18 @@
       "display_name": "Destino do transporte",
       "scope": "CASE",
       "value_type": "ENUM",
-      "allowed_values": ["OUTRO_CEMITERIO", "JAZIGO_FAMILIA", "CREMATORIO", "OSSUARIO"],
+      "allowed_values": [
+        "OUTRO_CEMITERIO",
+        "JAZIGO_FAMILIA",
+        "CREMATORIO",
+        "OSSUARIO"
+      ],
       "priority_class": "FLOW_BRANCH",
-      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION", "DOCUMENT"],
+      "allowed_sources": [
+        "USER_EXPLICIT",
+        "USER_CORRECTION",
+        "DOCUMENT"
+      ],
       "ai_extractable": true
     },
     {
@@ -57,9 +93,21 @@
       "scope": "CASE",
       "value_type": "TEXT",
       "priority_class": "DEPENDENCY",
-      "relevant_when": [{ "fact": "transport_destination", "equals": "JAZIGO_FAMILIA" }],
-      "depends_on": ["transport_destination"],
-      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION", "DOCUMENT", "SYSTEM"],
+      "relevant_when": [
+        {
+          "fact": "transport_destination",
+          "equals": "JAZIGO_FAMILIA"
+        }
+      ],
+      "depends_on": [
+        "transport_destination"
+      ],
+      "allowed_sources": [
+        "USER_EXPLICIT",
+        "USER_CORRECTION",
+        "DOCUMENT",
+        "SYSTEM"
+      ],
       "ai_extractable": true
     },
     {
@@ -67,26 +115,62 @@
       "display_name": "Situacao do jazigo de destino",
       "scope": "CASE",
       "value_type": "ENUM",
-      "allowed_values": ["REGULAR", "IRREGULAR", "DESCONHECIDA"],
+      "allowed_values": [
+        "REGULAR",
+        "IRREGULAR",
+        "EM_VERIFICACAO"
+      ],
       "priority_class": "DEPENDENCY",
-      "relevant_when": [{ "fact": "transport_destination", "equals": "JAZIGO_FAMILIA" }],
-      "depends_on": ["transport_destination", "destination_grave_reference"],
-      "allowed_sources": ["SYSTEM", "DOCUMENT", "USER_EXPLICIT", "USER_CORRECTION"],
+      "relevant_when": [
+        {
+          "fact": "transport_destination",
+          "equals": "JAZIGO_FAMILIA"
+        }
+      ],
+      "depends_on": [
+        "transport_destination",
+        "destination_grave_reference"
+      ],
+      "allowed_sources": [
+        "SYSTEM",
+        "DOCUMENT"
+      ],
       "ai_extractable": false,
-      "human_rule_note": "Situacao cadastral do jazigo e definida pelo cadastro oficial, nao pela IA."
+      "human_rule_note": "5B.4-A.1 decisao 1: destino em jazigo da familia no Santana exige verificacao obrigatoria da situacao/dados do jazigo pela Administracao antes da continuidade. Declaracao do municipe nao confirma o fato.",
+      "authoritative_only": true,
+      "resolution_action": "ACTION_VERIFY_GRAVE_SITUATION"
     },
     {
       "fact_code": "destination_grave_authorization",
       "display_name": "Autorizacao do titular do jazigo de destino",
       "scope": "CASE",
       "value_type": "ENUM",
-      "allowed_values": ["OBTIDA", "PENDENTE", "NAO_APLICAVEL"],
+      "allowed_values": [
+        "OBTIDA_CONCESSIONARIO",
+        "OBTIDA_ADMINISTRADOR_PROVISORIO",
+        "PENDENTE",
+        "NAO_APLICAVEL"
+      ],
       "priority_class": "DEPENDENCY",
-      "relevant_when": [{ "fact": "transport_destination", "equals": "JAZIGO_FAMILIA" }],
-      "depends_on": ["transport_destination", "destination_grave_reference"],
-      "allowed_sources": ["DOCUMENT", "SYSTEM", "USER_EXPLICIT", "USER_CORRECTION"],
+      "relevant_when": [
+        {
+          "fact": "transport_destination",
+          "equals": "JAZIGO_FAMILIA"
+        }
+      ],
+      "depends_on": [
+        "transport_destination",
+        "destination_grave_reference"
+      ],
+      "allowed_sources": [
+        "DOCUMENT",
+        "SYSTEM"
+      ],
       "ai_extractable": false,
-      "human_rule_note": "Direito de uso e autorizacao do titular sao decisoes juridicas; a IA nao decide."
+      "human_rule_note": "5B.4-A.1 decisao 2: a colocacao dos restos no jazigo exige autorizacao do concessionario ou do Administrador Provisorio. Regra deterministica, nao delegavel ao LLM.",
+      "authoritative_only": true,
+      "resolution_action": "ACTION_COLLECT_GRAVE_AUTHORIZATION",
+      "deterministic_rule": true
     },
     {
       "fact_code": "transport_date_preference",
@@ -94,7 +178,10 @@
       "scope": "CASE",
       "value_type": "TEXT",
       "priority_class": "NEXT_ACTION_DATA",
-      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION"],
+      "allowed_sources": [
+        "USER_EXPLICIT",
+        "USER_CORRECTION"
+      ],
       "ai_extractable": true
     },
     {
@@ -102,21 +189,82 @@
       "display_name": "Finalidade da exumacao",
       "scope": "CASE",
       "value_type": "ENUM",
-      "allowed_values": ["TRANSPORTE", "OSSUARIO", "CREMACAO", "OUTRA"],
+      "allowed_values": [
+        "TRANSPORTE",
+        "OSSUARIO",
+        "CREMACAO",
+        "OUTRA"
+      ],
       "priority_class": "FLOW_BRANCH",
-      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION", "DERIVED_RULE"],
+      "allowed_sources": [
+        "USER_EXPLICIT",
+        "USER_CORRECTION",
+        "DERIVED_RULE"
+      ],
       "ai_extractable": true
+    },
+    {
+      "fact_code": "surviving_spouse_status",
+      "display_name": "Situacao do conjuge/companheiro do falecido",
+      "scope": "CASE",
+      "value_type": "ENUM",
+      "allowed_values": [
+        "VIVO",
+        "FALECIDO",
+        "INEXISTENTE",
+        "DESCONHECIDO"
+      ],
+      "priority_class": "PREREQUISITE",
+      "allowed_sources": [
+        "USER_EXPLICIT",
+        "USER_CORRECTION",
+        "DOCUMENT",
+        "SYSTEM"
+      ],
+      "ai_extractable": true,
+      "human_rule_note": "Fato de entrada da regra de assinatura da exumacao; quem assina continua sendo decidido por regra deterministica."
+    },
+    {
+      "fact_code": "required_authorization_signatory",
+      "display_name": "Assinaturas exigidas para a exumacao (derivado)",
+      "scope": "CASE",
+      "value_type": "ENUM",
+      "allowed_values": [
+        "CONJUGE_E_RESPONSAVEL_JAZIGO",
+        "RESPONSAVEL_JAZIGO"
+      ],
+      "priority_class": "DEPENDENCY",
+      "derived": true,
+      "depends_on": [
+        "surviving_spouse_status"
+      ],
+      "allowed_sources": [
+        "DERIVED_RULE"
+      ],
+      "ai_extractable": false,
+      "deterministic_rule": true,
+      "human_rule_note": "5B.4-A.1 decisao 6: derivado apenas de surviving_spouse_status por regra de negocio."
     },
     {
       "fact_code": "exhumation_authorization",
       "display_name": "Autorizacao da familia para exumacao",
       "scope": "CASE",
       "value_type": "ENUM",
-      "allowed_values": ["OBTIDA", "PENDENTE"],
+      "allowed_values": [
+        "OBTIDA_CONJUGE_E_RESPONSAVEL_JAZIGO",
+        "OBTIDA_RESPONSAVEL_JAZIGO",
+        "PENDENTE"
+      ],
       "priority_class": "PREREQUISITE",
-      "allowed_sources": ["DOCUMENT", "SYSTEM", "USER_EXPLICIT", "USER_CORRECTION"],
+      "allowed_sources": [
+        "DOCUMENT",
+        "SYSTEM"
+      ],
       "ai_extractable": false,
-      "human_rule_note": "Legitimidade do requerente e documentos obrigatorios sao definidos por regra oficial."
+      "human_rule_note": "5B.4-A.1 decisao 6: com esposo/companheiro do falecido vivo, ele deve autorizar e assinar; o concessionario ou Administrador Provisorio assina como responsavel pelo jazigo. O LLM nao determina elegibilidade nem dispensa autorizacao.",
+      "authoritative_only": true,
+      "resolution_action": "ACTION_COLLECT_EXHUMATION_AUTHORIZATION",
+      "deterministic_rule": true
     },
     {
       "fact_code": "burial_reference",
@@ -124,7 +272,12 @@
       "scope": "CASE",
       "value_type": "TEXT",
       "priority_class": "NEXT_ACTION_DATA",
-      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION", "DOCUMENT", "SYSTEM"],
+      "allowed_sources": [
+        "USER_EXPLICIT",
+        "USER_CORRECTION",
+        "DOCUMENT",
+        "SYSTEM"
+      ],
       "ai_extractable": true
     },
     {
@@ -132,10 +285,27 @@
       "display_name": "Situacao do recadastro",
       "scope": "CASE",
       "value_type": "ENUM",
-      "allowed_values": ["OK", "PENDENTE", "DESCONHECIDO"],
+      "allowed_values": [
+        "OK",
+        "PENDENTE",
+        "DESCONHECIDO"
+      ],
       "priority_class": "PREREQUISITE",
-      "allowed_sources": ["SYSTEM", "DOCUMENT", "USER_EXPLICIT", "USER_CORRECTION"],
-      "ai_extractable": true
+      "allowed_sources": [
+        "SYSTEM",
+        "DOCUMENT",
+        "USER_EXPLICIT",
+        "USER_CORRECTION"
+      ],
+      "ai_extractable": true,
+      "authoritative_values": [
+        "OK"
+      ],
+      "resolution_action": "ACTION_VERIFY_RECADASTRO",
+      "human_rule_note": "5B.4-A.1 decisoes 3 e 4: OK so pode ser gravado apos sinal autoritativo de conclusao do Recadastro (SYSTEM/DOCUMENT). Declaracao do usuario, extracao do LLM ou inferencia registram apenas alegacao UNCERTAIN e abrem verificacao pela Administracao.",
+      "blocking_values": [
+        "DESCONHECIDO"
+      ]
     },
     {
       "fact_code": "concession_reference",
@@ -143,7 +313,12 @@
       "scope": "CASE",
       "value_type": "TEXT",
       "priority_class": "NEXT_ACTION_DATA",
-      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION", "DOCUMENT", "SYSTEM"],
+      "allowed_sources": [
+        "USER_EXPLICIT",
+        "USER_CORRECTION",
+        "DOCUMENT",
+        "SYSTEM"
+      ],
       "ai_extractable": true
     },
     {
@@ -152,7 +327,11 @@
       "scope": "CASE",
       "value_type": "TEXT",
       "priority_class": "ADMINISTRATIVE",
-      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION", "DOCUMENT"],
+      "allowed_sources": [
+        "USER_EXPLICIT",
+        "USER_CORRECTION",
+        "DOCUMENT"
+      ],
       "ai_extractable": true
     },
     {
@@ -160,9 +339,16 @@
       "display_name": "Finalidade do processo de concessao",
       "scope": "CASE",
       "value_type": "ENUM",
-      "allowed_values": ["NOVA", "TRANSFERENCIA", "RENOVACAO"],
+      "allowed_values": [
+        "NOVA",
+        "TRANSFERENCIA",
+        "RENOVACAO"
+      ],
       "priority_class": "FLOW_BRANCH",
-      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION"],
+      "allowed_sources": [
+        "USER_EXPLICIT",
+        "USER_CORRECTION"
+      ],
       "ai_extractable": true
     },
     {
@@ -170,9 +356,18 @@
       "display_name": "Item comercial",
       "scope": "CASE",
       "value_type": "ENUM",
-      "allowed_values": ["LAPIDE", "JAZIGO", "OSSUARIO", "CINZAS", "ZELADORIA"],
+      "allowed_values": [
+        "LAPIDE",
+        "JAZIGO",
+        "OSSUARIO",
+        "CINZAS",
+        "ZELADORIA"
+      ],
       "priority_class": "FLOW_BRANCH",
-      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION"],
+      "allowed_sources": [
+        "USER_EXPLICIT",
+        "USER_CORRECTION"
+      ],
       "ai_extractable": true
     },
     {
@@ -180,9 +375,18 @@
       "display_name": "Etapa comercial",
       "scope": "CASE",
       "value_type": "ENUM",
-      "allowed_values": ["ORCAMENTO", "PEDIDO_PAGO", "PEDIDO_NAO_PAGO"],
+      "allowed_values": [
+        "ORCAMENTO",
+        "PEDIDO_PAGO",
+        "PEDIDO_NAO_PAGO"
+      ],
       "priority_class": "NEXT_ACTION_DATA",
-      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION", "SYSTEM", "DOCUMENT"],
+      "allowed_sources": [
+        "USER_EXPLICIT",
+        "USER_CORRECTION",
+        "SYSTEM",
+        "DOCUMENT"
+      ],
       "ai_extractable": true
     },
     {
@@ -190,11 +394,29 @@
       "display_name": "Situacao de entrega/instalacao",
       "scope": "CASE",
       "value_type": "ENUM",
-      "allowed_values": ["NAO_APLICAVEL", "PENDENTE", "INSTALADO"],
+      "allowed_values": [
+        "NAO_APLICAVEL",
+        "PENDENTE",
+        "INSTALADO"
+      ],
       "priority_class": "NEXT_ACTION_DATA",
-      "relevant_when": [{ "fact": "commercial_stage", "in": ["PEDIDO_PAGO", "PEDIDO_NAO_PAGO"] }],
-      "depends_on": ["commercial_stage"],
-      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION", "SYSTEM"],
+      "relevant_when": [
+        {
+          "fact": "commercial_stage",
+          "in": [
+            "PEDIDO_PAGO",
+            "PEDIDO_NAO_PAGO"
+          ]
+        }
+      ],
+      "depends_on": [
+        "commercial_stage"
+      ],
+      "allowed_sources": [
+        "USER_EXPLICIT",
+        "USER_CORRECTION",
+        "SYSTEM"
+      ],
       "ai_extractable": true
     },
     {
@@ -203,7 +425,10 @@
       "scope": "GOAL",
       "value_type": "TEXT",
       "priority_class": "NEXT_ACTION_DATA",
-      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION"],
+      "allowed_sources": [
+        "USER_EXPLICIT",
+        "USER_CORRECTION"
+      ],
       "ai_extractable": true
     },
     {
@@ -212,7 +437,10 @@
       "scope": "GOAL",
       "value_type": "TEXT",
       "priority_class": "NEXT_ACTION_DATA",
-      "allowed_sources": ["USER_EXPLICIT", "SYSTEM"],
+      "allowed_sources": [
+        "USER_EXPLICIT",
+        "SYSTEM"
+      ],
       "ai_extractable": true
     },
     {
@@ -221,7 +449,10 @@
       "scope": "GOAL",
       "value_type": "TEXT",
       "priority_class": "NEXT_ACTION_DATA",
-      "allowed_sources": ["USER_EXPLICIT", "SYSTEM"],
+      "allowed_sources": [
+        "USER_EXPLICIT",
+        "SYSTEM"
+      ],
       "ai_extractable": true
     },
     {
@@ -230,7 +461,10 @@
       "scope": "GOAL",
       "value_type": "TEXT",
       "priority_class": "NEXT_ACTION_DATA",
-      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION"],
+      "allowed_sources": [
+        "USER_EXPLICIT",
+        "USER_CORRECTION"
+      ],
       "ai_extractable": true
     },
     {
@@ -239,7 +473,11 @@
       "scope": "CASE",
       "value_type": "TEXT",
       "priority_class": "ADMINISTRATIVE",
-      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION", "DOCUMENT"],
+      "allowed_sources": [
+        "USER_EXPLICIT",
+        "USER_CORRECTION",
+        "DOCUMENT"
+      ],
       "ai_extractable": true
     },
     {
@@ -249,8 +487,12 @@
       "value_type": "BOOLEAN",
       "priority_class": "DEPENDENCY",
       "derived": true,
-      "depends_on": ["remains_status"],
-      "allowed_sources": ["DERIVED_RULE"],
+      "depends_on": [
+        "remains_status"
+      ],
+      "allowed_sources": [
+        "DERIVED_RULE"
+      ],
       "ai_extractable": false
     },
     {
@@ -260,8 +502,12 @@
       "value_type": "BOOLEAN",
       "priority_class": "DEPENDENCY",
       "derived": true,
-      "depends_on": ["recadastro_status"],
-      "allowed_sources": ["DERIVED_RULE"],
+      "depends_on": [
+        "recadastro_status"
+      ],
+      "allowed_sources": [
+        "DERIVED_RULE"
+      ],
       "ai_extractable": false
     },
     {
@@ -271,9 +517,33 @@
       "value_type": "BOOLEAN",
       "priority_class": "BLOCKING_UNCERTAINTY",
       "derived": true,
-      "depends_on": ["recadastro_status"],
-      "allowed_sources": ["DERIVED_RULE"],
+      "depends_on": [
+        "recadastro_status"
+      ],
+      "allowed_sources": [
+        "DERIVED_RULE"
+      ],
       "ai_extractable": false
     }
-  ]
+  ],
+  "authoritative_signal_policy": {
+    "description": "Fatos autoritativos so sao CONFIRMADOS por sinal externo autoritativo (Administracao/documento), nunca por declaracao do usuario, extracao de LLM ou inferencia.",
+    "accepted_sources": [
+      "SYSTEM",
+      "DOCUMENT"
+    ],
+    "rejected_as_confirmation": [
+      "USER_EXPLICIT",
+      "USER_CORRECTION",
+      "LLM_EXTRACTION",
+      "INFERENCE"
+    ],
+    "user_claim_handling": "Registrado como fato com confidence=UNCERTAIN e abertura da acao de verificacao correspondente.",
+    "actions": [
+      "ACTION_VERIFY_GRAVE_SITUATION",
+      "ACTION_COLLECT_GRAVE_AUTHORIZATION",
+      "ACTION_COLLECT_EXHUMATION_AUTHORIZATION",
+      "ACTION_VERIFY_RECADASTRO"
+    ]
+  }
 }

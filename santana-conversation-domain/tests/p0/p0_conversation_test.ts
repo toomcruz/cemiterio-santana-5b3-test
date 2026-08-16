@@ -5,6 +5,7 @@ import { assert, assertEquals } from "../../../tests/fixtures/assert.ts";
 import {
   activeFact,
   activeFacts,
+  applyAuthoritativeSignal,
   applyEvent,
   buildHandoff,
   type ConversationEvent,
@@ -22,6 +23,16 @@ function run(id: string, events: ConversationEvent[]): ConversationState {
     assertEquals(validateState(state), [], `estado invalido apos ${event.kind}`);
   }
   return state;
+}
+
+function signal(state: ConversationState, facts: { code: string; value: string }[]): ConversationState {
+  const next = applyAuthoritativeSignal(state, { facts });
+  assertEquals(validateState(next), [], "estado invalido apos sinal autoritativo");
+  return next;
+}
+
+function actions(state: ConversationState): string[] {
+  return state.pending_actions.map((a) => a.action_code);
 }
 
 function goalByCode(state: ConversationState, code: string): GoalRecord {
@@ -50,9 +61,14 @@ Deno.test("C01 Transporte -> sepultado -> Exumacao -> retorno", () => {
   assertEquals(goalByCode(state, "GOAL_TRANSPORTE").status, "SUSPENDED");
   assertEquals(activeFact(state, "exumacao_required", exumacao)?.value, true);
   assertEquals(activeFact(state, "exhumation_purpose", exumacao)?.source, "DERIVED_RULE");
-  assertEquals(pendingCode(state), "Q_EXHUMATION_AUTHORIZATION");
+  assertEquals(pendingCode(state), "Q_SURVIVING_SPOUSE");
 
-  state = applyEvent(state, { kind: "ANSWER", facts: [{ code: "exhumation_authorization", value: "OBTIDA" }] });
+  state = applyEvent(state, { kind: "ANSWER", facts: [{ code: "surviving_spouse_status", value: "FALECIDO" }] });
+  // Autorizacao e fato autoritativo: nao e perguntada ao usuario, bloqueia o goal.
+  assertEquals(goalByCode(state, "GOAL_EXUMACAO").status, "WAITING");
+  assertEquals(actions(state), ["ACTION_COLLECT_EXHUMATION_AUTHORIZATION"]);
+  state = signal(state, [{ code: "exhumation_authorization", value: "OBTIDA_RESPONSAVEL_JAZIGO" }]);
+  assertEquals(goalByCode(state, "GOAL_EXUMACAO").status, "ACTIVE");
   state = applyEvent(state, { kind: "ANSWER", facts: [{ code: "burial_reference", value: "Quadra 3 / Jazigo 18" }] });
   state = applyEvent(state, { kind: "ANSWER", facts: [{ code: "requester_document", value: "DOC-1" }] });
 
@@ -67,7 +83,7 @@ Deno.test("C02 Transporte -> ja exumado -> pula Exumacao", () => {
     { kind: "ANSWER", facts: [{ code: "remains_status", value: "EXUMADO" }] },
   ]);
   assert(!state.goals.some((g) => g.goal_code === "GOAL_EXUMACAO"), "Exumacao nao deve ser aberta");
-  assert(state.forbidden_goals.includes("GOAL_EXUMACAO"), "Exumacao deve ficar proibida");
+  assertEquals(state.forbidden_goals, [], "nao existe proibicao global de Exumacao");
   assertEquals(activeFact(state, "exumacao_required", focusGoal(state))?.value, false);
   assertEquals(pendingCode(state), "Q_TRANSPORT_DESTINATION");
 });
@@ -98,7 +114,10 @@ Deno.test("C04 Mudanca de destino recalcula apenas dependencias afetadas", () =>
     { kind: "ANSWER", facts: [{ code: "transport_destination", value: "JAZIGO_FAMILIA" }] },
     { kind: "ANSWER", facts: [{ code: "destination_grave_reference", value: "J-12" }] },
   ]);
-  assertEquals(pendingCode(state), "Q_DESTINATION_GRAVE_SITUATION");
+  // Situacao do jazigo e verificacao obrigatoria da Administracao: sem pergunta ao usuario.
+  assertEquals(pendingCode(state), null);
+  assertEquals(goalByCode(state, "GOAL_TRANSPORTE").status, "WAITING");
+  assertEquals(actions(state), ["ACTION_VERIFY_GRAVE_SITUATION"]);
 
   state = applyEvent(state, {
     kind: "CHANGE_OF_MIND",
@@ -109,6 +128,8 @@ Deno.test("C04 Mudanca de destino recalcula apenas dependencias afetadas", () =>
   assertEquals(jazigo?.status, "SUPERSEDED");
   assertEquals(jazigo?.supersession_reason, "DEPENDENCY_INVALIDATED");
   assertEquals(activeFact(state, "remains_status", focusGoal(state))?.value, "EXUMADO");
+  assertEquals(goalByCode(state, "GOAL_TRANSPORTE").status, "ACTIVE");
+  assertEquals(actions(state), []);
   assertEquals(pendingCode(state), "Q_TRANSPORT_DATE");
 });
 
@@ -119,6 +140,15 @@ Deno.test("C05 Concessao com Recadastro OK", () => {
   assertEquals(pendingCode(state), "Q_RECADASTRO_STATUS");
   state = applyEvent(state, { kind: "ANSWER", facts: [{ code: "recadastro_status", value: "OK" }] });
 
+  // Declaracao do usuario nao produz OK: fica UNCERTAIN e abre verificacao.
+  assertEquals(activeFact(state, "recadastro_status", goalByCode(state, "GOAL_CONCESSAO"))?.confidence, "UNCERTAIN");
+  assertEquals(goalByCode(state, "GOAL_CONCESSAO").status, "WAITING");
+  assertEquals(actions(state), ["ACTION_VERIFY_RECADASTRO"]);
+
+  state = signal(state, [{ code: "recadastro_status", value: "OK" }]);
+  const recadastro = activeFact(state, "recadastro_status", goalByCode(state, "GOAL_CONCESSAO"));
+  assertEquals(recadastro?.confidence, "CONFIRMED");
+  assertEquals(recadastro?.authoritative, true);
   assert(!state.goals.some((g) => g.goal_code === "GOAL_RECADASTRO"), "Recadastro nao deve ser aberto");
   assertEquals(goalByCode(state, "GOAL_CONCESSAO").status, "ACTIVE");
   assertEquals(pendingCode(state), "Q_CONCESSION_REFERENCE");
@@ -139,7 +169,10 @@ Deno.test("C06 Concessao sem Recadastro suspende e retorna", () => {
 
   assertEquals(goalByCode(state, "GOAL_RECADASTRO").status, "RESOLVED");
   assertEquals(goalByCode(state, "GOAL_CONCESSAO").status, "ACTIVE");
-  assertEquals(activeFact(state, "recadastro_status", goalByCode(state, "GOAL_CONCESSAO"))?.value, "OK");
+  const okFact = activeFact(state, "recadastro_status", goalByCode(state, "GOAL_CONCESSAO"));
+  assertEquals(okFact?.value, "OK");
+  assertEquals(okFact?.source, "SYSTEM");
+  assertEquals(okFact?.authoritative, true);
   assertEquals(pendingCode(state), "Q_REQUESTER_DOCUMENT");
 });
 
@@ -161,7 +194,7 @@ Deno.test("C08 Exumacao + pergunta paralela sobre ossuario", () => {
     { kind: "ANSWER", facts: [{ code: "remains_status", value: "SEPULTADO" }] },
   ]);
   const perguntaOriginal = state.pending_question;
-  assertEquals(perguntaOriginal?.question_code, "Q_EXHUMATION_AUTHORIZATION");
+  assertEquals(perguntaOriginal?.question_code, "Q_SURVIVING_SPOUSE");
 
   state = applyEvent(state, {
     kind: "PARALLEL_QUESTION",
@@ -172,7 +205,7 @@ Deno.test("C08 Exumacao + pergunta paralela sobre ossuario", () => {
   assertEquals(goalByCode(state, "GOAL_INFO_OSSUARIO").status, "RESOLVED");
   assertEquals(goalByCode(state, "GOAL_EXUMACAO").status, "ACTIVE");
   assertEquals(goalByCode(state, "GOAL_TRANSPORTE").status, "SUSPENDED");
-  assertEquals(state.pending_question?.question_code, "Q_EXHUMATION_AUTHORIZATION");
+  assertEquals(state.pending_question?.question_code, "Q_SURVIVING_SPOUSE");
   assertEquals(state.pending_question?.asked_at_seq, perguntaOriginal?.asked_at_seq);
 });
 
@@ -328,7 +361,7 @@ Deno.test("HANDOFF: modelo de estado para atendimento humano", () => {
     (handoff?.confirmed_facts ?? []).some((f) => f.fact_code === "remains_status"),
     "fatos confirmados no handoff",
   );
-  assert((handoff?.pending_facts ?? []).includes("exhumation_authorization"), "pendencias no handoff");
+  assert((handoff?.pending_facts ?? []).includes("surviving_spouse_status"), "pendencias no handoff");
   assert(handoff?.essential_context.goal_stack.includes("GOAL_TRANSPORTE:SUSPENDED"), "pilha de objetivos no handoff");
 });
 

@@ -3,6 +3,8 @@
 // Fase 5B.4-A. Nenhuma integracao com producao, n8n, WhatsApp ou LLM.
 
 import {
+  AUTHORITATIVE_SOURCES,
+  authoritativeResolution,
   Condition,
   Confidence,
   CONFLICT_QUESTION_CODE,
@@ -17,6 +19,7 @@ import {
   questionForFact,
   RelationEffect,
   relationsDoc,
+  requiresAuthoritativeSignal,
 } from "./catalog.ts";
 
 export interface CaseRecord {
@@ -56,6 +59,7 @@ export interface FactRecord {
   superseded_at_seq: number | null;
   supersession_reason: string | null;
   conflicts_with: string | null;
+  authoritative: boolean;
   derived_from: string[];
 }
 
@@ -110,6 +114,9 @@ export interface FactInput {
   value: FactValue;
   source?: FactSource;
   confidence?: Confidence;
+  // Sinal autoritativo externo (Administracao/documento). Nunca pode acompanhar
+  // uma origem de usuario, extracao de LLM ou inferencia.
+  authoritative?: boolean;
 }
 
 export interface ConversationEvent {
@@ -244,6 +251,17 @@ function recordFact(
   if (def.allowed_values && typeof input.value === "string" && !def.allowed_values.includes(input.value)) {
     throw new Error(`valor ${input.value} fora do dominio de ${input.code}`);
   }
+  if (input.authoritative && !AUTHORITATIVE_SOURCES.includes(source)) {
+    throw new Error(`sinal autoritativo exige origem ${AUTHORITATIVE_SOURCES.join("/")}, recebido ${source}`);
+  }
+  const authoritative = input.authoritative === true;
+  // Declaracao do usuario, extracao de LLM ou inferencia nunca confirmam um fato
+  // autoritativo: ficam registradas como alegacao UNCERTAIN.
+  const needsSignal = requiresAuthoritativeSignal(input.code, input.value) && source !== "DERIVED_RULE";
+  const effectiveConfidence: Confidence = needsSignal && !authoritative
+    ? "UNCERTAIN"
+    : (input.confidence ?? "CONFIRMED");
+
   const existing = activeFacts(state, input.code, goal);
   const incumbent = existing[0] ?? null;
   const sameValue = existing.find((f) => f.value === input.value) ?? null;
@@ -260,9 +278,10 @@ function recordFact(
       if (other === sameValue) continue;
       supersede(state, other, reason, sameValue.fact_id);
     }
-    if (input.confidence !== "UNCERTAIN" || sameValue.confidence !== "CONFIRMED") {
-      sameValue.confidence = input.confidence ?? "CONFIRMED";
+    if (effectiveConfidence !== "UNCERTAIN" || sameValue.confidence !== "CONFIRMED") {
+      sameValue.confidence = effectiveConfidence;
     }
+    sameValue.authoritative = sameValue.authoritative || authoritative;
     sameValue.conflicts_with = null;
     if (mode !== "ASSERT") sameValue.source = source;
     return sameValue;
@@ -275,13 +294,14 @@ function recordFact(
     goal_id: def.scope === "GOAL" ? (goal ? goal.goal_id : null) : null,
     value: input.value,
     source,
-    confidence: input.confidence ?? "CONFIRMED",
+    confidence: effectiveConfidence,
     status: "ACTIVE",
     recorded_at_seq: state.seq,
     superseded_by: null,
     superseded_at_seq: null,
     supersession_reason: null,
     conflicts_with: null,
+    authoritative,
     derived_from: derivedFrom,
   };
 
@@ -412,7 +432,12 @@ function applyEffects(
         recordFact(
           state,
           goal,
-          { code: effect.fact_code, value: effect.value ?? null, source: effect.source ?? "SYSTEM" },
+          {
+            code: effect.fact_code,
+            value: effect.value ?? null,
+            source: effect.source ?? "SYSTEM",
+            authoritative: effect.authoritative === true,
+          },
           "DERIVE",
         );
         changed = true;
@@ -422,7 +447,15 @@ function applyEffects(
         const code = effect.goal_code;
         if (!code) break;
         if (state.forbidden_goals.includes(code)) break;
-        const already = state.goals.some((g) => g.goal_code === code && g.created_by_relation === relationCode);
+        // So e reaberto o subfluxo que foi fechado por a dependencia ter deixado
+        // de existir; abandono pelo usuario e conclusao continuam bloqueando.
+        const recalculable = ["DEPENDENCY_SATISFIED", "DEPENDENCY_REMOVED"];
+        const already = state.goals.some((g) =>
+          g.goal_code === code &&
+          g.created_by_relation === relationCode &&
+          g.case_id === goal.case_id &&
+          !(g.status === "ABANDONED" && recalculable.includes(g.status_reason ?? ""))
+        );
         if (already) break;
         pushGoal(state, code, {
           parent: goal,
@@ -456,18 +489,17 @@ function applyEffects(
         changed = true;
         break;
       }
-      case "forbid_goal": {
+      case "satisfy_dependency": {
+        // Escopo do case: a dependencia fica satisfeita/inaplicavel enquanto o fato
+        // que a dispensa estiver ativo. Nao existe proibicao global nem permanente.
         const code = effect.goal_code;
         if (!code) break;
-        if (!state.forbidden_goals.includes(code)) {
-          state.forbidden_goals.push(code);
-          changed = true;
-        }
         for (const g of state.goals) {
           if (g.goal_code !== code) continue;
+          if (g.case_id !== goal.case_id) continue;
           if (!OPEN_STATUSES.includes(g.status)) continue;
           g.status = "ABANDONED";
-          g.status_reason = "DEPENDENCY_REMOVED";
+          g.status_reason = effect.reason ?? "DEPENDENCY_SATISFIED";
           g.closed_at_seq = state.seq;
           const parent = goalById(state, g.parent_goal_id);
           if (parent && parent.status === "SUSPENDED" && g.return_to_parent) {
@@ -509,22 +541,43 @@ function evaluateRelations(state: ConversationState): void {
   throw new Error("avaliacao de relacoes nao convergiu");
 }
 
-export function missingFacts(
-  state: ConversationState,
-  goal: GoalRecord,
-): { code: string; priority: PriorityClass; conflicting: boolean }[] {
+export interface MissingFact {
+  code: string;
+  priority: PriorityClass;
+  conflicting: boolean;
+  authoritative: boolean;
+}
+
+export function missingFacts(state: ConversationState, goal: GoalRecord): MissingFact[] {
   const def = goalDef(goal.goal_code);
-  const out: { code: string; priority: PriorityClass; conflicting: boolean }[] = [];
+  const out: MissingFact[] = [];
   for (const code of def.required_facts) {
     if (!isRelevant(state, code, goal)) continue;
     const facts = activeFacts(state, code, goal);
     const primary = facts[0];
+    const factSpec = factDef(code);
     if (!primary) {
-      out.push({ code, priority: factDef(code).priority_class, conflicting: false });
+      out.push({
+        code,
+        priority: factSpec.priority_class,
+        conflicting: false,
+        authoritative: factSpec.authoritative_only === true,
+      });
       continue;
     }
     if (primary.confidence !== "CONFIRMED") {
-      out.push({ code, priority: "BLOCKING_UNCERTAINTY", conflicting: primary.confidence === "CONFLICTING" });
+      out.push({
+        code,
+        priority: "BLOCKING_UNCERTAINTY",
+        conflicting: primary.confidence === "CONFLICTING",
+        authoritative: primary.confidence === "UNCERTAIN" && requiresAuthoritativeSignal(code, primary.value),
+      });
+      continue;
+    }
+    // Valor que, mesmo confirmado pelo usuario, nao permite continuar: exige
+    // verificacao pela Administracao (ex.: recadastro DESCONHECIDO).
+    if ((factSpec.blocking_values ?? []).includes(primary.value)) {
+      out.push({ code, priority: "BLOCKING_UNCERTAINTY", conflicting: false, authoritative: true });
     }
   }
   return out;
@@ -553,10 +606,23 @@ function resolveCompletedGoals(state: ConversationState): boolean {
   return changed;
 }
 
+export function bestMissingFact(state: ConversationState, goal: GoalRecord): MissingFact | null {
+  const missing = missingFacts(state, goal);
+  if (missing.length === 0) return null;
+  let best = missing.find((m) => m.conflicting) ?? missing[0];
+  if (!best) return null;
+  if (!best.conflicting) {
+    for (const candidate of missing) {
+      if (PRIORITY_RANK[candidate.priority] < PRIORITY_RANK[best.priority]) best = candidate;
+    }
+  }
+  return best;
+}
+
 export function nextBestQuestion(state: ConversationState): QuestionRef | null {
   const goal = focusGoal(state);
   if (!goal) return null;
-  const missing = missingFacts(state, goal);
+  const missing = missingFacts(state, goal).filter((m) => !m.authoritative);
   if (missing.length === 0) return null;
   // Conflito de fato precede a escolha por classe: uma contradicao invalida a
   // decisao que ja estava sendo tomada.
@@ -574,6 +640,40 @@ export function nextBestQuestion(state: ConversationState): QuestionRef | null {
     priority_class: best.priority,
     asked_at_seq: state.seq,
   };
+}
+
+// Lacuna autoritativa: o objetivo fica WAITING com uma acao pendente para a
+// Administracao, e nenhuma pergunta e feita ao usuario sobre esse fato.
+function syncAuthoritativeGaps(state: ConversationState): void {
+  for (const goal of state.goals) {
+    if (goal.status !== "ACTIVE" && goal.status !== "WAITING") continue;
+    const gap = bestMissingFact(state, goal);
+    const blocking = gap && gap.authoritative ? authoritativeResolution(gap.code) : null;
+    if (blocking) {
+      goal.status = "WAITING";
+      goal.status_reason = `AWAITING:${blocking.action_code}`;
+      // Uma lacuna resolvida deixa de gerar acao: so a lacuna corrente fica pendente.
+      state.pending_actions = state.pending_actions.filter(
+        (a) => a.goal_id !== goal.goal_id || a.action_code === blocking.action_code,
+      );
+      if (!state.pending_actions.some((a) => a.action_code === blocking.action_code && a.goal_id === goal.goal_id)) {
+        state.pending_actions.push({
+          action_code: blocking.action_code,
+          executor: blocking.executor,
+          goal_id: goal.goal_id,
+          requested_at_seq: state.seq,
+        });
+      }
+      if (state.pending_question && state.pending_question.goal_id === goal.goal_id) {
+        state.parked_questions.push(state.pending_question);
+        state.pending_question = null;
+      }
+    } else if (goal.status === "WAITING") {
+      goal.status = "ACTIVE";
+      goal.status_reason = null;
+      state.pending_actions = state.pending_actions.filter((a) => a.goal_id !== goal.goal_id);
+    }
+  }
 }
 
 function questionStillValid(state: ConversationState, q: QuestionRef): boolean {
@@ -729,6 +829,30 @@ export function applyEvent(previous: ConversationState, event: ConversationEvent
   }
 
   evaluateRelations(state);
+  syncAuthoritativeGaps(state);
+  refreshPendingQuestion(state);
+  return state;
+}
+
+export interface AuthoritativeSignal {
+  facts: FactInput[];
+  note?: string;
+}
+
+// Entrada autoritativa da Administracao (ou documento). Nao e um evento
+// conversacional: e o unico caminho capaz de CONFIRMAR um fato autoritativo.
+export function applyAuthoritativeSignal(
+  previous: ConversationState,
+  signal: AuthoritativeSignal,
+): ConversationState {
+  const state = clone(previous);
+  state.seq += 1;
+  for (const f of signal.facts) {
+    const owner = ownerGoalForFact(state, f.code, null);
+    recordFact(state, owner, { ...f, source: f.source ?? "SYSTEM", authoritative: true }, "SUPERSEDE");
+  }
+  evaluateRelations(state);
+  syncAuthoritativeGaps(state);
   refreshPendingQuestion(state);
   return state;
 }
