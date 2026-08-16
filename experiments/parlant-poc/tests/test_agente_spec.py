@@ -153,3 +153,26 @@ def test_nlp_service_da_poc_nao_usa_gemini_pro():
     assert set(nlp.MODEL_BY_SIZE) == set(nlp.ModelSize)
     for tamanho, classe in nlp.MODEL_BY_SIZE.items():
         assert "Pro" not in classe.__name__, (tamanho, classe.__name__)
+
+
+def test_rate_limiter_espaca_chamadas():
+    from santana_parlant_poc.agent import nlp
+
+    limiter = nlp.RateLimiter(rpm=600)  # 0,1s entre chamadas
+    inicio = asyncio.get_event_loop_policy().new_event_loop()
+    try:
+        inicio.run_until_complete(limiter.acquire())
+        marcado = __import__("time").monotonic()
+        inicio.run_until_complete(limiter.acquire())
+        assert __import__("time").monotonic() - marcado >= 0.09
+    finally:
+        inicio.close()
+
+
+def test_retry_de_429_usa_o_delay_sugerido_pela_api():
+    from santana_parlant_poc.agent import nlp
+
+    erro = Exception("429 RESOURCE_EXHAUSTED ... Please retry in 44.46s")
+    assert nlp._is_rate_limit(erro)
+    assert nlp._retry_after(erro) > 44
+    assert not nlp._is_rate_limit(Exception("404 NOT_FOUND"))

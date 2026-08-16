@@ -49,6 +49,7 @@ jobs:
   gemini-smoke:
     name: Smoke Parlant + Gemini (secret PARLANT)
     needs: offline-tests
+    timeout-minutes: 45
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_gemini_smoke == 'true' }}
     runs-on: ubuntu-latest
     defaults:
@@ -83,4 +84,6 @@ jobs:
           # A chave da POC entra na aplicacao apenas com este nome.
           GEMINI_API_KEY: ${{ secrets.PARLANT }}
           LAB_PORT: "8801"
+          # Free tier: o throttle da POC espaca as chamadas (ver agent/nlp.py).
+          POC_GEMINI_RPM: "14"
         run: python scripts/smoke_parlant.py
