@@ -1,7 +1,8 @@
-# Arquitetura futura do adapter de LLM (proposta — não implementada nesta fase)
+# Adapter controlado de LLM (5B.4-D)
 
-Nenhum modelo é chamado na 5B.4-C. Este documento fixa **onde** o LLM entraria e, sobretudo, **o que ele nunca poderá
-fazer**, para que a troca do interpretador seja uma substituição de peça, não uma mudança de arquitetura.
+O adapter provider-agnostic está implementado em `adapter/`, atrás de feature flag desligada por padrão. Nenhum provedor
+real foi configurado: a auditoria do ambiente não encontrou credencial, e os testes usam exclusivamente uma fronteira
+de rede injetada. Adapter `santana-llm-adapter/1.0.0`; prompt `santana-llm-prompt/1.0.0`.
 
 ## Onde o LLM entra
 
@@ -21,7 +22,7 @@ mensagem ──▶ Interpreter (mock hoje | LLM amanhã) ──▶ Interpretatio
                                         diffTransition() ──▶ conv_apply_transition (0020)
 ```
 
-O adapter implementa exatamente a mesma assinatura do mock:
+O adapter implementa a assinatura assíncrona:
 `interpret(input: InterpreterInput): Promise<Interpretation>`. Tudo depois dele já existe e já é testado — inclusive
 contra proposta maliciosa (o teste “fato fora do catálogo e origem proibida” injeta uma interpretação envenenada e prova
 que a guarda a descarta).
@@ -57,7 +58,7 @@ estimar confiança, redigir a pergunta de esclarecimento e resumir o handoff.
 | Privacidade       | a mensagem crua não é persistida em `conv_*`; o que entra é fato de domínio e HMAC do sujeito          |
 | Fronteira de rede | uma única função de saída, com allowlist de host, desabilitada por feature flag                        |
 
-## Testes que o adapter terá de passar antes de ser ligado
+## Gates antes de ligar
 
 1. As mesmas fixtures desta fase (`messages.v1.json`) com resultado equivalente em evento, objetivo e fatos —
    divergência de redação é aceitável, divergência de decisão não.

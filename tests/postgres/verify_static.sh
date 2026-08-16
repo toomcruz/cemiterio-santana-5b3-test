@@ -61,7 +61,11 @@ rg -Fq 'nenhum fato de origem de usuario virou autoritativo' "$root/p26_language
 for token in AUTHORITATIVE_FACT FORBIDDEN_SOURCE VALUE_OUT_OF_DOMAIN UNKNOWN_CODE; do
   rg -Fq "$token" "$root/../../santana-conversation-domain/runtime/interpreter/guard.ts" || { echo "language guard missing refusal: $token" >&2; exit 1; }
 done
-! rg -ni "gemini|openai|anthropic|fetch\(" "$root/../../santana-conversation-domain/runtime" || { echo 'language runtime must not call any model or network' >&2; exit 1; }
+runtime_dir="$root/../../santana-conversation-domain/runtime"
+! rg -ni "gemini|openai|anthropic" "$runtime_dir" || { echo 'language runtime must remain provider-agnostic' >&2; exit 1; }
+[[ "$(rg -l 'fetch\(' "$runtime_dir" | wc -l)" -eq 1 ]] || { echo 'language runtime must have exactly one network boundary' >&2; exit 1; }
+rg -Fq 'export const fetchBoundary' "$runtime_dir/adapter/network.ts" || { echo 'controlled network boundary missing' >&2; exit 1; }
+rg -Fq 'DEFAULT_LLM_ENABLED = false' "$runtime_dir/adapter/adapter.ts" || { echo 'LLM feature flag must default OFF' >&2; exit 1; }
 for token in conv_apply_transition conv_apply_authoritative_signal conv_state_canonical; do
   rg -Fq "$token" "$root/p24_conv_persistence.sql" || { echo "P24 lacks real coverage: $token" >&2; exit 1; }
 done

@@ -3,7 +3,8 @@
     "test:unit": "deno test --allow-read tests/unit",
     "test:shadow": "deno test --allow-read tests/shadow",
     "test:integration": "deno test --allow-read tests/integration",
-    "test": "deno test --allow-read tests/unit tests/shadow tests/integration"
+    "test:runtime": "deno test --allow-read santana-conversation-domain/runtime/tests",
+    "test": "deno test --allow-read tests/unit tests/shadow tests/integration santana-conversation-domain/runtime/tests"
   },
   "compilerOptions": {
     "strict": true,
