@@ -7,11 +7,33 @@ create or replace function support_vnext_test.ensure_classifier_authority()
 returns support_vnext_test.classifier_authority_fixture_context language plpgsql as $$
 declare r support_vnext_test.classifier_authority_fixture_context;
 begin
- select * into r from support_vnext_test.classifier_authority_fixture_context limit 1;
+ -- support_vnext_test survives the controlled reset while support_vnext_shadow is
+ -- dropped, so a cached key can outlive its classifier_authorities row. Only reuse
+ -- the cache when the authority still exists and is usable by the RPC guard
+ -- (active, inside its validity window); otherwise re-provision it.
+ select c.* into r
+   from support_vnext_test.classifier_authority_fixture_context c
+   join support_vnext_shadow.classifier_authorities a on a.authority_key_id = c.authority_key_id
+  where a.active and a.valid_from <= now() and (a.valid_to is null or a.valid_to > now())
+    and a.verifier_secret = c.verifier_secret
+  limit 1;
  if found then return r; end if;
- r.authority_key_id:=extensions.gen_random_uuid(); r.verifier_secret:='test-only-classifier-authority-not-for-runtime'; r.created_at:=timestamptz '2000-01-01 00:00:00+00';
- insert into support_vnext_shadow.classifier_authorities(authority_key_id,authority_name,verifier_secret,created_by)
- values(r.authority_key_id,'support-vnext-test-classifier',r.verifier_secret,'support_vnext_test');
+
+ delete from support_vnext_test.classifier_authority_fixture_context;
+ r.verifier_secret:='test-only-classifier-authority-not-for-runtime'; r.created_at:=timestamptz '2000-01-01 00:00:00+00';
+ -- authority_name is UNIQUE; adopt an existing test authority instead of colliding.
+ select authority_key_id into r.authority_key_id
+   from support_vnext_shadow.classifier_authorities
+  where authority_name='support-vnext-test-classifier';
+ if r.authority_key_id is null then
+   r.authority_key_id:=extensions.gen_random_uuid();
+   insert into support_vnext_shadow.classifier_authorities(authority_key_id,authority_name,verifier_secret,created_by)
+   values(r.authority_key_id,'support-vnext-test-classifier',r.verifier_secret,'support_vnext_test');
+ else
+   update support_vnext_shadow.classifier_authorities
+      set verifier_secret=r.verifier_secret, active=true, valid_from=now()-interval '1 minute', valid_to=null
+    where authority_key_id=r.authority_key_id;
+ end if;
  insert into support_vnext_test.classifier_authority_fixture_context (authority_key_id,verifier_secret,created_at) values (r.authority_key_id,r.verifier_secret,r.created_at);
  return r;
 end $$;
