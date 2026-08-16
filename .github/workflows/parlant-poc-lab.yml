@@ -1,0 +1,89 @@
+name: Parlant POC (lab)
+
+# POC isolada em experiments/parlant-poc/. Nao toca em migrations, Supabase,
+# n8n, W-API, WhatsApp nem Vercel. Nao publica nada.
+
+on:
+  push:
+    branches:
+      - "lab/**"
+      - "claude/parlant-poc-**"
+    paths:
+      - "experiments/parlant-poc/**"
+      - ".github/workflows/parlant-poc-lab.yml"
+  workflow_dispatch:
+    inputs:
+      run_gemini_smoke:
+        description: "Executar o smoke real com Gemini (consome a chave da POC)"
+        required: false
+        default: "true"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: parlant-poc-lab-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline-tests:
+    name: Testes offline (sem chave)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: experiments/parlant-poc
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: |
+          set -Eeuo pipefail
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Rodar testes automatizados
+        run: pytest -q
+
+  gemini-smoke:
+    name: Smoke Parlant + Gemini (secret PARLANT)
+    needs: offline-tests
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_gemini_smoke == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: experiments/parlant-poc
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: |
+          set -Eeuo pipefail
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Verificar presenca do secret (sem imprimir valor)
+        env:
+          GEMINI_API_KEY: ${{ secrets.PARLANT }}
+        run: |
+          set -Eeuo pipefail
+          if [ -z "${GEMINI_API_KEY-}" ]; then
+            echo "Secret PARLANT ausente: smoke com Gemini nao pode rodar."
+            exit 1
+          fi
+          echo "Secret PARLANT presente (valor nao exibido)."
+
+      - name: Smoke do agente real (Parlant + Gemini)
+        env:
+          # A chave da POC entra na aplicacao apenas com este nome.
+          GEMINI_API_KEY: ${{ secrets.PARLANT }}
+          LAB_PORT: "8801"
+        run: python scripts/smoke_parlant.py
