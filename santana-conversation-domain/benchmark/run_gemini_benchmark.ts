@@ -83,9 +83,18 @@ function sameFacts(
   return [[...got].filter((fact) => want.has(fact)).length, got.size, want.size];
 }
 
-function pricingFor(model: string): { input: number; output: number } | null {
-  if (model === "gemini-2.5-flash") return { input: 0.30, output: 2.50 };
-  if (model === "gemini-2.5-flash-lite") return { input: 0.10, output: 0.40 };
+/**
+ * USD per million tokens, standard tier. Only ids whose published rate we can name are priced;
+ * everything else reports a null cost rather than a fabricated one. `basis` says which it was.
+ */
+function pricingFor(model: string): { input: number; output: number; basis: string } | null {
+  if (model === "gemini-2.5-flash") return { input: 0.30, output: 2.50, basis: "published_rate" };
+  if (model === "gemini-2.5-flash-lite") return { input: 0.10, output: 0.40, basis: "published_rate" };
+  // Rolling aliases resolve to whichever model is current, so the rate is an assumption, not a quote.
+  if (model === "gemini-flash-latest") return { input: 0.30, output: 2.50, basis: "alias_assumed_flash_rate" };
+  if (model === "gemini-flash-lite-latest") {
+    return { input: 0.10, output: 0.40, basis: "alias_assumed_flash_lite_rate" };
+  }
   return null;
 }
 
@@ -447,6 +456,7 @@ const report = {
   adapter_latency_ms: { p50: percentile(durations, 0.5), p95: percentile(durations, 0.95) },
   tokens: { prompt_tokens: inputTokens, output_tokens: outputTokens, total_tokens: totalTokens },
   estimated_cost_usd: pricing ? (inputTokens * pricing.input + outputTokens * pricing.output) / 1_000_000 : null,
+  estimated_cost_basis: pricing?.basis ?? "no_published_rate_for_model",
   safety,
   safe_to_recommend: safeToRecommend,
 };
