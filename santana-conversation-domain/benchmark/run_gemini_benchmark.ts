@@ -254,11 +254,14 @@ const selectedSchemaMode = schemaAttempts[schemaAttempts.length - 1]!.mode;
 const selectedVariant = schemaVariants.find((variant) => variant.mode === selectedSchemaMode)!;
 
 /** Free-tier Gemini enforces a per-minute request budget; pace and retry instead of burning the run. */
-const minIntervalMs = Number(Deno.env.get("BENCHMARK_MIN_INTERVAL_MS") ?? "4500");
-const quotaBackoffMs = Number(Deno.env.get("BENCHMARK_QUOTA_BACKOFF_MS") ?? "20000");
-const maxQuotaRetries = 4;
+const minIntervalMs = Number(Deno.env.get("BENCHMARK_MIN_INTERVAL_MS") ?? "6000");
+const quotaBackoffMs = Number(Deno.env.get("BENCHMARK_QUOTA_BACKOFF_MS") ?? "30000");
+const maxQuotaRetries = 2;
+/** A per-minute limit clears in seconds; a spent daily allowance never will. Stop paying for it. */
+const quotaWaitBudgetMs = 6 * 60_000;
 let lastCallAt = 0;
 let quotaRetries = 0;
+let quotaWaitedMs = 0;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 async function pacedCall(request: Parameters<typeof fetchBoundary>[0], signal: AbortSignal) {
   const wait = lastCallAt + minIntervalMs - Date.now();
@@ -306,8 +309,10 @@ for (const testCase of corpus) {
       let response = await pacedCall(request, signal);
       for (let attempt = 0; attempt < maxQuotaRetries; attempt++) {
         if (caseProvider.classifyErrorResponse(response.status, response.body) !== "PROVIDER_QUOTA") break;
+        if (quotaWaitedMs >= quotaWaitBudgetMs) break;
         quotaRetries++;
-        await sleep(quotaBackoffMs * (attempt + 1));
+        quotaWaitedMs += quotaBackoffMs;
+        await sleep(quotaBackoffMs);
         response = await pacedCall(request, signal);
       }
       rawResponse = response.body;
@@ -421,6 +426,8 @@ const report = {
     provider_invalid_outputs: providerSuccess - validOutputs,
     provider_http_errors: providerHttpErrors,
     provider_quota_retries: quotaRetries,
+    provider_quota_wait_ms: quotaWaitedMs,
+    provider_quota_budget_exhausted: quotaWaitedMs >= quotaWaitBudgetMs,
     rejection_reasons: rejectionReasons,
   },
   reliability: {
