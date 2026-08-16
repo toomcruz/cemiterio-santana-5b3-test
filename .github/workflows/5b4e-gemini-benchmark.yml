@@ -27,6 +27,8 @@ jobs:
         run: |
           set -Eeuo pipefail
           [[ -n "${GEMINI_API_KEY:-}" ]] || { echo "5B.4-E BLOCKED — repository secret GEMINI_API_KEY is unavailable" >&2; exit 1; }
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ripgrep >/dev/null
+      - run: rg --version
       - name: Preserve baseline gates
         shell: bash
         run: |
