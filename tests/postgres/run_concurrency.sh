@@ -10,7 +10,7 @@ for url in "$DATABASE_URL_A" "$DATABASE_URL_B"; do
   [[ "$url" =~ ^postgres(ql)?:// ]] || { echo "refusing non-PostgreSQL URL" >&2; exit 64; }
   [[ ! "${url,,}" =~ (prod|production) ]] || { echo "refusing production-like database URL" >&2; exit 64; }
 done
-case "$(basename "$CASE_SQL")" in p01_release_overlap.sql|p09_session_concurrency.sql|p11_confirm_concurrency.sql) ;; *) echo "unsupported concurrency case" >&2; exit 64;; esac
+case "$(basename "$CASE_SQL")" in p01_release_overlap.sql|p09_session_concurrency.sql|p11_confirm_concurrency.sql|p25_conv_concurrency.sql) ;; *) echo "unsupported concurrency case" >&2; exit 64;; esac
 run_case() {
   local url="$1" mode="$2" worker="${3:-}"
   local args=("$url" -X -v ON_ERROR_STOP=1 -v "is_${mode}=true" -f "$CASE_SQL")

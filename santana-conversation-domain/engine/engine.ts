@@ -266,7 +266,11 @@ function recordFact(
   const incumbent = existing[0] ?? null;
   const sameValue = existing.find((f) => f.value === input.value) ?? null;
 
-  if (sameValue) {
+  // Uma alegacao nao autoritativa nunca e "promovida" no lugar: o sinal externo
+  // cria um fato novo e supera a alegacao, preservando o historico. (5B.4-B.2)
+  if (sameValue && authoritative && !sameValue.authoritative) {
+    supersede(state, sameValue, "SYSTEM_REPLACEMENT", null);
+  } else if (sameValue) {
     // O valor informado ja existe: ele passa a ser o unico ativo e qualquer
     // valor concorrente e superado com historico.
     const reason = source === "USER_CORRECTION"
@@ -283,7 +287,8 @@ function recordFact(
     }
     sameValue.authoritative = sameValue.authoritative || authoritative;
     sameValue.conflicts_with = null;
-    if (mode !== "ASSERT") sameValue.source = source;
+    // A origem registra quem afirmou o valor primeiro: confirmar nao reescreve
+    // a proveniencia (e a persistencia trata origem como imutavel).
     return sameValue;
   }
 

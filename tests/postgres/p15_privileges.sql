@@ -97,11 +97,27 @@ insert into p15_expected_functions values
 ('support_vnext_shadow.validate_decision_rule_scope()','TRIGGER_FUNCTION',false,false,false,false,false,false),
 ('support_vnext_shadow.validate_topic_release_coherence()','TRIGGER_FUNCTION',false,false,false,false,false,false),
 ('support_vnext_shadow.validate_confirmation_release_coherence()','TRIGGER_FUNCTION',false,false,false,false,false,false),
-('support_vnext_shadow.validate_decision_release_coherence()','TRIGGER_FUNCTION',false,false,false,false,false,false);
+('support_vnext_shadow.validate_decision_release_coherence()','TRIGGER_FUNCTION',false,false,false,false,false,false),
+-- 5B.4-B.2 (migration 0020): persistencia conversacional.
+('support_vnext_shadow.conv_get_state(uuid)','RUNTIME_RPC',false,false,false,true,false,false),
+('support_vnext_shadow.conv_apply_transition(uuid,bigint,jsonb,character)','RUNTIME_RPC',false,false,false,true,false,false),
+('support_vnext_shadow.conv_apply_authoritative_signal(uuid,bigint,jsonb,jsonb,character)','AUDIT_RPC',false,false,false,false,false,false),
+('support_vnext_shadow.conv_rollback_to_seq(uuid,bigint,text,text)','AUDIT_RPC',false,false,false,false,false,false),
+('support_vnext_shadow.conv_apply_ops(uuid,bigint,jsonb,boolean,uuid,text[])','INTERNAL_HELPER',false,false,false,false,false,false),
+('support_vnext_shadow.conv_commit_transition(uuid,bigint,jsonb,character,support_vnext_shadow.conv_event_kind,boolean,uuid,text[])','INTERNAL_HELPER',false,false,false,false,false,false),
+('support_vnext_shadow.conv_state_canonical(uuid)','INTERNAL_HELPER',false,false,false,false,false,false),
+('support_vnext_shadow.conv_state_hash(uuid)','INTERNAL_HELPER',false,false,false,false,false,false),
+('support_vnext_shadow.conv_events_append_only()','TRIGGER_FUNCTION',false,false,false,false,false,false),
+('support_vnext_shadow.conv_facts_immutable()','TRIGGER_FUNCTION',false,false,false,false,false,false),
+('support_vnext_shadow.conv_facts_case_coherence()','TRIGGER_FUNCTION',false,false,false,false,false,false),
+('support_vnext_shadow.conv_cases_immutable()','TRIGGER_FUNCTION',false,false,false,false,false,false),
+('support_vnext_shadow.conv_goals_transition_guard()','TRIGGER_FUNCTION',false,false,false,false,false,false),
+('support_vnext_shadow.conv_goals_overlay_guard()','TRIGGER_FUNCTION',false,false,false,false,false,false),
+('support_vnext_shadow.conv_question_stack_guard()','TRIGGER_FUNCTION',false,false,false,false,false,false);
 
 do $$
 declare f record; e record; r text; expected_execute boolean; expected_oid oid; table_name text;
-  expected_tables text[] := array['support_ruleset_release','knowledge_source','knowledge_service','knowledge_intent','knowledge_condition','knowledge_asset','knowledge_document_requirement','knowledge_price','knowledge_hours','knowledge_hours_exception','knowledge_message_template','decision_handoff_policy','decision_request_policy','decision_sla_policy','decision_conversation_policy','decision_session_policy','decision_rule','conversation_sessions','session_release_transitions','conversation_topics','pending_questions','message_batches','received_documents','pending_confirmations','inbound_messages','inbound_classifications','confirmation_authorizations','service_requests','handoffs','inactivity_jobs','inactivity_outbox','state_events','decision_plans','protocol_sequences','feature_flags','feature_flag_targets','shadow_comparisons','classifier_authorities','ruleset_source_link','release_audit_events'];
+  expected_tables text[] := array['support_ruleset_release','knowledge_source','knowledge_service','knowledge_intent','knowledge_condition','knowledge_asset','knowledge_document_requirement','knowledge_price','knowledge_hours','knowledge_hours_exception','knowledge_message_template','decision_handoff_policy','decision_request_policy','decision_sla_policy','decision_conversation_policy','decision_session_policy','decision_rule','conversation_sessions','session_release_transitions','conversation_topics','pending_questions','message_batches','received_documents','pending_confirmations','inbound_messages','inbound_classifications','confirmation_authorizations','service_requests','handoffs','inactivity_jobs','inactivity_outbox','state_events','decision_plans','protocol_sequences','feature_flags','feature_flag_targets','shadow_comparisons','classifier_authorities','ruleset_source_link','release_audit_events','conv_conversation_state','conv_cases','conv_goals','conv_facts','conv_fact_derivations','conv_question_stack','conv_pending_actions','conv_authoritative_signals','conv_events'];
 begin
   perform pg_temp.assert_true(not has_schema_privilege('public','support_vnext_shadow','USAGE'),'P15 PUBLIC has no shadow schema usage');
   -- Expected-inexistent detection.

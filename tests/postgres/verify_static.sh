@@ -52,8 +52,14 @@ rg -Fq "p_authority_assertion" "$root/../../edge-functions/support-classifier/in
 for token in insert update old.release_id new.release_id delete expect_error assert_true; do
   rg -Fqi "$token" "$root/p04_content_insert_update_delete.sql" || { echo "P04 missing immutability coverage: $token" >&2; exit 1; }
 done
-for file in "$root"/p*.sql; do [[ "$(basename "$file")" =~ ^p(00|0[1-9]|1[0-5])_ ]] || { echo "unexpected P test $file" >&2; exit 1; }; done
-[[ "$(find "$root" -maxdepth 1 -name 'p*.sql' ! -name 'p00_*' | wc -l | tr -d ' ')" == 15 ]] || { echo 'expected exactly 15 official P01-P15 files' >&2; exit 1; }
+for file in "$root"/p*.sql; do [[ "$(basename "$file")" =~ ^p(00|0[1-9]|1[0-5]|2[3-5])_ ]] || { echo "unexpected P test $file" >&2; exit 1; }; done
+[[ "$(find "$root" -maxdepth 1 -name 'p*.sql' ! -name 'p00_*' ! -name 'p2*' | wc -l | tr -d ' ')" == 15 ]] || { echo 'expected exactly 15 official P01-P15 files' >&2; exit 1; }
+# 5B.4-B.2: P23 (round-trip gerado), P24 (S01-S22) e P25 (S02 concorrencia real).
+[[ "$(find "$root" -maxdepth 1 -name 'p2[3-5]_*.sql' | wc -l | tr -d ' ')" == 3 ]] || { echo 'expected P23-P25 conversation persistence tests' >&2; exit 1; }
+for token in conv_apply_transition conv_apply_authoritative_signal conv_state_canonical; do
+  rg -Fq "$token" "$root/p24_conv_persistence.sql" || { echo "P24 lacks real coverage: $token" >&2; exit 1; }
+done
+rg -Fq 'conv_apply_transition cannot create authoritative facts' "$root/../../database/migrations/0020_5b4b_conversation_persistence.sql" || { echo '0020 lost the authoritative guard' >&2; exit 1; }
 for token in fixtures/confirmation_flow_fixture.sql confirmation_id classification_id authorization_id confirm_request_transaction "worker" service_requests protocol assert_true; do
   rg -Fq "$token" "$root/p11_confirm_concurrency.sql" || { echo "P11 missing real concurrency token: $token" >&2; exit 1; }
 done
@@ -209,7 +215,7 @@ manifest_verifier="$root/verify_migration_manifest.sh"
 [[ -r "$manifest_verifier" ]] || { echo 'migration/manifest verifier missing or unreadable' >&2; exit 1; }
 rg -Fq 'verify_migration_manifest.sh' "$ci" || { echo 'CI does not execute migration/manifest verifier' >&2; exit 1; }
 ! rg -Fq 'head -14' "$ci" || { echo 'CI still truncates migration inventory' >&2; exit 1; }
-for token in 'MIGRATIONS_COVERED: 0001-0019' '0013' '0014' '0015' '0016' '0017' '0018' '0019'; do
+for token in 'MIGRATIONS_COVERED: 0001-0020' '0013' '0014' '0015' '0016' '0017' '0018' '0019' '0020'; do
   rg -Fq "$token" "$root/../../docs/runtime-object-manifest.md" || { echo "manifest cumulative migration coverage missing: $token" >&2; exit 1; }
 done
 for token in 'oid::regprocedure' 'to_regprocedure(function_identity)' 'p15_expected_functions' 'function_identity text primary key' 'classification' 'PUBLISHER_RPC' 'RUNTIME_RPC' 'INTERNAL_HELPER' 'unclassified function overload' 'expected_public' 'expected_anon' 'expected_authenticated' 'expected_service_role' 'expected_publisher' 'expected_auditor' 'has_function_privilege' 'expected function missing' 'SELECT matrix' 'INSERT matrix' 'UPDATE matrix' 'DELETE matrix' 'unclassified table'; do
