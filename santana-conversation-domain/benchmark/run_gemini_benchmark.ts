@@ -263,12 +263,19 @@ let lastCallAt = 0;
 let quotaRetries = 0;
 let quotaWaitedMs = 0;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+/** Latency of the provider call itself, excluding the pacing wait this benchmark imposes. */
+const providerLatencies: number[] = [];
 async function pacedCall(request: Parameters<typeof fetchBoundary>[0], signal: AbortSignal) {
   const wait = lastCallAt + minIntervalMs - Date.now();
   if (wait > 0) await sleep(wait);
   lastCallAt = Date.now();
   providerCalls++;
-  return await fetchBoundary(request, signal);
+  const startedAt = performance.now();
+  try {
+    return await fetchBoundary(request, signal);
+  } finally {
+    providerLatencies.push(performance.now() - startedAt);
+  }
 }
 const durations: number[] = [];
 let eventCorrect = 0, eventTotal = 0, goalCorrect = 0, goalTotal = 0, clarificationCorrect = 0, caseCorrect = 0;
@@ -435,7 +442,9 @@ const report = {
     fallback_rate: fallbacks / corpus.length,
     schema_compliance: validOutputs / corpus.length,
   },
-  latency_ms: { p50: percentile(durations, 0.5), p95: percentile(durations, 0.95) },
+  latency_ms: { p50: percentile(providerLatencies, 0.5), p95: percentile(providerLatencies, 0.95) },
+  // Includes this benchmark's deliberate pacing wait, so it is not a provider latency figure.
+  adapter_latency_ms: { p50: percentile(durations, 0.5), p95: percentile(durations, 0.95) },
   tokens: { prompt_tokens: inputTokens, output_tokens: outputTokens, total_tokens: totalTokens },
   estimated_cost_usd: pricing ? (inputTokens * pricing.input + outputTokens * pricing.output) / 1_000_000 : null,
   safety,
@@ -451,6 +460,7 @@ console.log(
     provider_output: report.provider_output,
     reliability: report.reliability,
     latency_ms: report.latency_ms,
+    adapter_latency_ms: report.adapter_latency_ms,
     tokens: report.tokens,
     safety: report.safety,
     safe_to_recommend: report.safe_to_recommend,
