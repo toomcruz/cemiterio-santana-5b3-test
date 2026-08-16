@@ -15,7 +15,7 @@ begin
       repeat('0',64),'round-trip 5B.4-B','conv-fixture','conv-fixture');
   end if;
 
-  for i in 1..23 loop
+  for i in 1..30 loop
     insert into support_vnext_shadow.conversation_sessions(session_id, conversation_id, release_id, status, automation_mode)
     values (('55555555-0000-4000-8000-'||lpad(i::text,12,'0'))::uuid,
             ('66666666-0000-4000-8000-'||lpad(i::text,12,'0'))::uuid,

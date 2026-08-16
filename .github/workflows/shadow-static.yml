@@ -30,11 +30,14 @@ jobs:
       - run: deno test --allow-env --allow-read tests/unit tests/shadow
       - name: P0 conversacional 5B.4-A (C01-C16, sem rede)
         run: deno test --allow-read santana-conversation-domain/tests/p0
-      - name: Round-trip 5B.4-B gerado esta sincronizado com o reducer
+      - name: P0 de linguagem 5B.4-C (interpretador, guarda e bridge, sem rede)
+        run: deno test --allow-read santana-conversation-domain/runtime/tests
+      - name: Arquivos gerados estao sincronizados com o reducer e o interpretador
         run: |
           set -Eeuo pipefail
           deno run --allow-read --allow-write santana-conversation-domain/tools/emit_roundtrip.ts
-          git diff --exit-code -- tests/postgres/p23_roundtrip_generated.sql
+          deno run --allow-read --allow-write santana-conversation-domain/tools/emit_language_e2e.ts
+          git diff --exit-code -- tests/postgres/p23_roundtrip_generated.sql tests/postgres/p26_language_e2e_generated.sql
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq ripgrep >/dev/null
       - run: rg --version
       - run: bash tests/postgres/verify_migration_manifest.sh

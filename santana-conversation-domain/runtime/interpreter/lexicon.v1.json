@@ -1,0 +1,470 @@
+{
+  "artifact": "santana-conversation-domain/runtime/lexicon",
+  "version": "v1",
+  "phase": "5B.4-C",
+  "note": "Lexico deterministico em pt-BR. Os padroes sao aplicados sobre o texto normalizado (minusculas, sem acentos, sem pontuacao, espacos colapsados). Nenhuma regra oficial, preco, documento ou autorizacao e definida aqui.",
+  "correction_markers": [
+    "na verdade",
+    "na vdd",
+    "corrigindo",
+    "me enganei",
+    "eu errei",
+    "errei",
+    "quis dizer",
+    "e nao",
+    "desconsidera",
+    "desconsidere"
+  ],
+  "change_of_mind_markers": [
+    "mudei de ideia",
+    "mudei de ideia mesmo",
+    "pensando bem",
+    "prefiro",
+    "agora eu quero",
+    "melhor",
+    "ao inves"
+  ],
+  "parallel_question_markers": [
+    "aproveitando",
+    "ja que",
+    "so uma duvida",
+    "outra coisa",
+    "a proposito",
+    "antes disso"
+  ],
+  "complaint_markers": [
+    "reclamacao",
+    "reclamar",
+    "absurdo",
+    "ate hoje nao",
+    "nao instalaram",
+    "nao resolveram",
+    "descaso",
+    "faz meses"
+  ],
+  "new_subject_markers": [
+    "outro falecido",
+    "outra pessoa",
+    "minha mae tambem",
+    "meu pai tambem",
+    "de outro",
+    "tambem tenho"
+  ],
+  "uncertainty_markers": [
+    "nao sei",
+    "nao tenho certeza",
+    "acho que",
+    "talvez",
+    "sei la",
+    "nao lembro",
+    "creio que"
+  ],
+  "goal_patterns": [
+    {
+      "goal_code": "GOAL_TRANSPORTE",
+      "subject_kind": "DECEASED",
+      "any": [
+        "levar para outro cemiterio",
+        "transferir o corpo",
+        "translado",
+        "transportar",
+        "levar os restos",
+        "mudar de cemiterio",
+        "levar para o jazigo"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "goal_code": "GOAL_EXUMACAO",
+      "subject_kind": "DECEASED",
+      "any": [
+        "exumacao",
+        "exumar",
+        "tirar do tumulo",
+        "retirar os restos",
+        "abrir a sepultura"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "goal_code": "GOAL_CONCESSAO",
+      "subject_kind": "CONCESSION",
+      "any": [
+        "concessao",
+        "transferir o jazigo para meu nome",
+        "passar o jazigo para mim",
+        "renovar o jazigo"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "goal_code": "GOAL_RECADASTRO",
+      "subject_kind": "CONCESSION",
+      "any": [
+        "recadastro",
+        "recadastrar",
+        "atualizar o cadastro do jazigo"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "goal_code": "GOAL_COMERCIAL",
+      "subject_kind": "ORDER",
+      "any": [
+        "comprar",
+        "orcamento",
+        "preco da lapide",
+        "quero uma lapide",
+        "encomendei",
+        "pedido",
+        "lapide",
+        "lapida",
+        "encomenda"
+      ],
+      "confidence": "MEDIUM"
+    }
+  ],
+  "fact_patterns": [
+    {
+      "fact_code": "remains_status",
+      "value": "EXUMADO",
+      "any": [
+        "ja foi tirado do tumulo",
+        "ja foi exumado",
+        "ja exumaram",
+        "ja tiraram",
+        "ja foi retirado",
+        "ja esta exumado"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "fact_code": "remains_status",
+      "value": "SEPULTADO",
+      "any": [
+        "ainda esta enterrado",
+        "ainda esta sepultado",
+        "continua no tumulo",
+        "ainda no jazigo",
+        "esta sepultado",
+        "ainda nao foi exumado"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "fact_code": "remains_status",
+      "value": "DESCONHECIDO",
+      "any": [
+        "nao sei se ja tiraram",
+        "nao sei se foi exumado"
+      ],
+      "confidence": "MEDIUM"
+    },
+    {
+      "fact_code": "transport_destination",
+      "value": "OUTRO_CEMITERIO",
+      "any": [
+        "para outro cemiterio",
+        "outro cemiterio",
+        "cemiterio de outra cidade"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "fact_code": "transport_destination",
+      "value": "JAZIGO_FAMILIA",
+      "any": [
+        "jazigo da familia",
+        "jazigo da minha familia",
+        "nosso jazigo",
+        "jazigo do meu avo"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "fact_code": "transport_destination",
+      "value": "CREMATORIO",
+      "any": [
+        "crematorio",
+        "cremar"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "fact_code": "surviving_spouse_status",
+      "value": "VIVO",
+      "any": [
+        "minha mae esta viva",
+        "a esposa esta viva",
+        "o marido esta vivo",
+        "companheira esta viva"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "fact_code": "surviving_spouse_status",
+      "value": "FALECIDO",
+      "any": [
+        "minha mae ja faleceu",
+        "a esposa faleceu",
+        "o marido faleceu",
+        "os dois ja faleceram"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "fact_code": "surviving_spouse_status",
+      "value": "INEXISTENTE",
+      "any": [
+        "ele era solteiro",
+        "ela era solteira",
+        "nao tinha esposa",
+        "nao era casado"
+      ],
+      "confidence": "MEDIUM"
+    },
+    {
+      "fact_code": "recadastro_status",
+      "value": "OK",
+      "any": [
+        "ja recadastrei",
+        "ja fiz o recadastro",
+        "recadastro esta em dia",
+        "ja esta recadastrado"
+      ],
+      "confidence": "MEDIUM"
+    },
+    {
+      "fact_code": "recadastro_status",
+      "value": "PENDENTE",
+      "any": [
+        "nao fiz o recadastro",
+        "ainda nao recadastrei",
+        "recadastro pendente"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "fact_code": "recadastro_status",
+      "value": "DESCONHECIDO",
+      "any": [
+        "nao sei se esta recadastrado",
+        "nao sei se tem recadastro",
+        "nao faco ideia do recadastro"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "fact_code": "concession_purpose",
+      "value": "TRANSFERENCIA",
+      "any": [
+        "transferir a concessao",
+        "passar para meu nome",
+        "transferencia"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "fact_code": "concession_purpose",
+      "value": "RENOVACAO",
+      "any": [
+        "renovar"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "fact_code": "concession_purpose",
+      "value": "NOVA",
+      "any": [
+        "concessao nova",
+        "quero adquirir"
+      ],
+      "confidence": "MEDIUM"
+    },
+    {
+      "fact_code": "commercial_item",
+      "value": "LAPIDE",
+      "any": [
+        "lapide",
+        "lapida"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "fact_code": "commercial_item",
+      "value": "JAZIGO",
+      "any": [
+        "comprar um jazigo",
+        "adquirir jazigo"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "fact_code": "commercial_item",
+      "value": "OSSUARIO",
+      "any": [
+        "comprar ossuario",
+        "quero um ossuario"
+      ],
+      "confidence": "MEDIUM"
+    },
+    {
+      "fact_code": "commercial_stage",
+      "value": "ORCAMENTO",
+      "any": [
+        "quero um orcamento",
+        "queria um orcamento",
+        "quanto fica",
+        "quanto custa"
+      ],
+      "confidence": "MEDIUM"
+    },
+    {
+      "fact_code": "commercial_stage",
+      "value": "PEDIDO_PAGO",
+      "any": [
+        "ja paguei",
+        "paguei tudo",
+        "esta pago",
+        "quitei",
+        "paguei a lapide",
+        "paguei"
+      ],
+      "confidence": "HIGH",
+      "none": [
+        "nao paguei",
+        "ainda nao paguei"
+      ]
+    },
+    {
+      "fact_code": "commercial_stage",
+      "value": "PEDIDO_NAO_PAGO",
+      "any": [
+        "ainda nao paguei",
+        "nao paguei"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "fact_code": "commercial_delivery_status",
+      "value": "PENDENTE",
+      "any": [
+        "nao instalaram",
+        "ate hoje nao colocaram",
+        "nao foi instalada",
+        "nao entregaram"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "fact_code": "commercial_delivery_status",
+      "value": "INSTALADO",
+      "any": [
+        "ja instalaram",
+        "ja foi colocada"
+      ],
+      "confidence": "HIGH"
+    }
+  ],
+  "parallel_topics": [
+    {
+      "goal_code": "GOAL_INFO_OSSUARIO",
+      "fact_code": "ossuary_information_request",
+      "any": [
+        "ossuario",
+        "ossario"
+      ],
+      "confidence": "MEDIUM"
+    },
+    {
+      "goal_code": "GOAL_INFO_HORARIO",
+      "fact_code": "service_hours_request",
+      "any": [
+        "que horas",
+        "horario de atendimento",
+        "ate que horas",
+        "abre que horas"
+      ],
+      "confidence": "HIGH"
+    }
+  ],
+  "ambiguity_patterns": [
+    {
+      "code": "AMB_DESTINO_JAZIGO_OU_CEMITERIO",
+      "all": [
+        "jazigo"
+      ],
+      "none": [
+        "jazigo da familia",
+        "jazigo da minha familia",
+        "nosso jazigo",
+        "outro cemiterio",
+        "comprar um jazigo",
+        "jazigo do meu avo"
+      ],
+      "description": "Mencao a jazigo sem dizer se e o jazigo da familia, um jazigo a comprar ou o local atual.",
+      "options": [
+        "JAZIGO_FAMILIA",
+        "OUTRO_CEMITERIO",
+        "COMPRA_DE_JAZIGO"
+      ],
+      "blocking": true
+    },
+    {
+      "code": "AMB_SUJEITO_INDEFINIDO",
+      "all": [
+        "ele"
+      ],
+      "none": [
+        "meu pai",
+        "minha mae",
+        "meu avo",
+        "minha avo",
+        "meu irmao",
+        "minha irma",
+        "meu marido",
+        "minha esposa"
+      ],
+      "description": "Referencia a pessoa sem identificar de quem se trata.",
+      "options": [
+        "CASE_ATUAL",
+        "OUTRO_FALECIDO"
+      ],
+      "blocking": false
+    }
+  ],
+  "typo_tolerance": {
+    "max_edit_distance": 1,
+    "min_token_length": 5,
+    "note": "Tokens curtos nao sofrem correcao automatica para evitar falso positivo."
+  },
+  "authoritative_claim_patterns": [
+    {
+      "fact_code": "exhumation_authorization",
+      "any": [
+        "a familia ja autorizou a exumacao",
+        "autorizacao da exumacao ja",
+        "ja temos a autorizacao da familia"
+      ],
+      "note": "alegacao reconhecida so para ser recusada pela guarda"
+    },
+    {
+      "fact_code": "destination_grave_authorization",
+      "any": [
+        "a autorizacao do jazigo ja esta obtida",
+        "o titular ja autorizou",
+        "autorizacao do titular ja"
+      ],
+      "note": "alegacao reconhecida so para ser recusada pela guarda"
+    },
+    {
+      "fact_code": "destination_grave_situation",
+      "any": [
+        "o jazigo esta regular",
+        "o jazigo esta regular no cadastro",
+        "jazigo regularizado"
+      ],
+      "note": "alegacao reconhecida so para ser recusada pela guarda"
+    }
+  ]
+}

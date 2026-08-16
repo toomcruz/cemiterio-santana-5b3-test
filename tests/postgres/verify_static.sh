@@ -52,10 +52,16 @@ rg -Fq "p_authority_assertion" "$root/../../edge-functions/support-classifier/in
 for token in insert update old.release_id new.release_id delete expect_error assert_true; do
   rg -Fqi "$token" "$root/p04_content_insert_update_delete.sql" || { echo "P04 missing immutability coverage: $token" >&2; exit 1; }
 done
-for file in "$root"/p*.sql; do [[ "$(basename "$file")" =~ ^p(00|0[1-9]|1[0-5]|2[3-5])_ ]] || { echo "unexpected P test $file" >&2; exit 1; }; done
+for file in "$root"/p*.sql; do [[ "$(basename "$file")" =~ ^p(00|0[1-9]|1[0-5]|2[3-6])_ ]] || { echo "unexpected P test $file" >&2; exit 1; }; done
 [[ "$(find "$root" -maxdepth 1 -name 'p*.sql' ! -name 'p00_*' ! -name 'p2*' | wc -l | tr -d ' ')" == 15 ]] || { echo 'expected exactly 15 official P01-P15 files' >&2; exit 1; }
 # 5B.4-B.2: P23 (round-trip gerado), P24 (S01-S22) e P25 (S02 concorrencia real).
-[[ "$(find "$root" -maxdepth 1 -name 'p2[3-5]_*.sql' | wc -l | tr -d ' ')" == 3 ]] || { echo 'expected P23-P25 conversation persistence tests' >&2; exit 1; }
+[[ "$(find "$root" -maxdepth 1 -name 'p2[3-6]_*.sql' | wc -l | tr -d ' ')" == 4 ]] || { echo 'expected P23-P26 conversation persistence and language tests' >&2; exit 1; }
+# 5B.4-C: a camada de linguagem nao pode gravar autoridade nem burlar o dominio.
+rg -Fq 'nenhum fato de origem de usuario virou autoritativo' "$root/p26_language_e2e_generated.sql" || { echo 'P26 lacks the authority-escalation invariant' >&2; exit 1; }
+for token in AUTHORITATIVE_FACT FORBIDDEN_SOURCE VALUE_OUT_OF_DOMAIN UNKNOWN_CODE; do
+  rg -Fq "$token" "$root/../../santana-conversation-domain/runtime/interpreter/guard.ts" || { echo "language guard missing refusal: $token" >&2; exit 1; }
+done
+! rg -ni "gemini|openai|anthropic|fetch\(" "$root/../../santana-conversation-domain/runtime" || { echo 'language runtime must not call any model or network' >&2; exit 1; }
 for token in conv_apply_transition conv_apply_authoritative_signal conv_state_canonical; do
   rg -Fq "$token" "$root/p24_conv_persistence.sql" || { echo "P24 lacks real coverage: $token" >&2; exit 1; }
 done

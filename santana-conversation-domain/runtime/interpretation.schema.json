@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cemiterio-santana.local/santana-conversation-domain/runtime/interpretation.schema.json",
+  "title": "SantanaInterpretation v1",
+  "description": "Proposta produzida pela camada de linguagem. Nunca escreve no banco, nunca cria autoridade e so vira estado depois do reducer.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "message_id",
+    "text_normalized",
+    "primary_event",
+    "secondary_events",
+    "goal",
+    "case_reference",
+    "facts",
+    "ambiguities",
+    "overall_confidence",
+    "needs_clarification",
+    "clarification_reason",
+    "refusals",
+    "produced_by"
+  ],
+  "properties": {
+    "schema_version": { "const": "santana-interpretation/v1" },
+    "message_id": { "type": "string", "minLength": 1 },
+    "text_normalized": { "type": "string" },
+    "primary_event": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/candidate_event" }] },
+    "secondary_events": { "type": "array", "items": { "$ref": "#/$defs/candidate_event" } },
+    "goal": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/candidate_goal" }] },
+    "case_reference": { "$ref": "#/$defs/case_reference" },
+    "facts": { "type": "array", "items": { "$ref": "#/$defs/candidate_fact" } },
+    "ambiguities": { "type": "array", "items": { "$ref": "#/$defs/ambiguity" } },
+    "overall_confidence": { "$ref": "#/$defs/confidence" },
+    "needs_clarification": { "type": "boolean" },
+    "clarification_reason": { "type": ["string", "null"] },
+    "refusals": { "type": "array", "items": { "$ref": "#/$defs/refusal" } },
+    "produced_by": { "type": "string", "minLength": 1 }
+  },
+  "$defs": {
+    "confidence": { "enum": ["HIGH", "MEDIUM", "LOW"] },
+    "candidate_event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_kind", "confidence", "evidence"],
+      "properties": {
+        "event_kind": {
+          "enum": [
+            "ANSWER",
+            "CORRECTION",
+            "COMPLEMENT",
+            "PARALLEL_QUESTION",
+            "CHANGE_OF_MIND",
+            "NEW_GOAL",
+            "COMPLAINT",
+            "HUMAN_REQUEST",
+            "SOCIAL",
+            "UNCERTAIN"
+          ]
+        },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "evidence": { "type": "string" }
+      }
+    },
+    "candidate_goal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["goal_code", "confidence", "evidence"],
+      "properties": {
+        "goal_code": { "type": "string" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "evidence": { "type": "string" }
+      }
+    },
+    "candidate_fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fact_code", "value", "source", "confidence", "evidence", "requires_confirmation"],
+      "properties": {
+        "fact_code": { "type": "string" },
+        "value": { "type": ["string", "boolean", "number", "null"] },
+        "source": {
+          "enum": ["USER_EXPLICIT", "USER_CORRECTION"],
+          "description": "A linguagem so pode alegar origem de usuario. SYSTEM/DOCUMENT/DERIVED_RULE sao proibidos aqui."
+        },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "evidence": { "type": "string", "minLength": 1 },
+        "requires_confirmation": { "type": "boolean" }
+      }
+    },
+    "case_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "subject_kind", "subject_hint", "confidence"],
+      "properties": {
+        "kind": { "enum": ["CURRENT", "NEW", "AMBIGUOUS"] },
+        "subject_kind": { "enum": ["DECEASED", "CONCESSION", "ORDER", "GENERIC"] },
+        "subject_hint": { "type": ["string", "null"] },
+        "confidence": { "$ref": "#/$defs/confidence" }
+      }
+    },
+    "ambiguity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "description", "options", "blocking"],
+      "properties": {
+        "code": { "type": "string" },
+        "description": { "type": "string" },
+        "options": { "type": "array", "items": { "type": "string" } },
+        "blocking": { "type": "boolean" }
+      }
+    },
+    "refusal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason", "detail"],
+      "properties": {
+        "reason": {
+          "enum": [
+            "AUTHORITATIVE_FACT",
+            "OFFICIAL_RULE",
+            "UNKNOWN_CODE",
+            "VALUE_OUT_OF_DOMAIN",
+            "FORBIDDEN_SOURCE",
+            "LOW_CONFIDENCE"
+          ]
+        },
+        "detail": { "type": "string" }
+      }
+    }
+  }
+}
