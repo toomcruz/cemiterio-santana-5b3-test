@@ -194,6 +194,17 @@ if (!selectedModel) {
   }, 1);
 }
 
+/**
+ * Pins the authoritative message_id of the case being interpreted. The id comes from our own
+ * input, never from the model, so constraining it removes the only field the provider has no
+ * legitimate freedom over. Mismatches still fail closed in the adapter.
+ */
+function schemaForMessage(variant: Record<string, unknown>, messageId: string): Record<string, unknown> {
+  const properties = { ...(variant.properties as Record<string, unknown>) };
+  properties.message_id = { type: "string", enum: [messageId] };
+  return { ...variant, properties };
+}
+
 // `writeAndExit` never returns, so past this point a model has been verified end to end.
 const model: string = selectedModel!;
 
@@ -240,7 +251,22 @@ if (!provider) {
   }, 1);
 }
 const selectedSchemaMode = schemaAttempts[schemaAttempts.length - 1]!.mode;
-const selectedProvider = provider!;
+const selectedVariant = schemaVariants.find((variant) => variant.mode === selectedSchemaMode)!;
+
+/** Free-tier Gemini enforces a per-minute request budget; pace and retry instead of burning the run. */
+const minIntervalMs = Number(Deno.env.get("BENCHMARK_MIN_INTERVAL_MS") ?? "4500");
+const quotaBackoffMs = Number(Deno.env.get("BENCHMARK_QUOTA_BACKOFF_MS") ?? "20000");
+const maxQuotaRetries = 4;
+let lastCallAt = 0;
+let quotaRetries = 0;
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+async function pacedCall(request: Parameters<typeof fetchBoundary>[0], signal: AbortSignal) {
+  const wait = lastCallAt + minIntervalMs - Date.now();
+  if (wait > 0) await sleep(wait);
+  lastCallAt = Date.now();
+  providerCalls++;
+  return await fetchBoundary(request, signal);
+}
 const durations: number[] = [];
 let eventCorrect = 0, eventTotal = 0, goalCorrect = 0, goalTotal = 0, clarificationCorrect = 0, caseCorrect = 0;
 let factTruePositive = 0,
@@ -265,13 +291,25 @@ const promptInjectionCategories: Record<string, number> = {};
 for (const testCase of corpus) {
   let observation: AdapterObservation | undefined;
   let rawResponse = "";
+  const caseProvider = new GeminiBenchmarkProvider(
+    model,
+    apiKey,
+    schemaForMessage(selectedVariant.schema, testCase.input.message_id),
+    selectedSchemaMode,
+  );
   const adapter = new ControlledLlmAdapter({
+    // Generous enough to absorb the paced retries below; the adapter still fails closed on timeout.
     enabled: true,
-    timeoutMs: 30_000,
-    provider: selectedProvider,
+    timeoutMs: 180_000,
+    provider: caseProvider,
     network: async (request, signal) => {
-      providerCalls++;
-      const response = await fetchBoundary(request, signal);
+      let response = await pacedCall(request, signal);
+      for (let attempt = 0; attempt < maxQuotaRetries; attempt++) {
+        if (caseProvider.classifyErrorResponse(response.status, response.body) !== "PROVIDER_QUOTA") break;
+        quotaRetries++;
+        await sleep(quotaBackoffMs * (attempt + 1));
+        response = await pacedCall(request, signal);
+      }
       rawResponse = response.body;
       if (response.status >= 200 && response.status < 300) providerSuccess++;
       else providerHttpErrors++;
@@ -288,7 +326,7 @@ for (const testCase of corpus) {
     rejectionReasons[observation.rejection_reason] = (rejectionReasons[observation.rejection_reason] ?? 0) + 1;
   }
   if (rawResponse) {
-    const usage = selectedProvider.usageFromResponse(rawResponse);
+    const usage = caseProvider.usageFromResponse(rawResponse);
     inputTokens += usage?.input_tokens ?? 0;
     outputTokens += usage?.output_tokens ?? 0;
     totalTokens += usage?.total_tokens ?? 0;
@@ -382,6 +420,7 @@ const report = {
     provider_valid_outputs: validOutputs,
     provider_invalid_outputs: providerSuccess - validOutputs,
     provider_http_errors: providerHttpErrors,
+    provider_quota_retries: quotaRetries,
     rejection_reasons: rejectionReasons,
   },
   reliability: {
@@ -399,6 +438,9 @@ await Deno.writeTextFile("benchmark-report.json", JSON.stringify(report, null, 2
 console.log(
   JSON.stringify({
     model: report.model,
+    discovery: report.discovery,
+    connectivity: report.connectivity,
+    schema_compatibility: report.schema_compatibility,
     provider_output: report.provider_output,
     reliability: report.reliability,
     latency_ms: report.latency_ms,
