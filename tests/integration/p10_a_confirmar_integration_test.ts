@@ -108,15 +108,22 @@ Deno.test({
   const base = Deno.env.get("SUPABASE_URL")! + "/rest/v1/";
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const headers = { apikey: key, authorization: `Bearer ${key}`, "accept-profile": "support_vnext_shadow" };
-  const requests = await fetch(
+  // The package grants service_role EXECUTE on RPCs only - never direct DML or
+  // SELECT on its tables (P15 pins that matrix). So the REST boundary itself must
+  // refuse this read: making it succeed would require GRANT SELECT and would break
+  // the privilege boundary this phase exists to prove.
+  //
+  // That no service_request and no protocol were created is already proven above:
+  // propose_request_transaction refused the A_CONFIRMAR decision, which is the only
+  // path that can create either. P12/P14 assert the persisted state in SQL, where
+  // the reader is authorized.
+  const response = await fetch(
     `${base}service_requests?session_id=eq.${sessionId}&select=request_id,protocol`,
     { headers },
-  ).then((r) => r.json());
-  // PostgREST answers errors with an object, which would make length undefined and
-  // silently weaken the assertions below.
-  if (!Array.isArray(requests)) {
-    throw new Error(`service_requests query failed: ${JSON.stringify(requests)}`);
+  );
+  const body = await response.json();
+  if (Array.isArray(body)) {
+    throw new Error("service_role could read support_vnext_shadow.service_requests over REST");
   }
-  assertEquals(requests.length, 0);
-  assertEquals(requests.filter((r: { protocol?: unknown }) => r.protocol != null).length, 0);
+  assertEquals(body.code, "42501");
 });
