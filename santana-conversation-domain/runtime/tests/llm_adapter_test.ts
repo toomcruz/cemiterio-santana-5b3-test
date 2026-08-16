@@ -219,7 +219,26 @@ Deno.test("provider error falls back without leaking error, prompt or PII to obs
     "outcome",
     "prompt_version",
     "provider",
+    "rejection_reason",
   ]);
+  assertEquals(observed?.rejection_reason, "PROVIDER_ERROR");
+});
+
+Deno.test("provider HTTP rejection is observed only as a safe aggregate category", async () => {
+  let observed: AdapterObservation | undefined;
+  const adapter = new ControlledLlmAdapter({
+    enabled: true,
+    provider: {
+      ...provider,
+      classifyErrorResponse: () => "PROVIDER_INVALID_ARGUMENT",
+    },
+    network: () => Promise.resolve({ status: 400, body: '{"error":{"message":"never expose this"}}' }),
+    observe: (event) => observed = event,
+  });
+  await adapter.interpret(input("mensagem privada"));
+  assertEquals(observed?.outcome, "fallback_error");
+  assertEquals(observed?.rejection_reason, "PROVIDER_INVALID_ARGUMENT");
+  assert(!JSON.stringify(observed).includes("never expose this"));
 });
 
 const naturalCorpus = [
