@@ -11,14 +11,15 @@ declare -A tests=(
  [P07]=p07_explicit_rebind.sql [P08]=p08_hash_integrity.sql [P09]=p09_session_concurrency.sql
  [P10]=p10_a_confirmar.sql [P11]=p11_confirm_concurrency.sql [P12]=p12_inbound_reuse.sql
  [P13]=p13_confirmation_rejections.sql [P14]=p14_complaint_closed.sql [P15]=p15_privileges.sql
- [P23]=p23_roundtrip_generated.sql [P24]=p24_conv_persistence.sql [P25]=p25_conv_concurrency.sql )
+ [P23]=p23_roundtrip_generated.sql [P24]=p24_conv_persistence.sql [P25]=p25_conv_concurrency.sql
+ [P26]=p26_language_e2e_generated.sql )
 failed=0
-for id in P01 P02 P03 P04 P05 P06 P07 P08 P09 P10 P11 P12 P13 P14 P15 P23 P24 P25; do
+for id in P01 P02 P03 P04 P05 P06 P07 P08 P09 P10 P11 P12 P13 P14 P15 P23 P24 P25 P26; do
   file="$root/${tests[$id]}"
   [[ -f "$file" ]] || { echo "$id FAIL missing file" >&2; failed=1; continue; }
   if [[ "$id" == P01 || "$id" == P09 || "$id" == P11 || "$id" == P25 ]]; then
     if CASE_SQL="$file" DATABASE_URL_A="$TEST_DATABASE_URL" DATABASE_URL_B="$TEST_DATABASE_URL" "$root/run_concurrency.sh"; then echo "$id PASS"; else echo "$id FAIL" >&2; failed=1; fi
   elif psql "$TEST_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f "$file"; then echo "$id PASS"; else echo "$id FAIL" >&2; failed=1; fi
 done
-[[ "$failed" -eq 0 ]] && echo 'SUMMARY PASS P01–P15 + P23–P25' || echo 'SUMMARY FAIL'
+[[ "$failed" -eq 0 ]] && echo 'SUMMARY PASS P01–P15 + P23–P26' || echo 'SUMMARY FAIL'
 exit "$failed"

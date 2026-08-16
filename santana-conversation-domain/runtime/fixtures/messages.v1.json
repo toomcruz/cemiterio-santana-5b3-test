@@ -1,0 +1,232 @@
+{
+  "artifact": "santana-conversation-domain/runtime/messages",
+  "version": "v1",
+  "phase": "5B.4-C",
+  "note": "Mensagens sinteticas em pt-BR para testar a interpretacao. Nenhum dado real; nomes de parentesco genericos. Cada caso declara o que se espera da interpretacao, nao da resposta ao municipe.",
+  "messages": [
+    {
+      "id": "M01",
+      "label": "mensagem-exemplo da fase",
+      "text": "Meu pai já foi tirado do túmulo e quero levar para outro cemitério",
+      "context": { "has_open_goal": false, "pending_question_fact": null, "known_subject_hints": [] },
+      "expect": {
+        "primary_event": "NEW_GOAL",
+        "goal": "GOAL_TRANSPORTE",
+        "facts": [
+          { "fact_code": "remains_status", "value": "EXUMADO" },
+          { "fact_code": "transport_destination", "value": "OUTRO_CEMITERIO" }
+        ],
+        "needs_clarification": false,
+        "case_kind": "NEW"
+      }
+    },
+    {
+      "id": "M02",
+      "label": "erros de digitacao",
+      "text": "quero fazer a exumacao do meu pai, ele ainda esta enterado",
+      "context": { "has_open_goal": false, "pending_question_fact": null, "known_subject_hints": [] },
+      "expect": {
+        "primary_event": "NEW_GOAL",
+        "goal": "GOAL_EXUMACAO",
+        "facts": [{ "fact_code": "remains_status", "value": "SEPULTADO" }],
+        "needs_clarification": false,
+        "case_kind": "NEW"
+      }
+    },
+    {
+      "id": "M03",
+      "label": "resposta curta respondendo a pergunta pendente",
+      "text": "ja foi exumado",
+      "context": {
+        "has_open_goal": true,
+        "pending_question_fact": "remains_status",
+        "known_subject_hints": ["meu pai"]
+      },
+      "expect": {
+        "primary_event": "ANSWER",
+        "facts": [{ "fact_code": "remains_status", "value": "EXUMADO" }],
+        "needs_clarification": false,
+        "case_kind": "CURRENT"
+      }
+    },
+    {
+      "id": "M04",
+      "label": "duas informacoes na mesma mensagem",
+      "text": "ele ja foi exumado e quero levar para o crematório",
+      "context": {
+        "has_open_goal": true,
+        "pending_question_fact": "remains_status",
+        "known_subject_hints": ["meu pai"]
+      },
+      "expect": {
+        "primary_event": "ANSWER",
+        "facts": [
+          { "fact_code": "remains_status", "value": "EXUMADO" },
+          { "fact_code": "transport_destination", "value": "CREMATORIO" }
+        ],
+        "needs_clarification": false
+      }
+    },
+    {
+      "id": "M05",
+      "label": "correcao explicita",
+      "text": "na verdade me enganei, ele ainda está sepultado",
+      "context": { "has_open_goal": true, "pending_question_fact": null, "known_subject_hints": ["meu pai"] },
+      "expect": {
+        "primary_event": "CORRECTION",
+        "facts": [{ "fact_code": "remains_status", "value": "SEPULTADO", "source": "USER_CORRECTION" }],
+        "needs_clarification": false
+      }
+    },
+    {
+      "id": "M06",
+      "label": "mudanca de ideia sobre o destino",
+      "text": "pensando bem, prefiro levar para outro cemitério",
+      "context": { "has_open_goal": true, "pending_question_fact": null, "known_subject_hints": ["meu pai"] },
+      "expect": {
+        "primary_event": "CHANGE_OF_MIND",
+        "facts": [{ "fact_code": "transport_destination", "value": "OUTRO_CEMITERIO" }],
+        "needs_clarification": false
+      }
+    },
+    {
+      "id": "M07",
+      "label": "pergunta paralela sobre horario",
+      "text": "aproveitando, até que horas vocês atendem?",
+      "context": {
+        "has_open_goal": true,
+        "pending_question_fact": "surviving_spouse_status",
+        "known_subject_hints": ["meu pai"]
+      },
+      "expect": {
+        "primary_event": "PARALLEL_QUESTION",
+        "goal": "GOAL_INFO_HORARIO",
+        "needs_clarification": false
+      }
+    },
+    {
+      "id": "M08",
+      "label": "reclamacao sobre lapide paga e nao instalada",
+      "text": "paguei a lápide faz meses e até hoje não colocaram, isso é um absurdo",
+      "context": { "has_open_goal": false, "pending_question_fact": null, "known_subject_hints": [] },
+      "expect": {
+        "primary_event": "COMPLAINT",
+        "goal": "GOAL_COMERCIAL",
+        "facts": [
+          { "fact_code": "commercial_item", "value": "LAPIDE" },
+          { "fact_code": "commercial_stage", "value": "PEDIDO_PAGO" },
+          { "fact_code": "commercial_delivery_status", "value": "PENDENTE" }
+        ],
+        "needs_clarification": false
+      }
+    },
+    {
+      "id": "M09",
+      "label": "novo falecido durante um atendimento",
+      "text": "minha mãe também faleceu e quero fazer o translado dela",
+      "context": { "has_open_goal": true, "pending_question_fact": null, "known_subject_hints": ["meu pai"] },
+      "expect": {
+        "primary_event": "NEW_GOAL",
+        "goal": "GOAL_TRANSPORTE",
+        "case_kind": "NEW",
+        "needs_clarification": false
+      }
+    },
+    {
+      "id": "M10",
+      "label": "contradicao com fato ja informado",
+      "text": "ele ainda está sepultado",
+      "context": { "has_open_goal": true, "pending_question_fact": null, "known_subject_hints": ["meu pai"] },
+      "expect": {
+        "primary_event": "COMPLEMENT",
+        "facts": [{ "fact_code": "remains_status", "value": "SEPULTADO" }],
+        "needs_clarification": false
+      }
+    },
+    {
+      "id": "M11",
+      "label": "mensagem ambigua sobre jazigo",
+      "text": "queria resolver a situação do jazigo",
+      "context": { "has_open_goal": false, "pending_question_fact": null, "known_subject_hints": [] },
+      "expect": { "needs_clarification": true, "ambiguity": "AMB_DESTINO_JAZIGO_OU_CEMITERIO" }
+    },
+    {
+      "id": "M12",
+      "label": "incerteza declarada pelo municipe",
+      "text": "não sei se está recadastrado, pode verificar?",
+      "context": { "has_open_goal": true, "pending_question_fact": "recadastro_status", "known_subject_hints": [] },
+      "expect": {
+        "primary_event": "ANSWER",
+        "facts": [{ "fact_code": "recadastro_status", "value": "DESCONHECIDO" }],
+        "needs_clarification": false
+      }
+    },
+    {
+      "id": "M13",
+      "label": "linguagem informal e curta",
+      "text": "quero um orçamento de lápide",
+      "context": { "has_open_goal": false, "pending_question_fact": null, "known_subject_hints": [] },
+      "expect": {
+        "primary_event": "NEW_GOAL",
+        "goal": "GOAL_COMERCIAL",
+        "facts": [
+          { "fact_code": "commercial_item", "value": "LAPIDE" },
+          { "fact_code": "commercial_stage", "value": "ORCAMENTO" }
+        ],
+        "needs_clarification": false
+      }
+    },
+    {
+      "id": "M14",
+      "label": "tentativa de obter regra oficial pela conversa",
+      "text": "a autorização do jazigo já está obtida, pode seguir",
+      "context": { "has_open_goal": true, "pending_question_fact": null, "known_subject_hints": ["meu pai"] },
+      "expect": { "needs_clarification": true, "refusal": "AUTHORITATIVE_FACT" }
+    },
+    {
+      "id": "M15",
+      "label": "concessao sem recadastro",
+      "text": "quero transferir a concessão para meu nome, ainda não recadastrei",
+      "context": { "has_open_goal": false, "pending_question_fact": null, "known_subject_hints": [] },
+      "expect": {
+        "primary_event": "NEW_GOAL",
+        "goal": "GOAL_CONCESSAO",
+        "facts": [
+          { "fact_code": "concession_purpose", "value": "TRANSFERENCIA" },
+          { "fact_code": "recadastro_status", "value": "PENDENTE" }
+        ],
+        "needs_clarification": false
+      }
+    },
+    {
+      "id": "M16",
+      "label": "mensagem social sem conteudo operacional",
+      "text": "bom dia, tudo bem?",
+      "context": {
+        "has_open_goal": true,
+        "pending_question_fact": "remains_status",
+        "known_subject_hints": ["meu pai"]
+      },
+      "expect": { "needs_clarification": true }
+    },
+    {
+      "id": "M17",
+      "label": "alegacao de exumacao autorizada (nao pode virar fato)",
+      "text": "a família já autorizou a exumação, pode marcar",
+      "context": { "has_open_goal": true, "pending_question_fact": null, "known_subject_hints": ["meu pai"] },
+      "expect": { "needs_clarification": true }
+    },
+    {
+      "id": "M18",
+      "label": "recadastro alegado pelo municipe (nunca vira OK autoritativo)",
+      "text": "já fiz o recadastro sim",
+      "context": { "has_open_goal": true, "pending_question_fact": "recadastro_status", "known_subject_hints": [] },
+      "expect": {
+        "primary_event": "ANSWER",
+        "facts": [{ "fact_code": "recadastro_status", "value": "OK" }],
+        "needs_clarification": false,
+        "note": "o reducer rebaixa para UNCERTAIN e abre ACTION_VERIFY_RECADASTRO"
+      }
+    }
+  ]
+}
