@@ -1,0 +1,279 @@
+{
+  "artifact": "santana-conversation-domain/facts",
+  "version": "v1",
+  "phase": "5B.4-A",
+  "fact_sources": ["USER_EXPLICIT", "USER_CORRECTION", "DOCUMENT", "SYSTEM", "DERIVED_RULE"],
+  "confidence_states": ["CONFIRMED", "UNCERTAIN", "CONFLICTING"],
+  "fact_status": ["ACTIVE", "SUPERSEDED"],
+  "supersession_reasons": [
+    "USER_CORRECTION",
+    "CHANGE_OF_MIND",
+    "DEPENDENCY_INVALIDATED",
+    "RELEVANCE_LOST",
+    "SYSTEM_REPLACEMENT"
+  ],
+  "isolation_rules": {
+    "no_automatic_merge_between_cases": true,
+    "no_automatic_merge_between_deceased": true,
+    "no_automatic_merge_between_graves": true,
+    "case_scoped_facts_never_copied": true
+  },
+  "ai_boundary": {
+    "ai_may": ["EXTRACT_CANDIDATE_FACT", "IDENTIFY_EVENT", "SUMMARIZE", "DRAFT_ANSWER"],
+    "ai_may_not": [
+      "DEFINE_OFFICIAL_RULE",
+      "DEFINE_REQUIRED_DOCUMENTS",
+      "DEFINE_PRICES",
+      "DEFINE_PERMISSIONS",
+      "DECIDE_SUCCESSION_RIGHTS",
+      "DECIDE_LEGAL_MATTERS",
+      "EXECUTE_PROTECTED_TRANSITION"
+    ]
+  },
+  "facts": [
+    {
+      "fact_code": "remains_status",
+      "display_name": "Situacao dos restos mortais",
+      "scope": "CASE",
+      "value_type": "ENUM",
+      "allowed_values": ["SEPULTADO", "EXUMADO", "DESCONHECIDO"],
+      "priority_class": "FLOW_BRANCH",
+      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION", "DOCUMENT", "SYSTEM"],
+      "ai_extractable": true
+    },
+    {
+      "fact_code": "transport_destination",
+      "display_name": "Destino do transporte",
+      "scope": "CASE",
+      "value_type": "ENUM",
+      "allowed_values": ["OUTRO_CEMITERIO", "JAZIGO_FAMILIA", "CREMATORIO", "OSSUARIO"],
+      "priority_class": "FLOW_BRANCH",
+      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION", "DOCUMENT"],
+      "ai_extractable": true
+    },
+    {
+      "fact_code": "destination_grave_reference",
+      "display_name": "Jazigo de destino",
+      "scope": "CASE",
+      "value_type": "TEXT",
+      "priority_class": "DEPENDENCY",
+      "relevant_when": [{ "fact": "transport_destination", "equals": "JAZIGO_FAMILIA" }],
+      "depends_on": ["transport_destination"],
+      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION", "DOCUMENT", "SYSTEM"],
+      "ai_extractable": true
+    },
+    {
+      "fact_code": "destination_grave_situation",
+      "display_name": "Situacao do jazigo de destino",
+      "scope": "CASE",
+      "value_type": "ENUM",
+      "allowed_values": ["REGULAR", "IRREGULAR", "DESCONHECIDA"],
+      "priority_class": "DEPENDENCY",
+      "relevant_when": [{ "fact": "transport_destination", "equals": "JAZIGO_FAMILIA" }],
+      "depends_on": ["transport_destination", "destination_grave_reference"],
+      "allowed_sources": ["SYSTEM", "DOCUMENT", "USER_EXPLICIT", "USER_CORRECTION"],
+      "ai_extractable": false,
+      "human_rule_note": "Situacao cadastral do jazigo e definida pelo cadastro oficial, nao pela IA."
+    },
+    {
+      "fact_code": "destination_grave_authorization",
+      "display_name": "Autorizacao do titular do jazigo de destino",
+      "scope": "CASE",
+      "value_type": "ENUM",
+      "allowed_values": ["OBTIDA", "PENDENTE", "NAO_APLICAVEL"],
+      "priority_class": "DEPENDENCY",
+      "relevant_when": [{ "fact": "transport_destination", "equals": "JAZIGO_FAMILIA" }],
+      "depends_on": ["transport_destination", "destination_grave_reference"],
+      "allowed_sources": ["DOCUMENT", "SYSTEM", "USER_EXPLICIT", "USER_CORRECTION"],
+      "ai_extractable": false,
+      "human_rule_note": "Direito de uso e autorizacao do titular sao decisoes juridicas; a IA nao decide."
+    },
+    {
+      "fact_code": "transport_date_preference",
+      "display_name": "Data pretendida do transporte",
+      "scope": "CASE",
+      "value_type": "TEXT",
+      "priority_class": "NEXT_ACTION_DATA",
+      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION"],
+      "ai_extractable": true
+    },
+    {
+      "fact_code": "exhumation_purpose",
+      "display_name": "Finalidade da exumacao",
+      "scope": "CASE",
+      "value_type": "ENUM",
+      "allowed_values": ["TRANSPORTE", "OSSUARIO", "CREMACAO", "OUTRA"],
+      "priority_class": "FLOW_BRANCH",
+      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION", "DERIVED_RULE"],
+      "ai_extractable": true
+    },
+    {
+      "fact_code": "exhumation_authorization",
+      "display_name": "Autorizacao da familia para exumacao",
+      "scope": "CASE",
+      "value_type": "ENUM",
+      "allowed_values": ["OBTIDA", "PENDENTE"],
+      "priority_class": "PREREQUISITE",
+      "allowed_sources": ["DOCUMENT", "SYSTEM", "USER_EXPLICIT", "USER_CORRECTION"],
+      "ai_extractable": false,
+      "human_rule_note": "Legitimidade do requerente e documentos obrigatorios sao definidos por regra oficial."
+    },
+    {
+      "fact_code": "burial_reference",
+      "display_name": "Identificacao do sepultamento",
+      "scope": "CASE",
+      "value_type": "TEXT",
+      "priority_class": "NEXT_ACTION_DATA",
+      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION", "DOCUMENT", "SYSTEM"],
+      "ai_extractable": true
+    },
+    {
+      "fact_code": "recadastro_status",
+      "display_name": "Situacao do recadastro",
+      "scope": "CASE",
+      "value_type": "ENUM",
+      "allowed_values": ["OK", "PENDENTE", "DESCONHECIDO"],
+      "priority_class": "PREREQUISITE",
+      "allowed_sources": ["SYSTEM", "DOCUMENT", "USER_EXPLICIT", "USER_CORRECTION"],
+      "ai_extractable": true
+    },
+    {
+      "fact_code": "concession_reference",
+      "display_name": "Identificacao da concessao",
+      "scope": "CASE",
+      "value_type": "TEXT",
+      "priority_class": "NEXT_ACTION_DATA",
+      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION", "DOCUMENT", "SYSTEM"],
+      "ai_extractable": true
+    },
+    {
+      "fact_code": "recadastro_holder_document",
+      "display_name": "Documento do titular para recadastro",
+      "scope": "CASE",
+      "value_type": "TEXT",
+      "priority_class": "ADMINISTRATIVE",
+      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION", "DOCUMENT"],
+      "ai_extractable": true
+    },
+    {
+      "fact_code": "concession_purpose",
+      "display_name": "Finalidade do processo de concessao",
+      "scope": "CASE",
+      "value_type": "ENUM",
+      "allowed_values": ["NOVA", "TRANSFERENCIA", "RENOVACAO"],
+      "priority_class": "FLOW_BRANCH",
+      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION"],
+      "ai_extractable": true
+    },
+    {
+      "fact_code": "commercial_item",
+      "display_name": "Item comercial",
+      "scope": "CASE",
+      "value_type": "ENUM",
+      "allowed_values": ["LAPIDE", "JAZIGO", "OSSUARIO", "CINZAS", "ZELADORIA"],
+      "priority_class": "FLOW_BRANCH",
+      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION"],
+      "ai_extractable": true
+    },
+    {
+      "fact_code": "commercial_stage",
+      "display_name": "Etapa comercial",
+      "scope": "CASE",
+      "value_type": "ENUM",
+      "allowed_values": ["ORCAMENTO", "PEDIDO_PAGO", "PEDIDO_NAO_PAGO"],
+      "priority_class": "NEXT_ACTION_DATA",
+      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION", "SYSTEM", "DOCUMENT"],
+      "ai_extractable": true
+    },
+    {
+      "fact_code": "commercial_delivery_status",
+      "display_name": "Situacao de entrega/instalacao",
+      "scope": "CASE",
+      "value_type": "ENUM",
+      "allowed_values": ["NAO_APLICAVEL", "PENDENTE", "INSTALADO"],
+      "priority_class": "NEXT_ACTION_DATA",
+      "relevant_when": [{ "fact": "commercial_stage", "in": ["PEDIDO_PAGO", "PEDIDO_NAO_PAGO"] }],
+      "depends_on": ["commercial_stage"],
+      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION", "SYSTEM"],
+      "ai_extractable": true
+    },
+    {
+      "fact_code": "complaint_description",
+      "display_name": "Descricao da ocorrencia",
+      "scope": "GOAL",
+      "value_type": "TEXT",
+      "priority_class": "NEXT_ACTION_DATA",
+      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION"],
+      "ai_extractable": true
+    },
+    {
+      "fact_code": "ossuary_information_request",
+      "display_name": "Duvida sobre ossuario",
+      "scope": "GOAL",
+      "value_type": "TEXT",
+      "priority_class": "NEXT_ACTION_DATA",
+      "allowed_sources": ["USER_EXPLICIT", "SYSTEM"],
+      "ai_extractable": true
+    },
+    {
+      "fact_code": "service_hours_request",
+      "display_name": "Duvida sobre horario de atendimento",
+      "scope": "GOAL",
+      "value_type": "TEXT",
+      "priority_class": "NEXT_ACTION_DATA",
+      "allowed_sources": ["USER_EXPLICIT", "SYSTEM"],
+      "ai_extractable": true
+    },
+    {
+      "fact_code": "other_subject_description",
+      "display_name": "Descricao do assunto",
+      "scope": "GOAL",
+      "value_type": "TEXT",
+      "priority_class": "NEXT_ACTION_DATA",
+      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION"],
+      "ai_extractable": true
+    },
+    {
+      "fact_code": "requester_document",
+      "display_name": "Documento do solicitante",
+      "scope": "CASE",
+      "value_type": "TEXT",
+      "priority_class": "ADMINISTRATIVE",
+      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION", "DOCUMENT"],
+      "ai_extractable": true
+    },
+    {
+      "fact_code": "exumacao_required",
+      "display_name": "Exumacao necessaria (derivado)",
+      "scope": "CASE",
+      "value_type": "BOOLEAN",
+      "priority_class": "DEPENDENCY",
+      "derived": true,
+      "depends_on": ["remains_status"],
+      "allowed_sources": ["DERIVED_RULE"],
+      "ai_extractable": false
+    },
+    {
+      "fact_code": "recadastro_required",
+      "display_name": "Recadastro necessario (derivado)",
+      "scope": "CASE",
+      "value_type": "BOOLEAN",
+      "priority_class": "DEPENDENCY",
+      "derived": true,
+      "depends_on": ["recadastro_status"],
+      "allowed_sources": ["DERIVED_RULE"],
+      "ai_extractable": false
+    },
+    {
+      "fact_code": "recadastro_verification_required",
+      "display_name": "Verificacao de recadastro necessaria (derivado)",
+      "scope": "CASE",
+      "value_type": "BOOLEAN",
+      "priority_class": "BLOCKING_UNCERTAINTY",
+      "derived": true,
+      "depends_on": ["recadastro_status"],
+      "allowed_sources": ["DERIVED_RULE"],
+      "ai_extractable": false
+    }
+  ]
+}

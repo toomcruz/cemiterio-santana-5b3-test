@@ -1,0 +1,223 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cemiterio-santana.local/santana-conversation-domain/state.schema.json",
+  "title": "SantanaConversationState v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "conversation_id",
+    "seq",
+    "cases",
+    "goals",
+    "facts",
+    "pending_question",
+    "parked_questions",
+    "pending_actions",
+    "forbidden_goals",
+    "handoff",
+    "event_log"
+  ],
+  "properties": {
+    "schema_version": { "const": "santana-conversation-state/v1" },
+    "conversation_id": { "type": "string", "minLength": 1 },
+    "seq": { "type": "integer", "minimum": 0 },
+    "cases": { "type": "array", "items": { "$ref": "#/$defs/case" } },
+    "goals": { "type": "array", "items": { "$ref": "#/$defs/goal" } },
+    "facts": { "type": "array", "items": { "$ref": "#/$defs/fact" } },
+    "pending_question": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/question_ref" }] },
+    "parked_questions": { "type": "array", "items": { "$ref": "#/$defs/question_ref" } },
+    "pending_actions": { "type": "array", "items": { "$ref": "#/$defs/pending_action" } },
+    "forbidden_goals": { "type": "array", "items": { "type": "string" } },
+    "handoff": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/handoff" }] },
+    "event_log": { "type": "array", "items": { "$ref": "#/$defs/event_record" } }
+  },
+  "$defs": {
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["case_id", "subject_kind", "subject_ref", "opened_at_seq"],
+      "properties": {
+        "case_id": { "type": "string" },
+        "subject_kind": { "enum": ["DECEASED", "GRAVE", "CONCESSION", "ORDER", "HOLDER", "GENERIC"] },
+        "subject_ref": { "type": "string" },
+        "opened_at_seq": { "type": "integer" }
+      }
+    },
+    "goal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "goal_id",
+        "goal_code",
+        "case_id",
+        "status",
+        "parent_goal_id",
+        "overlay_of",
+        "stack_index",
+        "informational",
+        "return_to_parent",
+        "opened_at_seq",
+        "created_by_relation"
+      ],
+      "properties": {
+        "goal_id": { "type": "string" },
+        "goal_code": { "type": "string" },
+        "case_id": { "type": ["string", "null"] },
+        "status": { "enum": ["ACTIVE", "SUSPENDED", "WAITING", "RESOLVED", "ABANDONED"] },
+        "status_reason": { "type": ["string", "null"] },
+        "parent_goal_id": { "type": ["string", "null"] },
+        "overlay_of": { "type": ["string", "null"] },
+        "stack_index": { "type": "integer", "minimum": 0 },
+        "informational": { "type": "boolean" },
+        "return_to_parent": { "type": "boolean" },
+        "opened_at_seq": { "type": "integer" },
+        "closed_at_seq": { "type": ["integer", "null"] },
+        "created_by_relation": { "type": ["string", "null"] }
+      }
+    },
+    "fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fact_id",
+        "fact_code",
+        "case_id",
+        "goal_id",
+        "value",
+        "source",
+        "confidence",
+        "status",
+        "recorded_at_seq",
+        "derived_from"
+      ],
+      "properties": {
+        "fact_id": { "type": "string" },
+        "fact_code": { "type": "string" },
+        "case_id": { "type": ["string", "null"] },
+        "goal_id": { "type": ["string", "null"] },
+        "value": { "type": ["string", "boolean", "number", "null"] },
+        "source": { "enum": ["USER_EXPLICIT", "USER_CORRECTION", "DOCUMENT", "SYSTEM", "DERIVED_RULE"] },
+        "confidence": { "enum": ["CONFIRMED", "UNCERTAIN", "CONFLICTING"] },
+        "status": { "enum": ["ACTIVE", "SUPERSEDED"] },
+        "recorded_at_seq": { "type": "integer" },
+        "superseded_by": { "type": ["string", "null"] },
+        "superseded_at_seq": { "type": ["integer", "null"] },
+        "supersession_reason": {
+          "enum": [
+            "USER_CORRECTION",
+            "CHANGE_OF_MIND",
+            "DEPENDENCY_INVALIDATED",
+            "RELEVANCE_LOST",
+            "SYSTEM_REPLACEMENT",
+            null
+          ]
+        },
+        "conflicts_with": { "type": ["string", "null"] },
+        "derived_from": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "question_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["question_code", "fact_code", "goal_id", "priority_class", "asked_at_seq"],
+      "properties": {
+        "question_code": { "type": "string" },
+        "fact_code": { "type": "string" },
+        "goal_id": { "type": "string" },
+        "priority_class": {
+          "enum": [
+            "FLOW_BRANCH",
+            "PREREQUISITE",
+            "BLOCKING_UNCERTAINTY",
+            "DEPENDENCY",
+            "NEXT_ACTION_DATA",
+            "ADMINISTRATIVE"
+          ]
+        },
+        "asked_at_seq": { "type": "integer" }
+      }
+    },
+    "pending_action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action_code", "executor", "goal_id", "requested_at_seq"],
+      "properties": {
+        "action_code": { "type": "string" },
+        "executor": { "enum": ["SYSTEM", "HUMAN", "SYSTEM_OR_HUMAN"] },
+        "goal_id": { "type": "string" },
+        "requested_at_seq": { "type": "integer" }
+      }
+    },
+    "handoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requested_at_seq",
+        "goal_code",
+        "goal_status",
+        "current_step",
+        "confirmed_facts",
+        "pending_facts",
+        "current_question",
+        "essential_context"
+      ],
+      "properties": {
+        "requested_at_seq": { "type": "integer" },
+        "goal_code": { "type": ["string", "null"] },
+        "goal_status": { "type": ["string", "null"] },
+        "case_id": { "type": ["string", "null"] },
+        "current_step": { "type": "string" },
+        "confirmed_facts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["fact_code", "value", "source", "confidence"],
+            "properties": {
+              "fact_code": { "type": "string" },
+              "value": { "type": ["string", "boolean", "number", "null"] },
+              "source": { "type": "string" },
+              "confidence": { "type": "string" }
+            }
+          }
+        },
+        "pending_facts": { "type": "array", "items": { "type": "string" } },
+        "current_question": { "type": ["string", "null"] },
+        "essential_context": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["goal_stack", "open_overlays", "pending_actions"],
+          "properties": {
+            "goal_stack": { "type": "array", "items": { "type": "string" } },
+            "open_overlays": { "type": "array", "items": { "type": "string" } },
+            "pending_actions": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    },
+    "event_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seq", "event_kind"],
+      "properties": {
+        "seq": { "type": "integer" },
+        "event_kind": {
+          "enum": [
+            "ANSWER",
+            "CORRECTION",
+            "COMPLEMENT",
+            "PARALLEL_QUESTION",
+            "CHANGE_OF_MIND",
+            "NEW_GOAL",
+            "COMPLAINT",
+            "HUMAN_REQUEST",
+            "SOCIAL",
+            "UNCERTAIN"
+          ]
+        },
+        "note": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

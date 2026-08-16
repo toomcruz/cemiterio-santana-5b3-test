@@ -1,0 +1,134 @@
+{
+  "artifact": "santana-conversation-domain/relations",
+  "version": "v1",
+  "phase": "5B.4-A",
+  "relation_kinds": ["PREREQUISITE", "DEPENDENCY", "SCOPED_CHECK", "OVERLAY"],
+  "relations": [
+    {
+      "relation_code": "REL_CONCESSAO_REQUIRES_RECADASTRO",
+      "kind": "PREREQUISITE",
+      "from_goal": "GOAL_CONCESSAO",
+      "to_goal": "GOAL_RECADASTRO",
+      "description": "Recadastro e pre-requisito obrigatorio da Concessao.",
+      "when": {
+        "goal_code": "GOAL_CONCESSAO",
+        "goal_status_in": ["ACTIVE", "SUSPENDED", "WAITING"],
+        "conditions": [{ "fact": "recadastro_status", "equals": "PENDENTE" }]
+      },
+      "effects": [
+        {
+          "op": "assert_derived_fact",
+          "fact_code": "recadastro_required",
+          "value": true,
+          "from": ["recadastro_status"]
+        },
+        { "op": "push_goal", "goal_code": "GOAL_RECADASTRO", "suspend_parent": true, "return_to_parent": true }
+      ],
+      "on_child_resolved": [
+        { "op": "record_fact", "fact_code": "recadastro_status", "value": "OK", "source": "SYSTEM" }
+      ]
+    },
+    {
+      "relation_code": "REL_CONCESSAO_RECADASTRO_UNKNOWN",
+      "kind": "PREREQUISITE",
+      "from_goal": "GOAL_CONCESSAO",
+      "to_goal": "GOAL_RECADASTRO",
+      "description": "Situacao de recadastro desconhecida e incerteza bloqueadora: nao presumir OK nem PENDENTE.",
+      "when": {
+        "goal_code": "GOAL_CONCESSAO",
+        "goal_status_in": ["ACTIVE", "WAITING"],
+        "conditions": [{ "fact": "recadastro_status", "equals": "DESCONHECIDO" }]
+      },
+      "effects": [
+        {
+          "op": "assert_derived_fact",
+          "fact_code": "recadastro_verification_required",
+          "value": true,
+          "from": ["recadastro_status"]
+        },
+        {
+          "op": "set_goal_status",
+          "goal_code": "GOAL_CONCESSAO",
+          "status": "WAITING",
+          "reason": "RECADASTRO_VERIFICATION"
+        },
+        { "op": "require_action", "action_code": "ACTION_VERIFY_RECADASTRO", "executor": "SYSTEM_OR_HUMAN" }
+      ]
+    },
+    {
+      "relation_code": "REL_TRANSPORTE_REQUIRES_EXUMACAO",
+      "kind": "DEPENDENCY",
+      "from_goal": "GOAL_TRANSPORTE",
+      "to_goal": "GOAL_EXUMACAO",
+      "description": "Restos ainda sepultados tornam a Exumacao dependencia do Transporte.",
+      "when": {
+        "goal_code": "GOAL_TRANSPORTE",
+        "goal_status_in": ["ACTIVE", "SUSPENDED"],
+        "conditions": [{ "fact": "remains_status", "equals": "SEPULTADO" }]
+      },
+      "effects": [
+        { "op": "assert_derived_fact", "fact_code": "exumacao_required", "value": true, "from": ["remains_status"] },
+        {
+          "op": "assert_derived_fact",
+          "fact_code": "exhumation_purpose",
+          "value": "TRANSPORTE",
+          "from": ["remains_status"]
+        },
+        { "op": "push_goal", "goal_code": "GOAL_EXUMACAO", "suspend_parent": true, "return_to_parent": true }
+      ]
+    },
+    {
+      "relation_code": "REL_TRANSPORTE_ALREADY_EXHUMED",
+      "kind": "DEPENDENCY",
+      "from_goal": "GOAL_TRANSPORTE",
+      "to_goal": "GOAL_EXUMACAO",
+      "description": "Restos ja exumados: nao iniciar Exumacao.",
+      "when": {
+        "goal_code": "GOAL_TRANSPORTE",
+        "goal_status_in": ["ACTIVE", "SUSPENDED"],
+        "conditions": [{ "fact": "remains_status", "equals": "EXUMADO" }]
+      },
+      "effects": [
+        { "op": "assert_derived_fact", "fact_code": "exumacao_required", "value": false, "from": ["remains_status"] },
+        { "op": "forbid_goal", "goal_code": "GOAL_EXUMACAO" }
+      ]
+    },
+    {
+      "relation_code": "REL_TRANSPORTE_JAZIGO_FAMILIA_CHECK",
+      "kind": "SCOPED_CHECK",
+      "from_goal": "GOAL_TRANSPORTE",
+      "to_goal": null,
+      "description": "Destino em jazigo da familia exige verificar situacao do jazigo e autorizacao DENTRO do mesmo goal: nao cria novo atendimento nem novo case.",
+      "when": {
+        "goal_code": "GOAL_TRANSPORTE",
+        "goal_status_in": ["ACTIVE", "SUSPENDED"],
+        "conditions": [{ "fact": "transport_destination", "equals": "JAZIGO_FAMILIA" }]
+      },
+      "effects": [
+        {
+          "op": "require_facts_in_current_goal",
+          "fact_codes": [
+            "destination_grave_reference",
+            "destination_grave_situation",
+            "destination_grave_authorization"
+          ]
+        }
+      ],
+      "forbidden_effects": ["push_goal", "create_case"]
+    },
+    {
+      "relation_code": "REL_RECLAMACAO_OVERLAY",
+      "kind": "OVERLAY",
+      "from_goal": "GOAL_RECLAMACAO",
+      "to_goal": null,
+      "description": "Reclamacao e camada transversal sobre o assunto-base; nao substitui o goal-base e nao classifica gravidade automaticamente.",
+      "rules": {
+        "attaches_to_base_goal": true,
+        "creates_base_goal_when_absent": true,
+        "base_goal_remains_active": true,
+        "automatic_severity_classification": false
+      },
+      "example": "Lapide comprada e nao instalada => assunto-base GOAL_COMERCIAL (commercial_item=LAPIDE) + overlay GOAL_RECLAMACAO."
+    }
+  ]
+}
