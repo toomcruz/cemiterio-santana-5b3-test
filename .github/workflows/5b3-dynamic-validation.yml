@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: "Digite RUN_DYNAMIC_5B3 para executar P00/P01-P15"
+        description: "Digite RUN_DYNAMIC_5B3 para executar P00/P01-P15 e P23-P25"
         required: true
         type: string
 
@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   dynamic-validation:
-    name: P00/P01-P15 dynamic validation
+    name: P00/P01-P15 + P23-P25 dynamic validation
     runs-on: ubuntu-latest
     env:
       SUPPORT_VNEXT_VALIDATION_ENV: ISOLATED_5B3
@@ -186,6 +186,21 @@ jobs:
           conc() { CASE_SQL="$PWD/$root/$2" DATABASE_URL_A="$TEST_DATABASE_URL" DATABASE_URL_B="$TEST_DATABASE_URL" SUPPORT_VNEXT_TEST_ENV=1 "$root/run_concurrency.sh"; echo "$1 CONCURRENCY: PASS" | tee -a "$GITHUB_STEP_SUMMARY"; }
           conc P11 p11_confirm_concurrency.sql
           one P12 p12_inbound_reuse.sql; one P13 p13_confirmation_rejections.sql; one P14 p14_complaint_closed.sql; one P15 p15_privileges.sql
+
+      - name: P23-P25 persistencia conversacional (5B.4-B.2)
+        shell: bash
+        env:
+          TEST_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -Eeuo pipefail
+          root=tests/postgres
+          psql "$TEST_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f "$root/p23_roundtrip_generated.sql"
+          echo "P23 round-trip 22/22: PASS" | tee -a "$GITHUB_STEP_SUMMARY"
+          psql "$TEST_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f "$root/p24_conv_persistence.sql"
+          echo "P24 S01-S22: PASS" | tee -a "$GITHUB_STEP_SUMMARY"
+          SUPPORT_VNEXT_TEST_ENV=1 CASE_SQL="$PWD/$root/p25_conv_concurrency.sql" \
+            DATABASE_URL_A="$TEST_DATABASE_URL" DATABASE_URL_B="$TEST_DATABASE_URL" bash "$root/run_concurrency.sh"
+          echo "P25 S02 concorrencia real: PASS" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Seed P10 integration fixture
         env:

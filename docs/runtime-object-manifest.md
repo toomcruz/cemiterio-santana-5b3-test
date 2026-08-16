@@ -1,8 +1,8 @@
 # Manifesto de objetos runtime C4
 
-MIGRATIONS_COVERED: 0001-0019
+MIGRATIONS_COVERED: 0001-0020
 
-O manifesto descreve o estado cumulativo das migrations `0001`–`0019`. Ele é usado
+O manifesto descreve o estado cumulativo das migrations `0001`–`0020`. Ele é usado
 na 5B.3 para comparar instalação e remoção. Nenhum item abaixo reativa legado.
 
 | Migration | Objetos criados/alterados | Uso | Rollback operacional | Rollback físico |
@@ -27,6 +27,7 @@ na 5B.3 para comparar instalação e remoção. Nenhum item abaixo reativa legad
 | 0017 | `publish_ruleset_release` e `transition_ruleset_release` limpam os GUCs `controlled_publish`/`controlled_transition` logo após o UPDATE controlado | impede bypass do guard de estado final no resto da transação | revoke EXECUTE | removidas com o schema |
 | 0018 | retira os overloads legados `persist_inbound_classification(8 args)` e `propose_request_transaction(13 args)` | elimina caminhos de escrita sem fronteira de autoridade | sem efeito operacional separado | removidos com o schema |
 | 0019 | `revoke all on all functions/routines in schema support_vnext_shadow from public` | fecha o EXECUTE default do PUBLIC criado por 0011/0013/0014 | revoke PUBLIC | removidas com o schema |
+| 0020 | 9 tabelas `conv_*` (estado conversacional), 8 tipos enum do catalogo v1, 7 triggers de guarda, 4 RPCs (`conv_get_state`, `conv_apply_transition`, `conv_apply_authoritative_signal`, `conv_rollback_to_seq`) e 4 helpers internos | persiste conversation/case/goal/fact/pergunta/acao/evento do Santana Conversation Domain v1; o reducer semantico permanece no TypeScript | `conv_get_state`/`conv_apply_transition` para `service_role`; `conv_apply_authoritative_signal`/`conv_rollback_to_seq` apenas para `support_vnext_admin`; helpers sem grant | removidas com o schema |
 
 ## Modalidades
 

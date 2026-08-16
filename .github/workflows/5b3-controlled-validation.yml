@@ -151,7 +151,7 @@ jobs:
           printf 'identity_match=true\n' >> "$GITHUB_OUTPUT"
 
   install:
-    name: 5. Install migrations 0001-0019
+    name: 5. Install migrations 0001-0020
     needs: database-identity-gate
     uses: ./.github/workflows/5b3-install-migrations.yml
     secrets: inherit
@@ -189,7 +189,7 @@ jobs:
             printf 'POST-RESET: included in reset result\n'
             printf 'PREFLIGHT: %s\n' "$PREFLIGHT_RESULT"
             printf 'DATABASE IDENTITY: %s\n' "$IDENTITY_RESULT"
-            printf 'MIGRATIONS 0001-0019: %s\n' "$INSTALL_RESULT"
+            printf 'MIGRATIONS 0001-0020: %s\n' "$INSTALL_RESULT"
             printf 'POST-INSTALL: included in installer result\n'
             printf 'DATABASE FINGERPRINT MATCH: %s\n' "$IDENTITY_FINGERPRINT"
             printf 'TIMESTAMP UTC: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
