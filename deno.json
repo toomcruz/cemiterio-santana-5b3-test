@@ -4,7 +4,7 @@
     "test:shadow": "deno test --allow-read tests/shadow",
     "test:integration": "deno test --allow-read tests/integration",
     "test:runtime": "deno test --allow-read santana-conversation-domain/runtime/tests",
-    "benchmark:gemini": "deno run --allow-env=GEMINI_API_KEY --allow-net=generativelanguage.googleapis.com --allow-read --allow-write santana-conversation-domain/benchmark/run_gemini_benchmark.ts",
+    "benchmark:gemini": "deno run --allow-env=GEMINI_API_KEY,BENCHMARK_CASE_LIMIT --allow-net=generativelanguage.googleapis.com --allow-read --allow-write santana-conversation-domain/benchmark/run_gemini_benchmark.ts",
     "test": "deno test --allow-read tests/unit tests/shadow tests/integration santana-conversation-domain/runtime/tests"
   },
   "compilerOptions": {
