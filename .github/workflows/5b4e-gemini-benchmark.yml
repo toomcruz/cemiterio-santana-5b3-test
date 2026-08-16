@@ -2,6 +2,15 @@ name: 5B.4-E Gemini controlled benchmark
 
 on:
   workflow_dispatch:
+    inputs:
+      benchmark_size:
+        description: "Run a bounded smoke benchmark before the full corpus"
+        required: true
+        default: "full"
+        type: choice
+        options:
+          - smoke
+          - full
 
 permissions:
   contents: read
@@ -15,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      BENCHMARK_CASE_LIMIT: ${{ inputs.benchmark_size == 'smoke' && '25' || '300' }}
     steps:
       - uses: actions/checkout@v4
         with:

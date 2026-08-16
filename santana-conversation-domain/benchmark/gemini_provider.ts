@@ -50,4 +50,14 @@ export class GeminiBenchmarkProvider implements LlmProvider {
     }
     return { input_tokens: usage.promptTokenCount, output_tokens: usage.candidatesTokenCount };
   }
+
+  classifyErrorResponse(status: number, responseBody: string): string {
+    try {
+      const code = (JSON.parse(responseBody) as { error?: { status?: unknown } }).error?.status;
+      if (typeof code === "string" && /^[A-Z_]+$/.test(code)) return `PROVIDER_${code}`;
+    } catch {
+      // The aggregate HTTP category below is intentionally sufficient and safe.
+    }
+    return `PROVIDER_HTTP_${status}`;
+  }
 }
