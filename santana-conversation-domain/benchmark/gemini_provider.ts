@@ -1,10 +1,79 @@
 import type { LlmProvider } from "../runtime/adapter/adapter.ts";
+import type { NetworkBoundary, NetworkRequest } from "../runtime/adapter/network.ts";
 
 const GEMINI_API_ROOT = "https://generativelanguage.googleapis.com/v1beta/models";
 
-// The configured key returned PROVIDER_MODEL_NOT_FOUND for gemini-2.5-flash.
-// Flash-Lite is the documented structured-output alternative used for this bounded benchmark.
-export const GEMINI_MODEL = "gemini-2.5-flash-lite";
+const STABLE_FLASH_PREFERENCE = [
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+] as const;
+
+export interface GeminiModelSummary {
+  id: string;
+  supports_generate_content: boolean;
+}
+
+export class GeminiProviderError extends Error {
+  constructor(readonly category: string) {
+    super(category);
+  }
+}
+
+export function classifyGeminiError(status: number, responseBody: string, scope: "models_list" | "model_call"): string {
+  try {
+    const code = (JSON.parse(responseBody) as { error?: { status?: unknown } }).error?.status;
+    if (scope === "model_call" && code === "NOT_FOUND") return "PROVIDER_MODEL_NOT_FOUND";
+    if (code === "RESOURCE_EXHAUSTED") return "PROVIDER_QUOTA";
+    if (code === "UNAUTHENTICATED") return "PROVIDER_HTTP_401";
+    if (code === "PERMISSION_DENIED") return "PROVIDER_HTTP_403";
+    if (code === "INVALID_ARGUMENT") return "PROVIDER_INVALID_ARGUMENT";
+  } catch {
+    // The aggregate HTTP category below is intentionally sufficient and safe.
+  }
+  return status >= 500 ? "PROVIDER_HTTP_5XX" : `PROVIDER_HTTP_${status}`;
+}
+
+export function selectStableFlashModels(models: readonly GeminiModelSummary[]): string[] {
+  const available = new Set(
+    models.filter((model) => model.supports_generate_content).map((model) => model.id),
+  );
+  return STABLE_FLASH_PREFERENCE.filter((model) => available.has(model));
+}
+
+export async function listGeminiModels(
+  apiKey: string,
+  network: NetworkBoundary,
+  signal: AbortSignal,
+): Promise<GeminiModelSummary[]> {
+  const request: NetworkRequest = {
+    method: "GET",
+    url: GEMINI_API_ROOT,
+    headers: { "x-goog-api-key": apiKey },
+    body: "",
+  };
+  const response = await network(request, signal);
+  if (response.status < 200 || response.status >= 300) {
+    throw new GeminiProviderError(classifyGeminiError(response.status, response.body, "models_list"));
+  }
+  try {
+    const parsed = JSON.parse(response.body) as {
+      models?: Array<{ name?: unknown; supportedGenerationMethods?: unknown }>;
+    };
+    if (!Array.isArray(parsed.models)) throw new Error("models missing");
+    return parsed.models.flatMap((model) => {
+      if (typeof model.name !== "string" || !model.name.startsWith("models/")) return [];
+      const methods = Array.isArray(model.supportedGenerationMethods) ? model.supportedGenerationMethods : [];
+      return [{
+        id: model.name.slice("models/".length),
+        supports_generate_content: methods.includes("generateContent"),
+      }];
+    });
+  } catch {
+    throw new GeminiProviderError("PROVIDER_MODELS_LIST_PARSE_ERROR");
+  }
+}
 
 /**
  * Provider implementation used only by the manually-dispatched benchmark.
@@ -43,25 +112,29 @@ export class GeminiBenchmarkProvider implements LlmProvider {
     return text;
   }
 
-  usageFromResponse(responseBody: string): { input_tokens: number; output_tokens: number } | null {
+  usageFromResponse(responseBody: string): { input_tokens: number; output_tokens: number; total_tokens: number } | null {
     const usage =
-      (JSON.parse(responseBody) as { usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number } })
+      (JSON.parse(responseBody) as {
+        usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number };
+      })
         .usageMetadata;
     if (!usage || typeof usage.promptTokenCount !== "number" || typeof usage.candidatesTokenCount !== "number") {
       return null;
     }
-    return { input_tokens: usage.promptTokenCount, output_tokens: usage.candidatesTokenCount };
+    return {
+      input_tokens: usage.promptTokenCount,
+      output_tokens: usage.candidatesTokenCount,
+      total_tokens: typeof usage.totalTokenCount === "number"
+        ? usage.totalTokenCount
+        : usage.promptTokenCount + usage.candidatesTokenCount,
+    };
   }
 
   classifyErrorResponse(status: number, responseBody: string): string {
     try {
-      const code = (JSON.parse(responseBody) as { error?: { status?: unknown } }).error?.status;
-      if (code === "NOT_FOUND") return "PROVIDER_MODEL_NOT_FOUND";
-      if (code === "RESOURCE_EXHAUSTED") return "PROVIDER_QUOTA";
-      if (typeof code === "string" && /^[A-Z_]+$/.test(code)) return `PROVIDER_${code}`;
+      return classifyGeminiError(status, responseBody, "model_call");
     } catch {
-      // The aggregate HTTP category below is intentionally sufficient and safe.
+      return `PROVIDER_HTTP_${status}`;
     }
-    return `PROVIDER_HTTP_${status}`;
   }
 }

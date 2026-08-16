@@ -1,5 +1,6 @@
 /** The adapter's only network boundary. Keep credentials out of callers and logs. */
 export interface NetworkRequest {
+  method?: "GET" | "POST";
   url: string;
   headers: Readonly<Record<string, string>>;
   body: string;
@@ -14,9 +15,9 @@ export type NetworkBoundary = (request: NetworkRequest, signal: AbortSignal) => 
 
 export const fetchBoundary: NetworkBoundary = async (request, signal) => {
   const response = await fetch(request.url, {
-    method: "POST",
+    method: request.method ?? "POST",
     headers: request.headers,
-    body: request.body,
+    ...(request.body ? { body: request.body } : {}),
     signal,
   });
   return { status: response.status, body: await response.text() };
