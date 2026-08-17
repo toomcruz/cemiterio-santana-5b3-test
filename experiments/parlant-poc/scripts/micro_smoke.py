@@ -25,7 +25,7 @@ from typing import Any, Mapping
 import httpx
 import parlant.sdk as p
 from lagom import Container
-from parlant.adapters.nlp.gemini_service import GeminiTextEmbedding_001
+from parlant.adapters.nlp.gemini_service import GeminiTextEmbedding_001, T
 from parlant.core.loggers import Logger
 from parlant.core.meter import Meter
 from parlant.core.nlp.service import ModelSize, NLPService, SchematicGeneratorHints
@@ -48,7 +48,7 @@ RESULTADO = {"codigo": 1}
 
 
 # --------------------------------------------------------------- instrumentacao
-class GeradorContado(ThrottledGemini):
+class GeradorContado(ThrottledGemini[T]):
     """Mesmo gerador da POC (modelo unico + throttle), so que contando chamadas."""
 
     async def _do_generate(self, prompt: Any, hints: Mapping[str, Any] = {}) -> Any:
