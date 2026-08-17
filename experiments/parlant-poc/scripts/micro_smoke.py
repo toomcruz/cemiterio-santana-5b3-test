@@ -4,11 +4,14 @@
 Isolado de proposito. Nao usa a POC completa: sem journey, sem relationships,
 sem glossario, sem canned responses, sem as 38 entidades. So:
 
-* 2 guidelines (uma de atendimento, uma de seguranca contra inventar preco);
+* 1 guideline (a de seguranca: nao inventar preco);
 * 1 tool simples;
 * 1 conversa real, com a mensagem "quanto custa a exumacao?".
 
-Objetivo: provar que o Parlant inicializa, que o Gemini responde, que uma
+Cada entidade a mais custa chamadas de indexacao no start do Parlant, e a cota
+do free tier do Gemini e o recurso escasso aqui — dai o tamanho minimo.
+
+Objetivo: provar que o Parlant inicializa, que o Gemini responde, que a
 guideline e aplicada, que a tool e chamada, que sai uma resposta real e quantos
 429 aconteceram no caminho.
 
@@ -205,12 +208,8 @@ async def main() -> int:
             ),
         )
 
-        await agent.create_guideline(
-            condition="o municipe fala sobre exumacao ou retirada de restos mortais",
-            action="acolha em uma frase e diga que vai ajudar com o pedido de exumacao",
-            on_match=marcar_guideline("G_ATENDIMENTO"),
-        )
-
+        # Uma unica guideline: cada entidade extra custa chamadas de indexacao no
+        # start, e a cota do free tier e o recurso mais escasso deste teste.
         await agent.create_guideline(
             condition="o municipe pergunta preco, valor, taxa ou custo",
             action=(

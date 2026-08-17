@@ -42,15 +42,33 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Micro-smoke (2 guidelines, 1 tool, 1 conversa)
+      - name: Pre-flight — uma unica chamada ao modelo (para em 404/429)
+        env:
+          GEMINI_API_KEY: ${{ secrets.PARLANT }}
+          MODELO: gemini-3.1-flash-lite
+        run: |
+          set -Eeuo pipefail
+          codigo=$(curl -sS -o /tmp/preflight.json -w '%{http_code}' \
+            -X POST "https://generativelanguage.googleapis.com/v1beta/models/${MODELO}:generateContent" \
+            -H "x-goog-api-key: ${GEMINI_API_KEY}" \
+            -H 'Content-Type: application/json' \
+            -d '{"contents":[{"parts":[{"text":"responda apenas: ok"}]}]}')
+          echo "HTTP ${codigo} para ${MODELO}"
+          if [ "${codigo}" != "200" ]; then
+            # Imprime so status e mensagem de erro; a chave nunca aparece.
+            python -c "import json;d=json.load(open('/tmp/preflight.json')).get('error',{});print(d.get('status'),'-',d.get('message'))" || true
+            echo "Modelo indisponivel ou sem cota: parando sem consumir mais chamadas."
+            exit 1
+          fi
+          python -c "import json;d=json.load(open('/tmp/preflight.json'));print('resposta:', d['candidates'][0]['content']['parts'][0].get('text','').strip()[:80])"
+
+      - name: Ultra-micro-smoke (1 guideline, 1 tool, 1 mensagem)
         env:
           # A chave da POC entra na aplicacao apenas com este nome.
           GEMINI_API_KEY: ${{ secrets.PARLANT }}
           MICRO_PORT: "8802"
-          # O free tier do gemini-3.7-flash da 20 requisicoes por DIA
-          # (GenerateRequestsPerDayPerProjectPerModel-FreeTier), o que nao cobre
-          # nem a indexacao de duas guidelines. O gemini-2.5-flash tem cota
-          # diaria bem maior; o limite dele e por minuto (5), aplicado pelo
-          # throttle padrao de agent/nlp.py — por isso nao ha override de RPM.
-          POC_GEMINI_MODEL: "gemini-2.5-flash"
+          # gemini-3.7-flash: 20 requisicoes por DIA no free tier.
+          # familia 2.5 (pro/flash/flash-lite): 404 para chaves novas.
+          # Resta a familia 3.x lite, com cota diaria maior.
+          POC_GEMINI_MODEL: "gemini-3.1-flash-lite"
         run: python scripts/micro_smoke.py
