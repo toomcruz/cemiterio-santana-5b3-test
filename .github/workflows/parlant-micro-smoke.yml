@@ -1,0 +1,51 @@
+name: Parlant micro-smoke
+
+# Teste minimo e isolado do caminho real (Parlant + Gemini): 2 guidelines,
+# 1 tool, 1 conversa. Nao toca em producao, migrations, Supabase, n8n, W-API,
+# WhatsApp nem Vercel. Nao publica nada.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "lab/**"
+      - "claude/parlant-poc-**"
+    paths:
+      - "experiments/parlant-poc/scripts/micro_smoke.py"
+      - ".github/workflows/parlant-micro-smoke.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: parlant-micro-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  micro-smoke:
+    name: Micro-smoke Parlant + Gemini
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: experiments/parlant-poc
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: |
+          set -Eeuo pipefail
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Micro-smoke (2 guidelines, 1 tool, 1 conversa)
+        env:
+          # A chave da POC entra na aplicacao apenas com este nome.
+          GEMINI_API_KEY: ${{ secrets.PARLANT }}
+          MICRO_PORT: "8802"
+          POC_GEMINI_RPM: "10"
+        run: python scripts/micro_smoke.py
