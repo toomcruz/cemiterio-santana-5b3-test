@@ -28,12 +28,14 @@ from lagom import Container
 from parlant.adapters.nlp.gemini_service import (
     GeminiSchematicGenerator,
     GeminiService,
+    GeminiTextEmbedding_001,
     T,
 )
 from parlant.core.loggers import Logger
 from parlant.core.meter import Meter
 from parlant.core.nlp.generation import SchematicGenerationResult
-from parlant.core.nlp.service import ModelSize, NLPService, SchematicGeneratorHints
+from parlant.core.nlp.service import EmbedderHints, ModelSize, NLPService, SchematicGeneratorHints
+from parlant.core.nlp.tokenization import EstimatingTokenizer
 from parlant.core.tracer import Tracer
 
 DEFAULT_MODEL = "gemini-3.7-flash"
@@ -116,6 +118,103 @@ def _is_rate_limit(error: BaseException) -> bool:
     return "429" in text or "RESOURCE_EXHAUSTED" in text
 
 
+# ------------------------------------------------------- contagem de tokens
+# Estatisticas do caminho de contagem de tokens, lidas pela instrumentacao dos
+# smokes. Nao ha estado escondido: o que aconteceu aqui aparece no relatorio.
+TOKENIZER_STATS: dict[str, Any] = {
+    "modelo_pedido": None,
+    "count_tokens_ok": 0,
+    "count_tokens_404": 0,
+    "count_tokens_outros_erros": 0,
+    "estimativas_locais": 0,
+    "modo": "api",  # vira "local" apos um 404 no count_tokens
+    "motivo_do_fallback": None,
+}
+
+# Aproximacao local: ~3,5 caracteres por token em portugues. Sobrestima de
+# proposito — para o Parlant, achar o prompt maior do que e leva a truncar,
+# enquanto achar menor levaria a estourar a janela de contexto.
+CARACTERES_POR_TOKEN = 3.5
+
+
+def _e_modelo_indisponivel(erro: BaseException) -> bool:
+    texto = str(erro)
+    return "404" in texto or "NOT_FOUND" in texto or "not found" in texto.lower()
+
+
+class PocEstimatingTokenizer(EstimatingTokenizer):
+    """Contagem de tokens presa ao modelo que a chave desta POC realmente tem.
+
+    O adaptador do Parlant 3.3.2 conta tokens com o proprio modelo, exceto para
+    o embedder: `GoogleEstimatingTokenizer.estimate_token_count` traduz
+    `gemini-embedding-001` para `gemini-2.5-flash` como aproximacao. Com a chave
+    desta POC esse modelo responde `404 ... no longer available to new users`, e
+    o turno inteiro morria ali — nao no gerador, que ja usava o modelo certo.
+
+    Aqui a contagem vai sempre para `configured_model()`. Se a API de
+    `count_tokens` nao aceitar esse modelo, o tokenizer passa a estimar
+    localmente e registra o motivo. A estimativa local **nao e** a contagem real
+    do modelo: e uma aproximacao por tamanho de texto, usada so para dimensionar
+    prompt, nunca para cobranca ou para decisao de autoridade.
+    """
+
+    def __init__(self, client: Any, model_name: str) -> None:
+        self._client = client
+        self._model_name = model_name
+        TOKENIZER_STATS["modelo_pedido"] = model_name
+
+    def _estimar_local(self, prompt: str) -> int:
+        TOKENIZER_STATS["estimativas_locais"] += 1
+        return max(1, int(len(prompt) / CARACTERES_POR_TOKEN) + 1)
+
+    async def estimate_token_count(self, prompt: str) -> int:
+        if TOKENIZER_STATS["modo"] == "local":
+            return self._estimar_local(prompt)
+
+        try:
+            resultado = await self._client.aio.models.count_tokens(
+                model=self._model_name,
+                contents=prompt,
+            )
+        except Exception as erro:
+            if _e_modelo_indisponivel(erro):
+                # Um 404 aqui e definitivo para esta chave: nao adianta repetir.
+                TOKENIZER_STATS["count_tokens_404"] += 1
+                TOKENIZER_STATS["modo"] = "local"
+                TOKENIZER_STATS["motivo_do_fallback"] = (
+                    f"count_tokens recusou {self._model_name!r}: {str(erro)[:160]}"
+                )
+            else:
+                TOKENIZER_STATS["count_tokens_outros_erros"] += 1
+                TOKENIZER_STATS["modo"] = "local"
+                TOKENIZER_STATS["motivo_do_fallback"] = (
+                    f"count_tokens falhou para {self._model_name!r}: "
+                    f"{type(erro).__name__}: {str(erro)[:160]}"
+                )
+            return self._estimar_local(prompt)
+
+        TOKENIZER_STATS["count_tokens_ok"] += 1
+        return int(getattr(resultado, "total_tokens", 0) or 0)
+
+
+class PocEmbedder(GeminiTextEmbedding_001):
+    """Embedder da POC: mesmo modelo de embedding, tokenizer da POC.
+
+    O embedding continua em `gemini-embedding-001` — e o modelo de embedding da
+    conta e nao apresenta 404. O que muda e so quem conta os tokens dele.
+    """
+
+    def __init__(self, logger: Logger, tracer: Tracer, meter: Meter) -> None:
+        super().__init__(logger, tracer, meter)
+        self._poc_tokenizer = PocEstimatingTokenizer(
+            client=self._client, model_name=configured_model()
+        )
+
+    @property
+    def tokenizer(self) -> EstimatingTokenizer:  # type: ignore[override]
+        return self._poc_tokenizer
+
+
 class ThrottledGemini(GeminiSchematicGenerator[T]):
     """Gerador da POC: modelo unico, chamadas espacadas, 429 tratado com espera."""
 
@@ -130,6 +229,20 @@ class ThrottledGemini(GeminiSchematicGenerator[T]):
     @property
     def max_tokens(self) -> int:
         return 1024 * 1024
+
+    @property
+    def tokenizer(self) -> EstimatingTokenizer:  # type: ignore[override]
+        """Mesmo tokenizer guardado do embedder.
+
+        No gerador o adaptador padrao ja usaria o modelo correto, mas passar
+        pelos dois caminhos garante que um unico ponto decida qual modelo conta
+        tokens — e que um 404 de contagem nunca derrube um turno.
+        """
+        if not hasattr(self, "_poc_tokenizer"):
+            self._poc_tokenizer = PocEstimatingTokenizer(
+                client=self._client, model_name=self.model_name
+            )
+        return self._poc_tokenizer
 
     async def generate(
         self,
@@ -173,6 +286,10 @@ class GeminiFlashOnlyService(GeminiService):
     ) -> Any:
         generator_cls = MODEL_BY_SIZE[hints.get("model_size", ModelSize.AUTO)]
         return generator_cls[t](self.logger, self._tracer, self._meter)  # type: ignore[index]
+
+    async def get_embedder(self, hints: EmbedderHints = {}) -> Any:
+        """Embedder da POC: o padrao conta tokens em `gemini-2.5-flash` (404)."""
+        return PocEmbedder(self.logger, self._tracer, self._meter)
 
 
 def gemini_flash_only(container: Container) -> NLPService:

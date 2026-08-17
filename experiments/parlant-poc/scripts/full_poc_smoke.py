@@ -54,7 +54,7 @@ PARLANT_HOME = _home_limpo()
 import httpx  # noqa: E402
 import parlant.sdk as p  # noqa: E402
 from lagom import Container  # noqa: E402
-from parlant.adapters.nlp.gemini_service import GeminiTextEmbedding_001, T  # noqa: E402
+from parlant.adapters.nlp.gemini_service import T  # noqa: E402
 from parlant.core.loggers import Logger  # noqa: E402
 from parlant.core.meter import Meter  # noqa: E402
 from parlant.core.nlp.service import (  # noqa: E402
@@ -67,7 +67,9 @@ from parlant.core.tracer import Tracer  # noqa: E402
 from santana_parlant_poc.agent import spec  # noqa: E402
 from santana_parlant_poc.agent.build import build_agent  # noqa: E402
 from santana_parlant_poc.agent.nlp import (  # noqa: E402
+    TOKENIZER_STATS,
     GeminiFlashOnlyService,
+    PocEmbedder,
     ThrottledGemini,
     configured_model,
 )
@@ -176,7 +178,7 @@ class ServicoObservado(GeminiFlashOnlyService):
         return GeradorObservado[t](self.logger, self._tracer, self._meter)  # type: ignore[index]
 
     async def get_embedder(self, hints: Mapping[str, Any] = {}) -> Any:
-        return GeminiTextEmbedding_001(self.logger, self._tracer, self._meter)
+        return PocEmbedder(self.logger, self._tracer, self._meter)
 
 
 def servico_observado(container: Container) -> NLPService:
@@ -336,7 +338,15 @@ def _resumo(itens: list[dict[str, Any]], inicializacao: float, total: float) -> 
     print("=" * 74)
     print("SMOKE REAL — POC COMPLETA (Parlant + Gemini)")
     print("=" * 74)
-    print(f"modelo ...................: {configured_model()}")
+    print(f"modelo (geracao) .........: {configured_model()}")
+    print(f"modelo (count_tokens) ....: {TOKENIZER_STATS['modelo_pedido']} "
+          f"[modo: {TOKENIZER_STATS['modo']}]")
+    print(f"modelo (embeddings) ......: gemini-embedding-001")
+    print(f"count_tokens ok / 404 ....: {TOKENIZER_STATS['count_tokens_ok']} / "
+          f"{TOKENIZER_STATS['count_tokens_404']}")
+    print(f"estimativas locais .......: {TOKENIZER_STATS['estimativas_locais']}")
+    if TOKENIZER_STATS["motivo_do_fallback"]:
+        print(f"motivo do fallback .......: {TOKENIZER_STATS['motivo_do_fallback']}")
     print(f"PARLANT_HOME .............: {PARLANT_HOME} (limpo)")
     print(f"inicializacao ............: {inicializacao:.1f}s")
     print(f"conversas ................: {len(itens)}/{len(CONVERSAS)}")
@@ -359,7 +369,10 @@ def _resumo(itens: list[dict[str, Any]], inicializacao: float, total: float) -> 
     JSON_SAIDA.write_text(
         json.dumps(
             {
-                "modelo": configured_model(),
+                "modelo_geracao": configured_model(),
+                "modelo_count_tokens": TOKENIZER_STATS["modelo_pedido"],
+                "modelo_embeddings": "gemini-embedding-001",
+                "tokenizer": dict(TOKENIZER_STATS),
                 "parlant_home": str(PARLANT_HOME),
                 "inicializacao_s": round(inicializacao, 2),
                 "duracao_total_s": round(total, 2),

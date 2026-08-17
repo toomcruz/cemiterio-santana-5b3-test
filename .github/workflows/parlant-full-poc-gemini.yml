@@ -14,6 +14,7 @@ on:
     paths:
       - "experiments/parlant-poc/scripts/full_poc_smoke.py"
       - "experiments/parlant-poc/santana_parlant_poc/turnos.py"
+      - "experiments/parlant-poc/santana_parlant_poc/agent/nlp.py"
       - ".github/workflows/parlant-full-poc-gemini.yml"
 
 permissions:
