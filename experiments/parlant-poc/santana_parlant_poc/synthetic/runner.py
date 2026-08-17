@@ -27,6 +27,7 @@ from ..agent import spec
 from ..agent.build import build_agent
 from ..domain import authority
 from ..store import STORE
+from ..turnos import ResultadoTurno, mapear_ids, nova_sessao, rodar_turno
 from . import corpus as corpus_mod
 from . import cenarios as cenarios_mod
 from .guard import NetworkGuard
@@ -56,38 +57,6 @@ TOOLS_PERMITIDAS = {
 # Numero em resposta = possivel preco/prazo inventado. A POC nunca publica valor.
 _NUMERO = re.compile(r"\d")
 
-# id interno do Parlant -> chave da POC, para o rastro sair legivel no relatorio.
-MAPA_IDS: dict[str, dict[str, str]] = {
-    "guidelines": {},
-    "journey_states": {},
-    "journey_conditions": {},
-}
-
-
-def _legivel(dominio: str, identificador: Any) -> str:
-    bruto = str(identificador)
-    if bruto in MAPA_IDS[dominio]:
-        return MAPA_IDS[dominio][bruto]
-    # Guideline projetada de um no da journey: "journey_node:<no>[:<aresta>]".
-    if bruto.startswith("journey_node:"):
-        no = bruto.split(":")[1]
-        return f"ESTADO:{MAPA_IDS['journey_states'].get(no, no)}"
-    return MAPA_IDS["journey_conditions"].get(bruto, bruto)
-
-
-@dataclass
-class ResultadoTurno:
-    conversa: str
-    categoria: str
-    mensagem: str
-    resposta: str
-    guidelines: list[str] = field(default_factory=list)
-    tools: list[dict[str, Any]] = field(default_factory=list)
-    journey: list[str] = field(default_factory=list)
-    duracao: float = 0.0
-    erro: str | None = None
-
-
 @dataclass
 class Violacoes:
     preco_inventado: int = 0
@@ -108,129 +77,22 @@ class Violacoes:
         return dict(vars(self))
 
 
-# ------------------------------------------------------------------ conversa
-async def _esperar_turno(
-    cliente: httpx.AsyncClient, sessao: str, offset: int
-) -> tuple[bool, dict[str, Any]]:
-    """Espera o turno terminar de verdade.
-
-    O Parlant emite dois `ready` por turno: um logo apos o preambulo (sem
-    `stage`) e o do fim do turno (`stage="completed"`). Aceitar o primeiro fazia
-    o laboratorio mandar a proxima mensagem no meio do processamento, o que o
-    proprio Parlant cancelava ("Processing cancelled"). So o `completed` conta.
-
-    O evento final tambem carrega `matched_guidelines`, `matched_journeys` e
-    `matched_journey_states`: e a fonte oficial do rastro deste turno.
-    """
-    cursor = offset + 1
-    limite = time.perf_counter() + TEMPO_MAXIMO_TURNO
-    while time.perf_counter() < limite:
-        resposta = await cliente.get(
-            f"/sessions/{sessao}/events",
-            params={"min_offset": cursor, "kinds": "status", "wait_for_data": 10},
-        )
-        if resposta.status_code == 504:
-            continue
-        resposta.raise_for_status()
-        for evento in resposta.json():
-            cursor = max(cursor, evento["offset"] + 1)
-            dados = evento.get("data") or {}
-            if not isinstance(dados, dict):
-                continue
-            estado = dados.get("status")
-            # O payload do status vem aninhado: {"status": ..., "data": {...}}.
-            interno = dados.get("data") if isinstance(dados.get("data"), dict) else {}
-            if estado in ("error", "cancelled"):
-                return False, interno
-            if estado == "ready" and interno.get("stage") == "completed":
-                return True, interno
-    return False, {}
-
-
-async def _rodar_turno(
-    cliente: httpx.AsyncClient,
-    sessao: str,
-    turno: corpus_mod.Turno,
-    conversa: str,
-) -> ResultadoTurno:
-    resultado = ResultadoTurno(
-        conversa=conversa, categoria=turno.categoria, mensagem=turno.texto, resposta=""
-    )
-    inicio = time.perf_counter()
-    STORE.start_turn(sessao)
-
-    try:
-        evento = await cliente.post(
-            f"/sessions/{sessao}/events",
-            json={"kind": "message", "source": "customer", "message": turno.texto},
-        )
-        evento.raise_for_status()
-        offset = evento.json()["offset"]
-
-        concluiu, estado_final = await _esperar_turno(cliente, sessao, offset)
-        if not concluiu:
-            resultado.erro = "turno nao chegou a ready"
-        else:
-            resultado.guidelines = [
-                _legivel("guidelines", m.get("id"))
-                for m in estado_final.get("matched_guidelines", [])
-            ]
-            resultado.journey = [
-                _legivel("journey_states", m.get("id"))
-                for m in estado_final.get("matched_journey_states", [])
-            ]
-            eventos = await cliente.get(
-                f"/sessions/{sessao}/events",
-                params={"min_offset": offset + 1, "wait_for_data": 0},
-            )
-            eventos.raise_for_status()
-            for item in eventos.json():
-                dados = item.get("data") or {}
-                if not isinstance(dados, dict):
-                    continue
-                if item["kind"] == "message" and item.get("source") == "ai_agent":
-                    if dados.get("message"):
-                        resultado.resposta = dados["message"]
-                elif item["kind"] == "tool":
-                    for chamada in dados.get("tool_calls", []):
-                        resultado.tools.append(
-                            {
-                                "tool": chamada.get("tool_id", "?"),
-                                "argumentos": chamada.get("arguments"),
-                                "retorno": (chamada.get("result") or {}).get("data"),
-                            }
-                        )
-    except Exception as erro:  # falha de transporte nao pode derrubar a bateria
-        resultado.erro = f"{type(erro).__name__}: {erro}"
-
-    # O `on_match` da POC alimenta o painel do laboratorio; o evento `ready`
-    # e a fonte oficial. Aqui os dois se somam, sem um mascarar o outro.
-    rastro = STORE.trace(sessao).as_dict()
-    for chave in rastro["guidelines"]:
-        if chave not in resultado.guidelines:
-            resultado.guidelines.append(chave)
-    for chave in rastro["journey_states"]:
-        if chave not in resultado.journey:
-            resultado.journey.append(chave)
-    resultado.duracao = time.perf_counter() - inicio
-    return resultado
-
-
 async def _rodar_conversa(
     base: str, agente: str, conversa: corpus_mod.Conversa
 ) -> tuple[list[ResultadoTurno], str]:
     async with httpx.AsyncClient(base_url=base, timeout=120.0, trust_env=False) as cliente:
-        criacao = await cliente.post(
-            "/sessions",
-            json={"agent_id": agente, "title": conversa.identificador},
-            params={"allow_greeting": False},
-        )
-        criacao.raise_for_status()
-        sessao = criacao.json()["id"]
-
-        turnos = []
-        for turno in conversa.turnos:
-            turnos.append(await _rodar_turno(cliente, sessao, turno, conversa.identificador))
+        sessao = await nova_sessao(cliente, agente, conversa.identificador)
+        turnos = [
+            await rodar_turno(
+                cliente,
+                sessao,
+                turno.texto,
+                turno.categoria,
+                conversa.identificador,
+                TEMPO_MAXIMO_TURNO,
+            )
+            for turno in conversa.turnos
+        ]
         return turnos, sessao
 
 
@@ -298,18 +160,6 @@ def _checar_isolamento(sessoes: Sequence[str], violacoes: Violacoes) -> dict[str
 
 
 # ------------------------------------------------------------- inicializacao
-def _mapear_ids(criados: dict[str, Any]) -> None:
-    """Traduz os ids que o Parlant devolve no evento `ready` para as chaves da POC."""
-    MAPA_IDS["guidelines"] = {
-        str(getattr(objeto, "id", objeto)): chave
-        for chave, objeto in criados["guidelines"].items()
-    }
-    MAPA_IDS["journey_states"] = {
-        str(getattr(objeto, "id", objeto)): chave
-        for chave, objeto in criados["journey_states"].items()
-    }
-
-
 async def _inventario(server: p.Server, criados: dict[str, Any]) -> dict[str, Any]:
     """Confere que tudo o que a POC declara realmente entrou no Parlant."""
     from parlant.core.canned_responses import CannedResponseStore
@@ -327,11 +177,10 @@ async def _inventario(server: p.Server, criados: dict[str, Any]) -> dict[str, An
 
     # As condicoes de ativacao da journey viram guidelines proprias, criadas
     # pelo Parlant; sem esse mapa elas aparecem no rastro como id cru.
-    MAPA_IDS["journey_conditions"] = {
-        str(identificador): f"J_CONDICAO_{indice}"
-        for jornada in journeys
-        for indice, identificador in enumerate(jornada.conditions, start=1)
-    }
+    mapear_ids(
+        criados,
+        [identificador for jornada in journeys for identificador in jornada.conditions],
+    )
 
     esperado = {
         "guidelines": len(spec.GUIDELINES),
@@ -384,7 +233,6 @@ async def executar(quantidade: int, seed: int) -> dict[str, Any]:
         customer_store="transient",
     ) as server:
         agente, criados = await build_agent(server)
-        _mapear_ids(criados)
         inventario = await _inventario(server, criados)
 
         async def esperar_servidor(base: str, limite_s: float = 180.0) -> bool:
@@ -457,25 +305,17 @@ async def executar(quantidade: int, seed: int) -> dict[str, Any]:
             print("cenarios dirigidos (relationships, journey, tools, falhas)...", flush=True)
             async with httpx.AsyncClient(base_url=base, timeout=120.0, trust_env=False) as cliente:
 
-                async def nova_sessao(titulo: str) -> str:
-                    criacao = await cliente.post(
-                        "/sessions",
-                        json={"agent_id": agente.id, "title": titulo},
-                        params={"allow_greeting": False},
-                    )
-                    criacao.raise_for_status()
-                    return criacao.json()["id"]
+                async def abrir_sessao(titulo: str) -> str:
+                    return await nova_sessao(cliente, agente.id, titulo)
 
                 async def um_turno(sessao: str, texto: str) -> ResultadoTurno:
-                    return await _rodar_turno(
-                        cliente,
-                        sessao,
-                        corpus_mod.Turno(texto=texto, categoria="cenario_dirigido"),
-                        "cenario",
+                    return await rodar_turno(
+                        cliente, sessao, texto, "cenario_dirigido", "cenario",
+                        TEMPO_MAXIMO_TURNO,
                     )
 
                 relatorio["cenarios"] = await cenarios_mod.executar_cenarios(
-                    um_turno, nova_sessao
+                    um_turno, abrir_sessao
                 )
 
         async def executar_bateria() -> None:

@@ -270,7 +270,7 @@ def test_tool_avaliada_vem_da_secao_dedicada_do_prompt():
 def test_espera_do_turno_ignora_o_ready_do_preambulo():
     """Regressao: aceitar o `ready` sem stage cancelava o turno em andamento."""
     import httpx
-    from santana_parlant_poc.synthetic import runner
+    from santana_parlant_poc import turnos
 
     # Formato real do Parlant: o payload do status vem aninhado em "data".
     eventos = [
@@ -292,7 +292,7 @@ def test_espera_do_turno_ignora_o_ready_do_preambulo():
     async def executar():
         transporte = httpx.MockTransport(responder)
         async with httpx.AsyncClient(transport=transporte, base_url="http://lab") as cliente:
-            return await runner._esperar_turno(cliente, "s1", offset=0)
+            return await turnos.esperar_turno(cliente, "s1", offset=0, tempo_maximo=5)
 
     concluiu, dados = asyncio.run(executar())
     assert concluiu is True
@@ -301,7 +301,7 @@ def test_espera_do_turno_ignora_o_ready_do_preambulo():
 
 def test_espera_do_turno_reconhece_cancelamento():
     import httpx
-    from santana_parlant_poc.synthetic import runner
+    from santana_parlant_poc import turnos
 
     def responder(requisicao: httpx.Request) -> httpx.Response:
         return httpx.Response(
@@ -311,7 +311,7 @@ def test_espera_do_turno_reconhece_cancelamento():
     async def executar():
         transporte = httpx.MockTransport(responder)
         async with httpx.AsyncClient(transport=transporte, base_url="http://lab") as cliente:
-            return await runner._esperar_turno(cliente, "s1", offset=0)
+            return await turnos.esperar_turno(cliente, "s1", offset=0, tempo_maximo=5)
 
     concluiu, _ = asyncio.run(executar())
     assert concluiu is False

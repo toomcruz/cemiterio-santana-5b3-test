@@ -1,0 +1,83 @@
+name: Parlant POC completa + Gemini real
+
+# Sobe a POC COMPLETA (14 guidelines, 10 relationships, journey de 5 estados,
+# 5 tools, 7 canned responses, 8 termos) contra o Gemini real e roda 5 conversas,
+# uma por sessao. Para em qualquer 404/429 e no primeiro gate de autoridade
+# violado. Nao toca em main, migrations, Supabase, n8n, W-API, WhatsApp ou Vercel.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "lab/**"
+      - "claude/parlant-poc-**"
+    paths:
+      - "experiments/parlant-poc/scripts/full_poc_smoke.py"
+      - "experiments/parlant-poc/santana_parlant_poc/turnos.py"
+      - ".github/workflows/parlant-full-poc-gemini.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: parlant-full-poc-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  full-poc:
+    name: POC completa + Gemini (5 conversas)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: experiments/parlant-poc
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: |
+          set -Eeuo pipefail
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Pre-flight — uma unica chamada ao modelo (para em 404/429)
+        env:
+          GEMINI_API_KEY: ${{ secrets.PARLANT }}
+          MODELO: gemini-3.1-flash-lite
+        run: |
+          set -Eeuo pipefail
+          codigo=$(curl -sS -o /tmp/preflight.json -w '%{http_code}' \
+            -X POST "https://generativelanguage.googleapis.com/v1beta/models/${MODELO}:generateContent" \
+            -H "x-goog-api-key: ${GEMINI_API_KEY}" \
+            -H 'Content-Type: application/json' \
+            -d '{"contents":[{"parts":[{"text":"responda apenas: ok"}]}]}')
+          echo "HTTP ${codigo} para ${MODELO}"
+          if [ "${codigo}" != "200" ]; then
+            # Imprime so status e mensagem de erro; a chave nunca aparece.
+            python -c "import json;d=json.load(open('/tmp/preflight.json')).get('error',{});print(d.get('status'),'-',d.get('message'))" || true
+            echo "Modelo indisponivel ou sem cota: parando sem consumir mais chamadas."
+            exit 1
+          fi
+          python -c "import json;d=json.load(open('/tmp/preflight.json'));print('resposta:', d['candidates'][0]['content']['parts'][0].get('text','').strip()[:80])"
+
+      - name: 5 conversas reais contra a POC completa
+        env:
+          # A chave da POC entra na aplicacao apenas com este nome.
+          GEMINI_API_KEY: ${{ secrets.PARLANT }}
+          POC_GEMINI_MODEL: "gemini-3.1-flash-lite"
+          FULL_POC_PORT: "8804"
+          FULL_POC_TURN_TIMEOUT: "180"
+        # -u: sem isso o stdout fica bufferizado e o relatorio parcial se perde
+        # se o job terminar antes do fim.
+        run: python -u scripts/full_poc_smoke.py
+
+      - name: Publicar relatorio
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-poc-gemini-report
+          path: experiments/parlant-poc/full-poc-gemini-report.json
