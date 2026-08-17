@@ -1,0 +1,166 @@
+{
+  "tools": {
+    "consultar_base_autoritativa": {
+      "local": {
+        "assunto": {
+          "type": "string",
+          "enum": [
+            "PRECO",
+            "DOCUMENTOS",
+            "PRAZO",
+            "PROCEDIMENTO_ADMINISTRATIVO",
+            "ASSINATURA_EXUMACAO",
+            "JAZIGO_DESTINO",
+            "OSSUARIO",
+            "RESTOS_JA_EXUMADOS"
+          ]
+        }
+      },
+      "engine": {
+        "assunto": {
+          "type": "string",
+          "enum": [
+            "PRECO",
+            "DOCUMENTOS",
+            "PRAZO",
+            "PROCEDIMENTO_ADMINISTRATIVO",
+            "ASSINATURA_EXUMACAO",
+            "JAZIGO_DESTINO",
+            "OSSUARIO",
+            "RESTOS_JA_EXUMADOS"
+          ]
+        }
+      },
+      "identicos": true,
+      "diferencas": {}
+    },
+    "registrar_fato": {
+      "local": {
+        "fato": {
+          "type": "string",
+          "enum": [
+            "exhumation_purpose",
+            "remains_status",
+            "burial_reference",
+            "surviving_spouse_status",
+            "transport_destination",
+            "destination_grave_reference",
+            "requester_document"
+          ]
+        },
+        "valor": {
+          "type": "string",
+          "description": "Valor do fato, exatamente como o catalogo do Cemiterio Santana define. Valores aceitos por fato — exhumation_purpose: TRANSPORTE, OSSUARIO, CREMACAO, OUTRA; remains_status: SEPULTADO, EXUMADO, DESCONHECIDO; surviving_spouse_status: VIVO, FALECIDO, INEXISTENTE, DESCONHECIDO; transport_destination: OUTRO_CEMITERIO, JAZIGO_FAMILIA, CREMATORIO, OSSUARIO; texto livre (o que o municipe disse): burial_reference, destination_grave_reference, requester_document. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
+          "examples": [
+            "TRANSPORTE",
+            "SEPULTADO",
+            "OUTRO_CEMITERIO",
+            "VIVO"
+          ]
+        }
+      },
+      "engine": {
+        "fato": {
+          "type": "string",
+          "enum": [
+            "exhumation_purpose",
+            "remains_status",
+            "burial_reference",
+            "surviving_spouse_status",
+            "transport_destination",
+            "destination_grave_reference",
+            "requester_document"
+          ]
+        },
+        "valor": {
+          "type": "string",
+          "description": "Valor do fato, exatamente como o catalogo do Cemiterio Santana define. Valores aceitos por fato — exhumation_purpose: TRANSPORTE, OSSUARIO, CREMACAO, OUTRA; remains_status: SEPULTADO, EXUMADO, DESCONHECIDO; surviving_spouse_status: VIVO, FALECIDO, INEXISTENTE, DESCONHECIDO; transport_destination: OUTRO_CEMITERIO, JAZIGO_FAMILIA, CREMATORIO, OSSUARIO; texto livre (o que o municipe disse): burial_reference, destination_grave_reference, requester_document. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
+          "examples": [
+            "TRANSPORTE",
+            "SEPULTADO",
+            "OUTRO_CEMITERIO",
+            "VIVO"
+          ]
+        }
+      },
+      "identicos": true,
+      "diferencas": {}
+    },
+    "corrigir_fato": {
+      "local": {
+        "fato": {
+          "type": "string",
+          "enum": [
+            "exhumation_purpose",
+            "remains_status",
+            "burial_reference",
+            "surviving_spouse_status",
+            "transport_destination",
+            "destination_grave_reference",
+            "requester_document"
+          ]
+        },
+        "novo_valor": {
+          "type": "string",
+          "description": "Valor do fato, exatamente como o catalogo do Cemiterio Santana define. Valores aceitos por fato — exhumation_purpose: TRANSPORTE, OSSUARIO, CREMACAO, OUTRA; remains_status: SEPULTADO, EXUMADO, DESCONHECIDO; surviving_spouse_status: VIVO, FALECIDO, INEXISTENTE, DESCONHECIDO; transport_destination: OUTRO_CEMITERIO, JAZIGO_FAMILIA, CREMATORIO, OSSUARIO; texto livre (o que o municipe disse): burial_reference, destination_grave_reference, requester_document. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
+          "examples": [
+            "TRANSPORTE",
+            "SEPULTADO",
+            "OUTRO_CEMITERIO",
+            "VIVO"
+          ]
+        }
+      },
+      "engine": {
+        "fato": {
+          "type": "string",
+          "enum": [
+            "exhumation_purpose",
+            "remains_status",
+            "burial_reference",
+            "surviving_spouse_status",
+            "transport_destination",
+            "destination_grave_reference",
+            "requester_document"
+          ]
+        },
+        "novo_valor": {
+          "type": "string",
+          "description": "Valor do fato, exatamente como o catalogo do Cemiterio Santana define. Valores aceitos por fato — exhumation_purpose: TRANSPORTE, OSSUARIO, CREMACAO, OUTRA; remains_status: SEPULTADO, EXUMADO, DESCONHECIDO; surviving_spouse_status: VIVO, FALECIDO, INEXISTENTE, DESCONHECIDO; transport_destination: OUTRO_CEMITERIO, JAZIGO_FAMILIA, CREMATORIO, OSSUARIO; texto livre (o que o municipe disse): burial_reference, destination_grave_reference, requester_document. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
+          "examples": [
+            "TRANSPORTE",
+            "SEPULTADO",
+            "OUTRO_CEMITERIO",
+            "VIVO"
+          ]
+        }
+      },
+      "identicos": true,
+      "diferencas": {}
+    },
+    "registrar_assunto_fora_de_escopo": {
+      "local": {
+        "descricao": {
+          "type": "string",
+          "description": "O outro assunto, nas palavras do proprio municipe (por exemplo: 'recadastrar o jazigo', 'comprar lapide', 'horario de atendimento'). Nao resuma em categoria: registre o que ele pediu.",
+          "examples": [
+            "recadastrar o jazigo",
+            "comprar uma lapide"
+          ]
+        }
+      },
+      "engine": {
+        "descricao": {
+          "type": "string",
+          "description": "O outro assunto, nas palavras do proprio municipe (por exemplo: 'recadastrar o jazigo', 'comprar lapide', 'horario de atendimento'). Nao resuma em categoria: registre o que ele pediu.",
+          "examples": [
+            "recadastrar o jazigo",
+            "comprar uma lapide"
+          ]
+        }
+      },
+      "identicos": true,
+      "diferencas": {}
+    }
+  }
+}
