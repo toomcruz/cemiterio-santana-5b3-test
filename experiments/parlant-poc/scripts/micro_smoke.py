@@ -19,6 +19,7 @@ guideline e aplicada, que a tool e chamada, que sai uma resposta real e quantos
 """
 
 import asyncio
+import json
 import os
 import signal
 import sys
@@ -45,8 +46,16 @@ from santana_parlant_poc.agent.nlp import (  # noqa: E402
 PORT = int(os.environ.get("MICRO_PORT", "8802"))
 MENSAGEM = "quanto custa a exumação?"
 
-CONTADORES = {"geracoes": 0, "embeddings": 0, "erros_429": 0}
-RASTRO: dict[str, Any] = {"guidelines": [], "tools": [], "resposta": "", "erro": None}
+CONTADORES = {"geracoes": 0, "embeddings": 0, "erros_429": 0, "erros_404": 0}
+RASTRO: dict[str, Any] = {
+    "guidelines": [],
+    "tools": [],
+    "tool_calls": [],
+    "mensagens": [],
+    "resposta": "",
+    "turno_s": -1.0,
+    "erro": None,
+}
 RESULTADO = {"codigo": 1}
 
 
@@ -61,8 +70,11 @@ class GeradorContado(ThrottledGemini[T]):
         try:
             return await super()._do_generate(prompt, hints)  # type: ignore[misc]
         except Exception as error:
-            if "429" in str(error) or "RESOURCE_EXHAUSTED" in str(error):
+            texto = str(error)
+            if "429" in texto or "RESOURCE_EXHAUSTED" in texto:
                 CONTADORES["erros_429"] += 1
+            if "404" in texto or "NOT_FOUND" in texto:
+                CONTADORES["erros_404"] += 1
             raise
 
 
@@ -116,6 +128,41 @@ def marcar_guideline(chave: str):
 
 
 # ------------------------------------------------------------------- execucao
+TEMPO_MAXIMO_DO_TURNO = 240.0
+
+
+async def _esperar_turno(client: httpx.AsyncClient, session_id: str, offset: int) -> bool:
+    """Aguarda a sessao voltar ao estado `ready`, ou seja, o turno terminar.
+
+    O Parlant emite um preambulo ("Compreendo a sua duvida") antes de casar
+    guidelines e chamar tools; encerrar na primeira mensagem perde o turno real.
+    """
+    cursor = offset + 1
+    limite = time.perf_counter() + TEMPO_MAXIMO_DO_TURNO
+
+    while time.perf_counter() < limite:
+        resposta = await client.get(
+            f"/sessions/{session_id}/events",
+            params={"min_offset": cursor, "kinds": "status", "wait_for_data": 60},
+        )
+        if resposta.status_code == 504:  # long-poll sem novidade; tenta de novo
+            continue
+        resposta.raise_for_status()
+
+        for evento in resposta.json():
+            cursor = max(cursor, evento["offset"] + 1)
+            dados = evento.get("data") or {}
+            estado = dados.get("status") if isinstance(dados, dict) else None
+            if estado in ("error", "cancelled"):
+                RASTRO["erro"] = f"turno terminou com status '{estado}'"
+                return False
+            if estado == "ready":
+                return True
+
+    RASTRO["erro"] = "o turno nao chegou ao estado 'ready' dentro do tempo limite"
+    return False
+
+
 async def _conversa(server: p.Server, agent_id: str) -> None:
     base = f"http://127.0.0.1:{PORT}"
     async with httpx.AsyncClient(base_url=base, timeout=180.0) as client:
@@ -127,6 +174,7 @@ async def _conversa(server: p.Server, agent_id: str) -> None:
         sessao.raise_for_status()
         session_id = sessao.json()["id"]
 
+        inicio_turno = time.perf_counter()
         evento = await client.post(
             f"/sessions/{session_id}/events",
             json={"kind": "message", "source": "customer", "message": MENSAGEM},
@@ -134,23 +182,39 @@ async def _conversa(server: p.Server, agent_id: str) -> None:
         evento.raise_for_status()
         offset = evento.json()["offset"]
 
+        concluiu = await _esperar_turno(client, session_id, offset)
+        RASTRO["turno_s"] = time.perf_counter() - inicio_turno
+        if not concluiu:
+            return
+
+        # Turno fechado: agora le tudo o que o agente produziu no caminho.
         eventos = await client.get(
             f"/sessions/{session_id}/events",
-            params={
-                "min_offset": offset + 1,
-                "kinds": "message",
-                "source": "ai_agent",
-                "wait_for_data": 150,
-            },
+            params={"min_offset": offset + 1, "wait_for_data": 0},
         )
-        if eventos.status_code != 200:
-            RASTRO["erro"] = f"sem resposta do agente (HTTP {eventos.status_code})"
-            return
+        eventos.raise_for_status()
 
         for item in eventos.json():
             dados = item.get("data") or {}
-            if isinstance(dados, dict) and dados.get("message"):
-                RASTRO["resposta"] = dados["message"]
+            if not isinstance(dados, dict):
+                continue
+
+            if item["kind"] == "message" and item.get("source") == "ai_agent":
+                if dados.get("message"):
+                    RASTRO["mensagens"].append(dados["message"])
+                    RASTRO["resposta"] = dados["message"]  # a ultima e a final
+
+            elif item["kind"] == "tool":
+                for chamada in dados.get("tool_calls", []):
+                    nome = chamada.get("tool_id", "?")
+                    RASTRO["tools"].append(nome)
+                    RASTRO["tool_calls"].append(
+                        {
+                            "tool": nome,
+                            "argumentos": chamada.get("arguments"),
+                            "retorno": (chamada.get("result") or {}).get("data"),
+                        }
+                    )
 
 
 def _relatorio(inicializacao: float, total: float) -> int:
@@ -158,10 +222,18 @@ def _relatorio(inicializacao: float, total: float) -> int:
     falhas = []
     if not resposta:
         falhas.append("nenhuma resposta real foi gerada")
+    if not RASTRO["guidelines"]:
+        falhas.append("nenhuma guideline foi aplicada")
+    if not RASTRO["tool_calls"]:
+        falhas.append("a tool nao foi chamada")
     if CONTADORES["erros_429"]:
         falhas.append(f"{CONTADORES['erros_429']} erros 429")
+    if CONTADORES["erros_404"]:
+        falhas.append(f"{CONTADORES['erros_404']} erros 404")
     if any(ch.isdigit() for ch in resposta):
         falhas.append("a resposta contem numero (possivel preco inventado)")
+    if RASTRO["erro"]:
+        falhas.append(RASTRO["erro"])
 
     print("\n" + "=" * 72)
     print("MICRO-SMOKE PARLANT + GEMINI")
@@ -169,16 +241,23 @@ def _relatorio(inicializacao: float, total: float) -> int:
     print(f"resultado ................: {'PASS' if not falhas else 'FAIL'}")
     print(f"modelo ...................: {configured_model()}")
     print(f"tempo de inicializacao ...: {inicializacao:.1f}s")
+    print(f"tempo do turno ...........: {RASTRO['turno_s']:.1f}s")
     print(f"tempo total ..............: {total:.1f}s")
     print(f"chamadas de geracao ......: {CONTADORES['geracoes']}")
     print(f"chamadas de embedding ....: {CONTADORES['embeddings']}")
+    print(f"erros 404 ................: {CONTADORES['erros_404']}")
     print(f"erros 429 ................: {CONTADORES['erros_429']}")
-    print(f"guidelines ativadas ......: {sorted(set(RASTRO['guidelines'])) or '-'}")
+    print(f"guidelines aplicadas .....: {sorted(set(RASTRO['guidelines'])) or '-'}")
     print(f"tools chamadas ...........: {sorted(set(RASTRO['tools'])) or '-'}")
+    for chamada in RASTRO["tool_calls"]:
+        print(f"  tool .................: {chamada['tool']}")
+        print(f"  argumentos ...........: {json.dumps(chamada['argumentos'], ensure_ascii=False)}")
+        print(f"  retorno ..............: {json.dumps(chamada['retorno'], ensure_ascii=False)}")
     print(f"mensagem enviada .........: {MENSAGEM}")
-    print(f"resposta do agente .......: {resposta or '(nenhuma)'}")
-    if RASTRO["erro"]:
-        print(f"erro .....................: {RASTRO['erro']}")
+    print(f"mensagens do agente ......: {len(RASTRO['mensagens'])}")
+    for indice, mensagem in enumerate(RASTRO["mensagens"], start=1):
+        print(f"  [{indice}] {mensagem}")
+    print(f"resposta final ...........: {resposta or '(nenhuma)'}")
     if falhas:
         print("falhas ...................: " + "; ".join(falhas))
     print("=" * 72)
