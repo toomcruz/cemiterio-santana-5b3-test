@@ -1,5 +1,7 @@
 name: Parlant POC completa + Gemini real
 
+# So roda por disparo explicito (workflow_dispatch): um push que toque estes
+# arquivos rodaria as 5 conversas e consumiria a cota sem ninguem ter pedido.
 # Sobe a POC COMPLETA (14 guidelines, 10 relationships, journey de 5 estados,
 # 5 tools, 7 canned responses, 8 termos) contra o Gemini real e roda 5 conversas,
 # uma por sessao. Para em qualquer 404/429 e no primeiro gate de autoridade
@@ -13,15 +15,6 @@ on:
         required: false
         default: ""
         type: string
-  push:
-    branches:
-      - "lab/**"
-      - "claude/parlant-poc-**"
-    paths:
-      - "experiments/parlant-poc/scripts/full_poc_smoke.py"
-      - "experiments/parlant-poc/santana_parlant_poc/turnos.py"
-      - "experiments/parlant-poc/santana_parlant_poc/agent/nlp.py"
-      - ".github/workflows/parlant-full-poc-gemini.yml"
 
 permissions:
   contents: read
