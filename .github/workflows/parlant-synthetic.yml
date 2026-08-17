@@ -1,0 +1,81 @@
+name: Parlant synthetic validation (sem chave)
+
+# Validacao do Parlant real com provedor NLP sintetico.
+# Nao usa secret, nao usa rede externa (o NetworkGuard bloqueia e conta).
+# Nao toca em main, migrations, Supabase, n8n, W-API, WhatsApp nem Vercel.
+
+on:
+  push:
+    branches:
+      - "lab/**"
+      - "claude/parlant-poc-**"
+  workflow_dispatch:
+    inputs:
+      conversas:
+        description: "Quantidade de conversas da bateria"
+        required: false
+        default: "300"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: parlant-synthetic-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  synthetic:
+    name: Bateria sintetica (Parlant real, sem LLM externo)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: experiments/parlant-poc
+    env:
+      SYNTHETIC_CONVERSATIONS: ${{ inputs.conversas || '300' }}
+      SYNTHETIC_TURN_TIMEOUT: "60"
+      SYNTHETIC_PORT: "8850"
+      SYNTHETIC_CONCURRENCY: "8"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: |
+          set -Eeuo pipefail
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Confirmar que nenhum secret esta em jogo
+        run: |
+          set -Eeuo pipefail
+          if [ -n "${GEMINI_API_KEY-}" ]; then
+            echo "GEMINI_API_KEY definido neste job: a validacao sintetica nao usa chave."
+            exit 1
+          fi
+          echo "Nenhuma chave exposta a este job."
+
+      - name: Testes unitarios (guarda de rede, schemas, corpus, cenarios)
+        run: pytest -q
+
+      - name: Bateria sintetica + prova de zero rede + relatorios
+        run: python scripts/run_synthetic_validation.py
+
+      - name: Determinismo (segunda execucao com a mesma seed)
+        run: |
+          set -Eeuo pipefail
+          SYNTHETIC_PORT=8851 python scripts/check_determinism.py
+
+      - name: Publicar relatorios
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-validation-report
+          path: |
+            experiments/parlant-poc/synthetic-validation-report.json
+            experiments/parlant-poc/SYNTHETIC_VALIDATION_REPORT.md
+            experiments/parlant-poc/synthetic-determinism.json

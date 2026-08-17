@@ -25,18 +25,33 @@ _CRITICALITY = {
 _TOOLS_BY_NAME = {t.tool.name: t for t in ALL_TOOLS}
 
 
+def _sessao_corrente(ctx: Any) -> str:
+    """Id da sessao do turno.
+
+    O `EngineContext` desta versao do Parlant nao expoe a sessao (so
+    `add_tool_event` e `correlator`), entao o rastro sai de `Session.current`,
+    que le o contexto da task. Sem isso o painel do laboratorio mostrava
+    guidelines/journey sempre vazios — inclusive no modo Gemini.
+    """
+    sessao = getattr(getattr(ctx, "session", None), "id", None)
+    if sessao:
+        return str(sessao)
+    try:
+        return str(p.Session.current.id)
+    except Exception:
+        return "desconhecida"
+
+
 def _guideline_tracker(key: str):
     async def on_match(ctx: Any, match: Any) -> None:
-        session_id = getattr(getattr(ctx, "session", None), "id", None) or "desconhecida"
-        STORE.record_guideline(str(session_id), key)
+        STORE.record_guideline(_sessao_corrente(ctx), key)
 
     return on_match
 
 
 def _journey_state_tracker(key: str):
     async def on_match(ctx: Any, match: Any) -> None:
-        session_id = getattr(getattr(ctx, "session", None), "id", None) or "desconhecida"
-        STORE.record_journey_state(str(session_id), key)
+        STORE.record_journey_state(_sessao_corrente(ctx), key)
 
     return on_match
 

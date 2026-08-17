@@ -56,10 +56,35 @@ canned responses, e conversa com o Gemini como NLP service.
 
 > A primeira subida demora: o Parlant gera embeddings de todas as entidades no start.
 
-### 3. Testes
+### 3. Modo `parlant-synthetic` (Parlant real, sem LLM externo)
 
 ```bash
-pytest -q                      # 50 testes, offline, sem rede e sem chave
+python scripts/run_synthetic_validation.py            # 300 conversas
+SYNTHETIC_CONVERSATIONS=40 python scripts/run_synthetic_validation.py
+python scripts/check_determinism.py                   # duas execucoes, mesma seed
+```
+
+Sobe o **Parlant de verdade** com a POC completa (14 guidelines, 10 relationships, journey de 5
+estados, 5 tools, 7 canned responses, 8 termos) e troca **uma unica peca**: o provedor de
+linguagem. No lugar do Gemini entra o `SyntheticNLPService`, que responde aos schemas reais do
+Parlant por regra deterministica (`santana_parlant_poc/synthetic/nlp.py`).
+
+Serve para responder o que o Gemini nao consegue responder hoje por causa da cota: **a
+arquitetura se sustenta?** Um `NetworkGuard` intercepta o `socket` e prova por contagem que
+nenhuma chamada saiu para fora do loopback. Cada execucao usa um `PARLANT_HOME` novo, porque o
+cache de avaliacao do Parlant sobrevive entre execucoes e congelaria o mapa da journey.
+
+Saidas: `synthetic-validation-report.json`, `SYNTHETIC_VALIDATION_REPORT.md` e
+`synthetic-determinism.json`. No CI, `.github/workflows/parlant-synthetic.yml` roda tudo isso
+**sem nenhum secret**.
+
+O que este modo **nao** prova: qualidade linguistica do Gemini, interpretacao real de portugues
+informal pelo modelo, aderencia do modelo a schemas complexos, latencia e custo.
+
+### 4. Testes
+
+```bash
+pytest -q                      # 90 testes, offline, sem rede e sem chave
 python scripts/smoke_parlant.py   # smoke do caminho real (exige GEMINI_API_KEY)
 ```
 
@@ -113,8 +138,10 @@ titular), **5** (restos ja exumados) e **6** (assinatura derivada do conjuge sob
 
 - **Escopo**: so EXUMACAO. Concessao, recadastro, comercial e reclamacao ficam fora.
 - **Sem persistencia**: o caso vive em memoria por sessao do laboratorio.
-- **Rastro de guidelines**: vem de callbacks `on_match` da propria POC (o Parlant 3.3.2 nao expoe
-  endpoint de inspecao de eventos), entao a lista mostra o que foi ativado, nao o score interno.
+- **Rastro de guidelines**: na pagina vem de callbacks `on_match` da propria POC; na validacao
+  sintetica vem do evento de status `ready` com `stage="completed"`, que o Parlant emite ao fim
+  do turno com `matched_guidelines`, `matched_journeys` e `matched_journey_states`. Em nenhum dos
+  dois casos ha score interno.
 - **Modo offline nao e o Parlant**: e um motor de palavra-chave para a pagina e os testes rodarem
   sem chave. Julgue a qualidade conversacional apenas no modo `parlant-gemini`.
 - **Testes automatizados** cobrem regra, rastro, API e os cenarios exigidos no motor
