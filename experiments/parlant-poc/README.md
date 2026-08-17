@@ -124,9 +124,20 @@ titular), **5** (restos ja exumados) e **6** (assinatura derivada do conjuge sob
   como modelo pequeno). Com a chave desta POC os dois respondem
   `404 ... no longer available to new users`. Por isso `agent/nlp.py` fixa um modelo unico —
   hoje `gemini-3.7-flash` — ajustavel por `POC_GEMINI_MODEL`, e nunca usa `pro`.
-- **Free tier do Gemini e a principal limitacao operacional.** O Parlant avalia todas as
-  entidades (guidelines e journey) no start, em paralelo, o que estoura o limite de requests por
-  minuto. `agent/nlp.py` espaca as chamadas (`POC_GEMINI_RPM`) e respeita o `retryDelay` do
-  `429`, mas a consequencia e que **a primeira subida leva varios minutos**. Medido no CI com
-  `gemini-2.5-flash` (5 req/min): o start nao terminou em 45 minutos. Com chave paga, use
-  `POC_GEMINI_RPM=60` e o start volta a ser rapido.
+- **Free tier do Gemini e a limitacao que ficou aberta.** O Parlant avalia todas as entidades
+  (14 guidelines + journey) no start, em paralelo. `agent/nlp.py` espaca as chamadas
+  (`POC_GEMINI_RPM`) e respeita o `retryDelay` do `429`, mas nas execucoes de CI o start nao
+  concluiu:
+
+  | Modelo | Limite informado pela API | Resultado |
+  | ------ | ------------------------- | --------- |
+  | `gemini-2.5-pro` | — | `404 no longer available to new users` |
+  | `gemini-2.5-flash-lite` | — | `404 no longer available to new users` |
+  | `gemini-2.5-flash` | 5 req/min | start nao terminou em 45 min (46 x `429`) |
+  | `gemini-3.7-flash` | 20 req/min | `429` persistente mesmo com o throttle em 10 req/min |
+
+  O `429` continuar aparecendo com folga sobre o limite por minuto indica **quota diaria da chave
+  esgotada** pelas tentativas anteriores. Ou seja: a integracao esta ligada (autenticacao ok,
+  modelo resolvido, tools registradas), o que falta e cota. Para validar o caminho real:
+  rode localmente com a chave em outro dia/projeto (`POC_GEMINI_RPM=18 python run_lab.py`) ou
+  use uma chave paga (`POC_GEMINI_RPM=60`), quando o start passa a levar cerca de um minuto.
