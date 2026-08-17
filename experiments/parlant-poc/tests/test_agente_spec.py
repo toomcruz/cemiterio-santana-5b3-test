@@ -152,7 +152,8 @@ def test_nlp_service_da_poc_nao_usa_gemini_pro(monkeypatch):
 
     assert set(nlp.MODEL_BY_SIZE) == set(nlp.ModelSize)
     monkeypatch.delenv("POC_GEMINI_MODEL", raising=False)
-    assert nlp.configured_model() == "gemini-2.5-flash"
+    assert nlp.configured_model() == "gemini-3.7-flash"
+    assert "pro" not in nlp.configured_model()
 
     monkeypatch.setenv("POC_GEMINI_MODEL", "gemini-2.5-pro")
     with pytest.raises(ValueError):
@@ -164,6 +165,7 @@ def test_rpm_do_free_tier_pode_ser_sobrescrito(monkeypatch):
 
     monkeypatch.delenv("POC_GEMINI_RPM", raising=False)
     assert nlp.configured_rpm("gemini-2.5-flash") == 5
+    assert nlp.configured_rpm("gemini-3.7-flash") == 10
     monkeypatch.setenv("POC_GEMINI_RPM", "60")
     assert nlp.configured_rpm("gemini-2.5-flash") == 60
 

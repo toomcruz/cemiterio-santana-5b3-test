@@ -120,13 +120,13 @@ titular), **5** (restos ja exumados) e **6** (assinatura derivada do conjuge sob
 - **Testes automatizados** cobrem regra, rastro, API e os cenarios exigidos no motor
   deterministico. A qualidade das frases do Gemini e avaliada manualmente e pelo smoke do CI.
 - **Extracao offline de nome do falecido** e heuristica simples (parentesco + primeiro nome).
-- **Modelo Gemini**: a chave da POC so tem acesso a `gemini-2.5-flash`. Tanto `gemini-2.5-pro`
-  (usado pelo adaptador padrao do Parlant em tarefas grandes) quanto `gemini-2.5-flash-lite`
-  respondem `404 ... no longer available to new users`. Por isso `agent/nlp.py` fixa um modelo
-  unico (`POC_GEMINI_MODEL` troca) e nunca usa `pro`.
-- **Free tier do Gemini**: sao 5 requests/minuto no `gemini-2.5-flash`, e o Parlant avalia todas
-  as entidades no start, em paralelo. `agent/nlp.py` espaca as chamadas (`POC_GEMINI_RPM` ajusta)
-  e espera o `retryDelay` em caso de `429`. Consequencia pratica: **a primeira subida leva
-  varios minutos** e o laboratorio fica lento entre turnos. Com chave paga, suba o RPM
-  (`POC_GEMINI_RPM=60`) e o comportamento volta ao normal — essa e a principal limitacao
-  operacional encontrada.
+- **Modelo Gemini**: o adaptador padrao do Parlant usa `gemini-2.5-pro` (e `gemini-2.5-flash-lite`
+  como modelo pequeno). Com a chave desta POC os dois respondem
+  `404 ... no longer available to new users`. Por isso `agent/nlp.py` fixa um modelo unico —
+  hoje `gemini-3.7-flash` — ajustavel por `POC_GEMINI_MODEL`, e nunca usa `pro`.
+- **Free tier do Gemini e a principal limitacao operacional.** O Parlant avalia todas as
+  entidades (guidelines e journey) no start, em paralelo, o que estoura o limite de requests por
+  minuto. `agent/nlp.py` espaca as chamadas (`POC_GEMINI_RPM`) e respeita o `retryDelay` do
+  `429`, mas a consequencia e que **a primeira subida leva varios minutos**. Medido no CI com
+  `gemini-2.5-flash` (5 req/min): o start nao terminou em 45 minutos. Com chave paga, use
+  `POC_GEMINI_RPM=60` e o start volta a ser rapido.

@@ -1,16 +1,17 @@
 """NLP service da POC: um unico modelo Gemini, com limite de requests por minuto.
 
-Tres ajustes em relacao ao adaptador padrao do Parlant, todos observados no CI
+Quatro ajustes em relacao ao adaptador padrao do Parlant, todos observados no CI
 com a chave desta POC (`PARLANT`):
 
 1. **Sem `gemini-2.5-pro`** — a API responde
    `404 ... no longer available to new users` para chaves novas.
-2. **Sem `gemini-2.5-flash-lite`** — mesmo 404 nessa chave. Sobra
-   `gemini-2.5-flash`, que e o padrao aqui (`POC_GEMINI_MODEL` troca).
-3. **Throttle proprio** — a chave esta no free tier (5 requests/minuto no
-   `gemini-2.5-flash`) e o Parlant avalia todas as entidades em paralelo no
-   start, estourando o limite (`429 RESOURCE_EXHAUSTED`). O limitador espaca as
-   chamadas e respeita o `retryDelay` devolvido pela API.
+2. **Sem `gemini-2.5-flash-lite`** — mesmo 404 nessa chave.
+3. **Modelo unico e recente.** O padrao e `gemini-3.7-flash`
+   (`POC_GEMINI_MODEL` troca). O `gemini-2.5-flash` funciona, mas o free tier
+   dele e de 5 requests/minuto, o que torna o start do Parlant inviavel.
+4. **Throttle proprio** — o Parlant avalia todas as entidades em paralelo no
+   start e estoura o limite do free tier (`429 RESOURCE_EXHAUSTED`). O
+   limitador espaca as chamadas e respeita o `retryDelay` devolvido pela API.
 
 Nada disso muda a autoridade das regras: continua toda fora do LLM.
 """
@@ -35,12 +36,14 @@ from parlant.core.nlp.generation import SchematicGenerationResult
 from parlant.core.nlp.service import ModelSize, NLPService, SchematicGeneratorHints
 from parlant.core.tracer import Tracer
 
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-3.7-flash"
 
 # Requests por minuto do free tier, por modelo.
 DEFAULT_RPM_BY_MODEL = {
     "gemini-2.5-flash": 5,
-    "gemini-2.5-flash-lite": 15,
+    "gemini-3.7-flash": 10,
+    "gemini-3.6-flash": 10,
+    "gemini-3.5-flash": 10,
 }
 DEFAULT_RPM = 5
 MAX_RETRIES_ON_429 = 6
@@ -134,7 +137,9 @@ class ThrottledGemini(GeminiSchematicGenerator[T]):
         hints: Mapping[str, Any] = {},
     ) -> SchematicGenerationResult[T]:
         limiter = await limiter_for(self.model_name)
-        merged = {"thinking_config": {"thinking_budget": 0}, **hints}
+        # `thinking_budget` so existe na familia 2.5; nos modelos 3.x a chamada falha.
+        base = {"thinking_config": {"thinking_budget": 0}} if self.model_name.startswith("gemini-2.5") else {}
+        merged = {**base, **hints}
         last_error: BaseException | None = None
 
         for _ in range(MAX_RETRIES_ON_429):

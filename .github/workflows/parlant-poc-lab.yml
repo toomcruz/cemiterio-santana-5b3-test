@@ -94,6 +94,6 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.PARLANT }}
           LAB_PORT: "8801"
           # Free tier: o throttle da POC espaca as chamadas (ver agent/nlp.py).
-          # Free tier: 5 req/min no gemini-2.5-flash (throttle em agent/nlp.py).
-          POC_GEMINI_RPM: "5"
+          # Free tier: throttle em agent/nlp.py (10 req/min no gemini-3.x flash).
+          POC_GEMINI_RPM: "10"
         run: python scripts/smoke_parlant.py
