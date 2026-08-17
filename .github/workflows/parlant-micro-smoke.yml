@@ -6,6 +6,12 @@ name: Parlant micro-smoke
 
 on:
   workflow_dispatch:
+    inputs:
+      conversas_extras:
+        description: "Rodar as 10 conversas variadas se a primeira passar (1/0)"
+        required: false
+        default: "1"
+        type: string
   push:
     branches:
       - "lab/**"
@@ -62,7 +68,7 @@ jobs:
           fi
           python -c "import json;d=json.load(open('/tmp/preflight.json'));print('resposta:', d['candidates'][0]['content']['parts'][0].get('text','').strip()[:80])"
 
-      - name: Ultra-micro-smoke (1 guideline, 1 tool, 1 mensagem)
+      - name: Micro-smoke real — 1 conversa e, se passar, mais 10 variadas
         env:
           # A chave da POC entra na aplicacao apenas com este nome.
           GEMINI_API_KEY: ${{ secrets.PARLANT }}
@@ -71,4 +77,7 @@ jobs:
           # familia 2.5 (pro/flash/flash-lite): 404 para chaves novas.
           # Resta a familia 3.x lite, com cota diaria maior.
           POC_GEMINI_MODEL: "gemini-3.1-flash-lite"
+          # As 10 conversas extras so rodam se a primeira passar, no mesmo
+          # servidor: reinicializar custaria a indexacao inteira de novo.
+          MICRO_EXTRA: ${{ inputs.conversas_extras || '1' }}
         run: python scripts/micro_smoke.py
