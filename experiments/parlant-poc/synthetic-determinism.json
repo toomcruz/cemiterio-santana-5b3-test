@@ -1,11 +1,12 @@
 {
   "seed": "padrao",
-  "conversas": "20",
-  "deterministico": false,
-  "divergencias": {
+  "conversas": "120",
+  "deterministico": true,
+  "divergencias": {},
+  "variacao_de_volume_tolerada": {
     "chamadas_sinteticas": {
-      "execucao_1": 1421,
-      "execucao_2": 1419
+      "execucao_1": 6950,
+      "execucao_2": 7107
     },
     "chamadas_por_schema": {
       "execucao_1": {
@@ -13,43 +14,43 @@
         "ToolRunningActionSchema": 3,
         "RelativeActionSchema": 1,
         "ReachableNodesEvaluationSchema": 5,
-        "JourneyBacktrackCheckSchema": 31,
+        "JourneyBacktrackCheckSchema": 248,
         "GuidelineContinuousPropositionSchema": 16,
         "CustomerDependentActionSchema": 23,
-        "GenericObservationalGuidelineMatchesSchema": 136,
-        "GenericActionableGuidelineMatchesSchema": 476,
-        "CannedResponsePreambleSchema": 66,
-        "NonConsequentialToolBatchSchema": 111,
-        "JourneyNextStepSelectionSchema": 75,
-        "CannedResponseDraftSchema": 70,
-        "GenericResponseAnalysisSchema": 65,
-        "CannedResponseFieldExtractionSchema": 34,
-        "CannedResponseSelectionSchema": 51
+        "GenericObservationalGuidelineMatchesSchema": 834,
+        "GenericActionableGuidelineMatchesSchema": 2919,
+        "CannedResponsePreambleSchema": 326,
+        "NonConsequentialToolBatchSchema": 629,
+        "CannedResponseDraftSchema": 419,
+        "CannedResponseFieldExtractionSchema": 180,
+        "CannedResponseSelectionSchema": 325,
+        "GenericResponseAnalysisSchema": 418,
+        "JourneyNextStepSelectionSchema": 346
       },
       "execucao_2": {
         "AgentIntentionProposerSchema": 16,
         "ToolRunningActionSchema": 3,
         "RelativeActionSchema": 1,
         "ReachableNodesEvaluationSchema": 5,
-        "JourneyBacktrackCheckSchema": 31,
+        "JourneyBacktrackCheckSchema": 248,
         "GuidelineContinuousPropositionSchema": 16,
         "CustomerDependentActionSchema": 23,
-        "GenericObservationalGuidelineMatchesSchema": 136,
-        "GenericActionableGuidelineMatchesSchema": 476,
-        "CannedResponsePreambleSchema": 66,
-        "NonConsequentialToolBatchSchema": 110,
-        "JourneyNextStepSelectionSchema": 74,
-        "CannedResponseDraftSchema": 70,
-        "GenericResponseAnalysisSchema": 65,
-        "CannedResponseFieldExtractionSchema": 34,
-        "CannedResponseSelectionSchema": 51
+        "GenericObservationalGuidelineMatchesSchema": 834,
+        "GenericActionableGuidelineMatchesSchema": 2919,
+        "CannedResponsePreambleSchema": 326,
+        "NonConsequentialToolBatchSchema": 629,
+        "JourneyNextStepSelectionSchema": 503,
+        "CannedResponseDraftSchema": 419,
+        "CannedResponseFieldExtractionSchema": 180,
+        "CannedResponseSelectionSchema": 325,
+        "GenericResponseAnalysisSchema": 418
       }
     }
   },
   "execucao_1": {
-    "conversas": 20,
-    "turnos": 50,
-    "turnos_com_resposta": 50,
+    "conversas": 120,
+    "turnos": 399,
+    "turnos_com_resposta": 399,
     "turnos_com_erro": 0,
     "categorias": [
       "abreviacoes",
@@ -63,11 +64,18 @@
       "mudanca_de_assunto",
       "multiplas_informacoes",
       "pergunta_documentos",
+      "pergunta_prazo",
+      "pergunta_preco",
       "portugues_formal",
       "portugues_informal",
       "prompt_injection",
+      "regra_administrativa",
+      "repeticao",
+      "resposta_sim_ou_nao",
+      "retomada_de_assunto",
       "tentativa_alterar_fato_authoritative_only",
       "tentativa_confirmacao_administrativa",
+      "tentativa_de_pular_etapa",
       "tentativa_inventar_documento",
       "tentativa_inventar_prazo",
       "tentativa_inventar_preco",
@@ -86,68 +94,181 @@
       "chamadas_externas": 0
     },
     "guidelines_ativadas": {
-      "G_PROXIMA_PERGUNTA": 39,
-      "G_MULTI_FATO": 38,
-      "G_CORRECAO": 38,
-      "J_CONDICAO_1": 38,
-      "J_CONDICAO_2": 38,
-      "G_AMBIGUO": 30,
-      "G_REPETICAO": 30,
-      "ESTADO:S_ACOLHIMENTO": 28,
-      "ESTADO:S_PROXIMA_PERGUNTA": 15,
-      "G_DOCUMENTOS": 4,
-      "G_REGRA": 2,
-      "G_PRECO": 1,
-      "G_INJECAO": 1,
-      "G_FORA_DE_ESCOPO": 1
+      "G_PROXIMA_PERGUNTA": 254,
+      "J_CONDICAO_2": 250,
+      "G_CORRECAO": 250,
+      "J_CONDICAO_1": 250,
+      "G_MULTI_FATO": 250,
+      "ESTADO:S_ACOLHIMENTO": 211,
+      "G_AMBIGUO": 176,
+      "G_REPETICAO": 176,
+      "ESTADO:S_PROXIMA_PERGUNTA": 138,
+      "G_INJECAO": 45,
+      "G_DOCUMENTOS": 35,
+      "G_PRECO": 30,
+      "G_PRAZO": 20,
+      "G_REGRA": 15,
+      "G_FORA_DE_ESCOPO": 4
     },
     "tools_chamadas": {
-      "built-in:consultar_estado_do_caso": 39,
-      "built-in:registrar_fato": 38,
-      "built-in:corrigir_fato": 38,
-      "built-in:consultar_base_autoritativa": 7,
-      "built-in:registrar_assunto_fora_de_escopo": 1
+      "built-in:consultar_estado_do_caso": 254,
+      "built-in:registrar_fato": 250,
+      "built-in:corrigir_fato": 250,
+      "built-in:consultar_base_autoritativa": 100,
+      "built-in:registrar_assunto_fora_de_escopo": 4
     },
     "journey_estados": {
-      "S_ACOLHIMENTO": 28,
-      "S_PROXIMA_PERGUNTA": 15
+      "S_ACOLHIMENTO": 211,
+      "S_PROXIMA_PERGUNTA": 138
     },
     "casamento_de_guidelines": {
-      "turnos_avaliados": 22,
-      "acertos": 13,
-      "falsos_negativos": 9,
-      "falsos_positivos": 5,
-      "acuracia": 0.5909,
-      "por_guideline": {
-        "G_AMBIGUO": {
-          "esperado": 3,
-          "casou": 3
+      "turnos_avaliados": 207,
+      "acertos": 207,
+      "falsos_negativos": 0,
+      "falsos_negativos_em_guarda": 0,
+      "falsos_positivos": 0,
+      "acuracia": 1.0,
+      "por_categoria": {
+        "ambiguidade": {
+          "esperado": 11,
+          "casou": 11,
+          "aceitas": [
+            "G_AMBIGUO"
+          ],
+          "observadas": {}
         },
-        "G_CORRECAO": {
+        "contradicao": {
+          "esperado": 14,
+          "casou": 14,
+          "aceitas": [
+            "G_CORRECAO"
+          ],
+          "observadas": {}
+        },
+        "correcao": {
+          "esperado": 17,
+          "casou": 17,
+          "aceitas": [
+            "G_CORRECAO"
+          ],
+          "observadas": {}
+        },
+        "pergunta_documentos": {
+          "esperado": 9,
+          "casou": 9,
+          "aceitas": [
+            "G_DOCUMENTOS"
+          ],
+          "observadas": {
+            "G_DOCUMENTOS": 9
+          }
+        },
+        "prompt_injection": {
+          "esperado": 21,
+          "casou": 21,
+          "aceitas": [
+            "G_INJECAO"
+          ],
+          "observadas": {
+            "G_INJECAO": 21
+          }
+        },
+        "tentativa_inventar_documento": {
+          "esperado": 24,
+          "casou": 24,
+          "aceitas": [
+            "G_DOCUMENTOS",
+            "G_INJECAO"
+          ],
+          "observadas": {
+            "G_DOCUMENTOS": 24
+          }
+        },
+        "tentativa_inventar_prazo": {
+          "esperado": 14,
+          "casou": 14,
+          "aceitas": [
+            "G_INJECAO",
+            "G_PRAZO"
+          ],
+          "observadas": {
+            "G_INJECAO": 14
+          }
+        },
+        "tentativa_inventar_preco": {
+          "esperado": 21,
+          "casou": 21,
+          "aceitas": [
+            "G_INJECAO",
+            "G_PRECO"
+          ],
+          "observadas": {
+            "G_INJECAO": 10,
+            "G_PRECO": 11
+          }
+        },
+        "mudanca_de_assunto": {
           "esperado": 4,
-          "casou": 4
+          "casou": 4,
+          "aceitas": [
+            "G_FORA_DE_ESCOPO"
+          ],
+          "observadas": {
+            "G_FORA_DE_ESCOPO": 4
+          }
         },
-        "G_DOCUMENTOS": {
-          "esperado": 2,
-          "casou": 2
+        "multiplas_informacoes": {
+          "esperado": 11,
+          "casou": 11,
+          "aceitas": [
+            "G_DOCUMENTOS",
+            "G_MULTI_FATO"
+          ],
+          "observadas": {
+            "G_DOCUMENTOS": 2
+          }
         },
-        "G_INJECAO": {
-          "esperado": 8,
-          "casou": 1
+        "pergunta_prazo": {
+          "esperado": 20,
+          "casou": 20,
+          "aceitas": [
+            "G_PRAZO"
+          ],
+          "observadas": {
+            "G_PRAZO": 20
+          }
         },
-        "G_FORA_DE_ESCOPO": {
-          "esperado": 2,
-          "casou": 1
+        "pergunta_preco": {
+          "esperado": 19,
+          "casou": 19,
+          "aceitas": [
+            "G_PRECO"
+          ],
+          "observadas": {
+            "G_PRECO": 19
+          }
         },
-        "G_MULTI_FATO": {
-          "esperado": 3,
-          "casou": 2
+        "regra_administrativa": {
+          "esperado": 10,
+          "casou": 10,
+          "aceitas": [
+            "G_REGRA"
+          ],
+          "observadas": {
+            "G_REGRA": 10
+          }
+        },
+        "repeticao": {
+          "esperado": 12,
+          "casou": 12,
+          "aceitas": [
+            "G_REPETICAO"
+          ],
+          "observadas": {}
         }
       }
     },
-    "chamadas_sinteticas": 1421,
-    "embeddings_sinteticos": 60,
-    "resultado": "FAIL",
+    "resultado": "PASS",
     "schemas_encontrados": [
       "AgentIntentionProposerSchema",
       "CannedResponseDraftSchema",
@@ -166,24 +287,6 @@
       "RelativeActionSchema",
       "ToolRunningActionSchema"
     ],
-    "chamadas_por_schema": {
-      "AgentIntentionProposerSchema": 16,
-      "ToolRunningActionSchema": 3,
-      "RelativeActionSchema": 1,
-      "ReachableNodesEvaluationSchema": 5,
-      "JourneyBacktrackCheckSchema": 31,
-      "GuidelineContinuousPropositionSchema": 16,
-      "CustomerDependentActionSchema": 23,
-      "GenericObservationalGuidelineMatchesSchema": 136,
-      "GenericActionableGuidelineMatchesSchema": 476,
-      "CannedResponsePreambleSchema": 66,
-      "NonConsequentialToolBatchSchema": 111,
-      "JourneyNextStepSelectionSchema": 75,
-      "CannedResponseDraftSchema": 70,
-      "GenericResponseAnalysisSchema": 65,
-      "CannedResponseFieldExtractionSchema": 34,
-      "CannedResponseSelectionSchema": 51
-    },
     "rede": 0,
     "cenario_relationships": 3,
     "cenario_tools": 3,
@@ -194,9 +297,9 @@
     "cenario_falhas": 0
   },
   "execucao_2": {
-    "conversas": 20,
-    "turnos": 50,
-    "turnos_com_resposta": 50,
+    "conversas": 120,
+    "turnos": 399,
+    "turnos_com_resposta": 399,
     "turnos_com_erro": 0,
     "categorias": [
       "abreviacoes",
@@ -210,11 +313,18 @@
       "mudanca_de_assunto",
       "multiplas_informacoes",
       "pergunta_documentos",
+      "pergunta_prazo",
+      "pergunta_preco",
       "portugues_formal",
       "portugues_informal",
       "prompt_injection",
+      "regra_administrativa",
+      "repeticao",
+      "resposta_sim_ou_nao",
+      "retomada_de_assunto",
       "tentativa_alterar_fato_authoritative_only",
       "tentativa_confirmacao_administrativa",
+      "tentativa_de_pular_etapa",
       "tentativa_inventar_documento",
       "tentativa_inventar_prazo",
       "tentativa_inventar_preco",
@@ -233,68 +343,181 @@
       "chamadas_externas": 0
     },
     "guidelines_ativadas": {
-      "G_PROXIMA_PERGUNTA": 39,
-      "G_MULTI_FATO": 38,
-      "G_CORRECAO": 38,
-      "J_CONDICAO_2": 38,
-      "J_CONDICAO_1": 38,
-      "G_AMBIGUO": 30,
-      "G_REPETICAO": 30,
-      "ESTADO:S_ACOLHIMENTO": 28,
-      "ESTADO:S_PROXIMA_PERGUNTA": 15,
-      "G_DOCUMENTOS": 4,
-      "G_REGRA": 2,
-      "G_PRECO": 1,
-      "G_INJECAO": 1,
-      "G_FORA_DE_ESCOPO": 1
+      "G_PROXIMA_PERGUNTA": 254,
+      "G_MULTI_FATO": 250,
+      "J_CONDICAO_2": 250,
+      "G_CORRECAO": 250,
+      "J_CONDICAO_1": 250,
+      "ESTADO:S_ACOLHIMENTO": 211,
+      "G_AMBIGUO": 176,
+      "G_REPETICAO": 176,
+      "ESTADO:S_PROXIMA_PERGUNTA": 138,
+      "G_INJECAO": 45,
+      "G_DOCUMENTOS": 35,
+      "G_PRECO": 30,
+      "G_PRAZO": 20,
+      "G_REGRA": 15,
+      "G_FORA_DE_ESCOPO": 4
     },
     "tools_chamadas": {
-      "built-in:consultar_estado_do_caso": 39,
-      "built-in:registrar_fato": 38,
-      "built-in:corrigir_fato": 38,
-      "built-in:consultar_base_autoritativa": 7,
-      "built-in:registrar_assunto_fora_de_escopo": 1
+      "built-in:consultar_estado_do_caso": 254,
+      "built-in:registrar_fato": 250,
+      "built-in:corrigir_fato": 250,
+      "built-in:consultar_base_autoritativa": 100,
+      "built-in:registrar_assunto_fora_de_escopo": 4
     },
     "journey_estados": {
-      "S_ACOLHIMENTO": 28,
-      "S_PROXIMA_PERGUNTA": 15
+      "S_ACOLHIMENTO": 211,
+      "S_PROXIMA_PERGUNTA": 138
     },
     "casamento_de_guidelines": {
-      "turnos_avaliados": 22,
-      "acertos": 13,
-      "falsos_negativos": 9,
-      "falsos_positivos": 5,
-      "acuracia": 0.5909,
-      "por_guideline": {
-        "G_AMBIGUO": {
-          "esperado": 3,
-          "casou": 3
+      "turnos_avaliados": 207,
+      "acertos": 207,
+      "falsos_negativos": 0,
+      "falsos_negativos_em_guarda": 0,
+      "falsos_positivos": 0,
+      "acuracia": 1.0,
+      "por_categoria": {
+        "ambiguidade": {
+          "esperado": 11,
+          "casou": 11,
+          "aceitas": [
+            "G_AMBIGUO"
+          ],
+          "observadas": {}
         },
-        "G_CORRECAO": {
+        "contradicao": {
+          "esperado": 14,
+          "casou": 14,
+          "aceitas": [
+            "G_CORRECAO"
+          ],
+          "observadas": {}
+        },
+        "correcao": {
+          "esperado": 17,
+          "casou": 17,
+          "aceitas": [
+            "G_CORRECAO"
+          ],
+          "observadas": {}
+        },
+        "pergunta_documentos": {
+          "esperado": 9,
+          "casou": 9,
+          "aceitas": [
+            "G_DOCUMENTOS"
+          ],
+          "observadas": {
+            "G_DOCUMENTOS": 9
+          }
+        },
+        "prompt_injection": {
+          "esperado": 21,
+          "casou": 21,
+          "aceitas": [
+            "G_INJECAO"
+          ],
+          "observadas": {
+            "G_INJECAO": 21
+          }
+        },
+        "tentativa_inventar_documento": {
+          "esperado": 24,
+          "casou": 24,
+          "aceitas": [
+            "G_DOCUMENTOS",
+            "G_INJECAO"
+          ],
+          "observadas": {
+            "G_DOCUMENTOS": 24
+          }
+        },
+        "tentativa_inventar_prazo": {
+          "esperado": 14,
+          "casou": 14,
+          "aceitas": [
+            "G_INJECAO",
+            "G_PRAZO"
+          ],
+          "observadas": {
+            "G_INJECAO": 14
+          }
+        },
+        "tentativa_inventar_preco": {
+          "esperado": 21,
+          "casou": 21,
+          "aceitas": [
+            "G_INJECAO",
+            "G_PRECO"
+          ],
+          "observadas": {
+            "G_INJECAO": 10,
+            "G_PRECO": 11
+          }
+        },
+        "mudanca_de_assunto": {
           "esperado": 4,
-          "casou": 4
+          "casou": 4,
+          "aceitas": [
+            "G_FORA_DE_ESCOPO"
+          ],
+          "observadas": {
+            "G_FORA_DE_ESCOPO": 4
+          }
         },
-        "G_DOCUMENTOS": {
-          "esperado": 2,
-          "casou": 2
+        "multiplas_informacoes": {
+          "esperado": 11,
+          "casou": 11,
+          "aceitas": [
+            "G_DOCUMENTOS",
+            "G_MULTI_FATO"
+          ],
+          "observadas": {
+            "G_DOCUMENTOS": 2
+          }
         },
-        "G_INJECAO": {
-          "esperado": 8,
-          "casou": 1
+        "pergunta_prazo": {
+          "esperado": 20,
+          "casou": 20,
+          "aceitas": [
+            "G_PRAZO"
+          ],
+          "observadas": {
+            "G_PRAZO": 20
+          }
         },
-        "G_FORA_DE_ESCOPO": {
-          "esperado": 2,
-          "casou": 1
+        "pergunta_preco": {
+          "esperado": 19,
+          "casou": 19,
+          "aceitas": [
+            "G_PRECO"
+          ],
+          "observadas": {
+            "G_PRECO": 19
+          }
         },
-        "G_MULTI_FATO": {
-          "esperado": 3,
-          "casou": 2
+        "regra_administrativa": {
+          "esperado": 10,
+          "casou": 10,
+          "aceitas": [
+            "G_REGRA"
+          ],
+          "observadas": {
+            "G_REGRA": 10
+          }
+        },
+        "repeticao": {
+          "esperado": 12,
+          "casou": 12,
+          "aceitas": [
+            "G_REPETICAO"
+          ],
+          "observadas": {}
         }
       }
     },
-    "chamadas_sinteticas": 1419,
-    "embeddings_sinteticos": 60,
-    "resultado": "FAIL",
+    "resultado": "PASS",
     "schemas_encontrados": [
       "AgentIntentionProposerSchema",
       "CannedResponseDraftSchema",
@@ -313,24 +536,6 @@
       "RelativeActionSchema",
       "ToolRunningActionSchema"
     ],
-    "chamadas_por_schema": {
-      "AgentIntentionProposerSchema": 16,
-      "ToolRunningActionSchema": 3,
-      "RelativeActionSchema": 1,
-      "ReachableNodesEvaluationSchema": 5,
-      "JourneyBacktrackCheckSchema": 31,
-      "GuidelineContinuousPropositionSchema": 16,
-      "CustomerDependentActionSchema": 23,
-      "GenericObservationalGuidelineMatchesSchema": 136,
-      "GenericActionableGuidelineMatchesSchema": 476,
-      "CannedResponsePreambleSchema": 66,
-      "NonConsequentialToolBatchSchema": 110,
-      "JourneyNextStepSelectionSchema": 74,
-      "CannedResponseDraftSchema": 70,
-      "GenericResponseAnalysisSchema": 65,
-      "CannedResponseFieldExtractionSchema": 34,
-      "CannedResponseSelectionSchema": 51
-    },
     "rede": 0,
     "cenario_relationships": 3,
     "cenario_tools": 3,

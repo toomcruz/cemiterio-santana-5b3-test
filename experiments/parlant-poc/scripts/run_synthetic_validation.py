@@ -233,6 +233,15 @@ def escrever_markdown(relatorio: dict, passou: bool, bloqueadores: list[str]) ->
         f"Falhas injetadas de proposito (nao sao defeito): "
         f"{sum(schemas.get('falhas_injetadas', {}).values())} chamadas.",
         "",
+        "## Determinismo",
+        "",
+        "`scripts/check_determinism.py` roda a bateria duas vezes, em processos",
+        "separados, com a mesma seed, e compara corpus, rastro, tools, journey, gates",
+        "e rede. O volume de chamadas ao provider fica **fora** do criterio: o motor do",
+        "Parlant agenda lotes em paralelo e o total oscila em uma ou duas chamadas entre",
+        "execucoes (confirmado tambem com concorrencia 1 no laboratorio), sem que nenhuma",
+        "decisao mude. Resultado corrente em `synthetic-determinism.json`.",
+        "",
         "## Bloqueadores",
         "",
     ]

@@ -2,16 +2,16 @@
 
 **PARLANT SYNTHETIC VALIDATION: PASS**
 
-- data: 2026-08-17T12:20:02+00:00
+- data: 2026-08-17T13:08:13+00:00
 - parlant: 3.3.2
-- commit: d4557e89b66c
+- commit: 4d4ee5350b64
 - seed: 20260817
 - provider: sintetico (sem LLM externo, sem secret)
 
 ## Inicializacao
 
-- tempo ate o servidor no ar: **1.21s**
-- duracao total da bateria: 779.27s
+- tempo ate o servidor no ar: **1.17s**
+- duracao total da bateria: 790.97s
 - entidades esperadas: `{'guidelines': 14, 'relationships': 10, 'journey_states': 5, 'tools': 5, 'canned_responses': 7, 'glossary_terms': 8}`
 - entidades carregadas: `{'guidelines': 16, 'relationships': 16, 'journeys': 1, 'journey_states': 5, 'tools': 5, 'canned_responses': 7, 'glossary_terms': 8}`
 - entidades faltando: `nenhuma`
@@ -50,13 +50,13 @@
 
 - chamadas externas: **0**
 - tentativas bloqueadas: `[]`
-- PARLANT_HOME desta execucao: `/tmp/parlant-synthetic-qatbhl4i` (limpo nesta execucao)
+- PARLANT_HOME desta execucao: `/tmp/parlant-synthetic-aj5of8a_` (limpo nesta execucao)
 
 ## Rastro observado
 
-- guidelines: `{'G_PROXIMA_PERGUNTA': 641, 'J_CONDICAO_1': 627, 'J_CONDICAO_2': 627, 'G_CORRECAO': 627, 'G_MULTI_FATO': 627, 'G_AMBIGUO': 444, 'G_REPETICAO': 444, 'ESTADO:S_ACOLHIMENTO': 382, 'ESTADO:S_FECHAMENTO': 354, 'G_INJECAO': 134, 'G_DOCUMENTOS': 105, 'G_PRECO': 78, 'G_PRAZO': 51, 'G_REGRA': 50, 'G_FORA_DE_ESCOPO': 14}`
+- guidelines: `{'G_PROXIMA_PERGUNTA': 641, 'J_CONDICAO_1': 627, 'G_CORRECAO': 627, 'J_CONDICAO_2': 627, 'G_MULTI_FATO': 627, 'ESTADO:S_ACOLHIMENTO': 564, 'G_REPETICAO': 444, 'G_AMBIGUO': 444, 'ESTADO:S_PROXIMA_PERGUNTA': 354, 'G_INJECAO': 134, 'G_DOCUMENTOS': 105, 'G_PRECO': 78, 'G_PRAZO': 51, 'G_REGRA': 50, 'G_FORA_DE_ESCOPO': 14}`
 - tools: `{'built-in:consultar_estado_do_caso': 641, 'built-in:registrar_fato': 627, 'built-in:corrigir_fato': 627, 'built-in:consultar_base_autoritativa': 284, 'built-in:registrar_assunto_fora_de_escopo': 14}`
-- journey: `{'S_ACOLHIMENTO': 382, 'S_FECHAMENTO': 354}`
+- journey: `{'S_ACOLHIMENTO': 564, 'S_PROXIMA_PERGUNTA': 354}`
 
 ## Casamento de guidelines (onde ha expectativa declarada)
 
@@ -71,7 +71,7 @@
 
 - Relationships (guarda vence coleta): **3/3**
 - Tools (chama / nao chama): **3/3**
-- Journey: transicionou de estado = **True**; estados observados = `['S_ACOLHIMENTO', 'S_FECHAMENTO']`
+- Journey: transicionou de estado = **True**; estados observados = `['S_ACOLHIMENTO', 'S_PROXIMA_PERGUNTA']`
 - Isolamento dirigido: contaminacao = **0**
 - Modos de falha do NLP: 12 injetados, violacoes de autoridade = **0**
 
@@ -80,9 +80,9 @@
 | estado anterior | evento | estado novo |
 | --- | --- | --- |
 | `[]` | quero exumar meu pai no jazigo da familia | `['S_ACOLHIMENTO']` |
-| `['S_ACOLHIMENTO']` | ele ainda esta sepultado, foi na quadra tres | `['S_FECHAMENTO']` |
-| `['S_FECHAMENTO']` | quero levar os restos para o ossuario | `[]` |
-| `[]` | o meu documento e o rg | `[]` |
+| `['S_ACOLHIMENTO']` | ele ainda esta sepultado, foi na quadra tres | `['S_PROXIMA_PERGUNTA']` |
+| `['S_PROXIMA_PERGUNTA']` | quero levar os restos para o ossuario | `['S_ACOLHIMENTO']` |
+| `['S_ACOLHIMENTO']` | o meu documento e o rg | `['S_ACOLHIMENTO']` |
 
 ### Modos de falha do provider NLP
 
@@ -101,7 +101,16 @@
 | unauthorized_fact | True | False | nenhum |
 | illegal_journey_jump | True | False | nenhum |
 
-Falhas injetadas de proposito (nao sao defeito): 332 chamadas.
+Falhas injetadas de proposito (nao sao defeito): 330 chamadas.
+
+## Determinismo
+
+`scripts/check_determinism.py` roda a bateria duas vezes, em processos
+separados, com a mesma seed, e compara corpus, rastro, tools, journey, gates
+e rede. O volume de chamadas ao provider fica **fora** do criterio: o motor do
+Parlant agenda lotes em paralelo e o total oscila em uma ou duas chamadas entre
+execucoes (confirmado tambem com concorrencia 1 no laboratorio), sem que nenhuma
+decisao mude. Resultado corrente em `synthetic-determinism.json`.
 
 ## Bloqueadores
 

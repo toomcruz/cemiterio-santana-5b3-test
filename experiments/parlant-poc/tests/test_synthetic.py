@@ -228,6 +228,34 @@ def test_lote_de_tool_usa_a_chave_args_com_os_parametros_reais():
     assert set(resultado.calls[0].args or {}) == obrigatorios["consultar_base_autoritativa"]
 
 
+def test_escolha_da_transicao_nao_depende_da_ordem_do_prompt():
+    """Regressao: a indexacao do Parlant reordena as transicoes entre execucoes."""
+    from parlant.core.engines.alpha.guideline_matching.generic.journey.journey_next_step_selection import (  # noqa: E501
+        JourneyNextStepSelectionSchema,
+    )
+    from santana_parlant_poc.synthetic.nlp import _journey
+
+    def prompt_com(ordem):
+        linhas = "\n".join(f"Condition ({i}): {texto}" for i, texto in ordem)
+        return _prompt("quero exumar meu pai") + f"\nCURRENT STEP -\n{linhas}\n"
+
+    direta = [("1", "ainda ha fatos faltando no caso"), ("2", "o caso esta completo")]
+    invertida = [("1", "o caso esta completo"), ("2", "ainda ha fatos faltando no caso")]
+
+    escolha_direta = _journey(
+        JourneyNextStepSelectionSchema, decidir(prompt_com(direta)), prompt_com(direta), CONTROLE
+    )
+    escolha_invertida = _journey(
+        JourneyNextStepSelectionSchema,
+        decidir(prompt_com(invertida)),
+        prompt_com(invertida),
+        CONTROLE,
+    )
+    # Ids diferentes, mesma condicao escolhida: a decisao segue o texto.
+    assert escolha_direta.applied_condition_id == "1"
+    assert escolha_invertida.applied_condition_id == "2"
+
+
 def test_tool_avaliada_vem_da_secao_dedicada_do_prompt():
     """Regressao: o lote decidia por uma tool e mandava os argumentos de outra."""
     from santana_parlant_poc.synthetic.nlp import _nome_da_tool

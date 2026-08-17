@@ -703,12 +703,17 @@ def _journey(schema: type, decisao: Decisao, prompt: str, controle: ControleSint
     if controle.modo_de_falha is FailureMode.ILLEGAL_JOURNEY_JUMP:
         avanca = True
 
-    condicoes = _condicoes_de_transicao(prompt)
+    # A escolha e por conteudo, nunca por posicao: a indexacao do Parlant nao
+    # devolve as transicoes na mesma ordem em execucoes diferentes, e escolher
+    # `condicoes[0]` fazia a mesma seed terminar ora em S_PROXIMA_PERGUNTA, ora
+    # em S_FECHAMENTO. Ordenar pelo texto da condicao torna a decisao estavel.
+    condicoes = sorted(_condicoes_de_transicao(prompt), key=lambda par: normalizar(par[1]))
     escolhido = "0"
     if avanca and condicoes:
-        escolhido = condicoes[0][0]
+        compativeis = [par for par in condicoes if _condicao_bate(par[1], decisao)[0]]
+        escolhido = (compativeis or condicoes)[0][0]
     if controle.modo_de_falha is FailureMode.ILLEGAL_JOURNEY_JUMP and condicoes:
-        escolhido = condicoes[-1][0]  # salta direto para o ultimo caminho oferecido
+        escolhido = condicoes[-1][0]  # salta para a ultima transicao oferecida
 
     modelo = construir_modelo(schema, decisao)
     dados = modelo.model_dump()

@@ -1,7 +1,7 @@
 {
   "seed": 20260817,
   "conversas_pedidas": 300,
-  "parlant_home": "/tmp/parlant-synthetic-qatbhl4i",
+  "parlant_home": "/tmp/parlant-synthetic-aj5of8a_",
   "cache_de_avaliacao": "limpo nesta execucao",
   "isolamento": {
     "cross_session_contamination": 0,
@@ -210,28 +210,34 @@
           ],
           "evento": "ele ainda esta sepultado, foi na quadra tres",
           "estado_novo": [
-            "S_FECHAMENTO"
+            "S_PROXIMA_PERGUNTA"
           ],
           "mudou": true
         },
         {
           "estado_anterior": [
-            "S_FECHAMENTO"
+            "S_PROXIMA_PERGUNTA"
           ],
           "evento": "quero levar os restos para o ossuario",
-          "estado_novo": [],
+          "estado_novo": [
+            "S_ACOLHIMENTO"
+          ],
           "mudou": true
         },
         {
-          "estado_anterior": [],
+          "estado_anterior": [
+            "S_ACOLHIMENTO"
+          ],
           "evento": "o meu documento e o rg",
-          "estado_novo": [],
+          "estado_novo": [
+            "S_ACOLHIMENTO"
+          ],
           "mudou": false
         }
       ],
       "estados_distintos": [
         "S_ACOLHIMENTO",
-        "S_FECHAMENTO"
+        "S_PROXIMA_PERGUNTA"
       ],
       "houve_transicao": true
     },
@@ -406,8 +412,8 @@
       "violacoes": 0
     }
   },
-  "inicializacao_s": 1.21,
-  "duracao_total_s": 779.27,
+  "inicializacao_s": 1.17,
+  "duracao_total_s": 790.97,
   "inventario": {
     "esperado": {
       "guidelines": 14,
@@ -520,18 +526,18 @@
       "ToolRunningActionSchema": 3,
       "RelativeActionSchema": 1,
       "ReachableNodesEvaluationSchema": 5,
-      "JourneyBacktrackCheckSchema": 696,
+      "JourneyBacktrackCheckSchema": 655,
       "GuidelineContinuousPropositionSchema": 16,
       "CustomerDependentActionSchema": 23,
       "GenericObservationalGuidelineMatchesSchema": 2154,
       "GenericActionableGuidelineMatchesSchema": 7539,
       "CannedResponsePreambleSchema": 804,
-      "NonConsequentialToolBatchSchema": 1603,
+      "NonConsequentialToolBatchSchema": 1577,
       "CannedResponseDraftSchema": 1079,
       "CannedResponseFieldExtractionSchema": 448,
       "CannedResponseSelectionSchema": 841,
       "GenericResponseAnalysisSchema": 1078,
-      "JourneyNextStepSelectionSchema": 921
+      "JourneyNextStepSelectionSchema": 896
     },
     "falhas_de_schema": {},
     "falhas_injetadas": {
@@ -562,8 +568,7 @@
       "GenericObservationalGuidelineMatchesSchema:contradictory": 2,
       "GenericActionableGuidelineMatchesSchema:contradictory": 7,
       "CannedResponsePreambleSchema:contradictory": 1,
-      "NonConsequentialToolBatchSchema:contradictory": 5,
-      "JourneyNextStepSelectionSchema:contradictory": 1,
+      "NonConsequentialToolBatchSchema:contradictory": 4,
       "CannedResponseDraftSchema:contradictory": 1,
       "CannedResponseFieldExtractionSchema:contradictory": 1,
       "CannedResponseSelectionSchema:contradictory": 1,
@@ -598,18 +603,18 @@
       "GenericResponseAnalysisSchema:illegal_journey_jump": 1
     }
   },
-  "chamadas_sinteticas": 17469,
-  "embeddings_sinteticos": 306,
+  "chamadas_sinteticas": 17377,
+  "embeddings_sinteticos": 210,
   "guidelines_ativadas": {
     "G_PROXIMA_PERGUNTA": 641,
     "J_CONDICAO_1": 627,
-    "J_CONDICAO_2": 627,
     "G_CORRECAO": 627,
+    "J_CONDICAO_2": 627,
     "G_MULTI_FATO": 627,
-    "G_AMBIGUO": 444,
+    "ESTADO:S_ACOLHIMENTO": 564,
     "G_REPETICAO": 444,
-    "ESTADO:S_ACOLHIMENTO": 382,
-    "ESTADO:S_FECHAMENTO": 354,
+    "G_AMBIGUO": 444,
+    "ESTADO:S_PROXIMA_PERGUNTA": 354,
     "G_INJECAO": 134,
     "G_DOCUMENTOS": 105,
     "G_PRECO": 78,
@@ -625,16 +630,16 @@
     "built-in:registrar_assunto_fora_de_escopo": 14
   },
   "journey_estados": {
-    "S_ACOLHIMENTO": 382,
-    "S_FECHAMENTO": 354
+    "S_ACOLHIMENTO": 564,
+    "S_PROXIMA_PERGUNTA": 354
   },
   "rede": {
     "external_network_calls": 0,
     "tentativas": []
   },
-  "gerado_em": "2026-08-17T12:20:02+00:00",
+  "gerado_em": "2026-08-17T13:08:13+00:00",
   "parlant": "3.3.2",
-  "commit": "d4557e89b66c",
+  "commit": "4d4ee5350b64",
   "resultado": "PASS",
   "bloqueadores": []
 }
