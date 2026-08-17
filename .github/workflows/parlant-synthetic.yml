@@ -28,7 +28,7 @@ jobs:
   synthetic:
     name: Bateria sintetica (Parlant real, sem LLM externo)
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
     defaults:
       run:
         working-directory: experiments/parlant-poc
@@ -66,9 +66,14 @@ jobs:
         run: python scripts/run_synthetic_validation.py
 
       - name: Determinismo (segunda execucao com a mesma seed)
-        run: |
-          set -Eeuo pipefail
-          SYNTHETIC_PORT=8851 python scripts/check_determinism.py
+        env:
+          # Determinismo compara duas execucoes com a mesma seed; a cobertura
+          # ampla ja e responsabilidade da bateria principal acima. Herdar as
+          # 300 conversas fazia esta etapa repetir 2x o trabalho da bateria
+          # (~29 min) e estourar o teto do job, sem acrescentar sinal algum.
+          SYNTHETIC_CONVERSATIONS: "120"
+          SYNTHETIC_PORT: "8851"
+        run: python -u scripts/check_determinism.py
 
       - name: Publicar relatorios
         if: always()

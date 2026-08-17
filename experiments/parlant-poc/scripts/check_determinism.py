@@ -20,6 +20,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -67,15 +68,35 @@ def observar(relatorio: dict) -> dict:
     return dados
 
 
-def executar(porta: int) -> dict:
+def executar(rotulo: str, porta: int) -> dict:
+    """Roda uma bateria em processo separado, com progresso visivel.
+
+    A saida do filho e ecoada em vez de engolida: quando esta etapa foi
+    cancelada por teto de tempo, os 29 minutos anteriores nao deixaram uma
+    linha sequer no log, e nao dava para saber onde tinha parado.
+    """
     ambiente = dict(os.environ, SYNTHETIC_PORT=str(porta))
+    conversas = ambiente.get("SYNTHETIC_CONVERSATIONS", "300")
+    inicio = time.monotonic()
+    print(f"[determinismo] {rotulo}: {conversas} conversas, porta {porta}…", flush=True)
+
     processo = subprocess.run(
-        [sys.executable, str(RAIZ / "scripts" / "run_synthetic_validation.py")],
+        [sys.executable, "-u", str(RAIZ / "scripts" / "run_synthetic_validation.py")],
         cwd=RAIZ,
         env=ambiente,
         capture_output=True,
         text=True,
     )
+
+    for linha in processo.stdout.splitlines():
+        if linha.startswith(("PARLANT SYNTHETIC", "  BLOCKER", "Parlant (sintetico)")):
+            print(f"[determinismo] {rotulo}: {linha}", flush=True)
+    print(
+        f"[determinismo] {rotulo}: terminou em {time.monotonic() - inicio:.0f}s "
+        f"(codigo {processo.returncode})",
+        flush=True,
+    )
+
     if not RELATORIO.exists():
         raise SystemExit(
             f"execucao na porta {porta} nao gerou relatorio:\n{processo.stdout[-2000:]}\n"
@@ -86,8 +107,8 @@ def executar(porta: int) -> dict:
 
 def main() -> int:
     porta = int(os.environ.get("SYNTHETIC_PORT", "8860"))
-    relatorio_1 = executar(porta)
-    relatorio_2 = executar(porta + 1)
+    relatorio_1 = executar("execucao 1", porta)
+    relatorio_2 = executar("execucao 2", porta + 1)
     primeira, segunda = recortar(relatorio_1), recortar(relatorio_2)
     observado_1, observado_2 = observar(relatorio_1), observar(relatorio_2)
 
