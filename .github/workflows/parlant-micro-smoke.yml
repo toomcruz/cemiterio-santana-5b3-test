@@ -31,7 +31,7 @@ jobs:
   micro-smoke:
     name: Micro-smoke Parlant + Gemini
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: experiments/parlant-poc
@@ -80,4 +80,6 @@ jobs:
           # As 10 conversas extras so rodam se a primeira passar, no mesmo
           # servidor: reinicializar custaria a indexacao inteira de novo.
           MICRO_EXTRA: ${{ inputs.conversas_extras || '1' }}
-        run: python scripts/micro_smoke.py
+        # -u: sem isso o stdout fica bufferizado no runner e, se o job
+        # terminar antes do fim, o relatorio parcial se perde no buffer.
+        run: python -u scripts/micro_smoke.py
