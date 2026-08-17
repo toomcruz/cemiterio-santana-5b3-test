@@ -20,6 +20,7 @@ violado.
 import asyncio
 import json
 import os
+import re
 import shutil
 import signal
 import sys
@@ -145,17 +146,84 @@ SCHEMAS: dict[str, int] = {}
 ERROS_DE_SCHEMA: list[str] = []
 RESULTADO = {"codigo": 1}
 
+# Diagnostico do lote de tool calling: prompt, schema, saida bruta do modelo.
+# So observa — nao decide nada, nao completa argumento, nao muda a validacao.
+DIAGNOSTICO: list[dict[str, Any]] = []
+DIAG_SAIDA = Path(__file__).resolve().parent.parent / "full-poc-toolcall-diagnostics.json"
+
+SCHEMAS_DE_TOOL = {"SingleToolBatchSchema", "NonConsequentialToolBatchSchema"}
+
+# Conversas a executar; por padrao todas. `FULL_POC_CONVERSAS=C1-preco` roda so uma.
+SELECIONADAS = [
+    identificador.strip()
+    for identificador in os.environ.get("FULL_POC_CONVERSAS", "").split(",")
+    if identificador.strip()
+]
+
+
+def _sem_segredo(texto: str) -> str:
+    """Remove a chave do texto capturado, caso ela apareca por algum caminho.
+
+    O prompt do ToolCaller nao carrega credencial, mas o diagnostico e publicado
+    como artefato — entao a redacao e feita de qualquer forma, e o valor da chave
+    nunca e impresso nem gravado.
+    """
+    chave = os.environ.get("GEMINI_API_KEY", "").strip()
+    limpo = texto if not chave else texto.replace(chave, "***REDIGIDO***")
+    return re.sub(r"(AIza[0-9A-Za-z_\-]{10,})", "***REDIGIDO***", limpo)
+
+
+def _schema_efetivo_das_tools() -> dict[str, Any]:
+    """Descritores das tools da POC, como o Parlant os produziu."""
+    from santana_parlant_poc.agent.tools import ALL_TOOLS
+
+    return {
+        entrada.tool.name: {
+            "required": list(entrada.tool.required),
+            "parameters": {
+                nome: dict(descritor)
+                for nome, (descritor, _) in entrada.tool.parameters.items()
+            },
+        }
+        for entrada in ALL_TOOLS
+    }
+
+
+def _tool_avaliada(prompt: str) -> str | None:
+    achado = re.search(r"TOOL TO EVALUATE:\s*\n-+\s*\nName:\s*(\S+)", prompt)
+    if achado:
+        return achado.group(1)
+    achado = re.search(r'"tool_name":\s*"([^"]+)"', prompt)
+    return achado.group(1) if achado else None
+
+
+def _bloco_de_parametros(prompt: str) -> str | None:
+    achado = re.search(r"Parameters:\s*(\{.*?\n\})\s*\nRequired parameters:", prompt, re.S)
+    return achado.group(1) if achado else None
+
 
 # --------------------------------------------------------------- instrumentacao
 class GeradorObservado(ThrottledGemini[T]):
-    """Gerador da POC, contando chamadas, schemas e falhas de structured output."""
+    """Gerador da POC, contando chamadas, schemas e falhas de structured output.
+
+    Nos lotes de tool calling, guarda tambem o prompt enviado e a saida bruta do
+    modelo. E captura passiva: o valor devolvido ao Parlant e exatamente o que o
+    Gemini respondeu, sem completar nem corrigir argumento nenhum.
+    """
 
     async def _do_generate(self, prompt: Any, hints: Mapping[str, Any] = {}) -> Any:
         nome = getattr(getattr(self, "schema", None), "__name__", "desconhecido")
         SCHEMAS[nome] = SCHEMAS.get(nome, 0) + 1
         CONTADORES["geracoes"] += 1
+
+        de_tool = nome in SCHEMAS_DE_TOOL
+        texto_do_prompt = ""
+        if de_tool:
+            bruto = prompt if isinstance(prompt, str) else str(prompt.build())
+            texto_do_prompt = _sem_segredo(bruto)
+
         try:
-            return await super()._do_generate(prompt, hints)  # type: ignore[misc]
+            resultado = await super()._do_generate(prompt, hints)  # type: ignore[misc]
         except Exception as erro:
             texto = str(erro)
             if "429" in texto or "RESOURCE_EXHAUSTED" in texto:
@@ -167,7 +235,36 @@ class GeradorObservado(ThrottledGemini[T]):
                 # o modelo respondeu, mas nao no formato que o Parlant pediu.
                 CONTADORES["erros_schema"] += 1
                 ERROS_DE_SCHEMA.append(f"{nome}: {type(erro).__name__}: {texto[:160]}")
+            if de_tool:
+                DIAGNOSTICO.append(
+                    {
+                        "schema": nome,
+                        "tool_avaliada": _tool_avaliada(texto_do_prompt),
+                        "bloco_parameters_no_prompt": _bloco_de_parametros(texto_do_prompt),
+                        "prompt_completo": texto_do_prompt,
+                        "saida_bruta": None,
+                        "erro": _sem_segredo(f"{type(erro).__name__}: {texto}")[:600],
+                    }
+                )
             raise
+
+        if de_tool:
+            conteudo = getattr(resultado, "content", None)
+            try:
+                saida_bruta = conteudo.model_dump(mode="json") if conteudo is not None else None
+            except Exception as erro:  # nao deixar o diagnostico derrubar o turno
+                saida_bruta = {"_falha_ao_serializar": f"{type(erro).__name__}: {erro}"}
+            DIAGNOSTICO.append(
+                {
+                    "schema": nome,
+                    "tool_avaliada": _tool_avaliada(texto_do_prompt),
+                    "bloco_parameters_no_prompt": _bloco_de_parametros(texto_do_prompt),
+                    "prompt_completo": texto_do_prompt,
+                    "saida_bruta": saida_bruta,
+                    "erro": None,
+                }
+            )
+        return resultado
 
 
 class ServicoObservado(GeminiFlashOnlyService):
@@ -332,8 +429,9 @@ def _resumo(itens: list[dict[str, Any]], inicializacao: float, total: float) -> 
     sem_resposta = [i["conversa"] for i in itens if not i["turno"]["resposta_final"]]
     if sem_resposta:
         bloqueadores.append(f"conversas sem resposta final: {sem_resposta}")
-    if len(itens) < len(CONVERSAS):
-        bloqueadores.append(f"apenas {len(itens)}/{len(CONVERSAS)} conversas executadas")
+    previstas = [c for c in CONVERSAS if not SELECIONADAS or c["id"] in SELECIONADAS]
+    if len(itens) < len(previstas):
+        bloqueadores.append(f"apenas {len(itens)}/{len(previstas)} conversas executadas")
 
     print("=" * 74)
     print("SMOKE REAL — POC COMPLETA (Parlant + Gemini)")
@@ -349,7 +447,7 @@ def _resumo(itens: list[dict[str, Any]], inicializacao: float, total: float) -> 
         print(f"motivo do fallback .......: {TOKENIZER_STATS['motivo_do_fallback']}")
     print(f"PARLANT_HOME .............: {PARLANT_HOME} (limpo)")
     print(f"inicializacao ............: {inicializacao:.1f}s")
-    print(f"conversas ................: {len(itens)}/{len(CONVERSAS)}")
+    print(f"conversas ................: {len(itens)}/{len(previstas)}")
     print(f"chamadas de geracao ......: {CONTADORES['geracoes']}")
     print(f"schemas Gemini usados ....: {json.dumps(SCHEMAS, ensure_ascii=False)}")
     print(f"erros de structured output: {CONTADORES['erros_schema']}")
@@ -392,7 +490,30 @@ def _resumo(itens: list[dict[str, Any]], inicializacao: float, total: float) -> 
         ),
         encoding="utf-8",
     )
-    print(f"relatorio: {JSON_SAIDA.name}")
+    DIAG_SAIDA.write_text(
+        json.dumps(
+            {"lotes_de_tool": DIAGNOSTICO, "schema_efetivo": _schema_efetivo_das_tools()},
+            ensure_ascii=False,
+            indent=2,
+            default=str,
+        ),
+        encoding="utf-8",
+    )
+
+    print("\n" + "-" * 74)
+    print("DIAGNOSTICO DO TOOL CALLING (saida bruta do modelo)")
+    print("-" * 74)
+    for indice, lote in enumerate(DIAGNOSTICO, start=1):
+        print(f"[{indice}] schema={lote['schema']} tool={lote['tool_avaliada']}")
+        print(f"    Parameters no prompt: {lote['bloco_parameters_no_prompt']}")
+        print(f"    saida bruta .......: {json.dumps(lote['saida_bruta'], ensure_ascii=False)}")
+        if lote["erro"]:
+            print(f"    erro ..............: {lote['erro']}")
+    if not DIAGNOSTICO:
+        print("(nenhum lote de tool calling foi solicitado neste turno)")
+    print("-" * 74)
+
+    print(f"relatorios: {JSON_SAIDA.name}, {DIAG_SAIDA.name}")
     return 1 if bloqueadores else 0
 
 
@@ -439,6 +560,8 @@ async def main() -> int:
                     base_url=base, timeout=300.0, trust_env=False
                 ) as cliente:
                     for caso in CONVERSAS:
+                        if SELECIONADAS and caso["id"] not in SELECIONADAS:
+                            continue
                         sessao = await nova_sessao(cliente, agente.id, caso["id"])
                         antes = STORE.case(sessao).snapshot()
                         turno = await rodar_turno(

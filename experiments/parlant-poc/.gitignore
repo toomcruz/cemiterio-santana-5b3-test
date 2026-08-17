@@ -7,3 +7,4 @@ __pycache__/
 
 # relatorio gerado pelo smoke real da POC completa (publicado como artifact)
 full-poc-gemini-report.json
+full-poc-toolcall-diagnostics.json

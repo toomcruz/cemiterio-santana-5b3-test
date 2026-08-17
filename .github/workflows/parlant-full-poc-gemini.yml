@@ -7,6 +7,12 @@ name: Parlant POC completa + Gemini real
 
 on:
   workflow_dispatch:
+    inputs:
+      conversas:
+        description: "Ids das conversas (vazio = todas). Ex.: C1-preco"
+        required: false
+        default: ""
+        type: string
   push:
     branches:
       - "lab/**"
@@ -65,13 +71,15 @@ jobs:
           fi
           python -c "import json;d=json.load(open('/tmp/preflight.json'));print('resposta:', d['candidates'][0]['content']['parts'][0].get('text','').strip()[:80])"
 
-      - name: 5 conversas reais contra a POC completa
+      - name: Conversas reais contra a POC completa
         env:
           # A chave da POC entra na aplicacao apenas com este nome.
           GEMINI_API_KEY: ${{ secrets.PARLANT }}
           POC_GEMINI_MODEL: "gemini-3.1-flash-lite"
           FULL_POC_PORT: "8804"
           FULL_POC_TURN_TIMEOUT: "180"
+          # Vazio roda as 5; nesta etapa de diagnostico roda so a C1.
+          FULL_POC_CONVERSAS: ${{ inputs.conversas || '' }}
         # -u: sem isso o stdout fica bufferizado e o relatorio parcial se perde
         # se o job terminar antes do fim.
         run: python -u scripts/full_poc_smoke.py
@@ -81,4 +89,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: full-poc-gemini-report
-          path: experiments/parlant-poc/full-poc-gemini-report.json
+          path: |
+            experiments/parlant-poc/full-poc-gemini-report.json
+            experiments/parlant-poc/full-poc-toolcall-diagnostics.json
