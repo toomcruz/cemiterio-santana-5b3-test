@@ -1,18 +1,19 @@
 name: 1A NVIDIA preflight
-# Preflight da Fase 1A. Nao e benchmark, nao e a C1, nao roda bateria.
+# Preflight da Fase 1A, segunda rodada. Nao e benchmark, nao e a C1.
 # Teto rigido de 5 chamadas reais. Fail-fast em 401/403/429. Zero retries.
 # Nao toca Supabase, n8n, W-API, Vercel nem producao. Nao usa Gemini.
+#
+# Rodada 1 (run 32184998151) provou: a chave autentica e GET /v1/models
+# devolveu 200 com 102 modelos. Mas a lista publica do catalogo NIM nao e a
+# lista invocavel pela conta: 'ai21labs/jamba-1.5-large-instruct' respondeu
+# 404 "Not found for account". Por isso esta rodada nao gasta chamada em
+# /v1/models e nao escolhe modelo por nome: descobre acesso por tentativa.
 on:
   workflow_dispatch:
     inputs:
       confirmation:
         description: "Digite PREFLIGHT_NVIDIA_1A para autorizar ate 5 chamadas reais"
         required: true
-        type: string
-      model:
-        description: "Modelo a testar (vazio = escolher a partir de /v1/models)"
-        required: false
-        default: ""
         type: string
 
 permissions:
@@ -25,7 +26,6 @@ jobs:
     env:
       BASE: https://integrate.api.nvidia.com/v1
       CONFIRMATION: ${{ inputs.confirmation }}
-      MODEL_INPUT: ${{ inputs.model }}
     steps:
       - name: Autorizacao explicita
         shell: bash
@@ -67,9 +67,15 @@ jobs:
           LAST_CODE=""
           LAST_OUT=""
 
+          MODEL_ACCESSIBLE=FAIL
+          TOOL_CALLING=FAIL
+          STRUCTURED_OUTPUT=FAIL
+          MODEL_OK=""
+
           # Uma chamada real. Fail-fast em 401/403/429. Sem retry, nunca.
+          # 404 NAO e fail-fast: significa "nao invocavel nesta conta".
           call() {
-            local label="$1" method="$2" path="$3" body="${4:-}"
+            local label="$1" body="$2"
             CALLS=$((CALLS + 1))
             if [ "$CALLS" -gt "$MAX" ]; then
               echo "teto de $MAX chamadas atingido: abortando" >&2
@@ -78,14 +84,9 @@ jobs:
             local out="$RUNNER_TEMP/out.$CALLS.json"
             local meta="$RUNNER_TEMP/meta.$CALLS.txt"
             local hdr="$RUNNER_TEMP/hdr.$CALLS.txt"
-            if [ -n "$body" ]; then
-              curl -K "$CFG" -o "$out" -D "$hdr" -w '%{http_code} %{time_total}\n' \
-                --max-time 90 -X "$method" -H 'Content-Type: application/json' \
-                -d "$body" "$BASE$path" > "$meta" || true
-            else
-              curl -K "$CFG" -o "$out" -D "$hdr" -w '%{http_code} %{time_total}\n' \
-                --max-time 90 -X "$method" "$BASE$path" > "$meta" || true
-            fi
+            curl -K "$CFG" -o "$out" -D "$hdr" -w '%{http_code} %{time_total}\n' \
+              --max-time 120 -X POST -H 'Content-Type: application/json' \
+              -d "$body" "$BASE/chat/completions" > "$meta" || true
             local code tempo
             code="$(awk '{print $1}' "$meta")"
             tempo="$(awk '{print $2}' "$meta")"
@@ -94,7 +95,6 @@ jobs:
               exit 1
             fi
             echo "CHAMADA $CALLS [$label] HTTP=$code latencia=${tempo}s"
-            # Cabecalhos de rate limit, quando a API os informar.
             grep -iE '^(x-ratelimit|retry-after|ratelimit)' "$hdr" || true
             case "$code" in
               401 | 403)
@@ -110,47 +110,49 @@ jobs:
             LAST_OUT="$out"
           }
 
-          # ---------------------------------------------- 1. modelos acessiveis
-          call "models.list" GET /models
-          if [ "$LAST_CODE" != "200" ]; then
-            echo "models.list falhou ($LAST_CODE)" >&2
-            jq -c '.' "$LAST_OUT" 2>/dev/null | head -3 >&2 || true
+          # ------------------ 1. descoberta de acesso por tentativa controlada
+          # Ordem fixa, definida por decisao humana. Uma chamada simples por
+          # candidato. Para no primeiro HTTP 200.
+          for CAND in \
+            "nvidia/llama-3.3-nemotron-super-49b-v1.5" \
+            "meta/llama-3.3-70b-instruct" \
+            "nvidia/nemotron-3-nano-30b-a3b"; do
+            body="$(jq -nc --arg m "$CAND" '{
+              model: $m, max_tokens: 16, temperature: 0,
+              messages: [{role: "user", content: "Responda apenas: ok"}]
+            }')"
+            call "acesso:$CAND" "$body"
+            if [ "$LAST_CODE" = "200" ]; then
+              MODEL_OK="$CAND"
+              MODEL_ACCESSIBLE=PASS
+              echo "ACESSO CONFIRMADO: $CAND"
+              jq -r '.choices[0].message.content // "(sem conteudo)"' "$LAST_OUT" | head -3
+              break
+            fi
+            if [ "$LAST_CODE" = "404" ]; then
+              echo "nao invocavel nesta conta: $CAND"
+              jq -c '.detail // .error // .' "$LAST_OUT" 2> /dev/null | head -1 || true
+              continue
+            fi
+            echo "resposta inesperada ($LAST_CODE) para $CAND"
+            jq -c '.detail // .error // .' "$LAST_OUT" 2> /dev/null | head -1 || true
+          done
+
+          if [ -z "$MODEL_OK" ]; then
+            echo "=== RESULTADO ==="
+            echo "MODEL_ACCESSIBLE=FAIL"
+            echo "TOOL_CALLING=FAIL"
+            echo "STRUCTURED_OUTPUT=FAIL"
+            echo "=== CHAMADAS REAIS EXECUTADAS: $CALLS de $MAX ==="
+            echo "nenhum dos candidatos e invocavel nesta conta" >&2
             exit 1
           fi
-          jq -r '.data[].id' "$LAST_OUT" | sort > "$RUNNER_TEMP/models.txt"
-          echo "--- modelos acessiveis: $(wc -l < "$RUNNER_TEMP/models.txt") ---"
-          cat "$RUNNER_TEMP/models.txt"
 
-          MODEL="$MODEL_INPUT"
-          if [ -z "$MODEL" ]; then
-            MODEL="$(grep -iE 'instruct' "$RUNNER_TEMP/models.txt" | head -1 || true)"
-          fi
-          if [ -z "$MODEL" ]; then
-            MODEL="$(head -1 "$RUNNER_TEMP/models.txt" || true)"
-          fi
-          if [ -z "$MODEL" ]; then
-            echo "nenhum modelo candidato na lista" >&2
-            exit 1
-          fi
-          echo "MODELO EM TESTE: $MODEL"
-
-          # ------------------------------------------------- 2. chamada simples
-          body="$(jq -nc --arg m "$MODEL" '{
-            model: $m, max_tokens: 32, temperature: 0,
-            messages: [{role: "user", content: "Responda apenas: ok"}]
-          }')"
-          call "chat.simples" POST /chat/completions "$body"
-          if [ "$LAST_CODE" = "200" ]; then
-            echo "CHAT SIMPLES: PASS"
-            jq -r '.choices[0].message.content // "(sem conteudo)"' "$LAST_OUT" | head -3
-          else
-            echo "CHAT SIMPLES: FAIL ($LAST_CODE)"
-            jq -c '.error // .' "$LAST_OUT" 2>/dev/null | head -3 || true
-          fi
-
-          # ---------------------------------------------------- 3. tool calling
-          # Usa o contrato real da POC: consulta sem argumento nenhum.
-          body="$(jq -nc --arg m "$MODEL" '{
+          # ------------------------------------------------------ 2. tool calling
+          # Contrato real da POC: consulta sem argumento nenhum.
+          # tool_choice nomeado prova o suporte do protocolo; a escolha
+          # automatica pelo modelo sera validada na C1.
+          body="$(jq -nc --arg m "$MODEL_OK" '{
             model: $m, max_tokens: 128, temperature: 0,
             messages: [{role: "user", content: "Quanto custa a exumacao?"}],
             tools: [{type: "function", function: {
@@ -158,21 +160,22 @@ jobs:
               description: "Consulta o valor aplicavel da exumacao na base oficial do Cemiterio Santana.",
               parameters: {type: "object", properties: {}, required: []}
             }}],
-            tool_choice: "auto"
+            tool_choice: {type: "function", function: {name: "consultar_preco_exumacao"}}
           }')"
-          call "tool.calling" POST /chat/completions "$body"
+          call "tool.calling" "$body"
           if [ "$LAST_CODE" = "200" ] &&
             jq -e '.choices[0].message.tool_calls[0].function.name == "consultar_preco_exumacao"' \
               "$LAST_OUT" > /dev/null 2>&1; then
+            TOOL_CALLING=PASS
             echo "TOOL CALLING: PASS"
             jq -c '.choices[0].message.tool_calls[0].function' "$LAST_OUT"
           else
             echo "TOOL CALLING: FAIL ($LAST_CODE)"
-            jq -c '.error // .choices[0].message' "$LAST_OUT" 2>/dev/null | head -3 || true
+            jq -c '.detail // .error // .choices[0].message' "$LAST_OUT" 2> /dev/null | head -3 || true
           fi
 
-          # ----------------------------------------------- 4. structured output
-          body="$(jq -nc --arg m "$MODEL" '{
+          # ------------------------------------------------ 3. structured output
+          body="$(jq -nc --arg m "$MODEL_OK" '{
             model: $m, max_tokens: 128, temperature: 0,
             messages: [{role: "user", content: "Extraia a intencao desta mensagem do municipe: quanto custa?"}],
             response_format: {type: "json_schema", json_schema: {
@@ -184,17 +187,35 @@ jobs:
               }
             }}
           }')"
-          call "structured.output" POST /chat/completions "$body"
+          call "structured.output" "$body"
           if [ "$LAST_CODE" = "200" ] &&
             jq -e '.choices[0].message.content | fromjson | .intencao' "$LAST_OUT" > /dev/null 2>&1; then
+            STRUCTURED_OUTPUT=PASS
             echo "STRUCTURED OUTPUT: PASS"
             jq -r '.choices[0].message.content' "$LAST_OUT"
+          elif [ "$LAST_CODE" = "400" ] || [ "$LAST_CODE" = "422" ]; then
+            # A API recusou o parametro: e ausencia de suporte, nao defeito nosso.
+            # Registrado como UNSUPPORTED com o erro exato. Sem fallback silencioso.
+            STRUCTURED_OUTPUT=UNSUPPORTED
+            echo "STRUCTURED OUTPUT: UNSUPPORTED ($LAST_CODE) — erro exato abaixo"
+            jq -c '.detail // .error // .' "$LAST_OUT" 2> /dev/null | head -3 || true
           else
-            echo "STRUCTURED OUTPUT: FAIL ($LAST_CODE) — avaliar json_object ou prompt-only na C1"
-            jq -c '.error // .choices[0].message' "$LAST_OUT" 2>/dev/null | head -3 || true
+            echo "STRUCTURED OUTPUT: FAIL ($LAST_CODE)"
+            jq -c '.detail // .error // .choices[0].message' "$LAST_OUT" 2> /dev/null | head -3 || true
           fi
 
+          # ----------------------------------------------------------- resultado
+          echo "=== RESULTADO ==="
+          echo "MODELO ACESSIVEL: $MODEL_OK"
+          echo "MODEL_ACCESSIBLE=$MODEL_ACCESSIBLE"
+          echo "TOOL_CALLING=$TOOL_CALLING"
+          echo "STRUCTURED_OUTPUT=$STRUCTURED_OUTPUT"
           echo "=== CHAMADAS REAIS EXECUTADAS: $CALLS de $MAX ==="
+
+          # O job so termina SUCCESS se houver modelo invocavel comprovado.
+          # TOOL_CALLING e STRUCTURED_OUTPUT sao reportados, nao reprovam o
+          # preflight: sao o dado que a decisao da C1 precisa.
+          [ "$MODEL_ACCESSIBLE" = "PASS" ] || exit 1
 
       - name: Remover credencial
         if: always()
