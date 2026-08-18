@@ -154,9 +154,11 @@ async def _apply_journey_states(
     )
     created["S_ACOLHIMENTO"] = s_acolhimento.target
 
+    # S_REGISTRO deixou de ser um tool_state: nao existe mais "a" tool de
+    # registro, e sim uma por fato. Quem seleciona a tool certa e a guideline
+    # (G_COLETA/G_MULTI_FATO/G_CORRECAO), que carrega todas elas.
     s_registro = await s_acolhimento.target.transition_to(
-        tool_state=_TOOLS_BY_NAME[states["S_REGISTRO"]["tool"]],
-        tool_instruction=states["S_REGISTRO"]["instruction"],
+        chat_state=states["S_REGISTRO"]["instruction"],
         on_match=_journey_state_tracker("S_REGISTRO"),
     )
     created["S_REGISTRO"] = s_registro.target

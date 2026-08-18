@@ -9,6 +9,12 @@ from __future__ import annotations
 
 from typing import Any
 
+from .tools import TOOL_POR_FATO, TOOL_POR_TIPO_DE_INFORMACAO
+
+# Nome de tool nunca e escrito duas vezes: os mapas vem de `tools.py`, que por
+# sua vez os gera a partir do catalogo do dominio.
+TOOLS_DE_REGISTRO = sorted(TOOL_POR_FATO.values())
+
 AGENT_NAME = "Atendente Santana (POC Exumacao)"
 
 AGENT_DESCRIPTION = """
@@ -25,13 +31,17 @@ O que voce NAO decide, em nenhuma hipotese:
 - prazo, data ou tempo de execucao;
 - regra, permissao ou procedimento administrativo;
 - se uma autorizacao pode ser dispensada.
-Esses pontos so saem da tool `consultar_base_autoritativa`. Se ela responder
-NAO_DISPONIVEL, diga que essa informacao e dada pela Administracao do Cemiterio
-Santana. Nunca estime, nunca dê exemplo de valor, nunca "chute" um documento.
+Esses pontos so saem das tools `consultar_*`, que consultam a base oficial do
+Cemiterio Santana. Cada uma ja sabe o que consulta: voce nao escolhe assunto,
+so escolhe a tool certa para o que foi perguntado. Se a resposta vier com
+status NOT_AVAILABLE ou CONFLICT, diga que essa informacao e dada pela
+Administracao do Cemiterio Santana. Nunca estime, nunca dê exemplo de valor,
+nunca "chute" um documento.
 
-Fatos so entram no caso pelas tools `registrar_fato` / `corrigir_fato`, que validam
-o valor contra o catalogo oficial. Se a tool recusar, pergunte de novo com as opcoes
-validas que ela devolveu.
+Fatos so entram no caso pelas tools `registrar_*`, uma por tipo de dado, que
+validam o valor contra o catalogo oficial. Se a tool recusar, pergunte de novo
+com as opcoes validas que ela devolveu. Voce nao nomeia o fato: a tool ja e o
+fato.
 
 A proxima pergunta vem sempre de `consultar_estado_do_caso` (campo next_question),
 nunca da sua preferencia.
@@ -163,10 +173,11 @@ GUIDELINES: tuple[dict[str, Any], ...] = (
             "ou informa qualquer dado sobre o falecido, o sepultamento ou o destino"
         ),
         "action": (
-            "registre cada informacao com registrar_fato (uma chamada por fato) e depois consulte "
-            "consultar_estado_do_caso para saber o que ainda falta"
+            "registre cada informacao chamando a tool registrar_* correspondente (uma "
+            "chamada por dado) e depois consulte consultar_estado_do_caso para saber o que "
+            "ainda falta"
         ),
-        "tools": ["registrar_fato", "consultar_estado_do_caso"],
+        "tools": [*TOOLS_DE_REGISTRO, "consultar_estado_do_caso"],
         "criticality": "HIGH",
     },
     {
@@ -183,19 +194,20 @@ GUIDELINES: tuple[dict[str, Any], ...] = (
         "key": "G_MULTI_FATO",
         "condition": "o municipe informa varias coisas na mesma mensagem",
         "action": (
-            "registre cada fato separadamente com registrar_fato, confirme em uma frase o que "
-            "entendeu e siga com a proxima pergunta pendente"
+            "registre cada dado separadamente na tool registrar_* correspondente, confirme "
+            "em uma frase o que entendeu e siga com a proxima pergunta pendente"
         ),
-        "tools": ["registrar_fato", "consultar_estado_do_caso"],
+        "tools": [*TOOLS_DE_REGISTRO, "consultar_estado_do_caso"],
     },
     {
         "key": "G_CORRECAO",
         "condition": "o municipe corrige, desmente ou muda uma informacao que ja tinha dado",
         "action": (
-            "chame corrigir_fato com o novo valor, confirme a correcao e nao volte a usar o "
-            "valor antigo"
+            "chame a mesma tool registrar_* daquele dado com o novo valor, confirme a "
+            "correcao e nao volte a usar o valor antigo; a substituicao do valor anterior e "
+            "feita pela regra deterministica, nao por voce"
         ),
-        "tools": ["corrigir_fato", "consultar_estado_do_caso"],
+        "tools": [*TOOLS_DE_REGISTRO, "consultar_estado_do_caso"],
         "criticality": "HIGH",
     },
     {
@@ -211,10 +223,10 @@ GUIDELINES: tuple[dict[str, Any], ...] = (
         "key": "G_PRECO",
         "condition": "o municipe pergunta preco, valor, taxa, custo ou quer uma estimativa de valor",
         "action": (
-            "chame consultar_base_autoritativa com o assunto PRECO e responda apenas o que ela "
-            "devolver; nunca cite um valor, nem aproximado, nem de exemplo"
+            "chame consultar_preco_exumacao e responda apenas o que ela devolver; nunca cite "
+            "um valor, nem aproximado, nem de exemplo"
         ),
-        "tools": ["consultar_base_autoritativa"],
+        "tools": [TOOL_POR_TIPO_DE_INFORMACAO["PRECO"]],
         "canned_responses": ["SEM_PRECO"],
         "criticality": "HIGH",
     },
@@ -222,10 +234,10 @@ GUIDELINES: tuple[dict[str, Any], ...] = (
         "key": "G_DOCUMENTOS",
         "condition": "o municipe pergunta quais documentos, papeis ou certidoes sao exigidos",
         "action": (
-            "chame consultar_base_autoritativa com o assunto DOCUMENTOS e responda apenas o que "
-            "ela devolver; nunca liste documentos por conta propria"
+            "chame consultar_documentos_exumacao e responda apenas o que ela devolver; nunca "
+            "liste documentos por conta propria"
         ),
-        "tools": ["consultar_base_autoritativa"],
+        "tools": [TOOL_POR_TIPO_DE_INFORMACAO["DOCUMENTOS"]],
         "canned_responses": ["SEM_DOCUMENTOS"],
         "criticality": "HIGH",
     },
@@ -233,24 +245,81 @@ GUIDELINES: tuple[dict[str, Any], ...] = (
         "key": "G_PRAZO",
         "condition": "o municipe pergunta prazo, data, demora ou tempo de execucao",
         "action": (
-            "chame consultar_base_autoritativa com o assunto PRAZO e responda apenas o que ela "
-            "devolver; nunca estime tempo"
+            "chame consultar_prazo_exumacao e responda apenas o que ela devolver; nunca estime "
+            "tempo"
         ),
-        "tools": ["consultar_base_autoritativa"],
+        "tools": [TOOL_POR_TIPO_DE_INFORMACAO["PRAZO"]],
         "canned_responses": ["SEM_PRAZO"],
         "criticality": "HIGH",
     },
     {
-        "key": "G_REGRA",
-        "condition": (
-            "o municipe pergunta quem assina, quem autoriza, o que a regra exige ou como e o "
-            "procedimento administrativo"
-        ),
+        "key": "G_ASSINATURA",
+        "condition": "o municipe pergunta quem assina ou quem autoriza a exumacao",
         "action": (
-            "chame consultar_base_autoritativa com o assunto correspondente (ASSINATURA_EXUMACAO, "
-            "JAZIGO_DESTINO, PROCEDIMENTO) e responda apenas o que ela devolver"
+            "chame consultar_quem_assina_exumacao e responda apenas o que ela devolver; a "
+            "selecao pela situacao do conjuge e feita pela base, nao por voce"
         ),
-        "tools": ["consultar_base_autoritativa"],
+        "tools": [TOOL_POR_TIPO_DE_INFORMACAO["ASSINATURA_EXUMACAO"]],
+        "criticality": "HIGH",
+    },
+    {
+        "key": "G_PROCEDIMENTO",
+        "condition": (
+            "o municipe pergunta como e o processo, o que a regra exige ou qual o procedimento "
+            "administrativo"
+        ),
+        "action": "chame consultar_procedimento_exumacao e responda apenas o que ela devolver",
+        "tools": [TOOL_POR_TIPO_DE_INFORMACAO["PROCEDIMENTO_ADMINISTRATIVO"]],
+        "criticality": "HIGH",
+    },
+    {
+        "key": "G_JAZIGO_DESTINO",
+        "condition": (
+            "o municipe pergunta sobre o jazigo de destino, se pode colocar os restos no jazigo "
+            "da familia, ou sobre a situacao desse jazigo"
+        ),
+        "action": "chame consultar_jazigo_de_destino e responda apenas o que ela devolver",
+        "tools": [TOOL_POR_TIPO_DE_INFORMACAO["JAZIGO_DESTINO"]],
+        "criticality": "HIGH",
+    },
+    {
+        "key": "G_OSSUARIO",
+        "condition": (
+            "o municipe pergunta sobre ossuario, se pode deixar os restos no ossuario ou como "
+            "funciona esse destino"
+        ),
+        "action": "chame consultar_ossuario e responda apenas o que ela devolver",
+        "tools": [TOOL_POR_TIPO_DE_INFORMACAO["OSSUARIO"]],
+        "criticality": "HIGH",
+    },
+    {
+        "key": "G_RESTOS_JA_EXUMADOS",
+        "condition": (
+            "o municipe diz que os restos ja foram exumados, ou pergunta o que muda quando ja "
+            "foram"
+        ),
+        "action": "chame consultar_restos_ja_exumados e responda apenas o que ela devolver",
+        "tools": [TOOL_POR_TIPO_DE_INFORMACAO["RESTOS_JA_EXUMADOS"]],
+        "criticality": "HIGH",
+    },
+    {
+        "key": "G_TRANSPORTE",
+        "condition": (
+            "o municipe pergunta sobre o transporte dos restos: como levar, quem leva, o que "
+            "precisa para transportar"
+        ),
+        "action": "chame consultar_transporte_exumacao e responda apenas o que ela devolver",
+        "tools": [TOOL_POR_TIPO_DE_INFORMACAO["TRANSPORTE"]],
+        "criticality": "HIGH",
+    },
+    {
+        "key": "G_REGULARIDADE_JAZIGO",
+        "condition": (
+            "o municipe pergunta se o jazigo esta regular, fala de recadastro, de concessao "
+            "vencida ou de pendencia do jazigo"
+        ),
+        "action": "chame consultar_regularidade_do_jazigo e responda apenas o que ela devolver",
+        "tools": [TOOL_POR_TIPO_DE_INFORMACAO["REGULARIDADE_DO_JAZIGO"]],
         "criticality": "HIGH",
     },
     {
@@ -319,7 +388,13 @@ RELATIONSHIPS: tuple[dict[str, Any], ...] = (
     {"kind": "prioritize_over", "source": "G_PRECO", "targets": ["G_COLETA", "G_PROXIMA_PERGUNTA"]},
     {"kind": "prioritize_over", "source": "G_DOCUMENTOS", "targets": ["G_COLETA", "G_PROXIMA_PERGUNTA"]},
     {"kind": "prioritize_over", "source": "G_PRAZO", "targets": ["G_COLETA", "G_PROXIMA_PERGUNTA"]},
-    {"kind": "prioritize_over", "source": "G_REGRA", "targets": ["G_COLETA"]},
+    {"kind": "prioritize_over", "source": "G_ASSINATURA", "targets": ["G_COLETA"]},
+    {"kind": "prioritize_over", "source": "G_PROCEDIMENTO", "targets": ["G_COLETA"]},
+    {"kind": "prioritize_over", "source": "G_JAZIGO_DESTINO", "targets": ["G_COLETA"]},
+    {"kind": "prioritize_over", "source": "G_OSSUARIO", "targets": ["G_COLETA"]},
+    {"kind": "prioritize_over", "source": "G_RESTOS_JA_EXUMADOS", "targets": ["G_COLETA"]},
+    {"kind": "prioritize_over", "source": "G_TRANSPORTE", "targets": ["G_COLETA"]},
+    {"kind": "prioritize_over", "source": "G_REGULARIDADE_JAZIGO", "targets": ["G_COLETA"]},
     {"kind": "prioritize_over", "source": "G_AMBIGUO", "targets": ["G_COLETA"]},
     {"kind": "prioritize_over", "source": "G_CORRECAO", "targets": ["G_COLETA"]},
     {"kind": "entail", "source": "G_MULTI_FATO", "targets": ["G_PROXIMA_PERGUNTA"]},
@@ -357,9 +432,11 @@ JOURNEY = {
         },
         {
             "key": "S_REGISTRO",
-            "kind": "tool",
-            "tool": "registrar_fato",
-            "instruction": "registre o que o municipe acabou de informar",
+            "kind": "chat",
+            "instruction": (
+                "registre o que o municipe acabou de informar chamando a tool registrar_* "
+                "daquele dado e confirme em uma frase curta o que voce entendeu"
+            ),
         },
         {
             "key": "S_PROXIMA_PERGUNTA",

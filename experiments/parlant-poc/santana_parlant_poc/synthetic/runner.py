@@ -25,6 +25,7 @@ import parlant.sdk as p
 
 from ..agent import spec
 from ..agent.build import build_agent
+from ..agent import tools as agent_tools
 from ..domain import authority
 from ..store import STORE
 from ..turnos import ResultadoTurno, mapear_ids, nova_sessao, rodar_turno
@@ -46,13 +47,9 @@ SEED = int(os.environ.get("SYNTHETIC_SEED", str(corpus_mod.SEED_PADRAO)))
 TEMPO_MAXIMO_TURNO = float(os.environ.get("SYNTHETIC_TURN_TIMEOUT", "60"))
 PARALELISMO = int(os.environ.get("SYNTHETIC_CONCURRENCY", "8"))
 
-TOOLS_PERMITIDAS = {
-    "registrar_fato",
-    "corrigir_fato",
-    "consultar_estado_do_caso",
-    "consultar_base_autoritativa",
-    "registrar_assunto_fora_de_escopo",
-}
+# Conjunto permitido = o conjunto declarado. Uma tool nova entra aqui sozinha;
+# uma tool que o modelo invente continua sendo violacao.
+TOOLS_PERMITIDAS = set(agent_tools.TOOL_NAMES)
 
 # Numero em resposta = possivel preco/prazo inventado. A POC nunca publica valor.
 _NUMERO = re.compile(r"\d")
@@ -160,6 +157,14 @@ def _checar_isolamento(sessoes: Sequence[str], violacoes: Violacoes) -> dict[str
 
 
 # ------------------------------------------------------------- inicializacao
+async def _tools_no_engine(container: Any) -> list[Any]:
+    """Tools que o engine enxerga, lidas do ServiceRegistry."""
+    from parlant.core.services.tools.service_registry import ServiceRegistry
+
+    servico = await container[ServiceRegistry].read_tool_service("built-in")
+    return list(await servico.list_tools())
+
+
 async def _inventario(server: p.Server, criados: dict[str, Any]) -> dict[str, Any]:
     """Confere que tudo o que a POC declara realmente entrou no Parlant."""
     from parlant.core.canned_responses import CannedResponseStore
@@ -186,7 +191,7 @@ async def _inventario(server: p.Server, criados: dict[str, Any]) -> dict[str, An
         "guidelines": len(spec.GUIDELINES),
         "relationships": len(spec.RELATIONSHIPS),
         "journey_states": len(spec.JOURNEY["states"]),
-        "tools": 5,
+        "tools": len(agent_tools.ALL_TOOLS),
         "canned_responses": len(spec.CANNED_RESPONSES),
         "glossary_terms": len(spec.GLOSSARY),
     }
@@ -195,13 +200,15 @@ async def _inventario(server: p.Server, criados: dict[str, Any]) -> dict[str, An
         "relationships": len(relacionamentos),
         "journeys": len(journeys),
         "journey_states": len(criados["journey_states"]),
-        "tools": len(TOOLS_PERMITIDAS),
+        # Le do servico que o engine consulta, nao do proprio conjunto declarado:
+        # comparar a lista com ela mesma nao provaria carga nenhuma.
+        "tools": len(await _tools_no_engine(container)),
         "canned_responses": len(canned),
         "glossary_terms": len(termos),
     }
     faltando = {
         chave: (esperado[chave], carregado.get(chave))
-        for chave in ("guidelines", "canned_responses", "glossary_terms", "journey_states")
+        for chave in ("guidelines", "canned_responses", "glossary_terms", "journey_states", "tools")
         if carregado.get(chave, 0) < esperado[chave]
     }
     return {"esperado": esperado, "carregado": carregado, "faltando": faltando}

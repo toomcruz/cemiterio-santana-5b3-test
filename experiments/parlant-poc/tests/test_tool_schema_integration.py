@@ -1,17 +1,15 @@
-"""Integracao: o schema que o Parlant REAL entrega ao ToolCaller.
+"""Integracao: o contrato que o Parlant REAL entrega ao ToolCaller.
 
-Os testes de `test_tool_args.py` liam o descritor produzido pelo decorador. Isso
-provou que a declaracao estava certa, mas nao que o texto entregue ao modelo
-carregava o dominio — e foi justamente essa lacuna que deixou o run
-32069767929 reprovar sem que a suite acusasse nada.
-
-Aqui nada passa por helper da POC: os descritores vem de
+Nada aqui passa por helper da POC. Os descritores vem de
 `plugins._describe_parameters` (o introspector do proprio Parlant, invocado pelo
-decorador `@p.tool`), e o texto vem de `SingleToolBatch._add_tool_definitions_section`
-e do bloco `TOOL TO EVALUATE` — os dois renderizadores reais do ToolCaller.
+decorador `@p.tool`); o texto vem de `SingleToolBatch._add_tool_definitions_section`
+e do bloco `TOOL TO EVALUATE`; e a decisao de aceitar ou recusar uma chamada vem
+de `SingleToolBatch._evaluate_non_consequential_tool_calls`.
 
-O teste falha se qualquer um desses parametros voltar a chegar ao modelo como
-apenas `{"type": "string"}`.
+A prova central do redesenho esta na secao 3: uma tool de consulta sem
+argumento produz chamada valida com `args={}` pelo caminho real do Parlant.
+Nao existe argumento para faltar, entao `<<__missing__>>` deixou de ser um
+resultado possivel — nao por instrucao melhor no prompt, por contrato.
 """
 
 import json
@@ -19,70 +17,68 @@ from typing import Annotated, Any
 
 import pytest
 
-from santana_parlant_poc.agent.tools import ALL_TOOLS
+from santana_parlant_poc.agent import tools as T
+from santana_parlant_poc.domain import authority, catalog
 
-PARAMETROS_COM_DOMINIO = {
-    ("consultar_base_autoritativa", "assunto"): "enum",
-    ("registrar_fato", "fato"): "enum",
-    ("corrigir_fato", "fato"): "enum",
-    ("registrar_fato", "valor"): "description",
-    ("corrigir_fato", "novo_valor"): "description",
-    ("registrar_assunto_fora_de_escopo", "descricao"): "description",
-}
+CONSULTAS_SEM_ARGUMENTO = [nome for nome, _t, _d in T.CONSULTAS]
+FATOS_ENUM = [c for c in authority.user_writable_facts() if catalog.fact_specs()[c].is_enum]
+FATOS_TEXTO = [c for c in authority.user_writable_facts() if not catalog.fact_specs()[c].is_enum]
 
 
 def _tool(nome: str) -> Any:
-    return next(t.tool for t in ALL_TOOLS if t.tool.name == nome)
+    return next(t.tool for t in T.ALL_TOOLS if t.tool.name == nome)
 
 
 # ------------------------------- 1. introspector real (plugins._describe_parameters)
-@pytest.mark.parametrize(("chave", "esperado"), list(PARAMETROS_COM_DOMINIO.items()))
-def test_introspector_do_parlant_produz_dominio(chave, esperado):
-    """O descritor sai de `_describe_parameters`, chamado pelo decorador `@p.tool`."""
-    nome_tool, parametro = chave
-    descritor, _opcoes = _tool(nome_tool).parameters[parametro]
-
+@pytest.mark.parametrize("code", FATOS_ENUM)
+def test_introspector_do_parlant_produz_o_enum_do_catalogo(code):
+    descritor, _opcoes = _tool(T.TOOL_POR_FATO[code]).parameters[T.PARAMETRO_POR_FATO[code]]
     assert descritor != {"type": "string"}, (
-        f"{nome_tool}.{parametro} voltou a ser string opaca: o ToolCaller responderia "
-        "<<__missing__>> por nao ter como inferir o argumento"
+        f"{code} voltou a ser string opaca: o ToolCaller responderia <<__missing__>> "
+        "por nao ter como inferir o argumento"
     )
-    assert descritor.get(esperado), f"{nome_tool}.{parametro} sem `{esperado}`: {descritor}"
+    assert descritor["enum"] == list(catalog.fact_specs()[code].allowed_values)
 
 
-def test_introspector_e_o_do_parlant_e_nao_um_helper_da_poc():
-    """O dominio nasce do introspector do Parlant, nao de codigo da POC.
+@pytest.mark.parametrize("code", FATOS_TEXTO)
+def test_introspector_do_parlant_produz_a_descricao(code):
+    descritor, _opcoes = _tool(T.TOOL_POR_FATO[code]).parameters[T.PARAMETRO_POR_FATO[code]]
+    assert descritor.get("description")
 
-    `_describe_parameters` e uma funcao aninhada no decorador, entao a forma de
-    exercita-la e aplicar o decorador real (`parlant.core.services.tools.plugins.tool`)
-    sobre uma sonda anotada com os mesmos tipos da POC. O descritor resultante e
-    produzido inteiramente pelo Parlant.
+
+def test_o_introspector_e_o_do_parlant_e_nao_um_helper_da_poc():
+    """As tools sao geradas; o descritor tem que sair do Parlant mesmo assim.
+
+    `_describe_parameters` e funcao aninhada no decorador, entao a forma de
+    exercita-la e aplicar o decorador real sobre uma sonda com a mesma anotacao
+    que o gerador monta — e conferir que o resultado bate.
     """
     import parlant.sdk as p
     from parlant.core.services.tools.plugins import tool as decorador_do_parlant
 
-    from santana_parlant_poc.agent.tools import (
-        VALOR_DO_FATO,
-        AssuntoAutoritativo,
-        FatoDoMunicipe,
-    )
+    code = "exhumation_purpose"
+    spec = catalog.fact_specs()[code]
+    anotacao = T._anotacao_do_fato(code, spec, "finalidade")
 
     @decorador_do_parlant
-    async def sonda(
-        context: p.ToolContext,
-        assunto: AssuntoAutoritativo,
-        fato: FatoDoMunicipe,
-        valor: Annotated[str, VALOR_DO_FATO],
-    ) -> p.ToolResult:
+    async def sonda(context: p.ToolContext, finalidade: anotacao) -> p.ToolResult:  # type: ignore[valid-type]
         """Sonda do teste: existe so para observar o introspector do Parlant."""
         return p.ToolResult(data={})
 
-    descritores = {nome: dict(d) for nome, (d, _) in sonda.tool.parameters.items()}
-    assert descritores["assunto"].get("enum") == [a.value for a in AssuntoAutoritativo]
-    assert descritores["fato"].get("enum") == [f.value for f in FatoDoMunicipe]
-    assert descritores["valor"].get("description")
+    descritor_da_sonda = dict(sonda.tool.parameters["finalidade"][0])
+    descritor_gerado = dict(_tool(T.TOOL_POR_FATO[code]).parameters["finalidade"][0])
+    assert descritor_da_sonda == descritor_gerado
+    assert descritor_da_sonda["enum"] == list(spec.allowed_values)
 
-    # E o mesmo resultado que as tools da POC carregam.
-    assert descritores["assunto"] == dict(_tool("consultar_base_autoritativa").parameters["assunto"][0])
+
+def test_tool_gerada_e_um_tool_do_parlant_de_verdade():
+    """A geracao nao pode produzir um objeto parecido: tem que ser o mesmo tipo."""
+    from parlant.core.tools import Tool
+    from parlant.core.services.tools.plugins import ToolEntry
+
+    entrada = next(t for t in T.ALL_TOOLS if t.tool.name == "consultar_preco_exumacao")
+    assert isinstance(entrada, ToolEntry)
+    assert isinstance(entrada.tool, Tool)
 
 
 # --------------------------- 2. renderizador real do prompt (SingleToolBatch)
@@ -93,9 +89,6 @@ def _render_consequencial(nome_tool: str) -> str:
 
     tool = _tool(nome_tool)
     tool_id = ToolId(service_name="built-in", tool_name=nome_tool)
-
-    # `_add_tool_definitions_section` nao usa estado da instancia: e chamado
-    # como funcao do proprio Parlant, sem reimplementar nada aqui.
     template, props = SingleToolBatch._add_tool_definitions_section(
         SingleToolBatch, candidate_tool=(tool_id, tool), reference_tools=[]
     )
@@ -116,41 +109,35 @@ def _render_nao_consequencial(nome_tool: str) -> str:
     return json.dumps(parameters_info, indent=2, ensure_ascii=False)
 
 
-@pytest.mark.parametrize(
-    ("nome_tool", "esperados"),
-    [
-        ("consultar_base_autoritativa", ["PRECO", "DOCUMENTOS"]),
-        ("registrar_fato", ["exhumation_purpose", "transport_destination"]),
-        ("corrigir_fato", ["exhumation_purpose"]),
-    ],
-)
-def test_prompt_do_toolcaller_carrega_os_valores_possiveis(nome_tool, esperados):
+@pytest.mark.parametrize("code", FATOS_ENUM)
+def test_prompt_do_toolcaller_carrega_os_valores_possiveis(code):
+    nome_tool = T.TOOL_POR_FATO[code]
     consequencial = _render_consequencial(nome_tool)
     nao_consequencial = _render_nao_consequencial(nome_tool)
-    for valor in esperados:
+    for valor in catalog.fact_specs()[code].allowed_values:
         assert valor in consequencial, f"{valor} ausente no caminho consequencial"
         assert valor in nao_consequencial, f"{valor} ausente no caminho nao consequencial"
 
 
-@pytest.mark.parametrize(
-    "nome_tool", ["registrar_fato", "corrigir_fato", "registrar_assunto_fora_de_escopo"]
-)
-def test_prompt_do_toolcaller_carrega_a_descricao_do_parametro(nome_tool):
+@pytest.mark.parametrize("nome_tool", CONSULTAS_SEM_ARGUMENTO)
+def test_prompt_de_consulta_nao_apresenta_parametro_ao_modelo(nome_tool):
+    """Sem parametro no prompt, nao ha o que o modelo deixar de preencher."""
+    assert _render_nao_consequencial(nome_tool) == "{}"
     consequencial = _render_consequencial(nome_tool)
-    assert "description" in consequencial
-    assert "Cemiterio Santana" in consequencial or "municipe" in consequencial
+    # Chaves do renderizador consequencial real do Parlant 3.3.2.
+    assert '"required_parameters": {}' in consequencial
+    assert '"optional_arguments": {}' in consequencial
 
 
 def test_prompt_nao_reduz_parametro_a_string_opaca():
     """Regressao direta do blocker: `{"type": "string"}` sozinho e o sintoma."""
-    for (nome_tool, parametro), _ in PARAMETROS_COM_DOMINIO.items():
-        bloco = json.loads(_render_nao_consequencial(nome_tool))[parametro]
-        assert bloco != {"type": "string"}, (
-            f"{nome_tool}.{parametro} chega ao modelo como string opaca"
-        )
+    for entrada in T.ALL_TOOLS:
+        bloco = json.loads(_render_nao_consequencial(entrada.tool.name))
+        for parametro, descritor in bloco.items():
+            assert descritor != {"type": "string"}, f"{entrada.tool.name}.{parametro}"
 
 
-# ------------------- 3. avaliacao real do ToolCaller sobre esse schema
+# ------------------- 3. avaliacao real do ToolCaller sobre esse contrato
 def _avaliar_com_o_parlant(nome_tool: str, args: dict[str, Any]) -> tuple[list, list]:
     """Roda a avaliacao real do lote nao consequencial do Parlant.
 
@@ -168,12 +155,7 @@ def _avaliar_com_o_parlant(nome_tool: str, args: dict[str, Any]) -> tuple[list, 
     saida = [NonConsequentialToolCallEvaluation(args=args)]
 
     class _LoteSemEventosEncenados:
-        """Instancia minima: a avaliacao real so precisa dos eventos encenados.
-
-        O metodo avaliado e o do Parlant, sem reimplementacao; o estado que ele
-        consulta e apenas `self._context.staged_events` (vazio aqui) e
-        `self._logger`, usado so para depuracao.
-        """
+        """Instancia minima: a avaliacao real so precisa dos eventos encenados."""
 
         _evaluate_non_consequential_tool_calls = (
             SingleToolBatch._evaluate_non_consequential_tool_calls
@@ -196,51 +178,53 @@ def _avaliar_com_o_parlant(nome_tool: str, args: dict[str, Any]) -> tuple[list, 
     return chamadas, faltando
 
 
-def test_saida_correta_do_modelo_vira_chamada_valida():
-    chamadas, faltando = _avaliar_com_o_parlant(
-        "consultar_base_autoritativa", {"assunto": "PRECO"}
-    )
-    assert len(chamadas) == 1
-    assert chamadas[0].arguments == {"assunto": "PRECO"}
+@pytest.mark.parametrize("nome_tool", CONSULTAS_SEM_ARGUMENTO)
+def test_consulta_sem_argumento_vira_chamada_valida(nome_tool):
+    """A prova do redesenho, pelo avaliador real do Parlant.
+
+    Antes, `consultar_base_autoritativa` com `{}` era recusada por
+    `Argument 'assunto' is missing`. Sem argumento declarado, `{}` e a chamada
+    completa.
+    """
+    chamadas, faltando = _avaliar_com_o_parlant(nome_tool, {})
+    assert len(chamadas) == 1, f"{nome_tool} nao produziu chamada"
+    assert chamadas[0].arguments == {}
     assert not faltando
 
 
-def test_registrar_fato_com_fato_e_valor_vira_chamada_valida():
-    chamadas, faltando = _avaliar_com_o_parlant(
-        "registrar_fato", {"fato": "transport_destination", "valor": "OUTRO_CEMITERIO"}
-    )
+@pytest.mark.parametrize("code", FATOS_ENUM)
+def test_registro_com_valor_do_catalogo_vira_chamada_valida(code):
+    nome_tool = T.TOOL_POR_FATO[code]
+    parametro = T.PARAMETRO_POR_FATO[code]
+    valor = catalog.fact_specs()[code].allowed_values[0]
+    chamadas, faltando = _avaliar_com_o_parlant(nome_tool, {parametro: valor})
     assert len(chamadas) == 1
-    assert chamadas[0].arguments == {
-        "fato": "transport_destination",
-        "valor": "OUTRO_CEMITERIO",
-    }
+    assert chamadas[0].arguments == {parametro: valor}
     assert not faltando
 
 
-@pytest.mark.parametrize(
-    ("nome_tool", "args", "parametro"),
-    [
-        ("consultar_base_autoritativa", {"assunto": "<<__missing__>>"}, "assunto"),
-        ("registrar_fato", {"fato": "<<__missing__>>", "valor": "TRANSPORTE"}, "fato"),
-        ("registrar_fato", {"fato": "exhumation_purpose", "valor": "<<__missing__>>"}, "valor"),
-        ("registrar_assunto_fora_de_escopo", {"descricao": "<<__missing__>>"}, "descricao"),
-    ],
-)
-def test_marcador_de_ausencia_reproduz_o_blocker(nome_tool, args, parametro):
-    """Reproduz `Argument '<x>' is missing` pelo caminho real do Parlant."""
-    chamadas, faltando = _avaliar_com_o_parlant(nome_tool, args)
+@pytest.mark.parametrize("code", authority.user_writable_facts())
+def test_marcador_de_ausencia_continua_recusado_no_registro(code):
+    """Onde ainda ha argumento, a regra do Parlant continua valendo integralmente."""
+    nome_tool = T.TOOL_POR_FATO[code]
+    parametro = T.PARAMETRO_POR_FATO[code]
+    chamadas, faltando = _avaliar_com_o_parlant(nome_tool, {parametro: "<<__missing__>>"})
     assert not chamadas, "uma chamada nao pode ser criada com argumento ausente"
     assert any(d.parameter == parametro for d in faltando)
 
 
-@pytest.mark.parametrize(
-    ("nome_tool", "args", "parametro"),
-    [
-        ("consultar_base_autoritativa", {}, "assunto"),
-        ("registrar_fato", {"fato": "exhumation_purpose"}, "valor"),
-    ],
-)
-def test_argumento_omitido_tambem_e_recusado(nome_tool, args, parametro):
-    chamadas, faltando = _avaliar_com_o_parlant(nome_tool, args)
+@pytest.mark.parametrize("code", authority.user_writable_facts())
+def test_argumento_omitido_tambem_e_recusado(code):
+    chamadas, faltando = _avaliar_com_o_parlant(T.TOOL_POR_FATO[code], {})
     assert not chamadas
-    assert any(d.parameter == parametro for d in faltando)
+    assert any(d.parameter == T.PARAMETRO_POR_FATO[code] for d in faltando)
+
+
+# ----------------------------------- 4. o que o contrato nao pode expor
+def test_nenhuma_tool_exposta_permite_escrever_fato_autoritativo():
+    """`authoritative_only` nao aparece em nome de tool nem em dominio de enum."""
+    autoritativos = set(authority.authoritative_facts())
+    for entrada in T.ALL_TOOLS:
+        for descritor, _ in entrada.tool.parameters.values():
+            assert not (autoritativos & set(descritor.get("enum") or ())), entrada.tool.name
+    assert not (autoritativos & set(T.TOOL_POR_FATO))

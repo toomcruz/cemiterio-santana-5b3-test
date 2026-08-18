@@ -208,24 +208,43 @@ Template ID: canrep_fora """
     assert escolha.match_quality == "low"
 
 
-def test_lote_de_tool_usa_a_chave_args_com_os_parametros_reais():
-    """Regressao: `arguments` era descartado e a tool virava 'argumento faltando'."""
+def _lote_de_tool(nome_tool: str, mensagem: str = "quanto custa a exumacao?"):
     from parlant.core.engines.alpha.tool_calling.single_tool_batch import (
         NonConsequentialToolBatchSchema,
     )
-    from santana_parlant_poc.agent.tools import ALL_TOOLS
     from santana_parlant_poc.synthetic.nlp import _tool_nao_consequencial
 
-    obrigatorios = {t.tool.name: set(t.tool.required) for t in ALL_TOOLS}
-    prompt = _prompt("quanto custa a exumacao?") + (
-        "\n\nTOOL TO EVALUATE:\n-----------------\nName: built-in:consultar_base_autoritativa"
+    prompt = _prompt(mensagem) + (
+        f"\n\nTOOL TO EVALUATE:\n-----------------\nName: built-in:{nome_tool}"
     )
-    resultado = _tool_nao_consequencial(
+    return _tool_nao_consequencial(
         NonConsequentialToolBatchSchema, decidir(prompt), prompt, CONTROLE
     )
+
+
+def test_lote_de_tool_usa_a_chave_args_com_os_parametros_reais():
+    """Regressao: `arguments` era descartado e a tool virava 'argumento faltando'."""
+    from santana_parlant_poc.agent.tools import ALL_TOOLS, TOOL_POR_FATO, PARAMETRO_POR_FATO
+
+    obrigatorios = {t.tool.name: set(t.tool.required) for t in ALL_TOOLS}
+    nome_tool = TOOL_POR_FATO["exhumation_purpose"]
+    # Mensagem de coleta: numa pergunta de preco a tool de registro nao roda —
+    # e nao deve mesmo.
+    resultado = _lote_de_tool(nome_tool, "quero exumar meu pai pra levar pra outro cemiterio")
     assert resultado.should_run is True
     assert resultado.calls, "o lote precisa conter a chamada"
-    assert set(resultado.calls[0].args or {}) == obrigatorios["consultar_base_autoritativa"]
+    assert set(resultado.calls[0].args or {}) == obrigatorios[nome_tool]
+    assert PARAMETRO_POR_FATO["exhumation_purpose"] in (resultado.calls[0].args or {})
+
+
+def test_lote_de_consulta_roda_sem_argumento_nenhum():
+    """Depois do redesenho a tool de preco nao tem argumento: `{}` e completo."""
+    from santana_parlant_poc.agent.tools import TOOL_POR_TIPO_DE_INFORMACAO
+
+    resultado = _lote_de_tool(TOOL_POR_TIPO_DE_INFORMACAO["PRECO"])
+    assert resultado.should_run is True
+    assert resultado.calls
+    assert (resultado.calls[0].args or {}) == {}
 
 
 def test_escolha_da_transicao_nao_depende_da_ordem_do_prompt():
@@ -262,9 +281,9 @@ def test_tool_avaliada_vem_da_secao_dedicada_do_prompt():
 
     prompt = (
         '"name": "consultar_estado_do_caso"\n'
-        "TOOL TO EVALUATE:\n-----------------\nName: built-in:registrar_fato\n"
+        "TOOL TO EVALUATE:\n-----------------\nName: built-in:registrar_finalidade_exumacao\n"
     )
-    assert _nome_da_tool(prompt) == "registrar_fato"
+    assert _nome_da_tool(prompt) == "registrar_finalidade_exumacao"
 
 
 def test_espera_do_turno_ignora_o_ready_do_preambulo():
@@ -432,3 +451,32 @@ def test_metricas_de_casamento_contam_acerto_e_falso_negativo():
 def test_corpus_tem_conversas_multi_turno():
     corpus = corpus_mod.gerar_corpus(100)
     assert sum(1 for c in corpus if len(c.turnos) > 1) >= 50
+
+
+def test_valor_de_texto_livre_varia_por_conversa():
+    """Regressao: valor fixo em `requester_document` acusa contaminacao falsa.
+
+    O detector de contaminacao entre sessoes olha exatamente esse fato: dois
+    atendimentos com o mesmo documento so podem ser vazamento de estado. Um
+    emulador que gravasse sempre o mesmo texto reprovaria a bateria inteira sem
+    haver defeito no runtime.
+    """
+    from santana_parlant_poc.agent.tools import TOOL_POR_FATO
+    from santana_parlant_poc.synthetic.nlp import _valor_para_registro
+
+    tool = TOOL_POR_FATO["requester_document"]
+    a = _valor_para_registro(tool, "meu rg e 12345, quero exumar meu pai")
+    b = _valor_para_registro(tool, "sou a filha da dona maria, quero exumar ela")
+    assert a != b
+    # E continua reprodutivel: mesma mensagem, mesmo valor.
+    assert a == _valor_para_registro(tool, "meu rg e 12345, quero exumar meu pai")
+
+
+def test_valor_de_enum_vem_do_dominio_do_catalogo():
+    from santana_parlant_poc.agent.tools import TOOL_POR_FATO
+    from santana_parlant_poc.domain import catalog
+    from santana_parlant_poc.synthetic.nlp import _valor_para_registro
+
+    tool = TOOL_POR_FATO["exhumation_purpose"]
+    valor = _valor_para_registro(tool, "qualquer mensagem")
+    assert valor in catalog.fact_specs()["exhumation_purpose"].allowed_values

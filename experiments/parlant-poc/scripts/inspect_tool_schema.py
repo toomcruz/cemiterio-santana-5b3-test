@@ -43,12 +43,11 @@ from santana_parlant_poc.synthetic.nlp import synthetic_nlp_service  # noqa: E40
 PORTA = int(os.environ.get("INSPECT_PORT", "8880"))
 SAIDA = Path(__file__).resolve().parent.parent / "tool-schema-inspection.json"
 
-INTERESSAM = (
-    "consultar_base_autoritativa",
-    "registrar_fato",
-    "corrigir_fato",
-    "registrar_assunto_fora_de_escopo",
-)
+# Interessam as tools que carregam argumento: sao as unicas onde o dominio pode
+# se perder no caminho ate o modelo. As de consulta nao tem parametro nenhum.
+from santana_parlant_poc.agent.tools import ALL_TOOLS as _ALL_TOOLS  # noqa: E402
+
+INTERESSAM = tuple(t.tool.name for t in _ALL_TOOLS if t.tool.parameters)
 RESULTADO: dict[str, Any] = {}
 
 

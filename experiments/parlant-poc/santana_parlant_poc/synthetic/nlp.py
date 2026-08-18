@@ -51,6 +51,9 @@ from parlant.core.nlp.service import (
 from parlant.core.nlp.tokenization import EstimatingTokenizer
 from parlant.core.tracer import Tracer
 
+from ..agent import tools as agent_tools
+from ..domain import catalog as domain_catalog
+
 MODELO_SINTETICO = "synthetic/santana-lab-1"
 SEED_PADRAO = 20260817
 
@@ -610,8 +613,46 @@ def _tool_batch(schema: type, decisao: Decisao, prompt: str, controle: ControleS
     )
 
 
-_TOOL_AVALIADA = re.compile(r"TOOL TO EVALUATE:\s*\n-+\s*\nName:\s*(?:\S+?:)?([a-z_]{4,40})")
-_TOOL_NO_FORMATO = re.compile(r"YOUR REASONING FOR RUNNING (?:\S+?:)?([a-z_]{4,40})")
+_TOOL_AVALIADA = re.compile(r"TOOL TO EVALUATE:\s*\n-+\s*\nName:\s*(?:\S+?:)?([a-z_]{4,60})")
+_TOOL_NO_FORMATO = re.compile(r"YOUR REASONING FOR RUNNING (?:\S+?:)?([a-z_]{4,60})")
+
+# O emulador conhece as tools pelo registro real, nao por lista escrita a mao:
+# uma tool nova nasce coberta pela bateria sintetica.
+TOOLS_CONHECIDAS: tuple[str, ...] = agent_tools.TOOL_NAMES
+TOOLS_SEM_ARGUMENTO: frozenset[str] = frozenset(
+    entrada.tool.name for entrada in agent_tools.ALL_TOOLS if not entrada.tool.parameters
+)
+TOOLS_DE_CONSULTA_AUTORITATIVA: frozenset[str] = frozenset(
+    agent_tools.TOOL_POR_TIPO_DE_INFORMACAO.values()
+)
+TOOLS_DE_REGISTRO: frozenset[str] = frozenset(agent_tools.TOOL_POR_FATO.values())
+PARAMETRO_DA_TOOL: dict[str, str] = {
+    agent_tools.TOOL_POR_FATO[code]: agent_tools.PARAMETRO_POR_FATO[code]
+    for code in agent_tools.TOOL_POR_FATO
+}
+
+
+FATO_DA_TOOL: dict[str, str] = {
+    nome: code for code, nome in agent_tools.TOOL_POR_FATO.items()
+}
+
+
+def _valor_para_registro(nome_tool: str, mensagem: str) -> str:
+    """Valor que um modelo produziria para esta tool.
+
+    Enum: o primeiro valor do dominio do catalogo.
+
+    Texto livre: um valor derivado da mensagem — **precisa variar por conversa**.
+    Um valor fixo faria todas as sessoes gravarem o mesmo `requester_document`, e
+    o proprio detector de contaminacao entre sessoes acusaria isso como
+    vazamento. Derivar da mensagem mantem a variacao e a reprodutibilidade: a
+    mesma seed produz os mesmos textos e, portanto, os mesmos valores.
+    """
+    spec = domain_catalog.fact_specs()[FATO_DA_TOOL[nome_tool]]
+    if spec.is_enum:
+        return spec.allowed_values[0]
+    marca = hashlib.sha1(mensagem.encode("utf-8")).hexdigest()[:10]
+    return f"{spec.display_name}: {marca}"
 
 
 def _nome_da_tool(prompt: str) -> str:
@@ -626,15 +667,8 @@ def _nome_da_tool(prompt: str) -> str:
     if dedicada:
         return dedicada.group(1)
 
-    achados = re.findall(r"[\"']?name[\"']?\s*[:=]\s*[\"']([a-z_]{4,40})[\"']", prompt)
-    conhecidas = (
-        "consultar_base_autoritativa",
-        "consultar_estado_do_caso",
-        "registrar_fato",
-        "corrigir_fato",
-        "registrar_assunto_fora_de_escopo",
-        "consultar_preco_exumacao",
-    )
+    achados = re.findall(r"[\"']?name[\"']?\s*[:=]\s*[\"']([a-z_]{4,60})[\"']", prompt)
+    conhecidas = TOOLS_CONHECIDAS
     for candidato in reversed(achados):
         if candidato in conhecidas:
             return candidato
@@ -645,11 +679,11 @@ def _nome_da_tool(prompt: str) -> str:
 
 
 def _deve_chamar_tool(nome_tool: str, decisao: Decisao) -> bool:
-    if nome_tool in ("consultar_base_autoritativa", "consultar_preco_exumacao"):
+    if nome_tool in TOOLS_DE_CONSULTA_AUTORITATIVA:
         return decisao.exige_tool_autoritativa
     if nome_tool == "registrar_assunto_fora_de_escopo":
         return decisao.assunto == "fora_de_escopo"
-    if nome_tool in ("registrar_fato", "corrigir_fato"):
+    if nome_tool in TOOLS_DE_REGISTRO:
         return decisao.assunto in ("exumacao", "outro")
     if nome_tool == "consultar_estado_do_caso":
         return not decisao.guarda_de_autoridade
@@ -659,23 +693,24 @@ def _deve_chamar_tool(nome_tool: str, decisao: Decisao) -> bool:
 def _argumentos_da_tool(
     nome_tool: str, decisao: Decisao, controle: ControleSintetico
 ) -> dict[str, Any]:
-    if nome_tool == "consultar_base_autoritativa":
-        assunto = {
-            "preco": "PRECO",
-            "documento": "DOCUMENTOS",
-            "prazo": "PRAZO",
-            "regra": "ASSINATURA_EXUMACAO",
-        }.get(decisao.assunto, "PROCEDIMENTO")
-        return {"assunto": assunto}
+    """Argumentos que um modelo produziria para esta tool.
+
+    As tools de consulta nao tem argumento nenhum: o assunto e ligado por
+    codigo quando a Guideline casa. Sobrou um argumento so nas tools de
+    registro — o valor — e ele vem do dominio do proprio catalogo.
+    """
+    if nome_tool in TOOLS_SEM_ARGUMENTO:
+        return {}
     if nome_tool == "registrar_assunto_fora_de_escopo":
         return {"descricao": decisao.mensagem[:80]}
-    if nome_tool in ("registrar_fato", "corrigir_fato"):
+    if nome_tool in TOOLS_DE_REGISTRO:
+        parametro = PARAMETRO_DA_TOOL[nome_tool]
         if controle.modo_de_falha is FailureMode.UNAUTHORIZED_FACT:
-            # Tentativa proposital de confirmar fato authoritative_only.
-            chave = "novo_valor" if nome_tool == "corrigir_fato" else "valor"
-            return {"fato": "exhumation_authorization", chave: "OBTIDA_RESPONSAVEL_JAZIGO"}
-        chave = "novo_valor" if nome_tool == "corrigir_fato" else "valor"
-        return {"fato": "exhumation_purpose", chave: "TRANSPORTE"}
+            # Tentativa proposital de gravar um valor de fato authoritative_only.
+            # Nao existe mais tool que *nomeie* esses fatos — a tentativa so
+            # pode chegar como valor fora do dominio, e tem que ser recusada.
+            return {parametro: "OBTIDA_RESPONSAVEL_JAZIGO"}
+        return {parametro: _valor_para_registro(nome_tool, decisao.mensagem)}
     return {}
 
 

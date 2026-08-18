@@ -1,137 +1,215 @@
 {
   "tools": {
-    "consultar_base_autoritativa": {
+    "registrar_finalidade_exumacao": {
       "local": {
-        "assunto": {
+        "finalidade": {
           "type": "string",
           "enum": [
-            "PRECO",
-            "DOCUMENTOS",
-            "PRAZO",
-            "PROCEDIMENTO_ADMINISTRATIVO",
-            "ASSINATURA_EXUMACAO",
-            "JAZIGO_DESTINO",
+            "TRANSPORTE",
             "OSSUARIO",
-            "RESTOS_JA_EXUMADOS"
+            "CREMACAO",
+            "OUTRA"
+          ],
+          "description": "Finalidade da exumacao, exatamente como o catalogo do Cemiterio Santana define. Pergunta correspondente: 'Qual e a finalidade da exumacao?'. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
+          "examples": [
+            "TRANSPORTE",
+            "OSSUARIO",
+            "CREMACAO"
           ]
         }
       },
       "engine": {
-        "assunto": {
+        "finalidade": {
           "type": "string",
           "enum": [
-            "PRECO",
-            "DOCUMENTOS",
-            "PRAZO",
-            "PROCEDIMENTO_ADMINISTRATIVO",
-            "ASSINATURA_EXUMACAO",
-            "JAZIGO_DESTINO",
+            "TRANSPORTE",
             "OSSUARIO",
-            "RESTOS_JA_EXUMADOS"
+            "CREMACAO",
+            "OUTRA"
+          ],
+          "description": "Finalidade da exumacao, exatamente como o catalogo do Cemiterio Santana define. Pergunta correspondente: 'Qual e a finalidade da exumacao?'. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
+          "examples": [
+            "TRANSPORTE",
+            "OSSUARIO",
+            "CREMACAO"
           ]
         }
       },
       "identicos": true,
       "diferencas": {}
     },
-    "registrar_fato": {
+    "registrar_situacao_dos_restos": {
       "local": {
-        "fato": {
+        "situacao": {
           "type": "string",
           "enum": [
-            "exhumation_purpose",
-            "remains_status",
-            "burial_reference",
-            "surviving_spouse_status",
-            "transport_destination",
-            "destination_grave_reference",
-            "requester_document"
-          ]
-        },
-        "valor": {
-          "type": "string",
-          "description": "Valor do fato, exatamente como o catalogo do Cemiterio Santana define. Valores aceitos por fato — exhumation_purpose: TRANSPORTE, OSSUARIO, CREMACAO, OUTRA; remains_status: SEPULTADO, EXUMADO, DESCONHECIDO; surviving_spouse_status: VIVO, FALECIDO, INEXISTENTE, DESCONHECIDO; transport_destination: OUTRO_CEMITERIO, JAZIGO_FAMILIA, CREMATORIO, OSSUARIO; texto livre (o que o municipe disse): burial_reference, destination_grave_reference, requester_document. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
-          "examples": [
-            "TRANSPORTE",
             "SEPULTADO",
-            "OUTRO_CEMITERIO",
-            "VIVO"
+            "EXUMADO",
+            "DESCONHECIDO"
+          ],
+          "description": "Situacao dos restos mortais, exatamente como o catalogo do Cemiterio Santana define. Pergunta correspondente: 'Os restos mortais ainda estao sepultados ou ja foram exumados?'. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
+          "examples": [
+            "SEPULTADO",
+            "EXUMADO",
+            "DESCONHECIDO"
           ]
         }
       },
       "engine": {
-        "fato": {
+        "situacao": {
           "type": "string",
           "enum": [
-            "exhumation_purpose",
-            "remains_status",
-            "burial_reference",
-            "surviving_spouse_status",
-            "transport_destination",
-            "destination_grave_reference",
-            "requester_document"
-          ]
-        },
-        "valor": {
-          "type": "string",
-          "description": "Valor do fato, exatamente como o catalogo do Cemiterio Santana define. Valores aceitos por fato — exhumation_purpose: TRANSPORTE, OSSUARIO, CREMACAO, OUTRA; remains_status: SEPULTADO, EXUMADO, DESCONHECIDO; surviving_spouse_status: VIVO, FALECIDO, INEXISTENTE, DESCONHECIDO; transport_destination: OUTRO_CEMITERIO, JAZIGO_FAMILIA, CREMATORIO, OSSUARIO; texto livre (o que o municipe disse): burial_reference, destination_grave_reference, requester_document. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
-          "examples": [
-            "TRANSPORTE",
             "SEPULTADO",
-            "OUTRO_CEMITERIO",
-            "VIVO"
+            "EXUMADO",
+            "DESCONHECIDO"
+          ],
+          "description": "Situacao dos restos mortais, exatamente como o catalogo do Cemiterio Santana define. Pergunta correspondente: 'Os restos mortais ainda estao sepultados ou ja foram exumados?'. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
+          "examples": [
+            "SEPULTADO",
+            "EXUMADO",
+            "DESCONHECIDO"
           ]
         }
       },
       "identicos": true,
       "diferencas": {}
     },
-    "corrigir_fato": {
+    "registrar_identificacao_do_sepultamento": {
       "local": {
-        "fato": {
+        "identificacao": {
           "type": "string",
-          "enum": [
-            "exhumation_purpose",
-            "remains_status",
-            "burial_reference",
-            "surviving_spouse_status",
-            "transport_destination",
-            "destination_grave_reference",
-            "requester_document"
-          ]
-        },
-        "novo_valor": {
-          "type": "string",
-          "description": "Valor do fato, exatamente como o catalogo do Cemiterio Santana define. Valores aceitos por fato — exhumation_purpose: TRANSPORTE, OSSUARIO, CREMACAO, OUTRA; remains_status: SEPULTADO, EXUMADO, DESCONHECIDO; surviving_spouse_status: VIVO, FALECIDO, INEXISTENTE, DESCONHECIDO; transport_destination: OUTRO_CEMITERIO, JAZIGO_FAMILIA, CREMATORIO, OSSUARIO; texto livre (o que o municipe disse): burial_reference, destination_grave_reference, requester_document. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
+          "description": "Identificacao do sepultamento, nas palavras do proprio municipe. Pergunta correspondente: 'Qual o nome do falecido e o local do sepultamento?'. Nao resuma em categoria e nao complete o que ele nao disse.",
           "examples": [
-            "TRANSPORTE",
-            "SEPULTADO",
-            "OUTRO_CEMITERIO",
-            "VIVO"
+            "Maria Souza, quadra 4, jazigo 18"
           ]
         }
       },
       "engine": {
-        "fato": {
+        "identificacao": {
+          "type": "string",
+          "description": "Identificacao do sepultamento, nas palavras do proprio municipe. Pergunta correspondente: 'Qual o nome do falecido e o local do sepultamento?'. Nao resuma em categoria e nao complete o que ele nao disse.",
+          "examples": [
+            "Maria Souza, quadra 4, jazigo 18"
+          ]
+        }
+      },
+      "identicos": true,
+      "diferencas": {}
+    },
+    "registrar_situacao_do_conjuge": {
+      "local": {
+        "situacao": {
           "type": "string",
           "enum": [
-            "exhumation_purpose",
-            "remains_status",
-            "burial_reference",
-            "surviving_spouse_status",
-            "transport_destination",
-            "destination_grave_reference",
-            "requester_document"
-          ]
-        },
-        "novo_valor": {
-          "type": "string",
-          "description": "Valor do fato, exatamente como o catalogo do Cemiterio Santana define. Valores aceitos por fato — exhumation_purpose: TRANSPORTE, OSSUARIO, CREMACAO, OUTRA; remains_status: SEPULTADO, EXUMADO, DESCONHECIDO; surviving_spouse_status: VIVO, FALECIDO, INEXISTENTE, DESCONHECIDO; transport_destination: OUTRO_CEMITERIO, JAZIGO_FAMILIA, CREMATORIO, OSSUARIO; texto livre (o que o municipe disse): burial_reference, destination_grave_reference, requester_document. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
+            "VIVO",
+            "FALECIDO",
+            "INEXISTENTE",
+            "DESCONHECIDO"
+          ],
+          "description": "Situacao do conjuge/companheiro do falecido, exatamente como o catalogo do Cemiterio Santana define. Pergunta correspondente: 'O esposo ou companheiro do falecido esta vivo?'. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
           "examples": [
-            "TRANSPORTE",
-            "SEPULTADO",
+            "VIVO",
+            "FALECIDO",
+            "INEXISTENTE"
+          ]
+        }
+      },
+      "engine": {
+        "situacao": {
+          "type": "string",
+          "enum": [
+            "VIVO",
+            "FALECIDO",
+            "INEXISTENTE",
+            "DESCONHECIDO"
+          ],
+          "description": "Situacao do conjuge/companheiro do falecido, exatamente como o catalogo do Cemiterio Santana define. Pergunta correspondente: 'O esposo ou companheiro do falecido esta vivo?'. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
+          "examples": [
+            "VIVO",
+            "FALECIDO",
+            "INEXISTENTE"
+          ]
+        }
+      },
+      "identicos": true,
+      "diferencas": {}
+    },
+    "registrar_destino_do_transporte": {
+      "local": {
+        "destino": {
+          "type": "string",
+          "enum": [
             "OUTRO_CEMITERIO",
-            "VIVO"
+            "JAZIGO_FAMILIA",
+            "CREMATORIO",
+            "OSSUARIO"
+          ],
+          "description": "Destino do transporte, exatamente como o catalogo do Cemiterio Santana define. Pergunta correspondente: 'Para onde o transporte deve ser feito?'. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
+          "examples": [
+            "OUTRO_CEMITERIO",
+            "JAZIGO_FAMILIA",
+            "CREMATORIO"
+          ]
+        }
+      },
+      "engine": {
+        "destino": {
+          "type": "string",
+          "enum": [
+            "OUTRO_CEMITERIO",
+            "JAZIGO_FAMILIA",
+            "CREMATORIO",
+            "OSSUARIO"
+          ],
+          "description": "Destino do transporte, exatamente como o catalogo do Cemiterio Santana define. Pergunta correspondente: 'Para onde o transporte deve ser feito?'. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
+          "examples": [
+            "OUTRO_CEMITERIO",
+            "JAZIGO_FAMILIA",
+            "CREMATORIO"
+          ]
+        }
+      },
+      "identicos": true,
+      "diferencas": {}
+    },
+    "registrar_jazigo_de_destino": {
+      "local": {
+        "jazigo": {
+          "type": "string",
+          "description": "Jazigo de destino, nas palavras do proprio municipe. Pergunta correspondente: 'Qual e o jazigo da familia que sera o destino?'. Nao resuma em categoria e nao complete o que ele nao disse.",
+          "examples": [
+            "jazigo 212 da familia Souza"
+          ]
+        }
+      },
+      "engine": {
+        "jazigo": {
+          "type": "string",
+          "description": "Jazigo de destino, nas palavras do proprio municipe. Pergunta correspondente: 'Qual e o jazigo da familia que sera o destino?'. Nao resuma em categoria e nao complete o que ele nao disse.",
+          "examples": [
+            "jazigo 212 da familia Souza"
+          ]
+        }
+      },
+      "identicos": true,
+      "diferencas": {}
+    },
+    "registrar_documento_do_solicitante": {
+      "local": {
+        "documento": {
+          "type": "string",
+          "description": "Documento do solicitante, nas palavras do proprio municipe. Pergunta correspondente: 'Qual o seu documento de identificacao?'. Nao resuma em categoria e nao complete o que ele nao disse.",
+          "examples": [
+            "CPF 123.456.789-00"
+          ]
+        }
+      },
+      "engine": {
+        "documento": {
+          "type": "string",
+          "description": "Documento do solicitante, nas palavras do proprio municipe. Pergunta correspondente: 'Qual o seu documento de identificacao?'. Nao resuma em categoria e nao complete o que ele nao disse.",
+          "examples": [
+            "CPF 123.456.789-00"
           ]
         }
       },

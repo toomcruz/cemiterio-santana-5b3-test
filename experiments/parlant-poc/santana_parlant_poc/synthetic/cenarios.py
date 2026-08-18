@@ -11,6 +11,7 @@ do provider e nao poderiam ser injetados no meio das conversas paralelas.
 from __future__ import annotations
 
 import re
+from ..agent import tools as agent_tools
 from typing import Any, Awaitable, Callable, Sequence
 
 from ..domain import authority
@@ -183,10 +184,11 @@ async def _journey(rodar_turno, nova_sessao) -> dict[str, Any]:
 
 async def _tools(rodar_turno, nova_sessao) -> dict[str, Any]:
     """Cenario que deve chamar a tool e cenario que nao deve."""
+    consulta = agent_tools.TOOL_POR_TIPO_DE_INFORMACAO
     casos = [
-        ("quanto custa a exumacao?", "consultar_base_autoritativa", True),
-        ("quais documentos preciso levar?", "consultar_base_autoritativa", True),
-        ("obrigado, era so isso", "consultar_base_autoritativa", False),
+        ("quanto custa a exumacao?", consulta["PRECO"], True),
+        ("quais documentos preciso levar?", consulta["DOCUMENTOS"], True),
+        ("obrigado, era so isso", consulta["PRECO"], False),
     ]
     saidas = []
     for texto, tool, esperado in casos:

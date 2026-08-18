@@ -64,7 +64,8 @@ def test_descricao_do_agente_declara_a_fronteira_ia():
     descricao = spec.AGENT_DESCRIPTION.lower()
     for proibicao in ("preco", "documentos", "prazo", "procedimento"):
         assert proibicao in descricao
-    assert "consultar_base_autoritativa" in descricao
+    assert "consultar_*" in descricao
+    assert "registrar_*" in descricao
     assert "next_question" in descricao
 
 
@@ -107,26 +108,36 @@ def _sessao_limpa():
     STORE.reset("sess-teste")
 
 
-def test_tool_registrar_fato_valida_contra_o_catalogo():
-    resultado = _run(tools.registrar_fato.function(_ctx(), fato="exhumation_purpose", valor="PIX"))
+def _tool(nome: str):
+    return next(t for t in tools.ALL_TOOLS if t.tool.name == nome)
+
+
+def test_tool_de_registro_valida_contra_o_catalogo():
+    resultado = _run(_tool("registrar_finalidade_exumacao").function(_ctx(), finalidade="PIX"))
     assert resultado.data["outcome"] == authority.REJECTED
     assert "TRANSPORTE" in resultado.data["allowed_values"]
 
 
-def test_tool_registrar_fato_nao_confirma_autorizacao():
-    resultado = _run(
-        tools.registrar_fato.function(
-            _ctx(), fato="exhumation_authorization", valor="OBTIDA_RESPONSAVEL_JAZIGO"
-        )
-    )
-    assert resultado.data["outcome"] == authority.RECORDED_AS_CLAIM
-    assert resultado.data["case"]["confirmed_facts"].get("exhumation_authorization") is None
+def test_nenhuma_tool_confirma_a_autorizacao_de_exumacao():
+    """O fato `authoritative_only` nao tem tool: nao ha por onde tentar."""
+    autoritativos = set(authority.authoritative_facts())
+    assert "exhumation_authorization" in autoritativos
+    assert not (autoritativos & set(tools.TOOL_POR_FATO))
+
+    # E, pelo caminho direto do Gateway, a escrita falha fechada.
+    from santana_parlant_poc.gateway import GATEWAY
+
+    caso = STORE.case("sess-teste")
+    resultado = GATEWAY.registrar_fato(caso, "exhumation_authorization", "OBTIDA_RESPONSAVEL_JAZIGO")
+    assert resultado["outcome"] == authority.REJECTED
+    assert caso.confirmed_value("exhumation_authorization") is None
 
 
-def test_tool_base_autoritativa_nunca_devolve_preco():
-    resultado = _run(tools.consultar_base_autoritativa.function(_ctx(), assunto="quanto custa"))
-    assert resultado.data["status"] == knowledge.NOT_AVAILABLE
-    assert not _DIGITOS.search(resultado.data["answer"])
+def test_consulta_de_preco_nunca_devolve_valor():
+    resultado = _run(_tool("consultar_preco_exumacao").function(_ctx()))
+    assert resultado.data["status"] == "NOT_AVAILABLE"
+    assert resultado.data["encaminhar_administracao"] is True
+    assert resultado.canned_response_fields == {}
 
 
 def test_tool_estado_do_caso_traz_proxima_pergunta_do_catalogo():
@@ -139,9 +150,9 @@ def test_tools_registram_rastro_para_a_pagina():
     store = LabStore()
     session = "sess-rastro"
     STORE.reset(session)
-    _run(tools.registrar_fato.function(_ctx(session), fato="remains_status", valor="SEPULTADO"))
+    _run(_tool("registrar_situacao_dos_restos").function(_ctx(session), situacao="SEPULTADO"))
     rastro = STORE.trace(session).as_dict()
-    assert rastro["tool_calls"][0]["tool"] == "registrar_fato"
+    assert rastro["tool_calls"][0]["tool"] == "registrar_situacao_dos_restos"
     STORE.reset(session)
     assert store.sessions() == []
 
@@ -191,3 +202,22 @@ def test_retry_de_429_usa_o_delay_sugerido_pela_api():
     assert nlp._is_rate_limit(erro)
     assert nlp._retry_after(erro) > 44
     assert not nlp._is_rate_limit(Exception("404 NOT_FOUND"))
+
+
+def test_toda_tool_declarada_e_alcancavel_por_alguma_guideline():
+    """Tool sem guideline nao chega ao engine — e o modelo nunca poderia chama-la.
+
+    O inventario da bateria sintetica pegou isso na pratica: 19 tools
+    declaradas, 15 no `ServiceRegistry`. As quatro orfas existiam so no codigo.
+    """
+    usadas = {nome for g in spec.GUIDELINES for nome in g.get("tools", [])}
+    usadas |= {s["tool"] for s in spec.JOURNEY["states"] if s.get("tool")}
+    orfas = set(tools.TOOL_NAMES) - usadas
+    assert orfas == set(), f"tools que nenhuma guideline aciona: {sorted(orfas)}"
+
+
+def test_cada_tool_de_consulta_tem_uma_guideline_dedicada():
+    """Uma guideline, uma tool: e assim que o assunto deixa de ser argumento."""
+    for tipo, nome_tool in tools.TOOL_POR_TIPO_DE_INFORMACAO.items():
+        donas = [g["key"] for g in spec.GUIDELINES if nome_tool in g.get("tools", [])]
+        assert len(donas) == 1, f"{tipo}: {donas}"

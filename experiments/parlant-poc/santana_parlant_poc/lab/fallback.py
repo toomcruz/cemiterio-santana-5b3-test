@@ -22,6 +22,7 @@ from functools import lru_cache
 from typing import Any, Iterable, Mapping, Sequence
 
 from ..agent import spec
+from ..agent import tools as agent_tools
 from ..domain import authority, catalog, knowledge
 from ..store import LabStore, STORE
 
@@ -131,8 +132,12 @@ class DeterministicLab:
             answer = knowledge.lookup(topic)
             tools.append(
                 {
-                    "tool": "consultar_base_autoritativa",
-                    "arguments": {"assunto": topic},
+                    # Uma tool por tipo de informacao, sem argumento: o assunto
+                    # ja foi determinado pela guideline que casou.
+                    "tool": agent_tools.TOOL_POR_TIPO_DE_INFORMACAO.get(
+                        topic, "consultar_estado_do_caso"
+                    ),
+                    "arguments": {},
                     "result": answer.as_dict(),
                 }
             )
@@ -175,11 +180,14 @@ class DeterministicLab:
                 continue
             source = "USER_CORRECTION" if is_correction else "USER_EXPLICIT"
             submission = case.submit_fact(fact_code, value, source=source)
-            tool_name = "corrigir_fato" if is_correction else "registrar_fato"
+            # Correcao nao tem tool propria: e a mesma tool do fato, com a
+            # origem decidida deterministicamente.
+            tool_name = agent_tools.TOOL_POR_FATO.get(fact_code, fact_code)
+            parametro = agent_tools.PARAMETRO_POR_FATO.get(fact_code, "valor")
             tools.append(
                 {
                     "tool": tool_name,
-                    "arguments": {"fato": fact_code, "valor": value},
+                    "arguments": {parametro: value},
                     "result": submission.as_dict(),
                 }
             )

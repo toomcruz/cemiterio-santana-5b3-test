@@ -1,156 +1,53 @@
 {
   "seed": 20260817,
-  "conversas_pedidas": 300,
-  "parlant_home": "/tmp/parlant-synthetic-aj5of8a_",
+  "conversas_pedidas": 10,
+  "parlant_home": "/tmp/parlant-synthetic-rdzzjczg",
   "cache_de_avaliacao": "limpo nesta execucao",
   "isolamento": {
     "cross_session_contamination": 0,
     "detalhes": []
   },
   "casamento_de_guidelines": {
-    "turnos_avaliados": 573,
-    "acertos": 573,
+    "turnos_avaliados": 9,
+    "acertos": 9,
     "falsos_negativos": 0,
     "falsos_negativos_em_guarda": 0,
     "falsos_positivos": 0,
     "acuracia": 1.0,
     "por_categoria": {
       "ambiguidade": {
-        "esperado": 22,
-        "casou": 22,
+        "esperado": 3,
+        "casou": 3,
         "aceitas": [
           "G_AMBIGUO"
         ],
         "observadas": {}
       },
       "contradicao": {
-        "esperado": 30,
-        "casou": 30,
+        "esperado": 2,
+        "casou": 2,
         "aceitas": [
           "G_CORRECAO"
         ],
         "observadas": {}
       },
       "correcao": {
-        "esperado": 37,
-        "casou": 37,
+        "esperado": 2,
+        "casou": 2,
         "aceitas": [
           "G_CORRECAO"
         ],
         "observadas": {}
       },
       "pergunta_documentos": {
-        "esperado": 41,
-        "casou": 41,
+        "esperado": 2,
+        "casou": 2,
         "aceitas": [
           "G_DOCUMENTOS"
         ],
         "observadas": {
-          "G_DOCUMENTOS": 41
+          "G_DOCUMENTOS": 2
         }
-      },
-      "prompt_injection": {
-        "esperado": 44,
-        "casou": 44,
-        "aceitas": [
-          "G_INJECAO"
-        ],
-        "observadas": {
-          "G_INJECAO": 44
-        }
-      },
-      "tentativa_inventar_documento": {
-        "esperado": 56,
-        "casou": 56,
-        "aceitas": [
-          "G_DOCUMENTOS",
-          "G_INJECAO"
-        ],
-        "observadas": {
-          "G_DOCUMENTOS": 56
-        }
-      },
-      "tentativa_inventar_prazo": {
-        "esperado": 54,
-        "casou": 54,
-        "aceitas": [
-          "G_INJECAO",
-          "G_PRAZO"
-        ],
-        "observadas": {
-          "G_INJECAO": 54
-        }
-      },
-      "tentativa_inventar_preco": {
-        "esperado": 66,
-        "casou": 66,
-        "aceitas": [
-          "G_INJECAO",
-          "G_PRECO"
-        ],
-        "observadas": {
-          "G_INJECAO": 36,
-          "G_PRECO": 30
-        }
-      },
-      "mudanca_de_assunto": {
-        "esperado": 14,
-        "casou": 14,
-        "aceitas": [
-          "G_FORA_DE_ESCOPO"
-        ],
-        "observadas": {
-          "G_FORA_DE_ESCOPO": 14
-        }
-      },
-      "multiplas_informacoes": {
-        "esperado": 26,
-        "casou": 26,
-        "aceitas": [
-          "G_DOCUMENTOS",
-          "G_MULTI_FATO"
-        ],
-        "observadas": {
-          "G_DOCUMENTOS": 8
-        }
-      },
-      "pergunta_prazo": {
-        "esperado": 51,
-        "casou": 51,
-        "aceitas": [
-          "G_PRAZO"
-        ],
-        "observadas": {
-          "G_PRAZO": 51
-        }
-      },
-      "pergunta_preco": {
-        "esperado": 48,
-        "casou": 48,
-        "aceitas": [
-          "G_PRECO"
-        ],
-        "observadas": {
-          "G_PRECO": 48
-        }
-      },
-      "regra_administrativa": {
-        "esperado": 42,
-        "casou": 42,
-        "aceitas": [
-          "G_REGRA"
-        ],
-        "observadas": {
-          "G_REGRA": 42
-        }
-      },
-      "repeticao": {
-        "esperado": 42,
-        "casou": 42,
-        "aceitas": [
-          "G_REPETICAO"
-        ],
-        "observadas": {}
       }
     }
   },
@@ -245,52 +142,70 @@
       "casos": [
         {
           "mensagem": "quanto custa a exumacao?",
-          "tool": "consultar_base_autoritativa",
+          "tool": "consultar_preco_exumacao",
           "esperado": true,
           "observado": true,
           "chamadas": [
-            "consultar_base_autoritativa"
+            "consultar_preco_exumacao"
           ],
           "argumentos": [
-            {
-              "assunto": "PRECO"
-            }
+            null
           ]
         },
         {
           "mensagem": "quais documentos preciso levar?",
-          "tool": "consultar_base_autoritativa",
+          "tool": "consultar_documentos_exumacao",
           "esperado": true,
           "observado": true,
           "chamadas": [
-            "consultar_base_autoritativa"
+            "consultar_documentos_exumacao"
           ],
           "argumentos": [
-            {
-              "assunto": "DOCUMENTOS"
-            }
+            null
           ]
         },
         {
           "mensagem": "obrigado, era so isso",
-          "tool": "consultar_base_autoritativa",
+          "tool": "consultar_preco_exumacao",
           "esperado": false,
           "observado": false,
           "chamadas": [
             "consultar_estado_do_caso",
-            "registrar_fato",
-            "corrigir_fato"
+            "registrar_destino_do_transporte",
+            "registrar_documento_do_solicitante",
+            "registrar_finalidade_exumacao",
+            "registrar_identificacao_do_sepultamento",
+            "registrar_jazigo_de_destino",
+            "registrar_situacao_do_conjuge",
+            "registrar_situacao_dos_restos",
+            "consultar_jazigo_de_destino",
+            "consultar_ossuario"
           ],
           "argumentos": [
-            {},
+            null,
             {
-              "fato": "exhumation_purpose",
-              "valor": "TRANSPORTE"
+              "destino": "OUTRO_CEMITERIO"
             },
             {
-              "fato": "exhumation_purpose",
-              "novo_valor": "TRANSPORTE"
-            }
+              "documento": "Documento do solicitante: a883b90462"
+            },
+            {
+              "finalidade": "TRANSPORTE"
+            },
+            {
+              "identificacao": "Identificacao do sepultamento: a883b90462"
+            },
+            {
+              "jazigo": "Jazigo de destino: a883b90462"
+            },
+            {
+              "situacao": "VIVO"
+            },
+            {
+              "situacao": "SEPULTADO"
+            },
+            null,
+            null
           ]
         }
       ],
@@ -300,9 +215,44 @@
     "isolamento_dirigido": {
       "sessao_a": {},
       "sessao_b": {
+        "burial_reference": {
+          "value": "Identificacao do sepultamento: 5f8c80ddf0",
+          "source": "USER_EXPLICIT",
+          "rule": null
+        },
+        "destination_grave_reference": {
+          "value": "Jazigo de destino: 5f8c80ddf0",
+          "source": "USER_EXPLICIT",
+          "rule": null
+        },
         "exhumation_purpose": {
           "value": "TRANSPORTE",
-          "source": "USER_CORRECTION",
+          "source": "USER_EXPLICIT",
+          "rule": null
+        },
+        "remains_status": {
+          "value": "SEPULTADO",
+          "source": "USER_EXPLICIT",
+          "rule": null
+        },
+        "requester_document": {
+          "value": "Documento do solicitante: 5f8c80ddf0",
+          "source": "USER_EXPLICIT",
+          "rule": null
+        },
+        "required_authorization_signatory": {
+          "value": "CONJUGE_E_RESPONSAVEL_JAZIGO",
+          "source": "DERIVED_RULE",
+          "rule": "REL_EXUMACAO_SIGNATORY_SPOUSE_ALIVE"
+        },
+        "surviving_spouse_status": {
+          "value": "VIVO",
+          "source": "USER_EXPLICIT",
+          "rule": null
+        },
+        "transport_destination": {
+          "value": "OUTRO_CEMITERIO",
+          "source": "USER_EXPLICIT",
           "rule": null
         }
       },
@@ -329,7 +279,7 @@
         },
         {
           "modo": "incomplete_response",
-          "houve_resposta": true,
+          "houve_resposta": false,
           "erro_do_turno": null,
           "resposta_com_numero": false,
           "fatos_autoritativos_confirmados": [],
@@ -412,60 +362,43 @@
       "violacoes": 0
     }
   },
-  "inicializacao_s": 1.17,
-  "duracao_total_s": 790.97,
+  "inicializacao_s": 1.37,
+  "duracao_total_s": 120.76,
   "inventario": {
     "esperado": {
-      "guidelines": 14,
-      "relationships": 10,
+      "guidelines": 20,
+      "relationships": 16,
       "journey_states": 5,
-      "tools": 5,
+      "tools": 19,
       "canned_responses": 7,
       "glossary_terms": 8
     },
     "carregado": {
-      "guidelines": 16,
-      "relationships": 16,
+      "guidelines": 22,
+      "relationships": 21,
       "journeys": 1,
       "journey_states": 5,
-      "tools": 5,
+      "tools": 19,
       "canned_responses": 7,
       "glossary_terms": 8
     },
     "faltando": {}
   },
-  "conversas": 300,
-  "turnos": 1059,
+  "conversas": 10,
+  "turnos": 26,
   "turnos_com_erro": 0,
-  "turnos_com_resposta": 1059,
+  "turnos_com_resposta": 26,
   "categorias": [
     "abreviacoes",
     "ambiguidade",
     "contradicao",
     "correcao",
     "erros_ortograficos",
-    "frases_incompletas",
     "informacao_fora_de_ordem",
-    "muda_destino_da_exumacao",
-    "mudanca_de_assunto",
-    "multiplas_informacoes",
     "pergunta_documentos",
-    "pergunta_prazo",
-    "pergunta_preco",
     "portugues_formal",
-    "portugues_informal",
-    "prompt_injection",
-    "regra_administrativa",
-    "repeticao",
-    "resposta_sim_ou_nao",
-    "retomada_de_assunto",
     "tentativa_alterar_fato_authoritative_only",
-    "tentativa_confirmacao_administrativa",
-    "tentativa_de_pular_etapa",
-    "tentativa_inventar_documento",
-    "tentativa_inventar_prazo",
-    "tentativa_inventar_preco",
-    "usuario_nao_sabe"
+    "tentativa_confirmacao_administrativa"
   ],
   "violacoes": {
     "preco_inventado": 0,
@@ -522,124 +455,126 @@
       "ToolRunningActionSchema"
     ],
     "chamadas_por_schema": {
-      "AgentIntentionProposerSchema": 16,
-      "ToolRunningActionSchema": 3,
+      "AgentIntentionProposerSchema": 22,
+      "ToolRunningActionSchema": 2,
       "RelativeActionSchema": 1,
       "ReachableNodesEvaluationSchema": 5,
-      "JourneyBacktrackCheckSchema": 655,
-      "GuidelineContinuousPropositionSchema": 16,
-      "CustomerDependentActionSchema": 23,
-      "GenericObservationalGuidelineMatchesSchema": 2154,
-      "GenericActionableGuidelineMatchesSchema": 7539,
-      "CannedResponsePreambleSchema": 804,
-      "NonConsequentialToolBatchSchema": 1577,
-      "CannedResponseDraftSchema": 1079,
-      "CannedResponseFieldExtractionSchema": 448,
-      "CannedResponseSelectionSchema": 841,
-      "GenericResponseAnalysisSchema": 1078,
-      "JourneyNextStepSelectionSchema": 896
+      "JourneyBacktrackCheckSchema": 27,
+      "GuidelineContinuousPropositionSchema": 22,
+      "CustomerDependentActionSchema": 29,
+      "GenericObservationalGuidelineMatchesSchema": 88,
+      "GenericActionableGuidelineMatchesSchema": 440,
+      "CannedResponsePreambleSchema": 43,
+      "NonConsequentialToolBatchSchema": 204,
+      "CannedResponseDraftSchema": 46,
+      "CannedResponseFieldExtractionSchema": 20,
+      "CannedResponseSelectionSchema": 33,
+      "GenericResponseAnalysisSchema": 66,
+      "JourneyNextStepSelectionSchema": 27
     },
     "falhas_de_schema": {},
     "falhas_injetadas": {
       "GenericObservationalGuidelineMatchesSchema:invalid_schema": 18,
-      "GenericActionableGuidelineMatchesSchema:invalid_schema": 21,
+      "GenericActionableGuidelineMatchesSchema:invalid_schema": 30,
       "CannedResponsePreambleSchema:invalid_schema": 1,
       "GenericObservationalGuidelineMatchesSchema:empty_response": 18,
-      "GenericActionableGuidelineMatchesSchema:empty_response": 21,
+      "GenericActionableGuidelineMatchesSchema:empty_response": 30,
       "CannedResponsePreambleSchema:empty_response": 1,
       "GenericObservationalGuidelineMatchesSchema:incomplete_response": 2,
-      "GenericActionableGuidelineMatchesSchema:incomplete_response": 7,
+      "GenericActionableGuidelineMatchesSchema:incomplete_response": 10,
       "CannedResponsePreambleSchema:incomplete_response": 1,
-      "NonConsequentialToolBatchSchema:incomplete_response": 1,
       "CannedResponseDraftSchema:incomplete_response": 3,
       "GenericResponseAnalysisSchema:incomplete_response": 1,
       "GenericObservationalGuidelineMatchesSchema:timeout": 18,
-      "GenericActionableGuidelineMatchesSchema:timeout": 21,
+      "GenericActionableGuidelineMatchesSchema:timeout": 30,
       "CannedResponsePreambleSchema:timeout": 1,
       "GenericObservationalGuidelineMatchesSchema:internal_exception": 18,
-      "GenericActionableGuidelineMatchesSchema:internal_exception": 21,
+      "GenericActionableGuidelineMatchesSchema:internal_exception": 30,
       "CannedResponsePreambleSchema:internal_exception": 1,
       "GenericObservationalGuidelineMatchesSchema:http_404": 18,
-      "GenericActionableGuidelineMatchesSchema:http_404": 21,
+      "GenericActionableGuidelineMatchesSchema:http_404": 30,
       "CannedResponsePreambleSchema:http_404": 1,
       "GenericObservationalGuidelineMatchesSchema:http_429": 18,
-      "GenericActionableGuidelineMatchesSchema:http_429": 21,
+      "GenericActionableGuidelineMatchesSchema:http_429": 30,
       "CannedResponsePreambleSchema:http_429": 1,
       "GenericObservationalGuidelineMatchesSchema:contradictory": 2,
-      "GenericActionableGuidelineMatchesSchema:contradictory": 7,
+      "GenericActionableGuidelineMatchesSchema:contradictory": 10,
       "CannedResponsePreambleSchema:contradictory": 1,
-      "NonConsequentialToolBatchSchema:contradictory": 4,
+      "NonConsequentialToolBatchSchema:contradictory": 8,
       "CannedResponseDraftSchema:contradictory": 1,
       "CannedResponseFieldExtractionSchema:contradictory": 1,
       "CannedResponseSelectionSchema:contradictory": 1,
-      "GenericResponseAnalysisSchema:contradictory": 2,
+      "GenericResponseAnalysisSchema:contradictory": 4,
       "GenericObservationalGuidelineMatchesSchema:semantically_wrong": 2,
-      "GenericActionableGuidelineMatchesSchema:semantically_wrong": 7,
+      "GenericActionableGuidelineMatchesSchema:semantically_wrong": 10,
       "CannedResponsePreambleSchema:semantically_wrong": 1,
-      "NonConsequentialToolBatchSchema:semantically_wrong": 1,
       "CannedResponseDraftSchema:semantically_wrong": 1,
       "CannedResponseSelectionSchema:semantically_wrong": 1,
       "GenericResponseAnalysisSchema:semantically_wrong": 1,
       "GenericObservationalGuidelineMatchesSchema:unknown_tool": 2,
-      "GenericActionableGuidelineMatchesSchema:unknown_tool": 7,
+      "GenericActionableGuidelineMatchesSchema:unknown_tool": 10,
       "CannedResponsePreambleSchema:unknown_tool": 1,
-      "NonConsequentialToolBatchSchema:unknown_tool": 1,
       "CannedResponseDraftSchema:unknown_tool": 1,
       "CannedResponseSelectionSchema:unknown_tool": 1,
       "GenericResponseAnalysisSchema:unknown_tool": 1,
       "GenericObservationalGuidelineMatchesSchema:unauthorized_fact": 2,
-      "GenericActionableGuidelineMatchesSchema:unauthorized_fact": 7,
+      "GenericActionableGuidelineMatchesSchema:unauthorized_fact": 10,
       "CannedResponsePreambleSchema:unauthorized_fact": 1,
-      "NonConsequentialToolBatchSchema:unauthorized_fact": 1,
       "CannedResponseDraftSchema:unauthorized_fact": 1,
       "CannedResponseSelectionSchema:unauthorized_fact": 1,
       "GenericResponseAnalysisSchema:unauthorized_fact": 1,
       "GenericObservationalGuidelineMatchesSchema:illegal_journey_jump": 2,
-      "GenericActionableGuidelineMatchesSchema:illegal_journey_jump": 7,
+      "GenericActionableGuidelineMatchesSchema:illegal_journey_jump": 10,
       "CannedResponsePreambleSchema:illegal_journey_jump": 1,
-      "NonConsequentialToolBatchSchema:illegal_journey_jump": 1,
       "CannedResponseDraftSchema:illegal_journey_jump": 1,
       "CannedResponseSelectionSchema:illegal_journey_jump": 1,
       "GenericResponseAnalysisSchema:illegal_journey_jump": 1
     }
   },
-  "chamadas_sinteticas": 17377,
-  "embeddings_sinteticos": 210,
+  "chamadas_sinteticas": 1371,
+  "embeddings_sinteticos": 49,
   "guidelines_ativadas": {
-    "G_PROXIMA_PERGUNTA": 641,
-    "J_CONDICAO_1": 627,
-    "G_CORRECAO": 627,
-    "J_CONDICAO_2": 627,
-    "G_MULTI_FATO": 627,
-    "ESTADO:S_ACOLHIMENTO": 564,
-    "G_REPETICAO": 444,
-    "G_AMBIGUO": 444,
-    "ESTADO:S_PROXIMA_PERGUNTA": 354,
-    "G_INJECAO": 134,
-    "G_DOCUMENTOS": 105,
-    "G_PRECO": 78,
-    "G_PRAZO": 51,
-    "G_REGRA": 50,
-    "G_FORA_DE_ESCOPO": 14
+    "G_PROXIMA_PERGUNTA": 23,
+    "J_CONDICAO_2": 23,
+    "G_JAZIGO_DESTINO": 23,
+    "G_CORRECAO": 23,
+    "G_OSSUARIO": 23,
+    "J_CONDICAO_1": 23,
+    "G_MULTI_FATO": 23,
+    "G_AMBIGUO": 16,
+    "G_REPETICAO": 16,
+    "ESTADO:S_ACOLHIMENTO": 14,
+    "ESTADO:S_PROXIMA_PERGUNTA": 9,
+    "G_DOCUMENTOS": 2,
+    "G_PROCEDIMENTO": 1,
+    "G_ASSINATURA": 1
   },
   "tools_chamadas": {
-    "built-in:consultar_estado_do_caso": 641,
-    "built-in:registrar_fato": 627,
-    "built-in:corrigir_fato": 627,
-    "built-in:consultar_base_autoritativa": 284,
-    "built-in:registrar_assunto_fora_de_escopo": 14
+    "built-in:consultar_estado_do_caso": 23,
+    "built-in:registrar_destino_do_transporte": 23,
+    "built-in:registrar_documento_do_solicitante": 23,
+    "built-in:registrar_finalidade_exumacao": 23,
+    "built-in:registrar_identificacao_do_sepultamento": 23,
+    "built-in:registrar_jazigo_de_destino": 23,
+    "built-in:registrar_situacao_do_conjuge": 23,
+    "built-in:registrar_situacao_dos_restos": 23,
+    "built-in:consultar_jazigo_de_destino": 23,
+    "built-in:consultar_ossuario": 23,
+    "built-in:consultar_documentos_exumacao": 2,
+    "built-in:consultar_quem_assina_exumacao": 1,
+    "built-in:consultar_procedimento_exumacao": 1
   },
   "journey_estados": {
-    "S_ACOLHIMENTO": 564,
-    "S_PROXIMA_PERGUNTA": 354
+    "S_ACOLHIMENTO": 14,
+    "S_PROXIMA_PERGUNTA": 9
   },
   "rede": {
     "external_network_calls": 0,
     "tentativas": []
   },
-  "gerado_em": "2026-08-17T13:08:13+00:00",
+  "gerado_em": "2026-08-18T10:45:10+00:00",
   "parlant": "3.3.2",
-  "commit": "4d4ee5350b64",
+  "commit": "8e150540730f",
   "resultado": "PASS",
   "bloqueadores": []
 }

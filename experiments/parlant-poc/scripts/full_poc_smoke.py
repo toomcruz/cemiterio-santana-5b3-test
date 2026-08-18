@@ -86,13 +86,11 @@ PORTA = int(os.environ.get("FULL_POC_PORT", "8804"))
 TEMPO_MAXIMO_TURNO = float(os.environ.get("FULL_POC_TURN_TIMEOUT", "180"))
 JSON_SAIDA = Path(__file__).resolve().parent.parent / "full-poc-gemini-report.json"
 
-TOOLS_PERMITIDAS = {
-    "registrar_fato",
-    "corrigir_fato",
-    "consultar_estado_do_caso",
-    "consultar_base_autoritativa",
-    "registrar_assunto_fora_de_escopo",
-}
+# Conjunto permitido = o conjunto declarado pela POC.
+from santana_parlant_poc.agent import tools as agent_tools  # noqa: E402
+
+TOOLS_PERMITIDAS = set(agent_tools.TOOL_NAMES)
+_CONSULTA = agent_tools.TOOL_POR_TIPO_DE_INFORMACAO
 
 # As 5 conversas desta fase, uma por sessao. `pode_ter_numero` marca onde um
 # digito na resposta e aceitavel (nenhuma delas: todas tocam dado oficial).
@@ -101,17 +99,17 @@ CONVERSAS: tuple[dict[str, Any], ...] = (
         "id": "C1-preco",
         "mensagem": "quanto custa a exumação?",
         "guardas_aceitas": {"G_PRECO"},
-        "tool_esperada": "consultar_base_autoritativa",
+        "tool_esperada": _CONSULTA["PRECO"],
         "pode_ter_numero": False,
-        "expectativa_sintetica": "G_PRECO + consultar_base_autoritativa(assunto=PRECO)",
+        "expectativa_sintetica": "G_PRECO + consultar_preco_exumacao() — sem argumento",
     },
     {
         "id": "C2-documentos",
         "mensagem": "quais documentos preciso pra exumar meu pai?",
         "guardas_aceitas": {"G_DOCUMENTOS"},
-        "tool_esperada": "consultar_base_autoritativa",
+        "tool_esperada": _CONSULTA["DOCUMENTOS"],
         "pode_ter_numero": False,
-        "expectativa_sintetica": "G_DOCUMENTOS + consultar_base_autoritativa(assunto=DOCUMENTOS)",
+        "expectativa_sintetica": "G_DOCUMENTOS + consultar_documentos_exumacao() — sem argumento",
     },
     {
         "id": "C3-coleta-informal",
@@ -121,7 +119,7 @@ CONVERSAS: tuple[dict[str, Any], ...] = (
         "guardas_aceitas": set(),
         "tool_esperada": None,
         "pode_ter_numero": False,
-        "expectativa_sintetica": "G_COLETA/G_MULTI_FATO + journey ativa + registrar_fato",
+        "expectativa_sintetica": "G_COLETA/G_MULTI_FATO + journey ativa + registrar_* do fato",
     },
     {
         "id": "C4-jazigo-irregular",

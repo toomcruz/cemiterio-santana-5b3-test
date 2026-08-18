@@ -33,38 +33,34 @@ SMOKE = _carregar_smoke()
 PROMPT_REAL = '''
 TOOL TO EVALUATE:
 -----------------
-Name: built-in:consultar_base_autoritativa
-Description: Consulta a base fechada do Cemiterio Santana sobre um ponto do atendimento.
+Name: built-in:registrar_finalidade_exumacao
+Description: Registra no caso: Finalidade da exumacao.
 Parameters: {
-  "assunto": {
+  "finalidade": {
     "type": "string",
     "enum": [
-      "PRECO",
-      "DOCUMENTOS",
-      "PRAZO",
-      "PROCEDIMENTO_ADMINISTRATIVO",
-      "ASSINATURA_EXUMACAO",
-      "JAZIGO_DESTINO",
+      "TRANSPORTE",
       "OSSUARIO",
-      "RESTOS_JA_EXUMADOS"
+      "CREMACAO",
+      "OUTRA"
     ]
   }
 }
-Required parameters: ['assunto']
+Required parameters: ['finalidade']
 Optional parameters: []
 '''
 
 
 def test_extrai_a_tool_avaliada_do_prompt_real():
-    assert SMOKE._tool_avaliada(PROMPT_REAL) == "built-in:consultar_base_autoritativa"
+    assert SMOKE._tool_avaliada(PROMPT_REAL) == "built-in:registrar_finalidade_exumacao"
 
 
 def test_extrai_o_bloco_de_parametros_com_o_enum():
     bloco = SMOKE._bloco_de_parametros(PROMPT_REAL)
     assert bloco is not None
     dados = json.loads(bloco)
-    assert dados["assunto"]["enum"][0] == "PRECO"
-    assert "DOCUMENTOS" in dados["assunto"]["enum"]
+    assert dados["finalidade"]["enum"][0] == "TRANSPORTE"
+    assert "CREMACAO" in dados["finalidade"]["enum"]
 
 
 def test_extracao_nao_quebra_em_prompt_sem_a_secao():
@@ -90,16 +86,22 @@ def test_redacao_pega_chave_google_mesmo_sem_env(monkeypatch):
 
 def test_redacao_preserva_o_conteudo_util():
     limpo = SMOKE._sem_segredo(PROMPT_REAL)
-    assert "PRECO" in limpo and "consultar_base_autoritativa" in limpo
+    assert "TRANSPORTE" in limpo and "registrar_finalidade_exumacao" in limpo
 
 
 # ----------------------------------------------------- schema efetivo captado
 def test_schema_efetivo_traz_o_dominio_das_tools():
     schema = SMOKE._schema_efetivo_das_tools()
-    assunto = schema["consultar_base_autoritativa"]["parameters"]["assunto"]
-    assert assunto.get("enum"), assunto
-    assert schema["registrar_fato"]["parameters"]["fato"].get("enum")
-    assert schema["registrar_fato"]["parameters"]["valor"].get("description")
+    finalidade = schema["registrar_finalidade_exumacao"]["parameters"]["finalidade"]
+    assert finalidade.get("enum"), finalidade
+    assert schema["registrar_jazigo_de_destino"]["parameters"]["jazigo"].get("description")
+
+
+def test_schema_efetivo_mostra_a_consulta_sem_parametro():
+    """A consulta de preco nao tem argumento: nao ha o que faltar."""
+    schema = SMOKE._schema_efetivo_das_tools()
+    assert schema["consultar_preco_exumacao"]["parameters"] == {}
+    assert schema["consultar_preco_exumacao"]["required"] == []
 
 
 # --------------------------------------------------- a instrumentacao so observa
