@@ -41,6 +41,10 @@ class LabStore:
         self._lock = threading.Lock()
         self._cases: dict[str, ExhumationCase] = {}
         self._traces: dict[str, TurnTrace] = {}
+        # `start_turn` troca o rastro a cada turno; o historico acumulado fica
+        # aqui. E dele que sai a prova de isolamento: todo fato confirmado numa
+        # sessao precisa ter uma chamada de tool *daquela* sessao que o produziu.
+        self._tool_history: dict[str, list[dict[str, Any]]] = {}
         self._created_at: dict[str, float] = {}
 
     def case(self, session_id: str) -> ExhumationCase:
@@ -69,9 +73,15 @@ class LabStore:
         self.trace(session_id).journey_states.append(label)
 
     def record_tool_call(self, session_id: str, name: str, args: dict[str, Any], result: Any) -> None:
-        self.trace(session_id).tool_calls.append(
-            {"tool": name, "arguments": args, "result": result}
-        )
+        chamada = {"tool": name, "arguments": args, "result": result}
+        self.trace(session_id).tool_calls.append(chamada)
+        with self._lock:
+            self._tool_history.setdefault(session_id, []).append(chamada)
+
+    def tool_history(self, session_id: str) -> list[dict[str, Any]]:
+        """Todas as chamadas de tool da sessao, nao so as do turno corrente."""
+        with self._lock:
+            return list(self._tool_history.get(session_id, ()))
 
     def record_fallback(self, session_id: str, reason: str) -> None:
         self.trace(session_id).fallback = reason
@@ -83,6 +93,7 @@ class LabStore:
         with self._lock:
             self._cases.pop(session_id, None)
             self._traces.pop(session_id, None)
+            self._tool_history.pop(session_id, None)
             self._created_at.pop(session_id, None)
 
     def sessions(self) -> list[str]:

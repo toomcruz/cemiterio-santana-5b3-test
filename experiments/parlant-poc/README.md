@@ -102,10 +102,11 @@ confirmados, alegacoes aguardando a Administracao, o que falta e as pendencias a
 
 | Recurso | Onde | Uso |
 | ------- | ---- | --- |
-| Guidelines | `agent/spec.py` → `GUIDELINES` | 14 guidelines: coleta, proxima pergunta, correcao, repeticao, ambiguidade, fora de escopo, luto e 4 guardas de autoridade (preco, documentos, prazo, regra) |
+| Guidelines | `agent/spec.py` → `GUIDELINES` | 20 guidelines: coleta, proxima pergunta, correcao, repeticao, ambiguidade, fora de escopo, injecao, luto e 10 guardas de autoridade — uma por ponto oficial (preco, documentos, prazo, procedimento, assinatura, jazigo de destino, ossuario, restos ja exumados, transporte, regularidade) |
 | Relationships | `spec.py` → `RELATIONSHIPS` | `prioritize_over` coloca as guardas acima da coleta; `entail` liga coleta → proxima pergunta; `depend_on` amarra pendencia administrativa |
 | Journeys | `spec.py` → `JOURNEY` | estado deterministico → acolhimento → registro → proxima pergunta (laco) → fechamento |
-| Tools | `agent/tools.py` | `registrar_fato`, `corrigir_fato`, `consultar_estado_do_caso`, `consultar_base_autoritativa`, `registrar_assunto_fora_de_escopo` |
+| Tools | `agent/tools.py` | 19 tools. 10 de consulta **sem argumento nenhum** (`consultar_preco_exumacao`, `consultar_documentos_exumacao`, …): o assunto e ligado por codigo quando a guideline casa, nao escolhido pelo modelo. 7 de registro **geradas a partir de `facts.v1.json`** (`registrar_finalidade_exumacao`, …), com um unico argumento de dominio fechado. Mais `consultar_estado_do_caso` e `registrar_assunto_fora_de_escopo`. Nao ha tool de correcao: a origem `USER_CORRECTION` e deduzida do estado. |
+| Authority Gateway | `gateway/` | Porta unica para conhecimento e escrita. Toda resposta carrega `release_id`, `source_id`, aplicabilidade, vigencia e status `AVAILABLE`/`NOT_AVAILABLE`/`CONFLICT`; toda escrita passa por segunda validacao. Catalogo oficial em `catalogo/exumacao.v1.json`. |
 | Canned Responses | `spec.py` → `CANNED_RESPONSES` | respostas fixas para preco/documento/prazo/injecao/fora de escopo — nenhuma contem numero |
 | Glossary | `spec.py` → `GLOSSARY` | 8 termos com sinonimos do jeito que o municipe fala ("tirar os restos", "gaveta", "tumulo") |
 

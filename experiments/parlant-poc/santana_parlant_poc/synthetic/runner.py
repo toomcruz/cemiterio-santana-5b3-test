@@ -26,7 +26,7 @@ import parlant.sdk as p
 from ..agent import spec
 from ..agent.build import build_agent
 from ..agent import tools as agent_tools
-from ..domain import authority
+from ..domain import authority, catalog
 from ..store import STORE
 from ..turnos import ResultadoTurno, mapear_ids, nova_sessao, rodar_turno
 from . import corpus as corpus_mod
@@ -137,22 +137,41 @@ def _avaliar(
 
 def _checar_isolamento(sessoes: Sequence[str], violacoes: Violacoes) -> dict[str, Any]:
     """Nenhum fato de uma sessao pode aparecer em outra."""
-    por_sessao = {s: STORE.case(s).snapshot()["confirmed_facts"] for s in sessoes}
+    # Contaminacao nao e "duas sessoes com o mesmo valor": dois municipes podem
+    # dizer a mesma coisa, e a versao anterior desta checagem acusava isso como
+    # vazamento. Contaminacao e um fato confirmado numa sessao **sem uma chamada
+    # de tool naquela sessao que o tenha produzido** — ou seja, estado que veio
+    # de outro lugar.
+    fato_da_tool = {nome: code for code, nome in agent_tools.TOOL_POR_FATO.items()}
+    derivados = {
+        code for code, spec_ in catalog.fact_specs().items() if spec_.derived
+    }
+
     detalhes = []
-    for sessao, fatos in por_sessao.items():
-        for outra, outros_fatos in por_sessao.items():
-            if sessao >= outra:
-                continue
-            # Contaminacao = mesma chave com o mesmo valor vindo de casos distintos
-            # que nunca deveriam se cruzar (cada sessao recebeu textos diferentes).
-            compartilhados = {
-                chave
-                for chave, valor in fatos.items()
-                if chave in outros_fatos and outros_fatos[chave] == valor and chave == "requester_document"
-            }
-            if compartilhados:
-                violacoes.contaminacao_entre_sessoes += 1
-                detalhes.append({"sessao_a": sessao, "sessao_b": outra, "fatos": sorted(compartilhados)})
+    casos = {}
+    for sessao in sessoes:
+        caso = STORE.case(sessao)
+        casos[sessao] = id(caso)
+        gravados = {
+            fato_da_tool[str(chamada["tool"]).rsplit(":", 1)[-1]]
+            for chamada in STORE.tool_history(sessao)
+            if str(chamada["tool"]).rsplit(":", 1)[-1] in fato_da_tool
+        }
+        intrusos = sorted(
+            code
+            for code in caso.snapshot()["confirmed_facts"]
+            if code not in derivados and code not in gravados
+        )
+        if intrusos:
+            violacoes.contaminacao_entre_sessoes += 1
+            detalhes.append({"sessao": sessao, "fatos_sem_origem_nesta_sessao": intrusos})
+
+    # E os casos precisam ser objetos distintos: um caso compartilhado seria a
+    # forma mais grosseira de contaminacao, e passaria despercebida acima.
+    if len(set(casos.values())) != len(casos):
+        violacoes.contaminacao_entre_sessoes += 1
+        detalhes.append({"erro": "duas sessoes compartilham o mesmo objeto de caso"})
+
     return {"cross_session_contamination": violacoes.contaminacao_entre_sessoes, "detalhes": detalhes}
 
 

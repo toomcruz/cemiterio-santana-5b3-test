@@ -480,3 +480,106 @@ def test_valor_de_enum_vem_do_dominio_do_catalogo():
     tool = TOOL_POR_FATO["exhumation_purpose"]
     valor = _valor_para_registro(tool, "qualquer mensagem")
     assert valor in catalog.fact_specs()["exhumation_purpose"].allowed_values
+
+
+# ------------------------------------------------------- prova de isolamento
+def test_isolamento_acusa_fato_sem_origem_na_sessao():
+    """Contaminacao e fato confirmado sem chamada de tool que o produzisse.
+
+    A versao anterior desta checagem comparava valores entre sessoes: dois
+    municipes dizendo a mesma coisa apareciam como vazamento, e a bateria de
+    100 conversas reprovou por 74 falsos positivos. O criterio agora e origem,
+    nao coincidencia.
+    """
+    from santana_parlant_poc.store import STORE
+    from santana_parlant_poc.synthetic.runner import Violacoes, _checar_isolamento
+
+    limpa, suja = "iso-limpa", "iso-suja"
+    for sessao in (limpa, suja):
+        STORE.reset(sessao)
+
+    # Sessao limpa: o fato entrou pela tool, nesta sessao.
+    STORE.case(limpa).submit_fact("exhumation_purpose", "TRANSPORTE")
+    STORE.record_tool_call(limpa, "registrar_finalidade_exumacao", {"finalidade": "TRANSPORTE"}, {})
+
+    # Mesma coisa numa outra sessao: valores iguais NAO sao contaminacao.
+    outra = "iso-limpa-2"
+    STORE.reset(outra)
+    STORE.case(outra).submit_fact("exhumation_purpose", "TRANSPORTE")
+    STORE.record_tool_call(outra, "registrar_finalidade_exumacao", {"finalidade": "TRANSPORTE"}, {})
+
+    violacoes = Violacoes()
+    resumo = _checar_isolamento([limpa, outra], violacoes)
+    assert resumo["cross_session_contamination"] == 0, resumo["detalhes"]
+
+    # Sessao suja: fato confirmado sem nenhuma chamada de tool que o explique.
+    STORE.case(suja).submit_fact("exhumation_purpose", "TRANSPORTE")
+    violacoes = Violacoes()
+    resumo = _checar_isolamento([limpa, suja], violacoes)
+    assert resumo["cross_session_contamination"] == 1
+    assert resumo["detalhes"][0]["sessao"] == suja
+
+    for sessao in (limpa, suja, outra):
+        STORE.reset(sessao)
+
+
+def test_historico_de_tools_sobrevive_ao_turno():
+    """`start_turn` troca o rastro; o historico da sessao nao pode zerar junto."""
+    from santana_parlant_poc.store import STORE
+
+    sessao = "hist-1"
+    STORE.reset(sessao)
+    STORE.record_tool_call(sessao, "registrar_finalidade_exumacao", {}, {})
+    STORE.start_turn(sessao)
+    STORE.record_tool_call(sessao, "consultar_estado_do_caso", {}, {})
+    assert [c["tool"] for c in STORE.tool_history(sessao)] == [
+        "registrar_finalidade_exumacao",
+        "consultar_estado_do_caso",
+    ]
+    assert len(STORE.trace(sessao).tool_calls) == 1
+    STORE.reset(sessao)
+    assert STORE.tool_history(sessao) == []
+
+
+def test_nenhuma_guarda_de_autoridade_casa_num_turno_de_coleta():
+    """Regressao dos 106 falsos positivos da bateria de 100.
+
+    `G_JAZIGO_DESTINO` caia na familia "destino" e `G_REGULARIDADE_JAZIGO` na
+    familia "recadastro", entao as duas casavam em todo turno de exumacao ou de
+    fora de escopo. Guarda de autoridade que dispara em turno de coleta
+    derrubaria a conversa para "a Administracao informa" sem ninguem ter
+    perguntado nada.
+    """
+    from santana_parlant_poc.agent import spec
+    from santana_parlant_poc.synthetic.cenarios import _GUARDAS_DE_AUTORIDADE
+    from santana_parlant_poc.synthetic.nlp import Decisao, _condicao_bate
+
+    coleta = Decisao(
+        mensagem="quero exumar meu pai e levar pra outro cemiterio",
+        assunto="exumacao",
+        guarda_de_autoridade=False,
+        texto_seguro="",
+    )
+    casadas = {
+        g["key"] for g in spec.GUIDELINES if _condicao_bate(g["condition"], coleta)[0]
+    }
+    assert not (casadas & _GUARDAS_DE_AUTORIDADE), sorted(casadas & _GUARDAS_DE_AUTORIDADE)
+
+
+def test_a_guarda_certa_ainda_casa_no_turno_dela():
+    from santana_parlant_poc.agent import spec
+    from santana_parlant_poc.synthetic.nlp import Decisao, _condicao_bate
+
+    for assunto, esperada in [
+        ("preco", "G_PRECO"),
+        ("documento", "G_DOCUMENTOS"),
+        ("prazo", "G_PRAZO"),
+        ("injecao", "G_INJECAO"),
+    ]:
+        decisao = Decisao(
+            mensagem="x", assunto=assunto, guarda_de_autoridade=True, texto_seguro=""
+        )
+        casadas = {
+            g["key"] for g in spec.GUIDELINES if _condicao_bate(g["condition"], decisao)[0]
+        }
+        assert esperada in casadas, (assunto, sorted(casadas))

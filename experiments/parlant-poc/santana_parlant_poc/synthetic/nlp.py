@@ -794,6 +794,18 @@ _CONDICAO_PARA_ASSUNTO = (
     (("documento", "papeis", "certidao"), {"documento"}),
     (("prazo", "data", "demora", "tempo de execucao"), {"prazo"}),
     (("quem assina", "quem autoriza", "procedimento administrativo", "regra exige"), {"regra"}),
+    # Guardas de autoridade sem frase correspondente no corpus. Precisam vir
+    # ANTES das familias largas: "jazigo de destino" cai em "destino" e
+    # "regularidade do jazigo" cai em "recadastro", e as duas passariam a casar
+    # em todo turno de exumacao/fora de escopo — foram 106 falsos positivos na
+    # bateria de 100 antes desta correcao. Conjunto vazio = nunca se aplica
+    # neste corpus; a cobertura delas hoje e de contrato (schema, inventario,
+    # gateway), nao de conversa.
+    (("jazigo de destino", "colocar os restos no jazigo"), set()),
+    (("jazigo esta regular", "concessao vencida", "pendencia do jazigo"), set()),
+    (("ossuario",), set()),
+    (("transporte dos restos", "como levar", "quem leva"), set()),
+    (("restos ja foram exumados",), set()),
     (("assunto que nao e exumacao", "concessao", "recadastro", "lapide", "reclamacao", "horario"), {"fora_de_escopo"}),
     # Inclui as condicoes de ativacao da Journey da POC ("quer exumar,
     # transladar ou retirar restos mortais...", "como fazer para tirar os

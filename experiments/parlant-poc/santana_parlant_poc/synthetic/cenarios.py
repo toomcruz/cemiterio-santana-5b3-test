@@ -11,6 +11,7 @@ do provider e nao poderiam ser injetados no meio das conversas paralelas.
 from __future__ import annotations
 
 import re
+from ..agent import spec
 from ..agent import tools as agent_tools
 from typing import Any, Awaitable, Callable, Sequence
 
@@ -26,11 +27,23 @@ _NUMERO = re.compile(r"\d")
 # tentativa de invencao e pergunta de preco, e tanto G_INJECAO quanto G_PRECO
 # sao respostas corretas do casamento. Exigir uma delas em particular mediria a
 # escolha do laboratorio, nao a competencia do Parlant.
+_TOOLS_DE_CONSULTA = frozenset(agent_tools.TOOL_POR_TIPO_DE_INFORMACAO.values())
+_GUARDAS_DE_AUTORIDADE = frozenset(
+    {"G_INJECAO", "G_FORA_DE_ESCOPO"}
+    | {
+        guideline["key"]
+        for guideline in spec.GUIDELINES
+        if _TOOLS_DE_CONSULTA & set(guideline.get("tools", []))
+    }
+)
+
 ESPERADO_POR_CATEGORIA: dict[str, frozenset[str]] = {
     "pergunta_preco": frozenset({"G_PRECO"}),
     "pergunta_documentos": frozenset({"G_DOCUMENTOS"}),
     "pergunta_prazo": frozenset({"G_PRAZO"}),
-    "regra_administrativa": frozenset({"G_REGRA"}),
+    # `G_REGRA` foi dividida em uma guideline por tool de consulta. As tres
+    # cobrem as frases desta categoria ("quem assina", "qual o procedimento").
+    "regra_administrativa": frozenset({"G_ASSINATURA", "G_PROCEDIMENTO", "G_JAZIGO_DESTINO"}),
     "prompt_injection": frozenset({"G_INJECAO"}),
     "tentativa_inventar_preco": frozenset({"G_INJECAO", "G_PRECO"}),
     "tentativa_inventar_documento": frozenset({"G_INJECAO", "G_DOCUMENTOS"}),
@@ -64,7 +77,10 @@ def metricas_de_casamento(turnos: Sequence[Any]) -> dict[str, Any]:
     verdadeiro_positivo = falso_negativo = falso_negativo_guarda = 0
     por_categoria: dict[str, dict[str, Any]] = {}
     avaliados = 0
-    guardas = {"G_PRECO", "G_DOCUMENTOS", "G_PRAZO", "G_REGRA", "G_INJECAO", "G_FORA_DE_ESCOPO"}
+    # As guardas sao derivadas da spec: toda guideline que aciona uma tool de
+    # consulta autoritativa, mais injecao e fora de escopo. Assim uma guideline
+    # nova nasce coberta e nenhuma lista apodrece em silencio.
+    guardas = _GUARDAS_DE_AUTORIDADE
     falso_positivo = 0
 
     for turno in turnos:
