@@ -1,0 +1,99 @@
+{
+  "mensagem": "Quanto custa a exumação?",
+  "modelo": "openai/nvidia/llama-3.3-nemotron-super-49b-v1.5",
+  "release_id": "exu-1.0-32cc48f26797",
+  "no_think": true,
+  "tool_choice_forcado": false,
+  "guidelines": [
+    "1DvvQUgdUU",
+    "G_PRECO",
+    "ESTADO:S_ACOLHIMENTO"
+  ],
+  "journey_estados": [
+    "S_ACOLHIMENTO"
+  ],
+  "tools": [
+    {
+      "tool": "consultar_preco_exumacao",
+      "argumentos": null
+    },
+    {
+      "tool": "consultar_estado_do_caso",
+      "argumentos": null
+    }
+  ],
+  "gateway": {
+    "status": "NEEDS_CONTEXT",
+    "motivo": "CONTEXTO_INSUFICIENTE_PARA_DETERMINAR",
+    "source_id": null,
+    "contexto_faltante": [
+      "modalidade_tarifaria"
+    ],
+    "opcoes_possiveis": [
+      "EXUMACAO_DE_OSSUARIO",
+      "SEPULTURA_CESSAO_GAVETA_UNITARIA_PRAZO_FIXO",
+      "SEPULTURA_CESSAO_TERRENO_PRAZO_INDETERMINADO"
+    ]
+  },
+  "resposta_final": "Para informar o custo da exumação, preciso saber mais detalhes. Primeiramente, qual é a finalidade da exumação? As opções são: TRANSPORTE, OSSUARIO, CREMACAO ou OUTRA. Além disso, para o cálculo do preço, é necessário saber a modalidade tarifária. Por favor, forneça essas informações para que eu possa continuar com o atendimento.",
+  "preambulos": [
+    "Entendi"
+  ],
+  "gates": {
+    "tarifa_exibida": 0,
+    "numeros_sem_origem": 0,
+    "tool_proibida": 0
+  },
+  "latencia": {
+    "inicializacao_s": 232.93,
+    "turno_s": 85.12
+  },
+  "chamadas_nvidia": {
+    "teto": 250,
+    "total": 103,
+    "inicializacao": {
+      "chamadas": 86,
+      "erros": 3,
+      "tokens_entrada": 91187,
+      "tokens_saida": 7152,
+      "latencia_total_s": 718.15,
+      "latencia_p50_s": 4.48,
+      "latencia_max_s": 113.79
+    },
+    "turno": {
+      "chamadas": 17,
+      "erros": 0,
+      "tokens_entrada": 58993,
+      "tokens_saida": 3424,
+      "latencia_total_s": 226.08,
+      "latencia_p50_s": 11.9,
+      "latencia_max_s": 32.38
+    }
+  },
+  "chamadas_detalhe_turno": [
+    { "indice": 87, "duracao_s": 0.81, "tokens_entrada": 1241, "tokens_saida": 9, "erro": null },
+    { "indice": 87, "duracao_s": 7.72, "tokens_entrada": 3265, "tokens_saida": 156, "erro": null },
+    { "indice": 87, "duracao_s": 8.24, "tokens_entrada": 3279, "tokens_saida": 117, "erro": null },
+    { "indice": 87, "duracao_s": 10.34, "tokens_entrada": 3499, "tokens_saida": 205, "erro": null },
+    { "indice": 87, "duracao_s": 10.64, "tokens_entrada": 3591, "tokens_saida": 274, "erro": null },
+    { "indice": 87, "duracao_s": 11.05, "tokens_entrada": 3577, "tokens_saida": 202, "erro": null },
+    { "indice": 87, "duracao_s": 11.9, "tokens_entrada": 3532, "tokens_saida": 253, "erro": null },
+    { "indice": 87, "duracao_s": 12.31, "tokens_entrada": 3505, "tokens_saida": 217, "erro": null },
+    { "indice": 87, "duracao_s": 12.38, "tokens_entrada": 3556, "tokens_saida": 248, "erro": null },
+    { "indice": 87, "duracao_s": 12.84, "tokens_entrada": 3539, "tokens_saida": 251, "erro": null },
+    { "indice": 87, "duracao_s": 20.32, "tokens_entrada": 3505, "tokens_saida": 208, "erro": null },
+    { "indice": 87, "duracao_s": 23.51, "tokens_entrada": 3565, "tokens_saida": 248, "erro": null },
+    { "indice": 87, "duracao_s": 32.38, "tokens_entrada": 3534, "tokens_saida": 212, "erro": null },
+    { "indice": 100, "duracao_s": 10.02, "tokens_entrada": 5780, "tokens_saida": 171, "erro": null },
+    { "indice": 101, "duracao_s": 17.74, "tokens_entrada": 4687, "tokens_saida": 445, "erro": null },
+    { "indice": 102, "duracao_s": 16.06, "tokens_entrada": 2624, "tokens_saida": 25, "erro": null },
+    { "indice": 103, "duracao_s": 7.81, "tokens_entrada": 2714, "tokens_saida": 183, "erro": null }
+  ],
+  "erros_http": [
+    "RateLimitError: litellm.RateLimitError: RateLimitError: OpenAIException - Error code: 429 - {'status': 429, 'title': 'Too Many Requests'}",
+    "RateLimitError: litellm.RateLimitError: RateLimitError: OpenAIException - Error code: 429 - {'status': 429, 'title': 'Too Many Requests'}",
+    "RateLimitError: litellm.RateLimitError: RateLimitError: OpenAIException - Error code: 429 - {'status': 429, 'title': 'Too Many Requests'}"
+  ],
+  "retries": 0,
+  "falhas": []
+}

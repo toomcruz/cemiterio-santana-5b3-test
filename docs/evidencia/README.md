@@ -84,6 +84,20 @@ testados, 0 violações) e `isolamento`.
   404 para chaves novas; `2.5-flash` a 5 req/min inviabilizando o start;
   `3.7-flash` com 429 persistente) e a seção de limitações conhecidas.
 
+## Fase 1B — C1 real com NVIDIA
+
+`c1-nvidia/` guarda a evidência da primeira conversa real completa, em
+`nvidia/llama-3.3-nemotron-super-49b-v1.5`:
+
+- **`c1-run-32194184059-bruto.json`** — cópia literal do relatório emitido pelo
+  run, sem qualquer correção. É o registro do que a máquina disse.
+- **`CORRECAO-C1.md`** — leitura corrigida do mesmo run. Status
+  `C1_FUNCTIONAL_PASS_WITH_DEVIATIONS`: o caminho arquitetural está provado, e
+  cinco desvios ficam registrados (retries da biblioteca, `null` vs `{}`,
+  over-asking na resposta, perfil de chamadas não aceitável como produção, e um
+  defeito de concorrência no contador). Onde os dois discordarem, a correção
+  prevalece como leitura e o bruto como registro.
+
 ## O que deliberadamente não está aqui
 
 | Não copiado | Motivo |

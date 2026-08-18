@@ -56,15 +56,36 @@ class Chamada:
 
 @dataclass
 class ContadorDeChamadas:
+    """Contador de chamadas com reserva de indice sob lock.
+
+    A primeira versao derivava o indice de `len(self.chamadas) + 1` no momento
+    da reserva, mas o registro so era anexado quando a chamada terminava. Sob
+    concorrencia isso tinha duas consequencias, ambas observadas no run
+    32194184059: treze chamadas paralelas reservaram o mesmo indice 87, e a
+    verificacao do teto podia ser atravessada por N chamadas simultaneas,
+    excedendo o limite em ate N-1.
+
+    Os totais daquele run continuam integros — `len()` e atualizado por append
+    atomico, e as somas de tokens e latencia batem. O que estava corrompido era
+    a identidade de cada chamada e a garantia do teto. Ver
+    docs/evidencia/c1-nvidia/CORRECAO-C1.md.
+
+    Agora a reserva incrementa um contador proprio dentro do mesmo lock: o
+    indice e unico e o teto vale por reserva, nao por comprimento observado.
+    """
+
     teto: int = 250
     fase: str = "inicializacao"
     chamadas: list[Chamada] = field(default_factory=list)
+    _reservados: int = 0
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     def proxima(self) -> int:
         with self._lock:
-            indice = len(self.chamadas) + 1
-        if indice > self.teto:
+            self._reservados += 1
+            indice = self._reservados
+            estourou = indice > self.teto
+        if estourou:
             raise TetoDeChamadasEstourado(
                 f"teto de {self.teto} chamadas NVIDIA estourado na chamada {indice} "
                 f"(fase '{self.fase}'). Abortando para nao gastar mais."
@@ -91,11 +112,25 @@ class ContadorDeChamadas:
                 "latencia_max_s": round(duracoes[-1], 2) if duracoes else None,
             }
 
+        erros_429 = sum(1 for c in self.chamadas if c.erro and "429" in c.erro)
         return {
             "teto": self.teto,
+            "reservados": self._reservados,
             "total": len(self.chamadas),
             "inicializacao": agregar(self.por_fase("inicializacao")),
             "turno": agregar(self.por_fase("turno")),
+            # O shim fica ABAIXO da camada que retenta: cada tentativa chega
+            # como chamada independente, sem vinculo com a anterior. Da para
+            # contar quantas falharam com 429; nao da para contar retentativas.
+            "retries": {
+                "erros_429": erros_429,
+                "retries_observed_min": erros_429,
+                "retry_owner": "Parlant/library layer",
+                "nota": (
+                    "o total de chamadas ja inclui as retentativas; "
+                    "o numero exato de retries nao e observavel deste ponto"
+                ),
+            },
         }
 
 

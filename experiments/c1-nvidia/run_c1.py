@@ -171,7 +171,8 @@ async def _executar(server: Any, agente_id: str) -> tuple[int, dict[str, Any]]:
             for c in CONTADOR.por_fase("turno")
         ],
         "erros_http": [c.erro for c in CONTADOR.chamadas if c.erro],
-        "retries": 0,
+        # Nao ha campo "retries" literal: o que o contador pode afirmar vem de
+        # CONTADOR.resumo()["retries"]. Ver docs/evidencia/c1-nvidia/CORRECAO-C1.md.
         "falhas": falhas,
     }
     return (0 if not falhas else 1), relatorio
