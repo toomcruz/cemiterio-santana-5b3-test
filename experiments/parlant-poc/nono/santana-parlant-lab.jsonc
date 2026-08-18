@@ -1,0 +1,148 @@
+// Perfil Nono do laboratorio Parlant do Cemiterio Santana.
+//
+// Objetivo: rodar localmente, em sandbox, tudo que NAO precisa do Gemini real,
+// para deixar de gastar GitHub Actions em cada iteracao.
+//
+// Regra do laboratorio: escrita so em `experiments/parlant-poc`. O resto do
+// repositorio e do computador fica de fora — inclusive `.git`, `.github`,
+// `database/`, `edge-functions/` e `contracts/`, que sao o caminho de producao.
+//
+// COMO RODAR: sempre a partir da RAIZ do repositorio, porque `$WORKDIR` e
+// expandido pelo Nono usando o diretorio de onde o `nono` foi lancado. O
+// wrapper `nono/lab.sh` recusa rodar de outro lugar.
+//
+//   nono run --profile ./experiments/parlant-poc/nono/santana-parlant-lab.jsonc -- <cmd>
+//
+// Variaveis de caminho aceitas pelo Nono: `~`, `$HOME`, `$WORKDIR`, `$TMPDIR`,
+// `$UID`, `$XDG_*`, `$NONO_CONFIG`, `$NONO_PACKAGES`. Nao existe `${REPO}` nem
+// expansao de variavel arbitraria de ambiente.
+{
+  "$schema": "https://nono.sh/schema/nono-profile.schema.json",
+  "extends": "default",
+
+  "meta": {
+    "name": "santana-parlant-lab",
+    "version": "1.0.0",
+    "description": "Laboratorio Parlant (POC de Exumacao) — escrita restrita a experiments/parlant-poc, rede negada, sem segredos.",
+    "author": "cemiterio-santana-5b3-test"
+  },
+
+  // `default` ja inclui: deny_credentials, deny_keychains_linux,
+  // deny_browser_data_linux, deny_shell_history, deny_shell_configs,
+  // system_read_linux_core, system_write_linux, user_tools,
+  // dangerous_commands*. Aqui so somamos o runtime de Python.
+  "groups": {
+    "include": ["python_runtime"]
+  },
+
+  // O cwd do lancamento (a raiz do repo) NAO e concedido: cada caminho abaixo
+  // e explicito.
+  "workdir": { "access": "none" },
+
+  "filesystem": {
+    // Unico lugar com escrita: o laboratorio.
+    "allow": ["$WORKDIR/experiments/parlant-poc"],
+
+    // Somente leitura: o catalogo autoritativo. A POC le daqui em
+    // `domain/catalog.py` (raiz do repo + `santana-conversation-domain/`) e em
+    // `lab/fallback.py` (`runtime/interpreter/lexicon.v1.json`). Sem esta
+    // linha o laboratorio nao inicia.
+    "read": ["$WORKDIR/santana-conversation-domain"],
+
+    // Deny vence qualquer allow. Redundante hoje (nada disso foi concedido),
+    // mas trava o perfil contra um alargamento futuro do bloco `allow`.
+    "deny": [
+      "$WORKDIR/.git",
+      "$WORKDIR/.github",
+      "$WORKDIR/database",
+      "$WORKDIR/edge-functions",
+      "$WORKDIR/contracts",
+      "$WORKDIR/tests",
+      "$WORKDIR/docs",
+      "~/.config/gh",
+      "~/.claude",
+      "~/.claude.json",
+      "~/.gitconfig",
+      "~/.config/git",
+      "~/.config/supabase",
+      "~/.supabase",
+      "~/.n8n",
+      "~/.vercel",
+      "~/.config/vercel"
+    ]
+  },
+
+  // Rede negada por inteiro: seccomp so deixa passar AF_UNIX. Nao ha Gemini,
+  // nao ha Supabase, nao ha n8n, nao ha W-API, nao ha Vercel, nao ha proxy.
+  // ATENCAO: isso tambem derruba loopback TCP (127.0.0.1), que e como o
+  // Parlant fala com o PluginServer. Ver `nono/README.md`: os testes que
+  // sobem servidor precisam de `--open-port`, e `--open-port` exige
+  // Landlock V4+ (kernel 6.7+), que o kernel padrao do WSL2 nao tem.
+  "network": { "block": true },
+
+  "environment": {
+    // Allow-list: o que nao esta aqui nao entra no processo.
+    "allow_vars": [
+      "PATH",
+      "HOME",
+      "USER",
+      "LOGNAME",
+      "SHELL",
+      "TERM",
+      "TZ",
+      "LANG",
+      "LC_*",
+      "PWD",
+      "PYTHON*",
+      "VIRTUAL_ENV",
+      "PIP_*",
+      "SYNTHETIC_*",
+      "FULL_POC_*",
+      "MICRO_*",
+      "INSPECT_*",
+      "POC_*",
+      "NO_PROXY",
+      "no_proxy"
+    ],
+
+    // Deny vence allow. Nenhuma chave de modelo, nenhum token, nenhuma
+    // credencial de produto entra — inclusive as que casariam com os
+    // prefixos acima.
+    "deny_vars": [
+      "GEMINI_API_KEY",
+      "GOOGLE_*",
+      "PARLANT",
+      "ANTHROPIC_*",
+      "CLAUDE_*",
+      "OPENAI_*",
+      "AZURE_OPENAI_*",
+      "GH_TOKEN",
+      "GH_*",
+      "GITHUB_*",
+      "SUPABASE_*",
+      "N8N_*",
+      "WAPI_*",
+      "W_API_*",
+      "VERCEL_*",
+      "AWS_*",
+      "AZURE_*",
+      "GCP_*",
+      "HTTP_PROXY",
+      "HTTPS_PROXY",
+      "ALL_PROXY",
+      "http_proxy",
+      "https_proxy",
+      "all_proxy"
+    ],
+
+    // Temporarios dentro do laboratorio: `/tmp` nao foi concedido, e todos os
+    // scripts criam o `PARLANT_HOME` com `tempfile.mkdtemp()`, que obedece
+    // `TMPDIR`. So redirecionamos o TMPDIR: fixar `PARLANT_HOME` aqui faria os
+    // scripts reaproveitarem o mesmo diretorio entre execucoes e traria de
+    // volta o bug do `evaluation_cache.json` velho congelando a Journey.
+    "set_vars": {
+      "TMPDIR": "$WORKDIR/experiments/parlant-poc/.nono-tmp",
+      "PYTHONDONTWRITEBYTECODE": "1"
+    }
+  }
+}

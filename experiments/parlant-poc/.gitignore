@@ -8,3 +8,6 @@ __pycache__/
 # relatorio gerado pelo smoke real da POC completa (publicado como artifact)
 full-poc-gemini-report.json
 full-poc-toolcall-diagnostics.json
+
+# area temporaria do sandbox Nono (TMPDIR/PARLANT_HOME do laboratorio local)
+.nono-tmp/
