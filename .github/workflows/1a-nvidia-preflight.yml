@@ -1,0 +1,205 @@
+name: 1A NVIDIA preflight
+# Preflight da Fase 1A. Nao e benchmark, nao e a C1, nao roda bateria.
+# Teto rigido de 5 chamadas reais. Fail-fast em 401/403/429. Zero retries.
+# Nao toca Supabase, n8n, W-API, Vercel nem producao. Nao usa Gemini.
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Digite PREFLIGHT_NVIDIA_1A para autorizar ate 5 chamadas reais"
+        required: true
+        type: string
+      model:
+        description: "Modelo a testar (vazio = escolher a partir de /v1/models)"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BASE: https://integrate.api.nvidia.com/v1
+      CONFIRMATION: ${{ inputs.confirmation }}
+      MODEL_INPUT: ${{ inputs.model }}
+    steps:
+      - name: Autorizacao explicita
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          if [ "$CONFIRMATION" != "PREFLIGHT_NVIDIA_1A" ]; then
+            echo "confirmacao ausente ou incorreta: nada foi chamado" >&2
+            exit 1
+          fi
+          echo "autorizacao confirmada"
+
+      - name: Preparar credencial fora de argv e de log
+        shell: bash
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+        run: |
+          set -Eeuo pipefail
+          if [ -z "${NVIDIA_API_KEY:-}" ]; then
+            echo "NVIDIA_API_KEY ausente ou vazia" >&2
+            exit 1
+          fi
+          umask 077
+          # A chave vai para um arquivo de config do curl: nunca em argv (onde ps a
+          # exporia), nunca em URL, nunca ecoada. Removida no fim do job.
+          {
+            printf 'header = "Authorization: Bearer %s"\n' "$NVIDIA_API_KEY"
+            printf 'silent\n'
+            printf 'show-error\n'
+          } > "$RUNNER_TEMP/nv.cfg"
+          echo "credencial presente (valor nao reportado)"
+
+      - name: Probes
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          CFG="$RUNNER_TEMP/nv.cfg"
+          CALLS=0
+          MAX=5
+          LAST_CODE=""
+          LAST_OUT=""
+
+          # Uma chamada real. Fail-fast em 401/403/429. Sem retry, nunca.
+          call() {
+            local label="$1" method="$2" path="$3" body="${4:-}"
+            CALLS=$((CALLS + 1))
+            if [ "$CALLS" -gt "$MAX" ]; then
+              echo "teto de $MAX chamadas atingido: abortando" >&2
+              exit 1
+            fi
+            local out="$RUNNER_TEMP/out.$CALLS.json"
+            local meta="$RUNNER_TEMP/meta.$CALLS.txt"
+            local hdr="$RUNNER_TEMP/hdr.$CALLS.txt"
+            if [ -n "$body" ]; then
+              curl -K "$CFG" -o "$out" -D "$hdr" -w '%{http_code} %{time_total}\n' \
+                --max-time 90 -X "$method" -H 'Content-Type: application/json' \
+                -d "$body" "$BASE$path" > "$meta" || true
+            else
+              curl -K "$CFG" -o "$out" -D "$hdr" -w '%{http_code} %{time_total}\n' \
+                --max-time 90 -X "$method" "$BASE$path" > "$meta" || true
+            fi
+            local code tempo
+            code="$(awk '{print $1}' "$meta")"
+            tempo="$(awk '{print $2}' "$meta")"
+            if [ -z "$code" ]; then
+              echo "CHAMADA $CALLS [$label] sem resposta HTTP (falha de transporte)" >&2
+              exit 1
+            fi
+            echo "CHAMADA $CALLS [$label] HTTP=$code latencia=${tempo}s"
+            # Cabecalhos de rate limit, quando a API os informar.
+            grep -iE '^(x-ratelimit|retry-after|ratelimit)' "$hdr" || true
+            case "$code" in
+              401 | 403)
+                echo "FAIL-FAST: credencial rejeitada ($code). Encerrando sem retry." >&2
+                exit 1
+                ;;
+              429)
+                echo "FAIL-FAST: rate limit ($code). Encerrando sem retry." >&2
+                exit 1
+                ;;
+            esac
+            LAST_CODE="$code"
+            LAST_OUT="$out"
+          }
+
+          # ---------------------------------------------- 1. modelos acessiveis
+          call "models.list" GET /models
+          if [ "$LAST_CODE" != "200" ]; then
+            echo "models.list falhou ($LAST_CODE)" >&2
+            jq -c '.' "$LAST_OUT" 2>/dev/null | head -3 >&2 || true
+            exit 1
+          fi
+          jq -r '.data[].id' "$LAST_OUT" | sort > "$RUNNER_TEMP/models.txt"
+          echo "--- modelos acessiveis: $(wc -l < "$RUNNER_TEMP/models.txt") ---"
+          cat "$RUNNER_TEMP/models.txt"
+
+          MODEL="$MODEL_INPUT"
+          if [ -z "$MODEL" ]; then
+            MODEL="$(grep -iE 'instruct' "$RUNNER_TEMP/models.txt" | head -1 || true)"
+          fi
+          if [ -z "$MODEL" ]; then
+            MODEL="$(head -1 "$RUNNER_TEMP/models.txt" || true)"
+          fi
+          if [ -z "$MODEL" ]; then
+            echo "nenhum modelo candidato na lista" >&2
+            exit 1
+          fi
+          echo "MODELO EM TESTE: $MODEL"
+
+          # ------------------------------------------------- 2. chamada simples
+          body="$(jq -nc --arg m "$MODEL" '{
+            model: $m, max_tokens: 32, temperature: 0,
+            messages: [{role: "user", content: "Responda apenas: ok"}]
+          }')"
+          call "chat.simples" POST /chat/completions "$body"
+          if [ "$LAST_CODE" = "200" ]; then
+            echo "CHAT SIMPLES: PASS"
+            jq -r '.choices[0].message.content // "(sem conteudo)"' "$LAST_OUT" | head -3
+          else
+            echo "CHAT SIMPLES: FAIL ($LAST_CODE)"
+            jq -c '.error // .' "$LAST_OUT" 2>/dev/null | head -3 || true
+          fi
+
+          # ---------------------------------------------------- 3. tool calling
+          # Usa o contrato real da POC: consulta sem argumento nenhum.
+          body="$(jq -nc --arg m "$MODEL" '{
+            model: $m, max_tokens: 128, temperature: 0,
+            messages: [{role: "user", content: "Quanto custa a exumacao?"}],
+            tools: [{type: "function", function: {
+              name: "consultar_preco_exumacao",
+              description: "Consulta o valor aplicavel da exumacao na base oficial do Cemiterio Santana.",
+              parameters: {type: "object", properties: {}, required: []}
+            }}],
+            tool_choice: "auto"
+          }')"
+          call "tool.calling" POST /chat/completions "$body"
+          if [ "$LAST_CODE" = "200" ] &&
+            jq -e '.choices[0].message.tool_calls[0].function.name == "consultar_preco_exumacao"' \
+              "$LAST_OUT" > /dev/null 2>&1; then
+            echo "TOOL CALLING: PASS"
+            jq -c '.choices[0].message.tool_calls[0].function' "$LAST_OUT"
+          else
+            echo "TOOL CALLING: FAIL ($LAST_CODE)"
+            jq -c '.error // .choices[0].message' "$LAST_OUT" 2>/dev/null | head -3 || true
+          fi
+
+          # ----------------------------------------------- 4. structured output
+          body="$(jq -nc --arg m "$MODEL" '{
+            model: $m, max_tokens: 128, temperature: 0,
+            messages: [{role: "user", content: "Extraia a intencao desta mensagem do municipe: quanto custa?"}],
+            response_format: {type: "json_schema", json_schema: {
+              name: "intencao", strict: true,
+              schema: {
+                type: "object", additionalProperties: false,
+                properties: {intencao: {type: "string", enum: ["PRECO", "DOCUMENTOS", "PRAZO", "OUTRO"]}},
+                required: ["intencao"]
+              }
+            }}
+          }')"
+          call "structured.output" POST /chat/completions "$body"
+          if [ "$LAST_CODE" = "200" ] &&
+            jq -e '.choices[0].message.content | fromjson | .intencao' "$LAST_OUT" > /dev/null 2>&1; then
+            echo "STRUCTURED OUTPUT: PASS"
+            jq -r '.choices[0].message.content' "$LAST_OUT"
+          else
+            echo "STRUCTURED OUTPUT: FAIL ($LAST_CODE) — avaliar json_object ou prompt-only na C1"
+            jq -c '.error // .choices[0].message' "$LAST_OUT" 2>/dev/null | head -3 || true
+          fi
+
+          echo "=== CHAMADAS REAIS EXECUTADAS: $CALLS de $MAX ==="
+
+      - name: Remover credencial
+        if: always()
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          shred -u "$RUNNER_TEMP/nv.cfg" 2> /dev/null || rm -f "$RUNNER_TEMP/nv.cfg"
+          echo "credencial removida do runner"
