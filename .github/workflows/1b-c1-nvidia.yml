@@ -68,10 +68,21 @@ jobs:
         run: |
           set -Eeuo pipefail
           python -m pip install --upgrade pip --quiet
-          # parlant fixado pela propria POC; litellm e o adaptador OpenAI-compativel
-          # que o Parlant usa para falar com o endpoint NVIDIA.
-          pip install --quiet -r experiments/parlant-poc/requirements.txt litellm
-          python -c "import parlant, litellm; print('parlant', parlant.__version__ if hasattr(parlant,'__version__') else 'ok'); print('litellm ok')"
+          # O extra [litellm] do parlant 3.3.2 e exatamente litellm + torch +
+          # transformers. torch e obrigatorio mesmo sem usar embeddings remotos:
+          # litellm_service importa JinaAIEmbedder no topo do modulo, e ele
+          # importa torch. A roda CPU vem do indice do PyTorch para nao baixar
+          # o pacote CUDA inteiro num runner sem GPU.
+          pip install --quiet torch --index-url https://download.pytorch.org/whl/cpu
+          pip install --quiet "parlant[litellm]==3.3.2" httpx fastapi uvicorn
+          python - <<'PY'
+          import litellm, torch, transformers
+          from parlant.adapters.nlp.litellm_service import LiteLLMService
+          print("litellm", litellm.__version__)
+          print("torch", torch.__version__)
+          print("transformers", transformers.__version__)
+          print("LiteLLMService importado")
+          PY
 
       - name: C1 real
         shell: bash
