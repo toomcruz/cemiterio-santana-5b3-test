@@ -203,6 +203,91 @@ def _bloco_de_parametros(prompt: str) -> str | None:
     return achado.group(1) if achado else None
 
 
+# ------------------------------------------ avaliacao real do ToolCaller, observada
+# O que a captura anterior nao mostrava: o que o Parlant FEZ com a saida do
+# modelo. Sem isso, "argumento ausente" pode nascer em tres lugares diferentes —
+# o modelo omitiu, o modelo mandou o marcador, ou o pos-processamento perdeu o
+# valor — e o log nao distingue.
+AVALIACOES_DE_TOOL: list[dict[str, Any]] = []
+
+
+def _json_seguro(valor: Any) -> Any:
+    """Serializa para o relatorio sem deixar o diagnostico derrubar o turno."""
+    try:
+        json.dumps(valor)
+        return valor
+    except TypeError:
+        return str(valor)
+
+
+def _registrar_avaliacao(caminho: str, entrada: Any, candidato: Any, saida: Any) -> None:
+    tool_id = candidato[0] if isinstance(candidato, (tuple, list)) and candidato else None
+    chamadas, avaliacoes, faltando, invalidos = saida
+    AVALIACOES_DE_TOOL.append(
+        {
+            "caminho": caminho,
+            "tool": str(getattr(tool_id, "tool_name", tool_id)),
+            # 5. argumentos como o Parlant os leu da saida do modelo
+            "argumentos_apos_parsing": [
+                _json_seguro(getattr(item, "args", None) or getattr(item, "arguments", None))
+                for item in (entrada or ())
+            ],
+            # 6. resultado da validacao
+            "validacao": {
+                "faltando": [
+                    {"parametro": getattr(d, "parameter", None), "detalhe": _json_seguro(vars(d))}
+                    for d in faltando
+                ],
+                "invalidos": [
+                    {
+                        "parametro": getattr(d, "parameter", None),
+                        "valor_invalido": getattr(d, "invalid_value", None),
+                    }
+                    for d in invalidos
+                ],
+            },
+            # 7. tool call efetivamente produzida
+            "tool_calls_produzidas": [
+                {"tool": str(c.tool_id), "arguments": _json_seguro(dict(c.arguments))}
+                for c in chamadas
+            ],
+        }
+    )
+
+
+def instrumentar_avaliacao_de_tool_call() -> None:
+    """Envolve os dois avaliadores reais do Parlant com observacao passiva.
+
+    O wrapper devolve **o mesmo objeto** que o metodo original produziu. Nao ha
+    caminho aqui que crie, complete ou descarte argumento: se a captura falhar,
+    ela e engolida e o turno segue com o resultado intacto.
+    """
+    from parlant.core.engines.alpha.tool_calling import single_tool_batch as lote
+
+    for caminho, nome in (
+        ("nao_consequencial", "_evaluate_non_consequential_tool_calls"),
+        ("consequencial", "_evaluate_consequential_tool_calls"),
+    ):
+        original = getattr(lote.SingleToolBatch, nome)
+
+        def envolver(original=original, caminho=caminho):
+            def observado(self, output=None, candidate_descriptor=None, **kwargs):
+                entrada = output if output is not None else kwargs.get("inference_output")
+                candidato = candidate_descriptor or kwargs.get("candidate_descriptor")
+                resultado = original(self, entrada, candidato)
+                try:
+                    _registrar_avaliacao(caminho, entrada, candidato, resultado)
+                except Exception as erro:  # diagnostico nunca derruba o turno
+                    AVALIACOES_DE_TOOL.append(
+                        {"caminho": caminho, "falha_na_captura": f"{type(erro).__name__}: {erro}"}
+                    )
+                return resultado
+
+            return observado
+
+        setattr(lote.SingleToolBatch, nome, envolver())
+
+
 # --------------------------------------------------------------- instrumentacao
 class GeradorObservado(ThrottledGemini[T]):
     """Gerador da POC, contando chamadas, schemas e falhas de structured output.
@@ -499,7 +584,11 @@ def _resumo(itens: list[dict[str, Any]], inicializacao: float, total: float) -> 
     )
     DIAG_SAIDA.write_text(
         json.dumps(
-            {"lotes_de_tool": DIAGNOSTICO, "schema_efetivo": _schema_efetivo_das_tools()},
+            {
+                "lotes_de_tool": DIAGNOSTICO,
+                "avaliacoes_do_toolcaller": AVALIACOES_DE_TOOL,
+                "schema_efetivo": _schema_efetivo_das_tools(),
+            },
             ensure_ascii=False,
             indent=2,
             default=str,
@@ -528,6 +617,11 @@ async def main() -> int:
     if not os.environ.get("GEMINI_API_KEY", "").strip():
         print("GEMINI_API_KEY ausente: smoke da POC completa nao executado.")
         return 2
+
+    # Observacao passiva do avaliador real do ToolCaller. Precisa vir antes do
+    # servidor subir; o resultado devolvido ao Parlant continua sendo o do
+    # metodo original, byte a byte.
+    instrumentar_avaliacao_de_tool_call()
 
     inicio = time.perf_counter()
     pronto: dict[str, float] = {}

@@ -138,3 +138,120 @@ def test_a_instrumentacao_nao_escreve_argumento(proibido):
     fonte = (RAIZ / "scripts" / "full_poc_smoke.py").read_text(encoding="utf-8")
     trecho = fonte[fonte.index("class GeradorObservado") : fonte.index("class ServicoObservado")]
     assert proibido not in trecho
+
+
+# ------------------------------- captura da avaliacao real (passiva, sem efeito)
+def _avaliar_pelo_parlant(nome_tool: str, args: dict):
+    """Roda o avaliador real do Parlant com a instrumentacao instalada."""
+    from parlant.core.engines.alpha.tool_calling.single_tool_batch import (
+        NonConsequentialToolCallEvaluation,
+        SingleToolBatch,
+    )
+    from parlant.core.tools import ToolId
+
+    from santana_parlant_poc.agent.tools import ALL_TOOLS
+
+    tool = next(t.tool for t in ALL_TOOLS if t.tool.name == nome_tool)
+    tool_id = ToolId(service_name="built-in", tool_name=nome_tool)
+
+    class _Lote:
+        _evaluate_non_consequential_tool_calls = (
+            SingleToolBatch._evaluate_non_consequential_tool_calls
+        )
+        _is_tool_call_already_staged = SingleToolBatch._is_tool_call_already_staged
+
+        class _context:  # noqa: N801
+            staged_events: list = []
+
+        class _logger:  # noqa: N801
+            @staticmethod
+            def debug(*_a, **_k) -> None: ...
+
+            @staticmethod
+            def warning(*_a, **_k) -> None: ...
+
+    return _Lote()._evaluate_non_consequential_tool_calls(
+        output=[NonConsequentialToolCallEvaluation(args=args)],
+        candidate_descriptor=(tool_id, tool, []),
+    )
+
+
+def test_a_instrumentacao_devolve_o_resultado_original_intacto():
+    """O wrapper observa; quem decide continua sendo o metodo do Parlant."""
+    from parlant.core.engines.alpha.tool_calling import single_tool_batch as lote
+
+    original = lote.SingleToolBatch._evaluate_non_consequential_tool_calls
+    antes = _avaliar_pelo_parlant("registrar_finalidade_exumacao", {"finalidade": "TRANSPORTE"})
+    SMOKE.instrumentar_avaliacao_de_tool_call()
+    try:
+        SMOKE.AVALIACOES_DE_TOOL.clear()
+        depois = _avaliar_pelo_parlant(
+            "registrar_finalidade_exumacao", {"finalidade": "TRANSPORTE"}
+        )
+        chamadas_antes, _, faltando_antes, _ = antes
+        chamadas_depois, _, faltando_depois, _ = depois
+        assert [c.arguments for c in chamadas_antes] == [c.arguments for c in chamadas_depois]
+        assert len(faltando_antes) == len(faltando_depois)
+
+        captura = SMOKE.AVALIACOES_DE_TOOL[-1]
+        assert captura["tool"] == "registrar_finalidade_exumacao"
+        assert captura["argumentos_apos_parsing"] == [{"finalidade": "TRANSPORTE"}]
+        assert captura["tool_calls_produzidas"][0]["arguments"] == {"finalidade": "TRANSPORTE"}
+        assert captura["validacao"]["faltando"] == []
+    finally:
+        lote.SingleToolBatch._evaluate_non_consequential_tool_calls = original
+
+
+def test_a_instrumentacao_nao_completa_argumento_ausente():
+    """Com o marcador, a recusa do Parlant continua sendo recusa."""
+    from parlant.core.engines.alpha.tool_calling import single_tool_batch as lote
+
+    original = lote.SingleToolBatch._evaluate_non_consequential_tool_calls
+    SMOKE.instrumentar_avaliacao_de_tool_call()
+    try:
+        SMOKE.AVALIACOES_DE_TOOL.clear()
+        chamadas, _, faltando, _ = _avaliar_pelo_parlant(
+            "registrar_finalidade_exumacao", {"finalidade": "<<__missing__>>"}
+        )
+        assert not chamadas
+        assert any(d.parameter == "finalidade" for d in faltando)
+
+        captura = SMOKE.AVALIACOES_DE_TOOL[-1]
+        assert captura["tool_calls_produzidas"] == []
+        assert captura["validacao"]["faltando"][0]["parametro"] == "finalidade"
+        # A captura registra o marcador como o modelo o mandou, sem traduzir.
+        assert captura["argumentos_apos_parsing"] == [{"finalidade": "<<__missing__>>"}]
+    finally:
+        lote.SingleToolBatch._evaluate_non_consequential_tool_calls = original
+
+
+def test_a_consulta_sem_argumento_aparece_como_chamada_completa():
+    """C1 hoje: a tool de preco nao tem argumento, entao `{}` e a chamada inteira."""
+    from parlant.core.engines.alpha.tool_calling import single_tool_batch as lote
+
+    original = lote.SingleToolBatch._evaluate_non_consequential_tool_calls
+    SMOKE.instrumentar_avaliacao_de_tool_call()
+    try:
+        SMOKE.AVALIACOES_DE_TOOL.clear()
+        chamadas, _, faltando, _ = _avaliar_pelo_parlant("consultar_preco_exumacao", {})
+        assert len(chamadas) == 1 and not faltando
+        captura = SMOKE.AVALIACOES_DE_TOOL[-1]
+        assert captura["tool_calls_produzidas"][0]["arguments"] == {}
+        assert captura["validacao"]["faltando"] == []
+    finally:
+        lote.SingleToolBatch._evaluate_non_consequential_tool_calls = original
+
+
+def test_o_diagnostico_continua_sem_mencionar_o_marcador_no_codigo():
+    """A regra nao mudou: quem interpreta `<<__missing__>>` e o Parlant."""
+    fonte = (RAIZ / "scripts" / "full_poc_smoke.py").read_text(encoding="utf-8")
+    assert "__missing__" not in fonte
+
+
+@pytest.mark.parametrize("proibido", ["arguments[", "args[", "setdefault(", "= chamadas", "= faltando"])
+def test_a_captura_da_avaliacao_nao_escreve_no_resultado(proibido):
+    fonte = (RAIZ / "scripts" / "full_poc_smoke.py").read_text(encoding="utf-8")
+    trecho = fonte[
+        fonte.index("def _registrar_avaliacao") : fonte.index("class GeradorObservado")
+    ]
+    assert proibido not in trecho
