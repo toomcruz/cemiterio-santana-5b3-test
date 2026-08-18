@@ -3,11 +3,10 @@ name: Parlant POC (lab)
 # POC isolada em experiments/parlant-poc/. Nao toca em migrations, Supabase,
 # n8n, W-API, WhatsApp nem Vercel. Nao publica nada.
 
+# So roda por disparo explicito. O gatilho `push` fazia cada commit desta
+# branch consumir minutos do Actions — e o objetivo desta etapa e justamente o
+# contrario: rodar isto localmente, em sandbox, por `experiments/parlant-poc/nono`.
 on:
-  push:
-    branches:
-      - "lab/**"
-      - "claude/parlant-poc-**"
   workflow_dispatch:
     inputs:
       run_gemini_smoke:

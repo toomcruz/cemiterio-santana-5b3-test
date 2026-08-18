@@ -4,11 +4,10 @@ name: Parlant synthetic validation (sem chave)
 # Nao usa secret, nao usa rede externa (o NetworkGuard bloqueia e conta).
 # Nao toca em main, migrations, Supabase, n8n, W-API, WhatsApp nem Vercel.
 
+# So roda por disparo explicito. O gatilho `push` fazia cada commit desta
+# branch consumir minutos do Actions — e o objetivo desta etapa e justamente o
+# contrario: rodar isto localmente, em sandbox, por `experiments/parlant-poc/nono`.
 on:
-  push:
-    branches:
-      - "lab/**"
-      - "claude/parlant-poc-**"
   workflow_dispatch:
     inputs:
       conversas:
