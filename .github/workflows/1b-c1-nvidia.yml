@@ -74,7 +74,12 @@ jobs:
           # importa torch. A roda CPU vem do indice do PyTorch para nao baixar
           # o pacote CUDA inteiro num runner sem GPU.
           pip install --quiet torch --index-url https://download.pytorch.org/whl/cpu
-          pip install --quiet "parlant[litellm]==3.3.2" httpx fastapi uvicorn
+          # transformers <5 e obrigatorio: o JinaAIEmbedder carrega codigo remoto
+          # do HuggingFace que faz 'from transformers.onnx import OnnxConfig', e
+          # esse modulo foi removido na 5.x. O pin do parlant e apenas >=4.53,
+          # entao sem este limite o pip instala a 5.x e a subida quebra no
+          # carregamento do embedder.
+          pip install --quiet "parlant[litellm]==3.3.2" "transformers>=4.53,<5" httpx fastapi uvicorn
           python - <<'PY'
           from importlib.metadata import version
           # Nada de tocar em atributos dos modulos: litellm intercepta
