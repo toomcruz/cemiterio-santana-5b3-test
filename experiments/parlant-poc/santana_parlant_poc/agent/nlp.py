@@ -40,15 +40,24 @@ from parlant.core.tracer import Tracer
 
 DEFAULT_MODEL = "gemini-3.7-flash"
 
-# Requests por minuto do free tier, por modelo.
-DEFAULT_RPM_BY_MODEL = {
-    "gemini-2.5-flash": 5,
-    "gemini-3.7-flash": 10,
-    "gemini-3.6-flash": 10,
-    "gemini-3.5-flash": 10,
-}
-DEFAULT_RPM = 5
-MAX_RETRIES_ON_429 = 6
+# Requests por minuto.
+#
+# Nao ha tabela por modelo aqui de proposito. A versao anterior tinha uma, com
+# valores que ninguem mediu, e `gemini-3.1-flash-lite` simplesmente nao estava
+# nela: caiu no fallback de 5 rpm, e o run 32146735829 gastou 1176 dos seus 1180
+# segundos esperando o limiter (98 chamadas x 12 s). Um numero inventado que
+# "quase" acerta e pior que a ausencia dele, porque nao aparece em lugar nenhum.
+#
+# `RPM_FAIL_SAFE` e a unica constante, e ela e deliberadamente conservadora: e o
+# que sobra quando ninguem configurou nada. O valor real da chave e configuracao
+# explicita, via `POC_GEMINI_RPM`, e o smoke real EXIGE que ela venha declarada
+# (`exigir_rpm_declarado`).
+RPM_FAIL_SAFE = 5
+
+# Retentativa apos 429. Zero por padrao: um 429 encerra o teste em vez de
+# continuar consumindo cota. `POC_GEMINI_RETRIES_429` permite subir quando a
+# execucao for de producao, nao de teste.
+DEFAULT_RETRIES_ON_429 = 0
 
 _RETRY_DELAY = re.compile(r"[Pp]lease retry in ([0-9.]+)s")
 
@@ -64,15 +73,57 @@ def configured_model() -> str:
     return model
 
 
+def rpm_declarado() -> int | None:
+    """RPM vindo de `POC_GEMINI_RPM`, ou `None` quando nao foi declarado."""
+    bruto = os.environ.get("POC_GEMINI_RPM", "").strip()
+    if not bruto:
+        return None
+    try:
+        return max(1, int(bruto))
+    except ValueError as erro:
+        raise ValueError(
+            f"POC_GEMINI_RPM invalido: {bruto!r}. Use um inteiro de requests por minuto."
+        ) from erro
+
+
 def configured_rpm(model_name: str) -> int:
-    """RPM do modelo; `POC_GEMINI_RPM` sobrescreve (util com chave paga)."""
-    override = os.environ.get("POC_GEMINI_RPM", "").strip()
-    if override:
-        try:
-            return max(1, int(override))
-        except ValueError:
-            pass
-    return DEFAULT_RPM_BY_MODEL.get(model_name, DEFAULT_RPM)
+    """RPM efetivo. Declarado vence; senao, o fail-safe conservador."""
+    declarado = rpm_declarado()
+    return declarado if declarado is not None else RPM_FAIL_SAFE
+
+
+def exigir_rpm_declarado() -> int:
+    """Usado pelos caminhos que gastam cota: sem declaracao, nao roda.
+
+    O fail-safe de 5 rpm existe para nao estourar quota por acidente, nao para
+    ser o valor de trabalho. Deixa-lo silenciosamente em vigor foi o que
+    transformou um turno de 15 chamadas em 20 minutos de espera.
+    """
+    declarado = rpm_declarado()
+    if declarado is None:
+        raise RuntimeError(
+            "POC_GEMINI_RPM nao declarado. Este caminho consome cota e o RPM precisa ser "
+            "explicito: declare o limite real da chave no workflow. "
+            f"Sem declaracao o fail-safe seria {RPM_FAIL_SAFE} rpm "
+            f"({60 / RPM_FAIL_SAFE:.0f}s por chamada, serializado)."
+        )
+    return declarado
+
+
+def configured_retries_on_429() -> int:
+    bruto = os.environ.get("POC_GEMINI_RETRIES_429", "").strip()
+    if not bruto:
+        return DEFAULT_RETRIES_ON_429
+    try:
+        return max(0, int(bruto))
+    except ValueError:
+        return DEFAULT_RETRIES_ON_429
+
+
+# Tempo total que os limiters passaram esperando, e quantas esperas houve. E o
+# que separa "o Parlant esta lento" de "estamos serializados no rate limit" — sem
+# esse numero, os dois se parecem no relogio.
+THROTTLE_STATS = {"espera_s": 0.0, "esperas": 0, "chamadas": 0}
 
 
 class RateLimiter:
@@ -88,7 +139,10 @@ class RateLimiter:
             now = time.monotonic()
             wait = max(0.0, self._next_slot - now)
             self._next_slot = max(now, self._next_slot) + self._interval
+        THROTTLE_STATS["chamadas"] += 1
         if wait:
+            THROTTLE_STATS["espera_s"] += wait
+            THROTTLE_STATS["esperas"] += 1
             await asyncio.sleep(wait)
 
     async def penalize(self, seconds: float) -> None:
@@ -255,7 +309,7 @@ class ThrottledGemini(GeminiSchematicGenerator[T]):
         merged = {**base, **hints}
         last_error: BaseException | None = None
 
-        for _ in range(MAX_RETRIES_ON_429):
+        for _ in range(1 + configured_retries_on_429()):
             await limiter.acquire()
             try:
                 return await super().generate(prompt, merged)

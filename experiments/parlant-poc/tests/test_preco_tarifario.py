@@ -295,11 +295,15 @@ def test_I_guard_bloqueia_numero_que_nao_veio_de_tool():
 
 
 def test_I_a_canned_response_de_preco_nao_traz_numero_escrito():
-    template = spec.canned_response("PRECO_APLICAVEL")["template"]
+    """A resposta com valor e transiente: vem da tool, nao da base do agente."""
+    from santana_parlant_poc.agent import canned
+
+    template = canned.PRECO_DISPONIVEL
     assert "{{valor}}" in template
     assert not any(c.isdigit() for c in template), (
         "o numero tem de vir do campo da tool, nunca do texto aprovado"
     )
+    assert template not in {c["template"] for c in spec.CANNED_RESPONSES}
 
 
 def test_I_sem_campo_da_tool_a_resposta_com_preco_nao_pode_ser_enviada():

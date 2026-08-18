@@ -1,186 +1,203 @@
 # Gate da Fase 4 — primeira nova chamada Gemini real
 
-Este documento existe para uma decisao sua: autorizar (ou nao) **uma unica**
-conversa real, C1-preco, contra o Gemini. Nada nele foi executado com a chave.
+Documento de decisao para autorizar **uma unica** conversa real, C1-preco.
+Nada aqui foi executado com a chave. Nenhum GitHub Actions foi disparado.
 
-Estado: **Fases 0, 1 e 2 concluidas. Fase 3 fechada para PRECO** — a tabela
-tarifaria oficial `Tabela_Politica_Tarifaria_07_01_2026` esta ingerida. Os
-demais tipos de conhecimento continuam sem fonte aprovada (secao 4).
-
-Isso muda o que a C1 testa. Ela deixou de ser "o agente diz que a Administracao
-informa" e passou a ser **o teste de ambiguidade tarifaria**: ha tres tarifas de
-exumacao, e a pergunta generica nao pode escolher nenhuma.
+Estado: **Fase 4A concluida.** Os quatro problemas que impediram a C1 anterior
+de chegar ao ToolCaller foram corrigidos offline.
 
 ---
 
-## 1. O que mudou desde o ultimo FAIL
+## 1. Por que a C1 anterior falhou
 
-O blocker do run `32069767929` foi `<<__missing__>>` em quatro argumentos
-obrigatorios. A inspecao runtime provou que o schema chegava intacto ao
-ToolCaller — enum, descricao, tudo. O que restou foi a pergunta certa: **por que
-pedir ao modelo um argumento que a Guideline ja determinou?**
-
-| Antes | Agora |
-|---|---|
-| `consultar_base_autoritativa(assunto="PRECO")` | `consultar_preco_exumacao()` — **zero argumentos** |
-| `registrar_fato(fato=<qualquer>, valor=<qualquer>)` | `registrar_finalidade_exumacao(finalidade: TRANSPORTE\|OSSUARIO\|CREMACAO\|OUTRA)` |
-| `corrigir_fato(...)` — modelo escolhia registrar ou corrigir | nao existe: origem `USER_CORRECTION` deduzida do estado |
-| 5 tools, 4 argumentos criticos escolhidos pelo modelo | 19 tools, **nenhum** argumento nao-linguistico |
-
-As 7 tools de registro sao **geradas a partir de `facts.v1.json`** — nome, enum e
-descricao saem do catalogo. Os tres fatos `authoritative_only` nao tem tool: nao
-ha por onde nomea-los.
-
-`<<__missing__>>` nao foi mitigado com prompt melhor. Ele deixou de ser um
-resultado possivel nas consultas, porque nao ha argumento para faltar.
-
----
-
-## 2. O que ja esta provado offline
-
-| Prova | Como | Resultado |
-|---|---|---|
-| Consulta sem argumento vira chamada valida | `SingleToolBatch._evaluate_non_consequential_tool_calls` **real** do Parlant, com `args={}` | PASS, 10/10 tools |
-| `<<__missing__>>` continua recusado onde ainda ha argumento | mesmo avaliador real | PASS, 7/7 fatos |
-| Enum e descricao chegam ao prompt | `_add_tool_definitions_section` e bloco `TOOL TO EVALUATE`, renderizadores reais | PASS |
-| Schema nao se perde do decorador ao engine | servidor Parlant de verdade + `ServiceRegistry.read_tool_service` | "tools cujo schema se perde: nenhuma" |
-| Toda tool declarada chega ao engine | inventario lido do `ServiceRegistry` | 19/19 |
-| `authoritative_only` inexpugnavel | schema + segunda validacao no Gateway | PASS |
-| Pergunta generica de preco nao escolhe tarifa | `NEEDS_CONTEXT` + `contexto_faltante`, nenhum dos tres valores na resposta | PASS |
-| Contexto suficiente devolve a tarifa certa | 3/3 modalidades, valor exato, `source_id` e vigencia | PASS |
-| Contexto incompativel falha fechado | `CONTEXTO_INCOMPATIVEL_COM_AS_ENTRADAS` | PASS |
-| Duas fontes oficiais no mesmo caso | `CONFLICT`, sem escolher nenhuma | PASS |
-| Prompt injection sobre preco | valor oficial intacto, nenhum valor sugerido aceito | PASS |
-| Modelo nao pode selecionar tarifa nem fonte | nenhum parametro de tool aceita preco, modalidade ou `source_id` | PASS |
-| Numero na resposta so vale se veio de tool | guard de origem no runner sintetico | PASS |
-| Autoridade sob conversa | bateria sintetica 100 conversas / 327 turnos | PASS, todos os gates 0 |
-| Casamento de guidelines | 169 turnos avaliados | 169 acertos, 0 FN, 0 FP |
-| Zero rede externa | `NetworkGuard` | 0 chamadas |
-| Suite offline | pytest | 321 testes |
-
-Custo em GitHub Actions destas provas: **zero minuto**. Tudo rodou local.
-
----
-
-## 3. O que a C1 vai testar — e o que ela nao testa
-
-A C1 e "quanto custa a exumação?". Com a tabela tarifaria carregada, a cadeia
-esperada e:
+Run `32146735829`, commit `620d282`. O tool calling **nunca foi exercitado**:
 
 ```
-Gemini interpreta a frase
+(nenhum lote de tool calling foi solicitado neste turno)
+```
+
+A aritmetica do run: `98 chamadas x 12 s = 1176 s`, contra 1180 s medidos.
+`gemini-3.1-flash-lite` nao estava na tabela de RPM, caiu no fail-safe de 5 rpm,
+e o run inteiro virou espera do limiter. A inicializacao levou 991,8 s
+(`Evaluating entities` 15m17s) e o turno bateu em 188,15 s contra um teto de
+180 s — estourou por 8 segundos.
+
+O que ja estava certo e nao foi tocado: o Gemini entendeu a intencao, `G_PRECO`
+casou, a prioridade sobre `G_COLETA` separou, nenhum fato indevido entrou, todos
+os gates de autoridade ficaram em zero, e o schema de `consultar_preco_exumacao`
+segue `parameters={}`, `required=[]`.
+
+---
+
+## 2. O que mudou na Fase 4A
+
+### 2.1 RPM deixou de ser um numero inventado
+
+A tabela `DEFAULT_RPM_BY_MODEL` tinha valores que ninguem mediu, e o modelo em
+uso nao estava nela. Ela foi removida.
+
+* `POC_GEMINI_RPM` e **configuracao explicita**. O caminho que gasta cota chama
+  `exigir_rpm_declarado()` e **recusa rodar** sem ela.
+* `RPM_FAIL_SAFE = 5` continua existindo, mas so como piso conservador para
+  quem nao configurou nada — nunca mais como valor de trabalho silencioso.
+* O workflow passou a ter `rpm` como **input obrigatorio sem default**. Nao ha
+  valor medido para esta chave no projeto, entao nao inventei um.
+* O throttle continua obrigatorio. Um 429 **encerra**: `POC_GEMINI_RETRIES_429`
+  passou a valer 0 por padrao, em vez das 6 retentativas anteriores.
+
+### 2.2 O timeout do turno passou a acompanhar o agente
+
+Os 180 s foram calibrados com 14 guidelines e 5 tools. Hoje sao 20 e 19.
+
+```
+timeout = CHAMADAS_POR_TURNO_ESPERADAS (20) x (60/rpm) x MARGEM (2,0)
+```
+
+As 20 chamadas vem de medicao: a bateria sintetica de 300 conversas deu ~16
+chamadas marginais por turno, e o run real bateu com isso (~15 chamadas em
+188 s a 12 s cada). A 5 rpm o timeout vira 480 s; a 60 rpm, 40 s. Ele deixou de
+ser um numero fixo que envelhece junto com o agente.
+
+O relatorio agora decompoe o tempo: inicializacao, cada turno, **espera de
+throttle** (`THROTTLE_STATS`), processamento efetivo, fracao em espera e tempo
+por estagio do pipeline. Sem essa separacao, "o turno demorou 188 s" nao
+distingue lentidao de rate limit — e no run anterior era a segunda coisa.
+
+### 2.3 `PRECO_APLICAVEL` nao existe mais como resposta armazenada
+
+O erro era estrutural:
+
+```
+CannedResponse field extraction: missing 'valor'
+KeyError: "Missing field 'valor' in canned response"
+```
+
+O compositor do Parlant **pre-renderiza** as candidatas da guideline que casou,
+antes de qualquer tool rodar. Uma resposta armazenada com `{{valor}}` e uma
+armadilha: gasta uma chamada ao modelo e falha.
+
+A inversao: a resposta que menciona valor **nasce da tool**, junto com o campo, e
+so quando o Gateway devolve `AVAILABLE`. O Parlant trata resposta vinda de tool
+como transiente e nao a submete ao filtro de campos.
+
+| Estado do Gateway | Resposta | Menciona valor |
+|---|---|---|
+| `AVAILABLE` | transiente, via `ToolResult.canned_responses` + `canned_response_fields` | sim, e o valor vem do Gateway |
+| `NEEDS_CONTEXT` | `PRECO_PRECISA_CONTEXTO`, armazenada | nao |
+| `CONFLICT` | `PRECO_EM_CONFLITO`, armazenada | nao |
+| `NOT_AVAILABLE` | `SEM_PRECO`, armazenada | nao |
+
+A regressao que trava isso usa a funcao real do Parlant
+(`canned_response_generator._get_response_template_fields`) e falha se **qualquer**
+resposta armazenada passar a depender de campo que so uma tool fornece.
+
+### 2.4 Cache de indexacao por `release_id`
+
+`santana_parlant_poc/release.py`. O `release_id` deriva do conteudo — catalogo
+oficial, catalogos de dominio e a configuracao do agente (guidelines,
+relationships, journey, canned responses, glossario, schema das tools).
+
+* Cache em `<raiz>/<release_id>`; releases diferentes nunca se cruzam.
+* Mudanca material gera id novo, e o cache antigo deixa de ser **alcancavel** —
+  e por isso que reaproveitar deixou de ser perigoso. Antes o home era limpo a
+  cada run porque o `evaluation_cache.json` ja tinha congelado a Journey uma vez.
+* Release so e publicada (`estado: pronta`) depois de indexada. Construcao
+  interrompida, marcador ilegivel, marcador de outra release, diretorio sem
+  marcador: **todos falham fechado**.
+* `releases_disponiveis()` lista so as publicadas — e por elas que o rollback
+  aponta para a anterior.
+* Testes continuam podendo pedir home limpo (`limpo=True`,
+  `FULL_POC_RELEASE_CACHE=0`).
+* O cache **nao e fonte de autoridade**: nada nele responde preco, documento,
+  prazo ou regra. Ha teste que falha se alguem escrever isso ali.
+
+---
+
+## 3. Micro-benchmark do cache
+
+`scripts/bench_release.py`, provider sintetico, dois processos separados.
+
+| | cold | warm |
+|---|---|---|
+| duracao | 0,56 s | 0,51 s |
+| chamadas de geracao | 0 | 0 |
+| operacoes de embedding | **27** | **0** |
+
+Diferenca absoluta 0,05 s (11%). **Embeddings evitados: 27 (100%).**
+
+**Limite honesto desta medicao.** O que esta medido e que o home da release
+carrega estado reutilizavel entre boots: o warm refaz zero do trabalho de
+embedding do cold. O que **nao** esta medido e a economia do lado da geracao —
+com o provider sintetico `Evaluating entities` sai de graca e o
+`evaluation_cache.json` termina com 2 bytes. Os 15m17s que essa etapa custou no
+run real nao aparecem aqui, nem para mais nem para menos. **So um run real com a
+mesma release mede isso**, e por isso nao afirmo que o cache resolve a
+inicializacao — afirmo que ele existe, e isolado, falha fechado, e ja elimina o
+trabalho que da para observar offline.
+
+---
+
+## 4. Testes offline
+
+**362 testes, todos passando.** Os obrigatorios desta fase:
+
+| # | Exigencia | Onde |
+|---|---|---|
+| 1 | suite completa PASS | 362 testes |
+| 2 | `PRECO_APLICAVEL` nao gera KeyError sem campo | `test_canned_preco.py` |
+| 3 | `AVAILABLE`: valor so do ToolResult/Gateway | `test_estado_available_entrega_valor_e_template_juntos` |
+| 4 | `NEEDS_CONTEXT`: nenhuma resposta com valor e candidata | `test_estado_needs_context_nao_oferece_resposta_com_valor` |
+| 5 | `CONFLICT`: nenhum preco escolhido | `test_estado_conflict_nao_escolhe_preco_nem_oferece_valor` |
+| 6 | `NOT_AVAILABLE`: nenhum preco escolhido | `test_estado_not_available_nao_oferece_resposta_com_valor` |
+| 7 | mesmo `release_id` reutiliza estado | `test_mesma_release_reaproveita_o_estado` |
+| 8 | `release_id` diferente nao reutiliza | `test_release_diferente_nao_reaproveita_cache_anterior` |
+| 9 | cache invalido/corrompido falha seguro | 4 testes de fail-safe |
+| 10 | instrumentacao continua passiva | `test_a_instrumentacao_devolve_o_resultado_original_intacto` |
+| 11 | gates de autoridade = 0 | bateria sintetica |
+
+---
+
+## 5. O que a C1 vai testar
+
+```
+Gemini interpreta "quanto custa a exumação?"
   -> G_PRECO casa
   -> consultar_preco_exumacao()          <- sem argumento nenhum
   -> Santana Authority Gateway
   -> tres tarifas possiveis, nenhuma determinada pelo caso
   -> NEEDS_CONTEXT + contexto_faltante=["modalidade_tarifaria"]
-  -> Parlant pergunta onde a pessoa esta sepultada
+  -> resposta armazenada PRECO_PRECISA_CONTEXTO (sem {{valor}})
   -> stage=completed
 ```
 
-**O ponto obrigatorio: o modelo nao escolhe o preco.** Escolher entre R$ 106,57,
-R$ 351,67 e R$ 586,04 e uma decisao de aplicabilidade, nao de linguagem. Um
-preco certo no caso errado e tao ruim quanto um preco inventado — e bem mais
-convincente.
+FAIL imediato se aparecer qualquer tarifa (R$ 106,57, R$ 351,67, R$ 586,04) ou
+qualquer numero que nao tenha vindo de uma tool — o guard de origem cobre isso.
 
-Criterios da Fase 4, com o que cada um mede:
-
-| Criterio | Quem responde |
-|---|---|
-| Gemini entende intencao | **so o Gemini** |
-| G_PRECO casa | **so o Gemini** |
-| Tool especializada chamada | **so o Gemini** (a escolha da tool e linguistica) |
-| Argumento critico do LLM | ja resolvido: **nao ha argumento** |
-| Authority Gateway consultado | ja provado offline; a C1 confirma no caminho real |
-| **NEEDS_CONTEXT vira pergunta, nao tarifa** | **so o Gemini** — e o coracao desta C1 |
-| Resposta final / `stage=completed` | **so o Gemini** |
-| 404 / 429 / structured output error | **so o Gemini** |
-| Preco inventado = 0 | guard de origem: todo numero na resposta tem de estar num resultado de tool |
-| Tool proibida = 0 | ja provado offline (conjunto permitido = conjunto declarado) |
-
-**O que a C1 nao testa:** o valor de nenhuma das tres tarifas, porque nenhuma
-delas deve aparecer nesta resposta. A tarifa so sai quando a modalidade estiver
-no contexto — e hoje o caso nunca a determina sozinho (secao 4).
-
-FAIL imediato se a resposta trouxer qualquer um dos tres valores, ou qualquer
-outro numero que nao tenha vindo de uma tool.
-
-## 4. Fase 3: PRECO fechado, o resto continua sem fonte
-
-### 4.1 O que foi ingerido
-
-Fonte `SRC_TABELA_TARIFARIA_2026_01_07`, referencia
-`Tabela_Politica_Tarifaria_07_01_2026`, aprovada. Tres entradas, cada uma com
-`servico`, `modalidade_tarifaria`, valor, vigencia e `source_id`:
-
-| `modalidade_tarifaria` | Nome na tabela | Valor |
-|---|---|---|
-| `EXUMACAO_DE_OSSUARIO` | Exumação de ossuário | R$ 106,57 |
-| `SEPULTURA_CESSAO_TERRENO_PRAZO_INDETERMINADO` | Exumação de sepultura em cessão de terreno a prazo indeterminado | R$ 586,04 |
-| `SEPULTURA_CESSAO_GAVETA_UNITARIA_PRAZO_FIXO` | Exumação de sepultura em cessão de gaveta unitária a prazo fixo | R$ 351,67 |
-
-Nenhuma tarifa global unica foi criada — ha teste que falha se alguem adicionar
-uma entrada de preco sem modalidade.
-
-### 4.2 Duas lacunas registradas, nao presumidas
-
-**`MAP_MODALIDADE_TARIFARIA` — pendente de decisao humana.** A tabela nomeia
-"ossuário", "cessão de terreno a prazo indeterminado" e "cessão de gaveta
-unitária a prazo fixo". O catalogo Santana nao declara equivalencia entre esses
-nomes e "jazigo de familia", "quadra geral" ou "gaveta". E ha um homonimo que
-seria facil errar: **"Exumação de ossuário" e a exumacao feita num ossuario,
-enquanto `transport_destination=OSSUARIO` e o destino para onde os restos vao.**
-Sao coisas diferentes. Nao liguei as duas.
-
-Efeito pratico: o contexto derivado do caso **nunca** determina a modalidade
-hoje, entao a pergunta generica sempre responde `NEEDS_CONTEXT`. Quando a
-decisao humana vier, basta declarar o mapeamento — o Gateway ja sabe responder.
-
-**`MAP_VIGENCIA_TABELA_TARIFARIA` — pendente de confirmacao.** `07_01_2026` foi
-lido como `2026-01-07` (dd_mm_aaaa). A leitura mm_dd_aaaa daria `2026-07-01`.
-Nenhuma das duas esta declarada dentro da fonte. As tarifas hoje respondem como
-vigentes desde 2026-01-07.
-
-### 4.3 O que continua sem fonte
-
-| Tipo | Fonte oficial aprovada | Resposta hoje |
-|---|---|---|
-| PRECO | **sim** | AVAILABLE com modalidade; NEEDS_CONTEXT sem ela |
-| ASSINATURA_EXUMACAO, JAZIGO_DESTINO, OSSUARIO, RESTOS_JA_EXUMADOS | sim (decisoes humanas ja fechadas) | AVAILABLE, com `source_id` |
-| **DOCUMENTOS, PRAZO, PROCEDIMENTO_ADMINISTRATIVO, REGULARIDADE_DO_JAZIGO, SEMI_INTACTO, TRANSPORTE** | **nao** | NOT_AVAILABLE, encaminha |
-
-Nao inventei valor para nenhum dos seis. O passo a passo de ingestao esta em
-`catalogo/README.md`.
-
-## 5. O que rodaria, se voce autorizar
-
-- Workflow: `parlant-full-poc-gemini.yml`, por `workflow_dispatch`, com
-  `conversas=C1-preco`.
-- Modelo: `gemini-3.1-flash-lite`. Chave: o secret `PARLANT`, exposto so como
-  `GEMINI_API_KEY`.
-- **Uma** sessao, **um** turno. Pre-flight de uma chamada para detectar 404/429
-  antes de subir a POC.
-- Para em qualquer 404, 429 ou gate de autoridade diferente de zero.
-- Nao avanca para C2-C5. Nao toca producao, Supabase, n8n, W-API, WhatsApp ou
-  Vercel. Nao faz merge.
-
-Classificacao do resultado, como combinado: A/B/C/D conforme onde a cadeia
-quebrar — interpretacao, casamento de guideline, chamada de tool ou resposta
-final.
-
-FAIL adicional, especifico desta C1: qualquer tarifa (R$ 106,57, R$ 351,67,
-R$ 586,04) ou qualquer outro numero que nao tenha vindo de uma tool aparecendo
-na resposta. Isso seria o modelo escolhendo o preco — o unico comportamento que
-esta etapa existe para impedir.
+**O modelo nao escolhe o preco.** Escolher entre tres tarifas reais e decisao de
+aplicabilidade, nao de linguagem; e um preco certo no caso errado e tao ruim
+quanto um inventado, so que mais convincente.
 
 ---
 
-## 6. Higiene de recursos
+## 6. Configuracao do run, quando autorizado
 
-As tres workflows do laboratorio (`parlant-synthetic.yml`,
-`parlant-poc-lab.yml`, `parlant-full-poc-gemini.yml`) rodam **somente** por
-`workflow_dispatch`. Nenhum push dispara Actions.
+| | |
+|---|---|
+| Workflow | `parlant-full-poc-gemini.yml`, `workflow_dispatch` |
+| `conversas` | `C1-preco` |
+| `rpm` | **voce precisa informar** — nao ha valor medido, e nao inventei um |
+| Modelo | `gemini-3.1-flash-lite` |
+| Timeout do turno | derivado do RPM |
+| 429 | encerra sem retentar |
+| Escopo | uma sessao, um turno. Nao avanca para C2-C5 |
 
-Sandbox Nono (`nono/`) fica como ferramenta de desenvolvimento. Upgrade do
-kernel WSL2 **nao** e pre-requisito de nada aqui: e so a condicao para rodar,
-sob sandbox, os alvos que precisam de loopback.
+Sem `rpm`, o smoke recusa rodar antes de gastar a primeira chamada.
+
+---
+
+## 7. Confirmacoes
+
+* **Gemini nao foi usado** nesta fase.
+* **GitHub Actions nao foi disparado** nesta fase.
+* main intacta, sem merge, sem producao, sem n8n, W-API, WhatsApp, Supabase ou
+  Vercel.

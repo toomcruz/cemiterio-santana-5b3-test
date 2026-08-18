@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from . import canned
 from .tools import TOOL_POR_FATO, TOOL_POR_TIPO_DE_INFORMACAO
 
 # Nome de tool nunca e escrito duas vezes: os mapas vem de `tools.py`, que por
@@ -114,31 +115,27 @@ GLOSSARY: tuple[dict[str, Any], ...] = (
 # `canned_response_fields` da tool — se o campo nao vier, a resposta nao pode
 # ser enviada. Isso e o que impede o modelo de escrever um preco.
 CANNED_RESPONSES: tuple[dict[str, Any], ...] = (
-    {
-        "key": "PRECO_APLICAVEL",
-        "template": "O valor aplicavel neste caso e {{valor}}, referente a {{modalidade}}.",
-        "signals": [
-            "a consulta de preco devolveu status AVAILABLE com o valor da tarifa aplicavel"
-        ],
-    },
+    # A resposta que carrega o valor NAO esta aqui de proposito: ela e entregue
+    # pela tool (`ToolResult.canned_responses`) so quando o Gateway devolve
+    # AVAILABLE. Ver `agent/canned.py`.
     {
         "key": "PRECO_PRECISA_CONTEXTO",
-        "template": (
-            "O valor muda conforme o tipo de sepultamento. Para eu te informar o valor certo, "
-            "me diga onde a pessoa esta sepultada: em ossuario, em sepultura de terreno ou em "
-            "gaveta?"
-        ),
+        "template": canned.PRECO_PRECISA_CONTEXTO,
         "signals": [
             "a consulta de preco devolveu NEEDS_CONTEXT: ha mais de uma tarifa possivel"
         ],
     },
     {
+        "key": "PRECO_EM_CONFLITO",
+        "template": canned.PRECO_EM_CONFLITO,
+        "signals": [
+            "a consulta de preco devolveu CONFLICT: fontes oficiais discordam para este caso"
+        ],
+    },
+    {
         "key": "SEM_PRECO",
-        "template": (
-            "Sobre valores eu nao tenho informacao para passar, e nao posso estimar. "
-            "Quem informa isso e a Administracao do Cemiterio Santana."
-        ),
-        "signals": ["o municipe pergunta preco, valor, taxa ou custo"],
+        "template": canned.SEM_PRECO,
+        "signals": ["o municipe pergunta preco e a base nao tem valor publicado"],
     },
     {
         "key": "SEM_DOCUMENTOS",
@@ -252,7 +249,7 @@ GUIDELINES: tuple[dict[str, Any], ...] = (
             "Nunca cite um valor que nao tenha vindo da tool, nem aproximado, nem de exemplo"
         ),
         "tools": [TOOL_POR_TIPO_DE_INFORMACAO["PRECO"]],
-        "canned_responses": ["PRECO_APLICAVEL", "PRECO_PRECISA_CONTEXTO", "SEM_PRECO"],
+        "canned_responses": ["PRECO_PRECISA_CONTEXTO", "PRECO_EM_CONFLITO", "SEM_PRECO"],
         "criticality": "HIGH",
     },
     {

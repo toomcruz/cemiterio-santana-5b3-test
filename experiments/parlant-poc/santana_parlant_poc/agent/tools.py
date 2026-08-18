@@ -36,6 +36,7 @@ from parlant.core.tools import ToolParameterOptions
 from ..domain import authority, catalog, knowledge
 from ..gateway import GATEWAY
 from ..store import STORE
+from . import canned
 
 
 def _emit(context: p.ToolContext, tool: str, args: dict[str, Any], result: dict[str, Any]) -> None:
@@ -154,9 +155,11 @@ def _consulta(nome_da_tool: str, tipo_informacao: str):
         _emit(context, nome_da_tool, {}, dados)
         return p.ToolResult(
             data=dados,
-            # Em STRICT, uma canned response que dependa de `{{valor}}` so pode
-            # ser enviada quando a base devolveu valor. Sem valor oficial, o
-            # campo nao existe e a resposta nao passa.
+            # A resposta que menciona valor nasce aqui, junto com o campo, e so
+            # quando o Gateway devolveu AVAILABLE. Guardada na base do agente,
+            # ela seria pre-renderizada antes de qualquer tool rodar e falharia
+            # por campo ausente.
+            canned_responses=canned.respostas_transientes(resposta.status),
             canned_response_fields=resposta.campos_para_canned(),
             metadata={"release_id": resposta.release_id, "source_id": resposta.source_id},
         )

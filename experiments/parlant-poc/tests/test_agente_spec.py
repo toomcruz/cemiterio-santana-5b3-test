@@ -172,14 +172,62 @@ def test_nlp_service_da_poc_nao_usa_gemini_pro(monkeypatch):
         nlp.configured_model()
 
 
-def test_rpm_do_free_tier_pode_ser_sobrescrito(monkeypatch):
+def test_rpm_e_configuracao_explicita_com_fail_safe(monkeypatch):
+    """Nao ha mais tabela de RPM por modelo — ela tinha numeros que ninguem mediu.
+
+    `gemini-3.1-flash-lite` simplesmente nao estava nela e caiu no fallback de 5
+    rpm em silencio: o run 32146735829 gastou 1176 dos seus 1180 segundos
+    esperando o limiter.
+    """
+    from santana_parlant_poc.agent import nlp
+
+    assert not hasattr(nlp, "DEFAULT_RPM_BY_MODEL")
+
+    monkeypatch.delenv("POC_GEMINI_RPM", raising=False)
+    assert nlp.rpm_declarado() is None
+    assert nlp.configured_rpm("qualquer-modelo") == nlp.RPM_FAIL_SAFE
+
+    monkeypatch.setenv("POC_GEMINI_RPM", "60")
+    assert nlp.rpm_declarado() == 60
+    assert nlp.configured_rpm("qualquer-modelo") == 60
+    assert nlp.exigir_rpm_declarado() == 60
+
+
+def test_caminho_que_gasta_cota_exige_rpm_declarado(monkeypatch):
+    """O fail-safe existe para nao estourar quota, nao para ser o valor de trabalho."""
     from santana_parlant_poc.agent import nlp
 
     monkeypatch.delenv("POC_GEMINI_RPM", raising=False)
-    assert nlp.configured_rpm("gemini-2.5-flash") == 5
-    assert nlp.configured_rpm("gemini-3.7-flash") == 10
-    monkeypatch.setenv("POC_GEMINI_RPM", "60")
-    assert nlp.configured_rpm("gemini-2.5-flash") == 60
+    with pytest.raises(RuntimeError, match="POC_GEMINI_RPM nao declarado"):
+        nlp.exigir_rpm_declarado()
+
+
+def test_429_nao_retenta_por_padrao(monkeypatch):
+    """Um 429 encerra o teste em vez de continuar consumindo cota."""
+    from santana_parlant_poc.agent import nlp
+
+    monkeypatch.delenv("POC_GEMINI_RETRIES_429", raising=False)
+    assert nlp.configured_retries_on_429() == 0
+    monkeypatch.setenv("POC_GEMINI_RETRIES_429", "3")
+    assert nlp.configured_retries_on_429() == 3
+
+
+def test_o_limiter_contabiliza_a_espera(monkeypatch):
+    """Sem esse numero, "o turno demorou" nao distingue lentidao de rate limit."""
+    import asyncio
+
+    from santana_parlant_poc.agent import nlp
+
+    antes = dict(nlp.THROTTLE_STATS)
+
+    async def exercitar() -> None:
+        limiter = nlp.RateLimiter(rpm=600)  # 0,1s por chamada
+        for _ in range(3):
+            await limiter.acquire()
+
+    asyncio.run(exercitar())
+    assert nlp.THROTTLE_STATS["chamadas"] == antes["chamadas"] + 3
+    assert nlp.THROTTLE_STATS["espera_s"] > antes["espera_s"]
 
 
 def test_rate_limiter_espaca_chamadas():

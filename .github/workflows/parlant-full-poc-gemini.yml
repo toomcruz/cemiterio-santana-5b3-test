@@ -15,6 +15,14 @@ on:
         required: false
         default: ""
         type: string
+      rpm:
+        description: >-
+          Requests por minuto permitidos para esta chave/modelo. OBRIGATORIO e sem
+          default: nao ha valor medido no projeto, e um numero inventado foi o que
+          travou o run 32146735829 (caiu no fail-safe de 5 rpm e gastou 1176 dos
+          1180 segundos esperando o limiter).
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -69,8 +77,12 @@ jobs:
           # A chave da POC entra na aplicacao apenas com este nome.
           GEMINI_API_KEY: ${{ secrets.PARLANT }}
           POC_GEMINI_MODEL: "gemini-3.1-flash-lite"
+          POC_GEMINI_RPM: ${{ inputs.rpm }}
           FULL_POC_PORT: "8804"
-          FULL_POC_TURN_TIMEOUT: "180"
+          # Sem FULL_POC_TURN_TIMEOUT: o smoke deriva o timeout do RPM declarado
+          # (chamadas esperadas por turno x intervalo x margem). Os 180s fixos
+          # foram calibrados com 14 guidelines e 5 tools; com 20 e 19 o turno da
+          # C1 levou 188,15s e estourou por 8 segundos.
           # Vazio roda as 5; nesta etapa de diagnostico roda so a C1.
           FULL_POC_CONVERSAS: ${{ inputs.conversas || '' }}
         # -u: sem isso o stdout fica bufferizado e o relatorio parcial se perde

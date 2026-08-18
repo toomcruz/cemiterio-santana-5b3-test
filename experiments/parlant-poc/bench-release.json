@@ -1,0 +1,24 @@
+{
+  "release_id": "exu-1.0-32cc48f26797+cfg-a6d586ca3c60",
+  "cold": {
+    "duracao_s": 0.602,
+    "chamadas": 0,
+    "embeddings": 27
+  },
+  "warm": {
+    "duracao_s": 0.536,
+    "chamadas": 0,
+    "embeddings": 0
+  },
+  "diferenca_absoluta_s": 0.066,
+  "diferenca_percentual": 11.0,
+  "chamadas_evitadas": 0,
+  "chamadas_evitadas_percentual": 0.0,
+  "embeddings_evitados": 27,
+  "cache_apos_cold": {
+    "arquivo": "evaluation_cache.json",
+    "existe": true,
+    "bytes": 2
+  },
+  "limite_da_medicao": "MEDIDO: o home da release carrega estado reutilizavel entre boots — o warm refaz zero das operacoes de embedding do cold. NAO MEDIDO: a economia do lado da geracao. Com o provider sintetico `Evaluating entities` sai de graca, e o `evaluation_cache.json` termina praticamente vazio; entao os 15m17s que essa etapa custou no run real 32146735829 nao aparecem aqui nem para mais nem para menos. So um run real com a mesma release mede isso."
+}

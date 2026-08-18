@@ -32,25 +32,55 @@ from typing import Any, Mapping
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-def _home_limpo() -> Path:
-    """PARLANT_HOME novo — antes de qualquer import do Parlant.
+def _home_da_execucao() -> tuple[Path, dict[str, Any]]:
+    """Escolhe o `PARLANT_HOME` — antes de qualquer import do Parlant.
 
-    O cache de avaliacao sobrevive entre execucoes e ja congelou o mapa da
-    journey uma vez; aqui ele tambem esconderia o custo real de indexacao.
+    O Parlant congela essa variavel num modulo-constante na importacao, entao a
+    decisao tem de acontecer aqui em cima.
+
+    Antes, o home era sempre limpo: o `evaluation_cache.json` ja tinha congelado
+    o mapa da journey uma vez, e limpar era a unica defesa. Com release imutavel
+    a defesa muda de lugar — o cache vive em `<raiz>/<release_id>` e o id deriva
+    do conteudo, entao cache velho deixa de ser alcancavel.
+
+    `FULL_POC_PARLANT_HOME` continua mandando quando declarado, e
+    `FULL_POC_RELEASE_CACHE=0` forca cold start.
     """
+    import santana_parlant_poc.release as release_mod
+
     escolhido = os.environ.get("FULL_POC_PARLANT_HOME")
     if escolhido:
         destino = Path(escolhido)
         if destino.exists():
             shutil.rmtree(destino)
         destino.mkdir(parents=True, exist_ok=True)
-    else:
+        os.environ["PARLANT_HOME"] = str(destino)
+        return destino, {"modo": "home-explicito", "release_id": None, "reaproveitada": False}
+
+    usar_cache = os.environ.get("FULL_POC_RELEASE_CACHE", "1").strip() not in ("0", "false", "no")
+    try:
+        # `id_isolado` calcula num subprocesso: `release_id()` importa a
+        # configuracao do agente, e esse import arrasta o Parlant.
+        identificador = release_mod.id_isolado()
+        rel = release_mod.preparar(identificador, limpo=not usar_cache)
+    except Exception as erro:  # cache invalido/corrompido: falha fechada e visivel
+        print(f"CACHE DE RELEASE INDISPONIVEL ({type(erro).__name__}: {erro})")
+        print("Seguindo com home temporario limpo — a inicializacao sera integral.")
         destino = Path(tempfile.mkdtemp(prefix="parlant-full-poc-"))
-    os.environ["PARLANT_HOME"] = str(destino)
-    return destino
+        os.environ["PARLANT_HOME"] = str(destino)
+        return destino, {"modo": "temporario", "release_id": None, "reaproveitada": False}
+
+    os.environ["PARLANT_HOME"] = str(rel.home)
+    RELEASE_EM_USO.append(rel)
+    return rel.home, {
+        "modo": "release",
+        "release_id": rel.release_id,
+        "reaproveitada": rel.reaproveitada,
+    }
 
 
-PARLANT_HOME = _home_limpo()
+RELEASE_EM_USO: list[Any] = []
+PARLANT_HOME, RELEASE_INFO = _home_da_execucao()
 
 import httpx  # noqa: E402
 import parlant.sdk as p  # noqa: E402
@@ -68,7 +98,9 @@ from parlant.core.tracer import Tracer  # noqa: E402
 from santana_parlant_poc.agent import spec  # noqa: E402
 from santana_parlant_poc.agent.build import build_agent  # noqa: E402
 from santana_parlant_poc.agent.nlp import (  # noqa: E402
+    THROTTLE_STATS,
     TOKENIZER_STATS,
+    exigir_rpm_declarado,
     GeminiFlashOnlyService,
     PocEmbedder,
     ThrottledGemini,
@@ -85,7 +117,24 @@ from santana_parlant_poc.turnos import (  # noqa: E402
 )
 
 PORTA = int(os.environ.get("FULL_POC_PORT", "8804"))
-TEMPO_MAXIMO_TURNO = float(os.environ.get("FULL_POC_TURN_TIMEOUT", "180"))
+# Chamadas de geracao por turno, medidas na bateria sintetica de 300 conversas:
+# 17768 chamadas em 1059 turnos com ~753 fixas de inicializacao dao ~16 por
+# turno. O run real 32146735829 bate com isso: ~15 chamadas em 188s a 12s cada.
+CHAMADAS_POR_TURNO_ESPERADAS = 20  # 16 medidas, arredondado para cima
+MARGEM_DO_TIMEOUT = 2.0
+
+
+TEMPO_MAXIMO_TURNO = 0.0  # definido em `main()`, a partir do RPM declarado
+
+
+def _timeout_do_turno(rpm: int) -> float:
+    """Timeout derivado do RPM, nao um numero fixo.
+
+    Os 180s originais foram calibrados com 14 guidelines e 5 tools. Com 20 e 19,
+    a 5 rpm, o turno da C1 levou 188,15s e estourou por 8 segundos — o timeout
+    nao acompanhou o agente. Amarra-lo ao RPM faz ele acompanhar sozinho.
+    """
+    return CHAMADAS_POR_TURNO_ESPERADAS * (60.0 / rpm) * MARGEM_DO_TIMEOUT
 JSON_SAIDA = Path(__file__).resolve().parent.parent / "full-poc-gemini-report.json"
 
 # Conjunto permitido = o conjunto declarado pela POC.
@@ -144,6 +193,9 @@ CONVERSAS: tuple[dict[str, Any], ...] = (
 
 CONTADORES = {"geracoes": 0, "erros_429": 0, "erros_404": 0, "erros_schema": 0}
 SCHEMAS: dict[str, int] = {}
+# Tempo dentro de cada schema (estagio do pipeline). Junto com THROTTLE_STATS,
+# separa espera de rate limit de processamento de verdade.
+TEMPO_POR_SCHEMA: dict[str, float] = {}
 ERROS_DE_SCHEMA: list[str] = []
 RESULTADO = {"codigo": 1}
 
@@ -301,6 +353,7 @@ class GeradorObservado(ThrottledGemini[T]):
         nome = getattr(getattr(self, "schema", None), "__name__", "desconhecido")
         SCHEMAS[nome] = SCHEMAS.get(nome, 0) + 1
         CONTADORES["geracoes"] += 1
+        inicio_da_chamada = time.perf_counter()
 
         de_tool = nome in SCHEMAS_DE_TOOL
         texto_do_prompt = ""
@@ -311,6 +364,9 @@ class GeradorObservado(ThrottledGemini[T]):
         try:
             resultado = await super()._do_generate(prompt, hints)  # type: ignore[misc]
         except Exception as erro:
+            TEMPO_POR_SCHEMA[nome] = TEMPO_POR_SCHEMA.get(nome, 0.0) + (
+                time.perf_counter() - inicio_da_chamada
+            )
             texto = str(erro)
             if "429" in texto or "RESOURCE_EXHAUSTED" in texto:
                 CONTADORES["erros_429"] += 1
@@ -333,6 +389,10 @@ class GeradorObservado(ThrottledGemini[T]):
                     }
                 )
             raise
+
+        TEMPO_POR_SCHEMA[nome] = TEMPO_POR_SCHEMA.get(nome, 0.0) + (
+            time.perf_counter() - inicio_da_chamada
+        )
 
         if de_tool:
             conteudo = getattr(resultado, "content", None)
@@ -537,11 +597,31 @@ def _resumo(itens: list[dict[str, Any]], inicializacao: float, total: float) -> 
     print(f"estimativas locais .......: {TOKENIZER_STATS['estimativas_locais']}")
     if TOKENIZER_STATS["motivo_do_fallback"]:
         print(f"motivo do fallback .......: {TOKENIZER_STATS['motivo_do_fallback']}")
-    print(f"PARLANT_HOME .............: {PARLANT_HOME} (limpo)")
-    print(f"inicializacao ............: {inicializacao:.1f}s")
+    print(f"PARLANT_HOME .............: {PARLANT_HOME}")
+    print(f"release ..................: {json.dumps(RELEASE_INFO, ensure_ascii=False)}")
     print(f"conversas ................: {len(itens)}/{len(previstas)}")
     print(f"chamadas de geracao ......: {CONTADORES['geracoes']}")
     print(f"schemas Gemini usados ....: {json.dumps(SCHEMAS, ensure_ascii=False)}")
+
+    # Decomposicao do tempo. Sem separar espera de rate limit de processamento,
+    # "o turno demorou 188s" nao diz se o timeout esta apertado ou se o RPM esta
+    # errado — e no run 32146735829 era a segunda coisa.
+    espera = float(THROTTLE_STATS["espera_s"])
+    tempo_dos_turnos = sum(i["turno"].get("latencia_s", 0.0) for i in itens)
+    print("decomposicao do tempo:")
+    print(f"   inicializacao .........: {inicializacao:.1f}s")
+    print(f"   turnos (soma) .........: {tempo_dos_turnos:.1f}s")
+    for item in itens:
+        print(f"      {item['conversa']} ...: {item['turno'].get('latencia_s', 0.0):.1f}s")
+    print(f"   espera de throttle ....: {espera:.1f}s "
+          f"({THROTTLE_STATS['esperas']}/{THROTTLE_STATS['chamadas']} chamadas esperaram)")
+    print(f"   processamento efetivo .: {max(0.0, total - espera):.1f}s")
+    if total:
+        print(f"   fracao em espera ......: {100 * espera / total:.0f}%")
+    por_estagio = sorted(TEMPO_POR_SCHEMA.items(), key=lambda kv: -kv[1])[:8]
+    print("   tempo por estagio (top 8):")
+    for nome, segundos in por_estagio:
+        print(f"      {nome} ...: {segundos:.1f}s em {SCHEMAS.get(nome, 0)} chamadas")
     print(f"erros de structured output: {CONTADORES['erros_schema']}")
     for erro in ERROS_DE_SCHEMA[:10]:
         print(f"   - {erro}")
@@ -618,6 +698,23 @@ async def main() -> int:
         print("GEMINI_API_KEY ausente: smoke da POC completa nao executado.")
         return 2
 
+    # Este caminho consome cota: o RPM precisa ser explicito. Sem declaracao, o
+    # fail-safe de 5 rpm entraria em silencio — foi assim que o run 32146735829
+    # passou 1176 dos seus 1180 segundos esperando o limiter.
+    try:
+        rpm = exigir_rpm_declarado()
+    except RuntimeError as erro:
+        print(f"ERRO DE CONFIGURACAO: {erro}")
+        return 2
+    global TEMPO_MAXIMO_TURNO
+    declarado = os.environ.get("FULL_POC_TURN_TIMEOUT", "").strip()
+    TEMPO_MAXIMO_TURNO = float(declarado) if declarado else _timeout_do_turno(rpm)
+    print(f"RPM declarado ............: {rpm} ({60 / rpm:.1f}s por chamada, serializado)")
+    print(f"timeout do turno .........: {TEMPO_MAXIMO_TURNO:.0f}s "
+          f"({CHAMADAS_POR_TURNO_ESPERADAS} chamadas x {60 / rpm:.1f}s x margem "
+          f"{MARGEM_DO_TIMEOUT:g})" + (" [declarado]" if declarado else " [derivado do RPM]"))
+    print(f"release ..................: {json.dumps(RELEASE_INFO, ensure_ascii=False)}")
+
     # Observacao passiva do avaliador real do ToolCaller. Precisa vir antes do
     # servidor subir; o resultado devolvido ao Parlant continua sendo o do
     # metodo original, byte a byte.
@@ -633,6 +730,12 @@ async def main() -> int:
         customer_store="transient",
     ) as server:
         agente, criados = await build_agent(server)
+
+        # A release so e publicada depois de indexada: uma construcao
+        # interrompida deixa o marcador em "construindo" e a proxima execucao
+        # recusa reaproveitar o indice incompleto.
+        for rel in RELEASE_EM_USO:
+            rel.marcar_pronta()
 
         from parlant.core.journeys import JourneyStore
 
