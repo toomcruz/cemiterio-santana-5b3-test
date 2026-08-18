@@ -133,11 +133,12 @@ def test_nenhuma_tool_confirma_a_autorizacao_de_exumacao():
     assert caso.confirmed_value("exhumation_authorization") is None
 
 
-def test_consulta_de_preco_nunca_devolve_valor():
+def test_consulta_de_preco_sem_contexto_nao_devolve_valor():
+    """Com tres tarifas na base, a pergunta generica pergunta de volta."""
     resultado = _run(_tool("consultar_preco_exumacao").function(_ctx()))
-    assert resultado.data["status"] == "NOT_AVAILABLE"
-    assert resultado.data["encaminhar_administracao"] is True
+    assert resultado.data["status"] == "NEEDS_CONTEXT"
     assert resultado.canned_response_fields == {}
+    assert not _DIGITOS.search(str(resultado.data.get("valor") or ""))
 
 
 def test_tool_estado_do_caso_traz_proxima_pergunta_do_catalogo():

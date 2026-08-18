@@ -3,54 +3,11 @@
   "conversas": "120",
   "deterministico": true,
   "divergencias": {},
-  "variacao_de_volume_tolerada": {
-    "chamadas_sinteticas": {
-      "execucao_1": 6952,
-      "execucao_2": 7109
-    },
-    "chamadas_por_schema": {
-      "execucao_1": {
-        "AgentIntentionProposerSchema": 16,
-        "ToolRunningActionSchema": 3,
-        "RelativeActionSchema": 1,
-        "ReachableNodesEvaluationSchema": 5,
-        "JourneyBacktrackCheckSchema": 248,
-        "GuidelineContinuousPropositionSchema": 16,
-        "CustomerDependentActionSchema": 23,
-        "GenericObservationalGuidelineMatchesSchema": 834,
-        "GenericActionableGuidelineMatchesSchema": 2919,
-        "CannedResponsePreambleSchema": 326,
-        "NonConsequentialToolBatchSchema": 630,
-        "CannedResponseDraftSchema": 419,
-        "GenericResponseAnalysisSchema": 418,
-        "JourneyNextStepSelectionSchema": 347,
-        "CannedResponseFieldExtractionSchema": 180,
-        "CannedResponseSelectionSchema": 325
-      },
-      "execucao_2": {
-        "AgentIntentionProposerSchema": 16,
-        "ToolRunningActionSchema": 3,
-        "RelativeActionSchema": 1,
-        "ReachableNodesEvaluationSchema": 5,
-        "JourneyBacktrackCheckSchema": 248,
-        "GuidelineContinuousPropositionSchema": 16,
-        "CustomerDependentActionSchema": 23,
-        "GenericObservationalGuidelineMatchesSchema": 834,
-        "GenericActionableGuidelineMatchesSchema": 2919,
-        "CannedResponsePreambleSchema": 326,
-        "NonConsequentialToolBatchSchema": 630,
-        "JourneyNextStepSelectionSchema": 504,
-        "CannedResponseDraftSchema": 419,
-        "CannedResponseFieldExtractionSchema": 180,
-        "CannedResponseSelectionSchema": 325,
-        "GenericResponseAnalysisSchema": 418
-      }
-    }
-  },
+  "variacao_de_volume_tolerada": {},
   "execucao_1": {
-    "conversas": 120,
-    "turnos": 399,
-    "turnos_com_resposta": 399,
+    "conversas": 100,
+    "turnos": 327,
+    "turnos_com_resposta": 327,
     "turnos_com_erro": 0,
     "categorias": [
       "abreviacoes",
@@ -94,117 +51,127 @@
       "chamadas_externas": 0
     },
     "guidelines_ativadas": {
-      "G_PROXIMA_PERGUNTA": 254,
-      "J_CONDICAO_1": 250,
-      "J_CONDICAO_2": 250,
-      "G_MULTI_FATO": 250,
-      "G_CORRECAO": 250,
-      "ESTADO:S_ACOLHIMENTO": 211,
-      "G_AMBIGUO": 176,
-      "G_REPETICAO": 176,
-      "ESTADO:S_PROXIMA_PERGUNTA": 138,
-      "G_INJECAO": 45,
-      "G_DOCUMENTOS": 35,
-      "G_PRECO": 30,
-      "G_PRAZO": 20,
-      "G_REGRA": 15,
+      "G_PROXIMA_PERGUNTA": 209,
+      "G_MULTI_FATO": 205,
+      "G_CORRECAO": 205,
+      "J_CONDICAO_1": 205,
+      "J_CONDICAO_2": 205,
+      "ESTADO:S_ACOLHIMENTO": 176,
+      "G_REPETICAO": 147,
+      "G_AMBIGUO": 147,
+      "ESTADO:S_PROXIMA_PERGUNTA": 105,
+      "G_INJECAO": 38,
+      "G_DOCUMENTOS": 25,
+      "G_PRECO": 25,
+      "G_PRAZO": 17,
+      "G_ASSINATURA": 13,
+      "G_PROCEDIMENTO": 13,
       "G_FORA_DE_ESCOPO": 4
     },
     "tools_chamadas": {
-      "built-in:consultar_estado_do_caso": 254,
-      "built-in:registrar_fato": 250,
-      "built-in:corrigir_fato": 250,
-      "built-in:consultar_base_autoritativa": 100,
+      "built-in:consultar_estado_do_caso": 209,
+      "built-in:registrar_destino_do_transporte": 205,
+      "built-in:registrar_documento_do_solicitante": 205,
+      "built-in:registrar_finalidade_exumacao": 205,
+      "built-in:registrar_identificacao_do_sepultamento": 205,
+      "built-in:registrar_jazigo_de_destino": 205,
+      "built-in:registrar_situacao_do_conjuge": 205,
+      "built-in:registrar_situacao_dos_restos": 205,
+      "built-in:consultar_documentos_exumacao": 25,
+      "built-in:consultar_preco_exumacao": 25,
+      "built-in:consultar_prazo_exumacao": 17,
+      "built-in:consultar_quem_assina_exumacao": 13,
+      "built-in:consultar_procedimento_exumacao": 13,
       "built-in:registrar_assunto_fora_de_escopo": 4
     },
     "journey_estados": {
-      "S_ACOLHIMENTO": 211,
-      "S_PROXIMA_PERGUNTA": 138
+      "S_ACOLHIMENTO": 176,
+      "S_PROXIMA_PERGUNTA": 105
     },
     "casamento_de_guidelines": {
-      "turnos_avaliados": 207,
-      "acertos": 207,
+      "turnos_avaliados": 169,
+      "acertos": 169,
       "falsos_negativos": 0,
       "falsos_negativos_em_guarda": 0,
       "falsos_positivos": 0,
       "acuracia": 1.0,
       "por_categoria": {
         "ambiguidade": {
-          "esperado": 11,
-          "casou": 11,
+          "esperado": 8,
+          "casou": 8,
           "aceitas": [
             "G_AMBIGUO"
           ],
           "observadas": {}
         },
         "contradicao": {
-          "esperado": 14,
-          "casou": 14,
+          "esperado": 10,
+          "casou": 10,
           "aceitas": [
             "G_CORRECAO"
           ],
           "observadas": {}
         },
         "correcao": {
-          "esperado": 17,
-          "casou": 17,
+          "esperado": 14,
+          "casou": 14,
           "aceitas": [
             "G_CORRECAO"
           ],
           "observadas": {}
         },
         "pergunta_documentos": {
-          "esperado": 9,
-          "casou": 9,
+          "esperado": 8,
+          "casou": 8,
           "aceitas": [
             "G_DOCUMENTOS"
           ],
           "observadas": {
-            "G_DOCUMENTOS": 9
+            "G_DOCUMENTOS": 8
           }
         },
         "prompt_injection": {
-          "esperado": 21,
-          "casou": 21,
+          "esperado": 19,
+          "casou": 19,
           "aceitas": [
             "G_INJECAO"
           ],
           "observadas": {
-            "G_INJECAO": 21
+            "G_INJECAO": 19
           }
         },
         "tentativa_inventar_documento": {
-          "esperado": 24,
-          "casou": 24,
+          "esperado": 15,
+          "casou": 15,
           "aceitas": [
             "G_DOCUMENTOS",
             "G_INJECAO"
           ],
           "observadas": {
-            "G_DOCUMENTOS": 24
+            "G_DOCUMENTOS": 15
           }
         },
         "tentativa_inventar_prazo": {
-          "esperado": 14,
-          "casou": 14,
+          "esperado": 12,
+          "casou": 12,
           "aceitas": [
             "G_INJECAO",
             "G_PRAZO"
           ],
           "observadas": {
-            "G_INJECAO": 14
+            "G_INJECAO": 12
           }
         },
         "tentativa_inventar_preco": {
-          "esperado": 21,
-          "casou": 21,
+          "esperado": 15,
+          "casou": 15,
           "aceitas": [
             "G_INJECAO",
             "G_PRECO"
           ],
           "observadas": {
-            "G_INJECAO": 10,
-            "G_PRECO": 11
+            "G_INJECAO": 7,
+            "G_PRECO": 8
           }
         },
         "mudanca_de_assunto": {
@@ -218,8 +185,8 @@
           }
         },
         "multiplas_informacoes": {
-          "esperado": 11,
-          "casou": 11,
+          "esperado": 10,
+          "casou": 10,
           "aceitas": [
             "G_DOCUMENTOS",
             "G_MULTI_FATO"
@@ -229,38 +196,41 @@
           }
         },
         "pergunta_prazo": {
-          "esperado": 20,
-          "casou": 20,
+          "esperado": 17,
+          "casou": 17,
           "aceitas": [
             "G_PRAZO"
           ],
           "observadas": {
-            "G_PRAZO": 20
+            "G_PRAZO": 17
           }
         },
         "pergunta_preco": {
-          "esperado": 19,
-          "casou": 19,
+          "esperado": 17,
+          "casou": 17,
           "aceitas": [
             "G_PRECO"
           ],
           "observadas": {
-            "G_PRECO": 19
+            "G_PRECO": 17
           }
         },
         "regra_administrativa": {
-          "esperado": 10,
-          "casou": 10,
+          "esperado": 9,
+          "casou": 9,
           "aceitas": [
-            "G_REGRA"
+            "G_ASSINATURA",
+            "G_JAZIGO_DESTINO",
+            "G_PROCEDIMENTO"
           ],
           "observadas": {
-            "G_REGRA": 10
+            "G_ASSINATURA": 9,
+            "G_PROCEDIMENTO": 9
           }
         },
         "repeticao": {
-          "esperado": 12,
-          "casou": 12,
+          "esperado": 11,
+          "casou": 11,
           "aceitas": [
             "G_REPETICAO"
           ],
@@ -297,9 +267,9 @@
     "cenario_falhas": 0
   },
   "execucao_2": {
-    "conversas": 120,
-    "turnos": 399,
-    "turnos_com_resposta": 399,
+    "conversas": 100,
+    "turnos": 327,
+    "turnos_com_resposta": 327,
     "turnos_com_erro": 0,
     "categorias": [
       "abreviacoes",
@@ -343,117 +313,127 @@
       "chamadas_externas": 0
     },
     "guidelines_ativadas": {
-      "G_PROXIMA_PERGUNTA": 254,
-      "J_CONDICAO_1": 250,
-      "J_CONDICAO_2": 250,
-      "G_MULTI_FATO": 250,
-      "G_CORRECAO": 250,
-      "ESTADO:S_ACOLHIMENTO": 211,
-      "G_AMBIGUO": 176,
-      "G_REPETICAO": 176,
-      "ESTADO:S_PROXIMA_PERGUNTA": 138,
-      "G_INJECAO": 45,
-      "G_DOCUMENTOS": 35,
-      "G_PRECO": 30,
-      "G_PRAZO": 20,
-      "G_REGRA": 15,
+      "G_PROXIMA_PERGUNTA": 209,
+      "G_MULTI_FATO": 205,
+      "G_CORRECAO": 205,
+      "J_CONDICAO_1": 205,
+      "J_CONDICAO_2": 205,
+      "ESTADO:S_ACOLHIMENTO": 176,
+      "G_REPETICAO": 147,
+      "G_AMBIGUO": 147,
+      "ESTADO:S_PROXIMA_PERGUNTA": 105,
+      "G_INJECAO": 38,
+      "G_DOCUMENTOS": 25,
+      "G_PRECO": 25,
+      "G_PRAZO": 17,
+      "G_ASSINATURA": 13,
+      "G_PROCEDIMENTO": 13,
       "G_FORA_DE_ESCOPO": 4
     },
     "tools_chamadas": {
-      "built-in:consultar_estado_do_caso": 254,
-      "built-in:registrar_fato": 250,
-      "built-in:corrigir_fato": 250,
-      "built-in:consultar_base_autoritativa": 100,
+      "built-in:consultar_estado_do_caso": 209,
+      "built-in:registrar_destino_do_transporte": 205,
+      "built-in:registrar_documento_do_solicitante": 205,
+      "built-in:registrar_finalidade_exumacao": 205,
+      "built-in:registrar_identificacao_do_sepultamento": 205,
+      "built-in:registrar_jazigo_de_destino": 205,
+      "built-in:registrar_situacao_do_conjuge": 205,
+      "built-in:registrar_situacao_dos_restos": 205,
+      "built-in:consultar_documentos_exumacao": 25,
+      "built-in:consultar_preco_exumacao": 25,
+      "built-in:consultar_prazo_exumacao": 17,
+      "built-in:consultar_quem_assina_exumacao": 13,
+      "built-in:consultar_procedimento_exumacao": 13,
       "built-in:registrar_assunto_fora_de_escopo": 4
     },
     "journey_estados": {
-      "S_ACOLHIMENTO": 211,
-      "S_PROXIMA_PERGUNTA": 138
+      "S_ACOLHIMENTO": 176,
+      "S_PROXIMA_PERGUNTA": 105
     },
     "casamento_de_guidelines": {
-      "turnos_avaliados": 207,
-      "acertos": 207,
+      "turnos_avaliados": 169,
+      "acertos": 169,
       "falsos_negativos": 0,
       "falsos_negativos_em_guarda": 0,
       "falsos_positivos": 0,
       "acuracia": 1.0,
       "por_categoria": {
         "ambiguidade": {
-          "esperado": 11,
-          "casou": 11,
+          "esperado": 8,
+          "casou": 8,
           "aceitas": [
             "G_AMBIGUO"
           ],
           "observadas": {}
         },
         "contradicao": {
-          "esperado": 14,
-          "casou": 14,
+          "esperado": 10,
+          "casou": 10,
           "aceitas": [
             "G_CORRECAO"
           ],
           "observadas": {}
         },
         "correcao": {
-          "esperado": 17,
-          "casou": 17,
+          "esperado": 14,
+          "casou": 14,
           "aceitas": [
             "G_CORRECAO"
           ],
           "observadas": {}
         },
         "pergunta_documentos": {
-          "esperado": 9,
-          "casou": 9,
+          "esperado": 8,
+          "casou": 8,
           "aceitas": [
             "G_DOCUMENTOS"
           ],
           "observadas": {
-            "G_DOCUMENTOS": 9
+            "G_DOCUMENTOS": 8
           }
         },
         "prompt_injection": {
-          "esperado": 21,
-          "casou": 21,
+          "esperado": 19,
+          "casou": 19,
           "aceitas": [
             "G_INJECAO"
           ],
           "observadas": {
-            "G_INJECAO": 21
+            "G_INJECAO": 19
           }
         },
         "tentativa_inventar_documento": {
-          "esperado": 24,
-          "casou": 24,
+          "esperado": 15,
+          "casou": 15,
           "aceitas": [
             "G_DOCUMENTOS",
             "G_INJECAO"
           ],
           "observadas": {
-            "G_DOCUMENTOS": 24
+            "G_DOCUMENTOS": 15
           }
         },
         "tentativa_inventar_prazo": {
-          "esperado": 14,
-          "casou": 14,
+          "esperado": 12,
+          "casou": 12,
           "aceitas": [
             "G_INJECAO",
             "G_PRAZO"
           ],
           "observadas": {
-            "G_INJECAO": 14
+            "G_INJECAO": 12
           }
         },
         "tentativa_inventar_preco": {
-          "esperado": 21,
-          "casou": 21,
+          "esperado": 15,
+          "casou": 15,
           "aceitas": [
             "G_INJECAO",
             "G_PRECO"
           ],
           "observadas": {
-            "G_INJECAO": 10,
-            "G_PRECO": 11
+            "G_INJECAO": 7,
+            "G_PRECO": 8
           }
         },
         "mudanca_de_assunto": {
@@ -467,8 +447,8 @@
           }
         },
         "multiplas_informacoes": {
-          "esperado": 11,
-          "casou": 11,
+          "esperado": 10,
+          "casou": 10,
           "aceitas": [
             "G_DOCUMENTOS",
             "G_MULTI_FATO"
@@ -478,38 +458,41 @@
           }
         },
         "pergunta_prazo": {
-          "esperado": 20,
-          "casou": 20,
+          "esperado": 17,
+          "casou": 17,
           "aceitas": [
             "G_PRAZO"
           ],
           "observadas": {
-            "G_PRAZO": 20
+            "G_PRAZO": 17
           }
         },
         "pergunta_preco": {
-          "esperado": 19,
-          "casou": 19,
+          "esperado": 17,
+          "casou": 17,
           "aceitas": [
             "G_PRECO"
           ],
           "observadas": {
-            "G_PRECO": 19
+            "G_PRECO": 17
           }
         },
         "regra_administrativa": {
-          "esperado": 10,
-          "casou": 10,
+          "esperado": 9,
+          "casou": 9,
           "aceitas": [
-            "G_REGRA"
+            "G_ASSINATURA",
+            "G_JAZIGO_DESTINO",
+            "G_PROCEDIMENTO"
           ],
           "observadas": {
-            "G_REGRA": 10
+            "G_ASSINATURA": 9,
+            "G_PROCEDIMENTO": 9
           }
         },
         "repeticao": {
-          "esperado": 12,
-          "casou": 12,
+          "esperado": 11,
+          "casou": 11,
           "aceitas": [
             "G_REPETICAO"
           ],

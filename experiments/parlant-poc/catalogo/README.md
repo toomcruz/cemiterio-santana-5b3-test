@@ -20,7 +20,7 @@ responde quando o caso em atendimento determina essa aplicabilidade.
 | JAZIGO_DESTINO | sim (`facts.v1.json`, decisoes 1 e 2) | AVAILABLE |
 | OSSUARIO | sim (`topics.v1.json`) | AVAILABLE |
 | RESTOS_JA_EXUMADOS | sim (`relations.v1.json`, decisao 5) | AVAILABLE |
-| **PRECO** | **nao** | NOT_AVAILABLE / encaminha |
+| **PRECO** | **sim** (`Tabela_Politica_Tarifaria_07_01_2026`) | AVAILABLE com modalidade; **NEEDS_CONTEXT** sem ela |
 | **DOCUMENTOS** | **nao** | NOT_AVAILABLE / encaminha |
 | **PRAZO** | **nao** | NOT_AVAILABLE / encaminha |
 | **PROCEDIMENTO_ADMINISTRATIVO** | **nao** | NOT_AVAILABLE / encaminha |
@@ -28,7 +28,7 @@ responde quando o caso em atendimento determina essa aplicabilidade.
 | **SEMI_INTACTO** | **nao** | NOT_AVAILABLE / encaminha |
 | **TRANSPORTE** | **nao** | NOT_AVAILABLE / encaminha |
 
-Os sete de baixo **nao estao publicados porque nao existe fonte oficial
+Os seis de baixo **nao estao publicados porque nao existe fonte oficial
 aprovada carregada aqui** — nao porque a POC decidiu esconder. A estrutura para
 receber cada um ja esta declarada em `tipos_de_informacao`; falta o dado
 aprovado. Enquanto faltar, o atendimento diz que a Administracao informa, e
@@ -36,6 +36,43 @@ isso e uma resposta correta, nao um placeholder.
 
 **Isto e o que impede a Fase 3 de ser dada como concluida.** Para fechar,
 alguem com autoridade precisa entregar os valores oficiais e aprovar as fontes.
+
+## Preco: tres tarifas, nenhuma escolhida por ninguem
+
+A `Tabela_Politica_Tarifaria_07_01_2026` traz tres tarifas de exumacao:
+
+| `modalidade_tarifaria` | Nome na tabela | Valor |
+|---|---|---|
+| `EXUMACAO_DE_OSSUARIO` | Exumação de ossuário | R$ 106,57 |
+| `SEPULTURA_CESSAO_TERRENO_PRAZO_INDETERMINADO` | Exumação de sepultura em cessão de terreno a prazo indeterminado | R$ 586,04 |
+| `SEPULTURA_CESSAO_GAVETA_UNITARIA_PRAZO_FIXO` | Exumação de sepultura em cessão de gaveta unitária a prazo fixo | R$ 351,67 |
+
+Isso muda o tipo de risco. Antes o perigo era o modelo inventar um valor onde
+nao havia nenhum. Agora o perigo e ele **escolher** entre valores reais: um
+preco certo aplicado ao caso errado e tao ruim quanto um preco inventado, e bem
+mais convincente.
+
+Por isso `modalidade_tarifaria` e criterio de aplicabilidade, e o Gateway
+responde `NEEDS_CONTEXT` — nao `NOT_AVAILABLE` — quando o caso nao diz qual e a
+modalidade. `NEEDS_CONTEXT` nao encaminha para a Administracao: manda perguntar,
+e a resposta diz exatamente o que falta (`contexto_faltante`) e quais sao as
+opcoes (`opcoes_possiveis`).
+
+### Duas lacunas registradas, nao presumidas
+
+Em `mapeamentos_pendentes`:
+
+1. **`MAP_MODALIDADE_TARIFARIA`** — nao existe equivalencia declarada entre os
+   nomes da tabela e os conceitos internos Santana (`jazigo de familia`,
+   `quadra geral`, `gaveta`). Atencao ao homonimo: "Exumação de ossuário" e a
+   exumacao **feita num** ossuario, enquanto `transport_destination=OSSUARIO` e
+   o destino **para onde** os restos vao. Ligar os dois seria inventar regra.
+   Enquanto a decisao humana nao vier, o contexto derivado do caso nunca
+   determina a modalidade — e a pergunta generica sempre pergunta de volta.
+
+2. **`MAP_VIGENCIA_TABELA_TARIFARIA`** — `07_01_2026` foi lido como
+   `2026-01-07` (dd_mm_aaaa). A leitura mm_dd_aaaa daria `2026-07-01`. Nenhuma
+   das duas esta declarada dentro da fonte. Precisa de confirmacao.
 
 ## Como carregar uma fonte oficial
 
@@ -78,6 +115,11 @@ ele "descobrir" a regra.
 
 ## Regras que o Gateway aplica sozinho
 
+* **Contexto insuficiente vira pergunta, nao escolha.** Havendo mais de uma
+  entrada possivel e nenhuma determinada, o status e `NEEDS_CONTEXT` com a lista
+  do que falta. O Gateway nao desempata, e o modelo nao tem por onde desempatar.
+* **Contexto que contradiz todas as entradas** vira `NOT_AVAILABLE` com motivo
+  `CONTEXTO_INCOMPATIVEL_COM_AS_ENTRADAS`.
 * **Entrada mais especifica vence.** `{situacao_do_conjuge: VIVO}` ganha da
   entrada geral `{}`.
 * **Criterio ausente do contexto nao casa.** O silencio nunca e tratado como

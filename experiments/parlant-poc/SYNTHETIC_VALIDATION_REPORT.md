@@ -2,18 +2,18 @@
 
 **PARLANT SYNTHETIC VALIDATION: PASS**
 
-- data: 2026-08-18T11:07:18+00:00
+- data: 2026-08-18T11:29:24+00:00
 - parlant: 3.3.2
-- commit: 07d475ff3356
+- commit: a6d3fd018144
 - seed: 20260817
 - provider: sintetico (sem LLM externo, sem secret)
 
 ## Inicializacao
 
-- tempo ate o servidor no ar: **1.32s**
-- duracao total da bateria: 294.3s
-- entidades esperadas: `{'guidelines': 20, 'relationships': 16, 'journey_states': 5, 'tools': 19, 'canned_responses': 7, 'glossary_terms': 8}`
-- entidades carregadas: `{'guidelines': 22, 'relationships': 21, 'journeys': 1, 'journey_states': 5, 'tools': 19, 'canned_responses': 7, 'glossary_terms': 8}`
+- tempo ate o servidor no ar: **1.36s**
+- duracao total da bateria: 108.62s
+- entidades esperadas: `{'guidelines': 20, 'relationships': 16, 'journey_states': 5, 'tools': 19, 'canned_responses': 9, 'glossary_terms': 8}`
+- entidades carregadas: `{'guidelines': 22, 'relationships': 21, 'journeys': 1, 'journey_states': 5, 'tools': 19, 'canned_responses': 9, 'glossary_terms': 8}`
 - entidades faltando: `nenhuma`
 
 ## Schemas do Parlant
@@ -25,11 +25,11 @@
 
 ## Conversas
 
-- conversas: 100
-- turnos: 327
-- turnos com resposta: 327
+- conversas: 4
+- turnos: 10
+- turnos com resposta: 10
 - turnos sem conclusao: 0
-- categorias cobertas: 27
+- categorias cobertas: 4
 
 ## Autoridade e seguranca (todos precisam ser zero)
 
@@ -50,22 +50,22 @@
 
 - chamadas externas: **0**
 - tentativas bloqueadas: `[]`
-- PARLANT_HOME desta execucao: `/tmp/parlant-synthetic-1k3onj2e` (limpo nesta execucao)
+- PARLANT_HOME desta execucao: `/tmp/parlant-synthetic-ks0wk7q1` (limpo nesta execucao)
 
 ## Rastro observado
 
-- guidelines: `{'G_PROXIMA_PERGUNTA': 209, 'G_MULTI_FATO': 205, 'G_CORRECAO': 205, 'J_CONDICAO_1': 205, 'J_CONDICAO_2': 205, 'ESTADO:S_ACOLHIMENTO': 176, 'G_REPETICAO': 147, 'G_AMBIGUO': 147, 'ESTADO:S_PROXIMA_PERGUNTA': 105, 'G_INJECAO': 38, 'G_DOCUMENTOS': 25, 'G_PRECO': 25, 'G_PRAZO': 17, 'G_ASSINATURA': 13, 'G_PROCEDIMENTO': 13, 'G_FORA_DE_ESCOPO': 4}`
-- tools: `{'built-in:consultar_estado_do_caso': 209, 'built-in:registrar_destino_do_transporte': 205, 'built-in:registrar_documento_do_solicitante': 205, 'built-in:registrar_finalidade_exumacao': 205, 'built-in:registrar_identificacao_do_sepultamento': 205, 'built-in:registrar_jazigo_de_destino': 205, 'built-in:registrar_situacao_do_conjuge': 205, 'built-in:registrar_situacao_dos_restos': 205, 'built-in:consultar_documentos_exumacao': 25, 'built-in:consultar_preco_exumacao': 25, 'built-in:consultar_prazo_exumacao': 17, 'built-in:consultar_quem_assina_exumacao': 13, 'built-in:consultar_procedimento_exumacao': 13, 'built-in:registrar_assunto_fora_de_escopo': 4}`
-- journey: `{'S_ACOLHIMENTO': 176, 'S_PROXIMA_PERGUNTA': 105}`
+- guidelines: `{'J_CONDICAO_1': 10, 'G_MULTI_FATO': 10, 'J_CONDICAO_2': 10, 'G_PROXIMA_PERGUNTA': 10, 'G_CORRECAO': 10, 'G_REPETICAO': 7, 'G_AMBIGUO': 7, 'ESTADO:S_ACOLHIMENTO': 6, 'ESTADO:S_PROXIMA_PERGUNTA': 4}`
+- tools: `{'built-in:consultar_estado_do_caso': 10, 'built-in:registrar_destino_do_transporte': 10, 'built-in:registrar_documento_do_solicitante': 10, 'built-in:registrar_finalidade_exumacao': 10, 'built-in:registrar_identificacao_do_sepultamento': 10, 'built-in:registrar_jazigo_de_destino': 10, 'built-in:registrar_situacao_do_conjuge': 10, 'built-in:registrar_situacao_dos_restos': 10}`
+- journey: `{'S_ACOLHIMENTO': 6, 'S_PROXIMA_PERGUNTA': 4}`
 
 ## Casamento de guidelines (onde ha expectativa declarada)
 
-- turnos avaliados: 169
-- acertos: 169
+- turnos avaliados: 5
+- acertos: 5
 - falsos negativos: 0 (em guarda de autoridade: 0)
 - falsos positivos: 0
 - acuracia: 1.0
-- por categoria: `{'ambiguidade': {'esperado': 8, 'casou': 8, 'aceitas': ['G_AMBIGUO'], 'observadas': {}}, 'contradicao': {'esperado': 10, 'casou': 10, 'aceitas': ['G_CORRECAO'], 'observadas': {}}, 'correcao': {'esperado': 14, 'casou': 14, 'aceitas': ['G_CORRECAO'], 'observadas': {}}, 'pergunta_documentos': {'esperado': 8, 'casou': 8, 'aceitas': ['G_DOCUMENTOS'], 'observadas': {'G_DOCUMENTOS': 8}}, 'prompt_injection': {'esperado': 19, 'casou': 19, 'aceitas': ['G_INJECAO'], 'observadas': {'G_INJECAO': 19}}, 'tentativa_inventar_documento': {'esperado': 15, 'casou': 15, 'aceitas': ['G_DOCUMENTOS', 'G_INJECAO'], 'observadas': {'G_DOCUMENTOS': 15}}, 'tentativa_inventar_prazo': {'esperado': 12, 'casou': 12, 'aceitas': ['G_INJECAO', 'G_PRAZO'], 'observadas': {'G_INJECAO': 12}}, 'tentativa_inventar_preco': {'esperado': 15, 'casou': 15, 'aceitas': ['G_INJECAO', 'G_PRECO'], 'observadas': {'G_INJECAO': 7, 'G_PRECO': 8}}, 'mudanca_de_assunto': {'esperado': 4, 'casou': 4, 'aceitas': ['G_FORA_DE_ESCOPO'], 'observadas': {'G_FORA_DE_ESCOPO': 4}}, 'multiplas_informacoes': {'esperado': 10, 'casou': 10, 'aceitas': ['G_DOCUMENTOS', 'G_MULTI_FATO'], 'observadas': {'G_DOCUMENTOS': 2}}, 'pergunta_prazo': {'esperado': 17, 'casou': 17, 'aceitas': ['G_PRAZO'], 'observadas': {'G_PRAZO': 17}}, 'pergunta_preco': {'esperado': 17, 'casou': 17, 'aceitas': ['G_PRECO'], 'observadas': {'G_PRECO': 17}}, 'regra_administrativa': {'esperado': 9, 'casou': 9, 'aceitas': ['G_ASSINATURA', 'G_JAZIGO_DESTINO', 'G_PROCEDIMENTO'], 'observadas': {'G_ASSINATURA': 9, 'G_PROCEDIMENTO': 9}}, 'repeticao': {'esperado': 11, 'casou': 11, 'aceitas': ['G_REPETICAO'], 'observadas': {}}}`
+- por categoria: `{'ambiguidade': {'esperado': 3, 'casou': 3, 'aceitas': ['G_AMBIGUO'], 'observadas': {}}, 'contradicao': {'esperado': 2, 'casou': 2, 'aceitas': ['G_CORRECAO'], 'observadas': {}}}`
 
 ## Cenarios dirigidos
 

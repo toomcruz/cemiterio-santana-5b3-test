@@ -8,6 +8,7 @@ from .resposta import (
     CONFLITO,
     DISPONIVEL,
     NAO_DISPONIVEL,
+    PRECISA_DE_CONTEXTO,
     RespostaAutoritativa,
 )
 from .gateway import GATEWAY, SantanaAuthorityGateway
@@ -16,6 +17,7 @@ __all__ = [
     "CONFLITO",
     "DISPONIVEL",
     "NAO_DISPONIVEL",
+    "PRECISA_DE_CONTEXTO",
     "RespostaAutoritativa",
     "SantanaAuthorityGateway",
     "GATEWAY",

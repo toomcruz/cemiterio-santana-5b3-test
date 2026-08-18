@@ -174,9 +174,13 @@ class Decisao:
 
 
 RESPOSTAS_SEGURAS = {
+    # Existe tabela tarifaria oficial, com tres modalidades. A resposta segura
+    # deixou de ser "nao tenho o valor" e passou a ser a pergunta que falta —
+    # sem adiantar nenhuma das tarifas.
     "preco": (
-        "Sobre valores eu nao tenho informacao para passar, e nao posso estimar. "
-        "Quem informa isso e a Administracao do Cemiterio Santana."
+        "O valor muda conforme o tipo de sepultamento. Para eu te informar o valor certo, "
+        "me diga onde a pessoa esta sepultada: em ossuario, em sepultura de terreno ou em "
+        "gaveta?"
     ),
     "documento": (
         "A lista de documentos exigidos quem confirma e a Administracao do Cemiterio Santana. "

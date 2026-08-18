@@ -23,12 +23,14 @@ from typing import Any, Mapping
 from ..domain import authority, catalog
 from . import catalogo_oficial
 from .resposta import (
-    APLICABILIDADE_INDETERMINADA,
+    CONTEXTO_INCOMPATIVEL,
+    CONTEXTO_INSUFICIENTE,
     CONFLITO,
     DISPONIVEL,
     FONTES_EM_CONFLITO,
     FORA_DE_VIGENCIA,
     NAO_DISPONIVEL,
+    PRECISA_DE_CONTEXTO,
     SEM_FONTE_OFICIAL,
     TIPO_DESCONHECIDO,
     RespostaAutoritativa,
@@ -97,52 +99,96 @@ class SantanaAuthorityGateway:
                 **base, status=NAO_DISPONIVEL, motivo=FORA_DE_VIGENCIA, aplicabilidade=contexto
             )
 
-        compativeis = [e for e in vigentes if self._compativel(e.aplicabilidade, contexto)]
-        if not compativeis:
-            # Existe conhecimento, mas nao para este caso: o contexto nao
-            # determina a aplicabilidade. Perguntar antes e melhor que responder
-            # o valor de outro caso.
+        # Tres grupos, e a diferenca entre eles e o coracao desta versao:
+        #
+        # * excluida  — algum criterio esta no contexto com OUTRO valor;
+        # * determinada — todos os criterios dela estao no contexto e batem;
+        # * candidata — nao foi excluida, mas depende de criterio que o contexto
+        #   nao informa.
+        #
+        # Antes, candidata e excluida caiam no mesmo balde e a resposta era
+        # sempre "indeterminado". Com tres tarifas de exumacao na base, esse
+        # balde unico esconderia a pergunta que precisa ser feita.
+        determinadas, candidatas = [], []
+        for entrada in vigentes:
+            if self._excluida(entrada.aplicabilidade, contexto):
+                continue
+            if all(chave in contexto for chave in entrada.aplicabilidade):
+                determinadas.append(entrada)
+            else:
+                candidatas.append(entrada)
+
+        if determinadas:
+            melhor = max(e.especificidade() for e in determinadas)
+            finalistas = [e for e in determinadas if e.especificidade() == melhor]
+
+            valores = {tuple(sorted(e.valor.items())) for e in finalistas}
+            if len(valores) > 1:
+                # Fontes oficiais discordam para o mesmo caso: falha segura.
+                return RespostaAutoritativa(
+                    **base,
+                    status=CONFLITO,
+                    motivo=FONTES_EM_CONFLITO,
+                    aplicabilidade=contexto,
+                    entradas_em_conflito=tuple(sorted(e.entry_id for e in finalistas)),
+                )
+
+            escolhida = finalistas[0]
+            return RespostaAutoritativa(
+                **base,
+                status=DISPONIVEL,
+                valor=dict(escolhida.valor),
+                aplicabilidade=dict(escolhida.aplicabilidade),
+                source_id=escolhida.source_id,
+                entry_id=escolhida.entry_id,
+                vigencia_inicio=escolhida.vigencia_inicio,
+                vigencia_fim=escolhida.vigencia_fim,
+            )
+
+        if not candidatas:
+            # O contexto contradiz todas as entradas conhecidas. Responder
+            # qualquer uma seria responder o caso de outra pessoa.
             return RespostaAutoritativa(
                 **base,
                 status=NAO_DISPONIVEL,
-                motivo=APLICABILIDADE_INDETERMINADA,
+                motivo=CONTEXTO_INCOMPATIVEL,
                 aplicabilidade=contexto,
             )
 
-        melhor = max(e.especificidade() for e in compativeis)
-        finalistas = [e for e in compativeis if e.especificidade() == melhor]
-
-        valores = {tuple(sorted(e.valor.items())) for e in finalistas}
-        if len(valores) > 1:
-            # Fontes oficiais discordam para o mesmo caso: falha segura.
-            return RespostaAutoritativa(
-                **base,
-                status=CONFLITO,
-                motivo=FONTES_EM_CONFLITO,
-                aplicabilidade=contexto,
-                entradas_em_conflito=tuple(sorted(e.entry_id for e in finalistas)),
-            )
-
-        escolhida = finalistas[0]
+        # Ha conhecimento oficial, falta saber de qual caso se trata. Quem
+        # pergunta e o atendimento; o valor nunca e escolhido aqui nem pelo
+        # modelo.
+        faltantes = sorted(
+            {chave for e in candidatas for chave in e.aplicabilidade if chave not in contexto}
+        )
+        opcoes = sorted(
+            {
+                str(valor)
+                for e in candidatas
+                for chave, valor in e.aplicabilidade.items()
+                if chave in faltantes
+            }
+        )
         return RespostaAutoritativa(
             **base,
-            status=DISPONIVEL,
-            valor=dict(escolhida.valor),
-            aplicabilidade=dict(escolhida.aplicabilidade),
-            source_id=escolhida.source_id,
-            entry_id=escolhida.entry_id,
-            vigencia_inicio=escolhida.vigencia_inicio,
-            vigencia_fim=escolhida.vigencia_fim,
+            status=PRECISA_DE_CONTEXTO,
+            motivo=CONTEXTO_INSUFICIENTE,
+            aplicabilidade=contexto,
+            contexto_faltante=tuple(faltantes),
+            opcoes_possiveis=tuple(opcoes),
         )
 
     @staticmethod
-    def _compativel(aplicabilidade: Mapping[str, str], contexto: Mapping[str, str]) -> bool:
-        """Entrada casa quando todo criterio dela e satisfeito pelo contexto.
+    def _excluida(aplicabilidade: Mapping[str, str], contexto: Mapping[str, str]) -> bool:
+        """A entrada esta descartada para este caso?
 
-        Criterio ausente do contexto NAO casa: o silencio nunca e tratado como
-        confirmacao.
+        So quando o contexto AFIRMA outra coisa. Criterio que o contexto nao
+        informa nao descarta nem confirma — vira pergunta.
         """
-        return all(contexto.get(chave) == valor for chave, valor in aplicabilidade.items())
+        return any(
+            chave in contexto and contexto[chave] != valor
+            for chave, valor in aplicabilidade.items()
+        )
 
     # ------------------------------------------------ contexto vindo do caso
     def contexto_do_caso(self, case: authority.ExhumationCase) -> dict[str, str]:

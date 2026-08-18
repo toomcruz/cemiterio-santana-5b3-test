@@ -13,6 +13,7 @@ Estes testes travam esse contrato e provam que a autoridade nao afrouxou junto.
 """
 
 import asyncio
+import json
 from typing import Any
 
 import pytest
@@ -184,13 +185,24 @@ def test_nao_existe_tool_de_correcao_separada():
 
 # ============================================ 6. a resposta autoritativa e rastreavel
 def test_consulta_sem_fonte_oficial_falha_segura_e_encaminha():
-    resposta = _run(_tool("consultar_preco_exumacao").function(_Contexto("s-preco")))
+    resposta = _run(_tool("consultar_documentos_exumacao").function(_Contexto("s-doc")))
     assert resposta.data["status"] == NAO_DISPONIVEL
     assert resposta.data["motivo"] == "SEM_FONTE_OFICIAL_CARREGADA"
     assert resposta.data["encaminhar_administracao"] is True
     # Sem valor oficial nao ha campo para interpolar: em STRICT a resposta que
     # dependeria de `{{valor}}` simplesmente nao pode ser enviada.
     assert resposta.canned_response_fields == {}
+
+
+def test_consulta_de_preco_generica_pede_contexto_e_nao_escolhe_tarifa():
+    """Ha tres tarifas de exumacao. Escolher uma seria decidir pelo municipe."""
+    resposta = _run(_tool("consultar_preco_exumacao").function(_Contexto("s-preco")))
+    assert resposta.data["status"] == "NEEDS_CONTEXT"
+    assert resposta.data["precisa_de_contexto"] is True
+    assert resposta.data["encaminhar_administracao"] is False
+    assert resposta.data["contexto_faltante"] == ["modalidade_tarifaria"]
+    assert resposta.canned_response_fields == {}
+    assert "R$" not in json.dumps(resposta.data, ensure_ascii=False)
 
 
 def test_consulta_publicada_traz_origem_e_release():
