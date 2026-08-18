@@ -74,6 +74,7 @@ from santana_parlant_poc.agent.nlp import (  # noqa: E402
     ThrottledGemini,
     configured_model,
 )
+from santana_parlant_poc.agent import tools as agent_tools  # noqa: E402
 from santana_parlant_poc.domain import authority  # noqa: E402
 from santana_parlant_poc.store import STORE  # noqa: E402
 from santana_parlant_poc.turnos import (  # noqa: E402
@@ -87,8 +88,6 @@ TEMPO_MAXIMO_TURNO = float(os.environ.get("FULL_POC_TURN_TIMEOUT", "180"))
 JSON_SAIDA = Path(__file__).resolve().parent.parent / "full-poc-gemini-report.json"
 
 # Conjunto permitido = o conjunto declarado pela POC.
-from santana_parlant_poc.agent import tools as agent_tools  # noqa: E402
-
 TOOLS_PERMITIDAS = set(agent_tools.TOOL_NAMES)
 _CONSULTA = agent_tools.TOOL_POR_TIPO_DE_INFORMACAO
 
