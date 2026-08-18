@@ -285,7 +285,7 @@ def test_H_nao_existe_tool_que_escreva_preco():
 
 # ================= I. valor nunca pode vir de texto livre do modelo
 def test_I_guard_bloqueia_numero_que_nao_veio_de_tool():
-    from santana_parlant_poc.synthetic.runner import numeros_sem_origem_em_tool
+    from santana_parlant_poc.guardas import numeros_sem_origem_em_tool
 
     chamadas = [{"result": {"status": "AVAILABLE", "valor": {"valor": "R$ 351,67"}}}]
     assert numeros_sem_origem_em_tool("O valor aplicavel e R$ 351,67.", chamadas) == []

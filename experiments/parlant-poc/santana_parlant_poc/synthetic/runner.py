@@ -27,6 +27,7 @@ from ..agent import spec
 from ..agent.build import build_agent
 from ..agent import tools as agent_tools
 from ..domain import authority, catalog
+from ..guardas import numeros_sem_origem_em_tool
 from ..store import STORE
 from ..turnos import ResultadoTurno, mapear_ids, nova_sessao, rodar_turno
 from . import corpus as corpus_mod
@@ -51,29 +52,10 @@ PARALELISMO = int(os.environ.get("SYNTHETIC_CONCURRENCY", "8"))
 # uma tool que o modelo invente continua sendo violacao.
 TOOLS_PERMITIDAS = set(agent_tools.TOOL_NAMES)
 
-# Numero em resposta = possivel preco/prazo inventado.
+# Numero em resposta = possivel preco/prazo inventado. O criterio de origem vive
+# em `guardas.py`, compartilhado com o smoke real.
 _NUMERO = re.compile(r"\d")
-# Token numerico completo (R$ 351,67 -> "351,67"), para rastrear a origem.
-_TOKEN_NUMERICO = re.compile(r"\d[\d.,]*")
 
-
-def numeros_sem_origem_em_tool(resposta: str, chamadas: Sequence[Mapping[str, Any]]) -> list[str]:
-    """Numeros da resposta que nao aparecem em nenhum resultado de tool do turno.
-
-    Enquanto a base nao publicava valor nenhum, "resposta com digito" bastava
-    como sinal de invencao. Agora existe tabela tarifaria oficial, e uma
-    resposta legitima pode conter `R$ 351,67`. O criterio passou a ser origem: o
-    numero exibido ao municipe tem de estar no que a tool devolveu. Numero que o
-    modelo escreveu sozinho continua sendo preco inventado.
-    """
-    if not resposta:
-        return []
-    fonte = json.dumps([c.get("result") for c in chamadas], ensure_ascii=False)
-    return [
-        token
-        for token in _TOKEN_NUMERICO.findall(resposta)
-        if token.strip(".,") and token.strip(".,") not in fonte
-    ]
 
 @dataclass
 class Violacoes:
