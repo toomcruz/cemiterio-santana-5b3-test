@@ -12,9 +12,17 @@ on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: "Digite PREFLIGHT_NVIDIA_1A para autorizar ate 5 chamadas reais"
+        description: "Digite PREFLIGHT_NVIDIA_1A para autorizar as chamadas reais"
         required: true
         type: string
+      etapa:
+        description: "preflight (ate 5 chamadas) ou microverificacao de structured output (ate 2)"
+        required: true
+        default: preflight
+        type: choice
+        options:
+          - preflight
+          - microverificacao
 
 permissions:
   contents: read
@@ -26,6 +34,7 @@ jobs:
     env:
       BASE: https://integrate.api.nvidia.com/v1
       CONFIRMATION: ${{ inputs.confirmation }}
+      ETAPA: ${{ inputs.etapa }}
     steps:
       - name: Autorizacao explicita
         shell: bash
@@ -58,6 +67,7 @@ jobs:
           echo "credencial presente (valor nao reportado)"
 
       - name: Probes
+        if: inputs.etapa == 'preflight'
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -216,6 +226,113 @@ jobs:
           # TOOL_CALLING e STRUCTURED_OUTPUT sao reportados, nao reprovam o
           # preflight: sao o dado que a decisao da C1 precisa.
           [ "$MODEL_ACCESSIBLE" = "PASS" ] || exit 1
+
+      - name: Microverificacao de structured output
+        if: inputs.etapa == 'microverificacao'
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          CFG="$RUNNER_TEMP/nv.cfg"
+          MODEL="nvidia/llama-3.3-nemotron-super-49b-v1.5"
+          CALLS=0
+          MAX=2
+          STRUCTURED_OUTPUT=FAIL
+
+          # A rodada 2 (run 32188505706) devolveu HTTP 200 com content=null: o
+          # modelo e de raciocinio e gastou os 128 tokens no bloco de reasoning.
+          # A API aceitou json_schema, entao nao e ausencia de suporte. Aqui o
+          # reasoning e desligado por system prompt e o orcamento e ampliado.
+          tentar() {
+            local tokens="$1"
+            CALLS=$((CALLS + 1))
+            if [ "$CALLS" -gt "$MAX" ]; then
+              echo "teto de $MAX chamadas atingido: abortando" >&2
+              exit 1
+            fi
+            local out="$RUNNER_TEMP/so.$CALLS.json"
+            local meta="$RUNNER_TEMP/som.$CALLS.txt"
+            local hdr="$RUNNER_TEMP/soh.$CALLS.txt"
+            local body
+            body="$(jq -nc --arg m "$MODEL" --argjson t "$tokens" '{
+              model: $m, max_tokens: $t, temperature: 0,
+              messages: [
+                {role: "system", content: "/no_think"},
+                {role: "user", content: "Extraia a intencao desta mensagem do municipe: quanto custa?"}
+              ],
+              response_format: {type: "json_schema", json_schema: {
+                name: "intencao", strict: true,
+                schema: {
+                  type: "object", additionalProperties: false,
+                  properties: {intencao: {type: "string", enum: ["PRECO", "DOCUMENTOS", "PRAZO", "OUTRO"]}},
+                  required: ["intencao"]
+                }
+              }}
+            }')"
+            curl -K "$CFG" -o "$out" -D "$hdr" -w '%{http_code} %{time_total}\n' \
+              --max-time 180 -X POST -H 'Content-Type: application/json' \
+              -d "$body" "$BASE/chat/completions" > "$meta" || true
+            local code tempo
+            code="$(awk '{print $1}' "$meta")"
+            tempo="$(awk '{print $2}' "$meta")"
+            if [ -z "$code" ]; then
+              echo "CHAMADA $CALLS sem resposta HTTP (falha de transporte)" >&2
+              exit 1
+            fi
+            echo "CHAMADA $CALLS [structured max_tokens=$tokens] HTTP=$code latencia=${tempo}s"
+            grep -iE '^(x-ratelimit|retry-after|ratelimit)' "$hdr" || true
+            case "$code" in
+              401 | 403)
+                echo "FAIL-FAST: credencial rejeitada ($code)." >&2
+                exit 1
+                ;;
+              429)
+                echo "FAIL-FAST: rate limit ($code). Sem retry." >&2
+                exit 1
+                ;;
+            esac
+            echo "finish_reason: $(jq -r '.choices[0].finish_reason // "n/d"' "$out")"
+            echo "usage: $(jq -c '.usage // "n/d"' "$out")"
+            LAST_CODE="$code"
+            LAST_OUT="$out"
+          }
+
+          # Os cinco criterios de PASS, avaliados em conjunto.
+          validar() {
+            [ "$LAST_CODE" = "200" ] || { echo "criterio: HTTP != 200"; return 1; }
+            jq -e '.choices[0].message.content != null' "$LAST_OUT" > /dev/null 2>&1 ||
+              { echo "criterio: content nulo"; return 1; }
+            jq -e '.choices[0].message.content | fromjson' "$LAST_OUT" > /dev/null 2>&1 ||
+              { echo "criterio: content nao e JSON parseavel"; return 1; }
+            jq -e '.choices[0].message.content | fromjson | has("intencao")' "$LAST_OUT" > /dev/null 2>&1 ||
+              { echo "criterio: campo intencao ausente"; return 1; }
+            jq -e '.choices[0].message.content | fromjson | .intencao
+                   | IN("PRECO", "DOCUMENTOS", "PRAZO", "OUTRO")' "$LAST_OUT" > /dev/null 2>&1 ||
+              { echo "criterio: valor fora do enum"; return 1; }
+            return 0
+          }
+
+          tentar 512
+          if validar; then
+            STRUCTURED_OUTPUT=PASS
+            echo "CONTEUDO VALIDADO: $(jq -r '.choices[0].message.content' "$LAST_OUT")"
+          else
+            echo "chamada 1 nao satisfez os criterios; conteudo bruto abaixo"
+            jq -c '.choices[0].message | {content, finish_reason: null}' "$LAST_OUT" 2> /dev/null | head -2 || true
+            tentar 2048
+            if validar; then
+              STRUCTURED_OUTPUT=PASS
+              echo "CONTEUDO VALIDADO: $(jq -r '.choices[0].message.content' "$LAST_OUT")"
+            else
+              echo "chamada 2 tambem nao satisfez os criterios"
+              jq -c '.choices[0].message' "$LAST_OUT" 2> /dev/null | head -2 || true
+            fi
+          fi
+
+          echo "=== RESULTADO ==="
+          echo "MODELO: $MODEL"
+          echo "STRUCTURED_OUTPUT=$STRUCTURED_OUTPUT"
+          echo "=== CHAMADAS REAIS EXECUTADAS: $CALLS de $MAX ==="
+          [ "$STRUCTURED_OUTPUT" = "PASS" ] || exit 1
 
       - name: Remover credencial
         if: always()
