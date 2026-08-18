@@ -76,12 +76,13 @@ jobs:
           pip install --quiet torch --index-url https://download.pytorch.org/whl/cpu
           pip install --quiet "parlant[litellm]==3.3.2" httpx fastapi uvicorn
           python - <<'PY'
-          import litellm, torch, transformers
-          from parlant.adapters.nlp.litellm_service import LiteLLMService
-          print("litellm", litellm.__version__)
-          print("torch", torch.__version__)
-          print("transformers", transformers.__version__)
-          print("LiteLLMService importado")
+          from importlib.metadata import version
+          # Nada de tocar em atributos dos modulos: litellm intercepta
+          # __getattr__ e levanta AttributeError para nomes que nao conhece.
+          for pacote in ("parlant", "litellm", "torch", "transformers"):
+              print(pacote, version(pacote))
+          from parlant.adapters.nlp.litellm_service import LiteLLMService  # noqa: F401
+          print("LiteLLMService importavel")
           PY
 
       - name: C1 real
