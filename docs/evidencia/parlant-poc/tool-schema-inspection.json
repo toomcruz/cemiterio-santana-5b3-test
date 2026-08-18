@@ -1,0 +1,244 @@
+{
+  "tools": {
+    "registrar_finalidade_exumacao": {
+      "local": {
+        "finalidade": {
+          "type": "string",
+          "enum": [
+            "TRANSPORTE",
+            "OSSUARIO",
+            "CREMACAO",
+            "OUTRA"
+          ],
+          "description": "Finalidade da exumacao, exatamente como o catalogo do Cemiterio Santana define. Pergunta correspondente: 'Qual e a finalidade da exumacao?'. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
+          "examples": [
+            "TRANSPORTE",
+            "OSSUARIO",
+            "CREMACAO"
+          ]
+        }
+      },
+      "engine": {
+        "finalidade": {
+          "type": "string",
+          "enum": [
+            "TRANSPORTE",
+            "OSSUARIO",
+            "CREMACAO",
+            "OUTRA"
+          ],
+          "description": "Finalidade da exumacao, exatamente como o catalogo do Cemiterio Santana define. Pergunta correspondente: 'Qual e a finalidade da exumacao?'. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
+          "examples": [
+            "TRANSPORTE",
+            "OSSUARIO",
+            "CREMACAO"
+          ]
+        }
+      },
+      "identicos": true,
+      "diferencas": {}
+    },
+    "registrar_situacao_dos_restos": {
+      "local": {
+        "situacao": {
+          "type": "string",
+          "enum": [
+            "SEPULTADO",
+            "EXUMADO",
+            "DESCONHECIDO"
+          ],
+          "description": "Situacao dos restos mortais, exatamente como o catalogo do Cemiterio Santana define. Pergunta correspondente: 'Os restos mortais ainda estao sepultados ou ja foram exumados?'. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
+          "examples": [
+            "SEPULTADO",
+            "EXUMADO",
+            "DESCONHECIDO"
+          ]
+        }
+      },
+      "engine": {
+        "situacao": {
+          "type": "string",
+          "enum": [
+            "SEPULTADO",
+            "EXUMADO",
+            "DESCONHECIDO"
+          ],
+          "description": "Situacao dos restos mortais, exatamente como o catalogo do Cemiterio Santana define. Pergunta correspondente: 'Os restos mortais ainda estao sepultados ou ja foram exumados?'. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
+          "examples": [
+            "SEPULTADO",
+            "EXUMADO",
+            "DESCONHECIDO"
+          ]
+        }
+      },
+      "identicos": true,
+      "diferencas": {}
+    },
+    "registrar_identificacao_do_sepultamento": {
+      "local": {
+        "identificacao": {
+          "type": "string",
+          "description": "Identificacao do sepultamento, nas palavras do proprio municipe. Pergunta correspondente: 'Qual o nome do falecido e o local do sepultamento?'. Nao resuma em categoria e nao complete o que ele nao disse.",
+          "examples": [
+            "Maria Souza, quadra 4, jazigo 18"
+          ]
+        }
+      },
+      "engine": {
+        "identificacao": {
+          "type": "string",
+          "description": "Identificacao do sepultamento, nas palavras do proprio municipe. Pergunta correspondente: 'Qual o nome do falecido e o local do sepultamento?'. Nao resuma em categoria e nao complete o que ele nao disse.",
+          "examples": [
+            "Maria Souza, quadra 4, jazigo 18"
+          ]
+        }
+      },
+      "identicos": true,
+      "diferencas": {}
+    },
+    "registrar_situacao_do_conjuge": {
+      "local": {
+        "situacao": {
+          "type": "string",
+          "enum": [
+            "VIVO",
+            "FALECIDO",
+            "INEXISTENTE",
+            "DESCONHECIDO"
+          ],
+          "description": "Situacao do conjuge/companheiro do falecido, exatamente como o catalogo do Cemiterio Santana define. Pergunta correspondente: 'O esposo ou companheiro do falecido esta vivo?'. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
+          "examples": [
+            "VIVO",
+            "FALECIDO",
+            "INEXISTENTE"
+          ]
+        }
+      },
+      "engine": {
+        "situacao": {
+          "type": "string",
+          "enum": [
+            "VIVO",
+            "FALECIDO",
+            "INEXISTENTE",
+            "DESCONHECIDO"
+          ],
+          "description": "Situacao do conjuge/companheiro do falecido, exatamente como o catalogo do Cemiterio Santana define. Pergunta correspondente: 'O esposo ou companheiro do falecido esta vivo?'. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
+          "examples": [
+            "VIVO",
+            "FALECIDO",
+            "INEXISTENTE"
+          ]
+        }
+      },
+      "identicos": true,
+      "diferencas": {}
+    },
+    "registrar_destino_do_transporte": {
+      "local": {
+        "destino": {
+          "type": "string",
+          "enum": [
+            "OUTRO_CEMITERIO",
+            "JAZIGO_FAMILIA",
+            "CREMATORIO",
+            "OSSUARIO"
+          ],
+          "description": "Destino do transporte, exatamente como o catalogo do Cemiterio Santana define. Pergunta correspondente: 'Para onde o transporte deve ser feito?'. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
+          "examples": [
+            "OUTRO_CEMITERIO",
+            "JAZIGO_FAMILIA",
+            "CREMATORIO"
+          ]
+        }
+      },
+      "engine": {
+        "destino": {
+          "type": "string",
+          "enum": [
+            "OUTRO_CEMITERIO",
+            "JAZIGO_FAMILIA",
+            "CREMATORIO",
+            "OSSUARIO"
+          ],
+          "description": "Destino do transporte, exatamente como o catalogo do Cemiterio Santana define. Pergunta correspondente: 'Para onde o transporte deve ser feito?'. Use somente o que o municipe declarou de forma inequivoca; se ele nao disse, NAO chame esta tool: pergunte antes.",
+          "examples": [
+            "OUTRO_CEMITERIO",
+            "JAZIGO_FAMILIA",
+            "CREMATORIO"
+          ]
+        }
+      },
+      "identicos": true,
+      "diferencas": {}
+    },
+    "registrar_jazigo_de_destino": {
+      "local": {
+        "jazigo": {
+          "type": "string",
+          "description": "Jazigo de destino, nas palavras do proprio municipe. Pergunta correspondente: 'Qual e o jazigo da familia que sera o destino?'. Nao resuma em categoria e nao complete o que ele nao disse.",
+          "examples": [
+            "jazigo 212 da familia Souza"
+          ]
+        }
+      },
+      "engine": {
+        "jazigo": {
+          "type": "string",
+          "description": "Jazigo de destino, nas palavras do proprio municipe. Pergunta correspondente: 'Qual e o jazigo da familia que sera o destino?'. Nao resuma em categoria e nao complete o que ele nao disse.",
+          "examples": [
+            "jazigo 212 da familia Souza"
+          ]
+        }
+      },
+      "identicos": true,
+      "diferencas": {}
+    },
+    "registrar_documento_do_solicitante": {
+      "local": {
+        "documento": {
+          "type": "string",
+          "description": "Documento do solicitante, nas palavras do proprio municipe. Pergunta correspondente: 'Qual o seu documento de identificacao?'. Nao resuma em categoria e nao complete o que ele nao disse.",
+          "examples": [
+            "CPF 123.456.789-00"
+          ]
+        }
+      },
+      "engine": {
+        "documento": {
+          "type": "string",
+          "description": "Documento do solicitante, nas palavras do proprio municipe. Pergunta correspondente: 'Qual o seu documento de identificacao?'. Nao resuma em categoria e nao complete o que ele nao disse.",
+          "examples": [
+            "CPF 123.456.789-00"
+          ]
+        }
+      },
+      "identicos": true,
+      "diferencas": {}
+    },
+    "registrar_assunto_fora_de_escopo": {
+      "local": {
+        "descricao": {
+          "type": "string",
+          "description": "O outro assunto, nas palavras do proprio municipe (por exemplo: 'recadastrar o jazigo', 'comprar lapide', 'horario de atendimento'). Nao resuma em categoria: registre o que ele pediu.",
+          "examples": [
+            "recadastrar o jazigo",
+            "comprar uma lapide"
+          ]
+        }
+      },
+      "engine": {
+        "descricao": {
+          "type": "string",
+          "description": "O outro assunto, nas palavras do proprio municipe (por exemplo: 'recadastrar o jazigo', 'comprar lapide', 'horario de atendimento'). Nao resuma em categoria: registre o que ele pediu.",
+          "examples": [
+            "recadastrar o jazigo",
+            "comprar uma lapide"
+          ]
+        }
+      },
+      "identicos": true,
+      "diferencas": {}
+    }
+  }
+}
