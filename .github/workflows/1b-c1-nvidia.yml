@@ -1,0 +1,102 @@
+name: 1B C1 real NVIDIA
+# Uma unica mensagem, um unico turno, um unico modelo.
+# Nao e benchmark, nao e bateria, nao roda C2 nem C3.
+# Nao usa Gemini. Nao toca Supabase, n8n, W-API, Vercel nem producao.
+#
+# A POC Parlant nao esta em main. Este job traz a baseline comprovada
+# 714f0fed21d56f9cb7317ba8c9c810029f58376a (tag local poc/exumacao-fase4a)
+# para o runner, sem mescla-la em main, e sobrepoe apenas os dois arquivos
+# de integracao NVIDIA versionados em experiments/c1-nvidia/.
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Digite C1_NVIDIA_REAL para autorizar a C1 real"
+        required: true
+        type: string
+      teto_chamadas:
+        description: "Teto de chamadas NVIDIA; o job aborta se estourar"
+        required: true
+        default: "250"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  c1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      BASELINE: 714f0fed21d56f9cb7317ba8c9c810029f58376a
+      CONFIRMATION: ${{ inputs.confirmation }}
+      TETO: ${{ inputs.teto_chamadas }}
+    steps:
+      - name: Autorizacao explicita
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          if [ "$CONFIRMATION" != "C1_NVIDIA_REAL" ]; then
+            echo "confirmacao ausente ou incorreta: nada foi chamado" >&2
+            exit 1
+          fi
+          echo "autorizacao confirmada"
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Materializar a baseline da POC sem mesclar em main
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git fetch --no-tags origin claude/parlant-poc-gemini-bjab09
+          git cat-file -e "$BASELINE^{commit}"
+          git checkout "$BASELINE" -- experiments/parlant-poc
+          echo "baseline materializada: $(git rev-parse --short "$BASELINE")"
+          # A integracao NVIDIA vive ao lado do pacote para os imports resolverem.
+          cp experiments/c1-nvidia/nvidia_nlp.py experiments/parlant-poc/
+          cp experiments/c1-nvidia/run_c1.py experiments/parlant-poc/
+          ls experiments/parlant-poc/*.py
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python -m pip install --upgrade pip --quiet
+          # parlant fixado pela propria POC; litellm e o adaptador OpenAI-compativel
+          # que o Parlant usa para falar com o endpoint NVIDIA.
+          pip install --quiet -r experiments/parlant-poc/requirements.txt litellm
+          python -c "import parlant, litellm; print('parlant', parlant.__version__ if hasattr(parlant,'__version__') else 'ok'); print('litellm ok')"
+
+      - name: C1 real
+        shell: bash
+        env:
+          LITELLM_PROVIDER_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          LITELLM_PROVIDER_BASE_URL: https://integrate.api.nvidia.com/v1
+          LITELLM_PROVIDER_MODEL_NAME: openai/nvidia/llama-3.3-nemotron-super-49b-v1.5
+          C1_TETO_CHAMADAS: ${{ inputs.teto_chamadas }}
+          C1_RELATORIO: ${{ github.workspace }}/c1-nvidia-report.json
+          PARLANT_HOME: ${{ runner.temp }}/parlant-c1
+        working-directory: experiments/parlant-poc
+        run: |
+          set -Eeuo pipefail
+          if [ -z "${LITELLM_PROVIDER_API_KEY:-}" ]; then
+            echo "NVIDIA_API_KEY ausente" >&2
+            exit 1
+          fi
+          mkdir -p "$PARLANT_HOME"
+          echo "teto de chamadas: $C1_TETO_CHAMADAS"
+          python run_c1.py
+
+      - name: Publicar relatorio da C1
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c1-nvidia-report
+          path: c1-nvidia-report.json
+          if-no-files-found: warn
