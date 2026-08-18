@@ -5,8 +5,8 @@
   "divergencias": {},
   "variacao_de_volume_tolerada": {
     "chamadas_sinteticas": {
-      "execucao_1": 6950,
-      "execucao_2": 7107
+      "execucao_1": 6952,
+      "execucao_2": 7109
     },
     "chamadas_por_schema": {
       "execucao_1": {
@@ -20,12 +20,12 @@
         "GenericObservationalGuidelineMatchesSchema": 834,
         "GenericActionableGuidelineMatchesSchema": 2919,
         "CannedResponsePreambleSchema": 326,
-        "NonConsequentialToolBatchSchema": 629,
+        "NonConsequentialToolBatchSchema": 630,
         "CannedResponseDraftSchema": 419,
-        "CannedResponseFieldExtractionSchema": 180,
-        "CannedResponseSelectionSchema": 325,
         "GenericResponseAnalysisSchema": 418,
-        "JourneyNextStepSelectionSchema": 346
+        "JourneyNextStepSelectionSchema": 347,
+        "CannedResponseFieldExtractionSchema": 180,
+        "CannedResponseSelectionSchema": 325
       },
       "execucao_2": {
         "AgentIntentionProposerSchema": 16,
@@ -38,8 +38,8 @@
         "GenericObservationalGuidelineMatchesSchema": 834,
         "GenericActionableGuidelineMatchesSchema": 2919,
         "CannedResponsePreambleSchema": 326,
-        "NonConsequentialToolBatchSchema": 629,
-        "JourneyNextStepSelectionSchema": 503,
+        "NonConsequentialToolBatchSchema": 630,
+        "JourneyNextStepSelectionSchema": 504,
         "CannedResponseDraftSchema": 419,
         "CannedResponseFieldExtractionSchema": 180,
         "CannedResponseSelectionSchema": 325,
@@ -95,10 +95,10 @@
     },
     "guidelines_ativadas": {
       "G_PROXIMA_PERGUNTA": 254,
-      "J_CONDICAO_2": 250,
-      "G_CORRECAO": 250,
       "J_CONDICAO_1": 250,
+      "J_CONDICAO_2": 250,
       "G_MULTI_FATO": 250,
+      "G_CORRECAO": 250,
       "ESTADO:S_ACOLHIMENTO": 211,
       "G_AMBIGUO": 176,
       "G_REPETICAO": 176,
@@ -344,10 +344,10 @@
     },
     "guidelines_ativadas": {
       "G_PROXIMA_PERGUNTA": 254,
-      "G_MULTI_FATO": 250,
-      "J_CONDICAO_2": 250,
-      "G_CORRECAO": 250,
       "J_CONDICAO_1": 250,
+      "J_CONDICAO_2": 250,
+      "G_MULTI_FATO": 250,
+      "G_CORRECAO": 250,
       "ESTADO:S_ACOLHIMENTO": 211,
       "G_AMBIGUO": 176,
       "G_REPETICAO": 176,
