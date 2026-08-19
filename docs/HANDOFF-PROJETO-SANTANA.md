@@ -235,11 +235,12 @@ A regra que produziu essa forma, aprendida por correção:
 | 2026-08-19 | `docs/decisoes-humanas/2026-08-19-exumacao-procedimento.md` | procedimento de EXUMAÇÃO: bifurcação de origem, prazos, destinos, valores, semi-intacto, ossuários, documentos, causa da morte, crematório, transporte, momento do valor, solicitação de agendamento | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
 | 2026-08-19 | `docs/decisoes-humanas/2026-08-19-recadastro-sucessao-administracao-provisoria.md` | RECADASTRO: condução do atendimento, sucessão, Administração Provisória, conflito familiar, linha lateral, validade e segunda Administração Provisória, troca voluntária, GOV.BR, falecimento do Administrador Provisório, consulta e divergência cadastral | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
 | 2026-08-19 | `docs/decisoes-humanas/2026-08-19-transporte-falecidos-e-restos-mortais.md` | TRANSPORTE DE FALECIDOS E RESTOS MORTAIS: escopo e três eixos (origem, situação atual, destino), ossuário alugado e perpétuo, taxa de desativação, jazigo, cremação, outro cemitério, entrada de restos externos, cinzas, documentação de transporte, valores e solicitação de agendamento | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
+| 2026-08-19 | `docs/decisoes-humanas/2026-08-19-processo-de-concessao.md` | PROCESSO DE CONCESSÃO: responsabilidade pelo processo e Setor de Concessões, iniciativa da família, pré-requisito de Recadastro, taxa inicial de R$ 94,00, dados da solicitação, pagamento, os três documentos, interpretação dos termos, documentação incompleta, assinaturas, prazo de até 180 dias, acompanhamento de processo existente e fronteira de autoridade | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
 
 Os documentos separam explicitamente **DECISÃO HUMANA APROVADA** do que não é
 decisão — **OBSERVAÇÃO** de quem registrou, nos de EXUMAÇÃO; **REQUISITO
-CONVERSACIONAL** e **GAP / REQUISITO TÉCNICO FUTURO**, nos de RECADASTRO e
-TRANSPORTE. Nada foi inferido ao transcrever, e as lacunas encontradas ficaram
+CONVERSACIONAL** e **GAP / REQUISITO TÉCNICO FUTURO**, nos de RECADASTRO,
+TRANSPORTE e CONCESSÃO. Nada foi inferido ao transcrever, e as lacunas encontradas ficaram
 registradas como lacunas — não foram preenchidas.
 
 O de tarifa e vigência traz três divergências entre a decisão e o catálogo
@@ -300,6 +301,28 @@ aritmética dos totais confirma: `94,00 + 386,65 = 480,65` e
 `DOMAIN_MODEL_GAP`: nove eixos de estado hoje sem representação separada, dos
 quais a **modalidade do ossuário** é a mais cara — ela separa R$ 480,65 de
 R$ 3.049,70 e hoje colapsa no mesmo valor `OSSUARIO` de `transport_destination`.
+
+O de CONCESSÃO **não recria** o tópico, que já existe com `GOAL_CONCESSAO`,
+`concession_purpose` e as duas relações de pré-requisito
+`REL_CONCESSAO_REQUIRES_RECADASTRO` e `REL_CONCESSAO_RECADASTRO_UNKNOWN` — esta
+última já é exatamente a regra de "não mandar recadastrar às cegas". Sua decisão
+central é a **fronteira de autoridade**: existe um **Setor de Concessões
+próprio**, o robô atua como apoio inicial e **não conduz a análise
+administrativa**; não escolhe sucessor, não determina titular, não decide quem
+desiste e não emite parecer sucessório. E a taxa inicial de **R$ 94,00** deve ser
+providenciada o quanto antes: `documentação incompleta != impedimento automático
+para a cobrança`.
+
+Três gaps próprios ficam registrados. O domínio **não representa nenhum estado do
+processo** — iniciado, taxa solicitada, taxa paga, documentação pendente ou em
+análise, acompanhamento, encaminhamento —, o que torna **não verificável** a
+proibição de abrir um segundo processo quando já existe um. O **Setor de
+Concessões não existe como destinatário**: as quatro ações de encaminhamento
+apontam genericamente para a Administração. E há uma **colisão de valor** em
+R$ 94,00, que agora nomeia dois componentes distintos: "abertura/movimentação em
+jazigo" (Transporte) e "taxa inicial do Processo de Concessão". **Não foram
+tratados como o mesmo componente**, e a escolha de publicá-los em uma ou duas
+entradas fica como decisão humana.
 
 **Decidido não é implementado.** Até a implementação chegar ao catálogo e passar
 pelos vetores, os dois primeiros continuam declarados como pendentes em
