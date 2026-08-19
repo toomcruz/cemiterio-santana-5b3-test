@@ -237,11 +237,12 @@ A regra que produziu essa forma, aprendida por correção:
 | 2026-08-19 | `docs/decisoes-humanas/2026-08-19-transporte-falecidos-e-restos-mortais.md` | TRANSPORTE DE FALECIDOS E RESTOS MORTAIS: escopo e três eixos (origem, situação atual, destino), ossuário alugado e perpétuo, taxa de desativação, jazigo, cremação, outro cemitério, entrada de restos externos, cinzas, documentação de transporte, valores e solicitação de agendamento | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
 | 2026-08-19 | `docs/decisoes-humanas/2026-08-19-processo-de-concessao.md` | PROCESSO DE CONCESSÃO: responsabilidade pelo processo e Setor de Concessões, iniciativa da família, pré-requisito de Recadastro, taxa inicial de R$ 94,00, dados da solicitação, pagamento, os três documentos, interpretação dos termos, documentação incompleta, assinaturas, prazo de até 180 dias, acompanhamento de processo existente e fronteira de autoridade | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
 | 2026-08-19 | `docs/decisoes-humanas/2026-08-19-comercial-basico-e-reclamacoes.md` | COMERCIAL em versão básica (`BASIC_CONSOLIDATED / FUTURE_ENRICHMENT_ALLOWED`): aquisição de jazigo, lápide, zeladoria, portão/tranca, reforma/construção e regra geral; RECLAMAÇÕES E OCORRÊNCIAS: intenção invisível, categoria operacional, ausência de gravidade automática e preservação do assunto original | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
+| 2026-08-19 | `docs/decisoes-humanas/2026-08-19-outros-assuntos.md` | OUTROS ASSUNTOS: papel de intenção invisível / rede de segurança, exemplos como lista aberta, resposta direta, ausência de resposta segura, preservação do motivo real, proibição de forçar classificação, demanda mal explicada, migração para tópico especializado e separação em relação a Reclamações | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
 
 Os documentos separam explicitamente **DECISÃO HUMANA APROVADA** do que não é
 decisão — **OBSERVAÇÃO** de quem registrou, nos de EXUMAÇÃO; **REQUISITO
 CONVERSACIONAL** e **GAP / REQUISITO TÉCNICO FUTURO**, nos de RECADASTRO,
-TRANSPORTE, CONCESSÃO e COMERCIAL/RECLAMAÇÕES. Nada foi inferido ao transcrever, e as lacunas encontradas ficaram
+TRANSPORTE, CONCESSÃO, COMERCIAL/RECLAMAÇÕES e OUTROS ASSUNTOS. Nada foi inferido ao transcrever, e as lacunas encontradas ficaram
 registradas como lacunas — não foram preenchidas.
 
 O de tarifa e vigência traz três divergências entre a decisão e o catálogo
@@ -346,6 +347,28 @@ pedida pela decisão não existe como campo. E o gap de **estado de solicitaçã
 acompanhamento** reaparece aqui, no Comercial — é o mesmo problema técnico já
 registrado em Concessão, visto de outro tópico, e **não foi unificado por conta
 própria**.
+
+O de OUTROS ASSUNTOS **encerra a consolidação dos sete tópicos** do atendimento.
+Sua decisão central é uma distinção: OUTROS ASSUNTOS é rede de segurança para a
+demanda que **não pertence com segurança** a nenhum tópico especializado — e
+**não** o destino da incerteza do classificador. Havendo resposta segura e
+autorizada, responde-se direto; não havendo, abre-se solicitação para a
+Administração **preservando o motivo real**, porque `intenção técnica != motivo
+real da solicitação`. E reclamação **não é ausência de tópico**: não pode ser
+absorvida aqui só porque não existe setor exclusivo de reclamações.
+
+Também aqui **nenhuma contradição** foi encontrada. Dois pontos de atenção ficam
+registrados sem alteração: o invariante *"nunca reutiliza facts de outro case"*
+de `NEW_GOAL` protege a fronteira entre cases distintos e **não** proíbe
+reclassificar a mesma demanda — mas implementar a migração de tópico **como**
+`NEW_GOAL` violaria a decisão de preservar o que já foi obtido; e a flag
+`fallback: true` do tópico está declarada **sem condição de disparo definida** em
+lugar nenhum, que é justamente o que a decisão passa a definir.
+
+O gap de **estado de solicitação e acompanhamento** reaparece pelo terceiro
+tópico — Concessão, Comercial e agora Outros Assuntos —, sempre com o mesmo
+formato: o goal existe, a solicitação que ele deveria abrir não é representada.
+**Não foi unificado por conta própria.**
 
 **Decidido não é implementado.** Até a implementação chegar ao catálogo e passar
 pelos vetores, os dois primeiros continuam declarados como pendentes em
