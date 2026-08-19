@@ -1,0 +1,22 @@
+{
+  "artifact": "conformidade/perfis/exumacao.v1.json",
+  "version": "1.0",
+  "natureza": "PERFIL DE CONFORMIDADE / ESCOPO TECNICO",
+  "nota": "Este arquivo NAO e fonte autoritativa administrativa. Ele nao declara regra, preco, documento nem prazo. Ele declara apenas QUAIS fatos do catalogo de dominio pertencem ao escopo tecnico do assunto EXUMACAO, para que a implementacao de referencia e o Gateway TS/Deno consumam exatamente a mesma lista em vez de duas copias hardcoded que podem divergir. Por isso ele vive em conformidade/ e nao em santana-authority/.",
+  "topic_code": "EXUMACAO",
+  "primary_goal": "GOAL_EXUMACAO",
+  "fact_codes": [
+    "exhumation_purpose",
+    "remains_status",
+    "burial_reference",
+    "surviving_spouse_status",
+    "required_authorization_signatory",
+    "exhumation_authorization",
+    "transport_destination",
+    "destination_grave_reference",
+    "destination_grave_situation",
+    "destination_grave_authorization",
+    "requester_document"
+  ],
+  "origem": "Extraido de POC_FACT_CODES da implementacao de referencia na Fase 3. Sao os fatos exigidos pelo goal real mais os fatos de ramificacao de destino usados pelas decisoes humanas 1 e 2. Dos 26 fatos declarados em santana-conversation-domain/facts.v1.json, os 15 restantes pertencem a recadastro, comercial e reclamacao, e nao entram num caso de EXUMACAO."
+}

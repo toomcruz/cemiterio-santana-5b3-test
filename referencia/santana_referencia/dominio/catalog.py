@@ -96,29 +96,42 @@ def _fact_spec(raw: Mapping[str, Any]) -> FactSpec:
     )
 
 
-# Fatos que a POC exercita no assunto EXUMACAO. Os exigidos pelo goal real
-# (`goals.v1.json`) mais os fatos de ramificacao de destino usados pelas
-# decisoes humanas 1 e 2.
-POC_FACT_CODES: tuple[str, ...] = (
-    "exhumation_purpose",
-    "remains_status",
-    "burial_reference",
-    "surviving_spouse_status",
-    "required_authorization_signatory",
-    "exhumation_authorization",
-    "transport_destination",
-    "destination_grave_reference",
-    "destination_grave_situation",
-    "destination_grave_authorization",
-    "requester_document",
-)
+# Escopo tecnico do assunto EXUMACAO.
+#
+# NAO e lista hardcoded aqui: vem de `conformidade/perfis/exumacao.v1.json`, o
+# mesmo arquivo que o Gateway TS/Deno consome. Duas copias da mesma lista, uma
+# em cada linguagem, divergiriam em silencio e nenhum vetor pegaria — porque
+# nenhum vetor exercita os 15 fatos de recadastro, comercial e reclamacao.
+#
+# O perfil e escopo TECNICO, nao fonte autoritativa administrativa: ele nao
+# declara regra, preco, documento nem prazo. Por isso vive em `conformidade/` e
+# nao em `santana-authority/`.
+
+
+def perfil_path() -> Path:
+    return repo_root() / "conformidade" / "perfis" / "exumacao.v1.json"
+
+
+@lru_cache(maxsize=1)
+def perfil_de_conformidade() -> Mapping[str, Any]:
+    caminho = perfil_path()
+    if not caminho.exists():
+        raise FileNotFoundError(f"Perfil de conformidade nao encontrado: {caminho}")
+    return json.loads(caminho.read_text(encoding="utf-8"))
+
+
+def fact_codes_do_perfil() -> tuple[str, ...]:
+    return tuple(perfil_de_conformidade()["fact_codes"])
 
 
 # Escopo adicional, usado APENAS pelas fixtures dos vetores. Vazio em runtime, e
-# ha teste que exige que continue vazio por padrao. Existe porque
-# `POC_FACT_CODES` e escopo de assunto: dos 26 fatos declarados no dominio, 15
-# pertencem a recadastro, comercial e reclamacao, e deixa-los entrar num caso de
-# EXUMACAO seria pior do que a inconveniencia que este seam resolve.
+# ha teste que exige que continue vazio por padrao. Existe porque o perfil e
+# escopo de assunto: dos 26 fatos declarados no dominio, 15 pertencem a
+# recadastro, comercial e reclamacao, e deixa-los entrar num caso de EXUMACAO
+# seria pior do que a inconveniencia que este seam resolve.
+#
+# A fixture acrescenta so no ambiente de conformidade: o perfil em disco nao e
+# tocado.
 _ESCOPO_DE_FIXTURE: tuple[str, ...] = ()
 
 
@@ -132,7 +145,7 @@ def definir_escopo_de_fixture(codigos: tuple[str, ...]) -> None:
 
 
 def escopo_de_fatos() -> tuple[str, ...]:
-    return POC_FACT_CODES + _ESCOPO_DE_FIXTURE
+    return fact_codes_do_perfil() + _ESCOPO_DE_FIXTURE
 
 
 @lru_cache(maxsize=1)
@@ -212,6 +225,7 @@ def limpar_caches() -> None:
     """
     for funcao in (
         _raw_catalogs,
+        perfil_de_conformidade,
         fact_specs,
         ai_boundary,
         goal_spec,

@@ -1,0 +1,3 @@
+CONFORMIDADE: IDENTICA (referencia x ts)
+  casos: 47  PASS: 47  FAIL: 0  INVALIDO: 0
+  saida real comparada byte a byte em 47 casos: identica
