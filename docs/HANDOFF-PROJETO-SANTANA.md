@@ -185,8 +185,18 @@ A regra que produziu essa forma, aprendida por correção:
 | Provider | Estado | O que ficou provado |
 | --- | --- | --- |
 | NVIDIA `nvidia/llama-3.3-nemotron-super-49b-v1.5` | **funciona** | tool calling no contrato de zero argumentos, escolha autônoma da tool, structured output com `/no_think`, uma conversa C1 completa ponta a ponta |
-| Gemini | **inviável na chave atual** | `2.5-pro` e `2.5-flash-lite` respondem 404; `2.5-flash` a 5 req/min inviabiliza o start; `3.7-flash` com 429 persistente |
+| Gemini | **histórico da chave usada na POC/baseline** | com **aquela** chave: `2.5-pro` e `2.5-flash-lite` responderam `404 no longer available to new users`; `2.5-flash` (5 req/min) não concluiu o start em 45 min; `3.7-flash` (20 req/min) com `429` persistente |
 | Embeddings | **locais** | `jinaai/jina-embeddings-v2-base-en`, 768 dims, zero chamada externa |
+
+> **A linha do Gemini é registro histórico, não veredito sobre o provider.** Os
+> `404` e `429` acima descrevem uma chave específica e as execuções daquela POC,
+> e **não** afirmam nada sobre qualquer chave futura, sobre outro projeto ou
+> sobre o estado atual do provider. A fonte canônica é
+> `docs/evidencia/parlant-poc/POC-README.md`, que registra o diagnóstico: a
+> integração estava ligada — autenticação ok, modelo resolvido, tools
+> registradas — e o que faltava era cota. O mesmo documento observa que o start
+> passa a concluir em outro dia/projeto ou com chave paga. **Reavaliar com
+> medição própria antes de decidir qualquer coisa sobre Gemini.**
 
 > O perfil de chamadas da C1 (103 chamadas, 232,93 s de inicialização) **não é
 > referência de produção**: runner efêmero, cold start completo, agente
