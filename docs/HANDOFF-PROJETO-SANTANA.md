@@ -227,10 +227,25 @@ A regra que produziu essa forma, aprendida por correção:
 | Fonte oficial para 6 tipos sem entradas | pendente | `DOCUMENTOS`, `PRAZO`, `PROCEDIMENTO_ADMINISTRATIVO`, `TRANSPORTE`, `REGULARIDADE_DO_JAZIGO`, `SEMI_INTACTO` |
 | Plano/organização do GitHub | pendente | proteção técnica real de `main` |
 
-As duas primeiras foram decididas em **2026-08-19** e estão registradas em
-**`docs/decisoes-humanas/2026-08-19-exumacao-tarifa-vigencia.md`**, com três
-divergências entre a decisão e o catálogo atual que precisam ser resolvidas na
-implementação.
+### Decisões humanas registradas
+
+| Data | Documento | Escopo | Estado |
+| --- | --- | --- | --- |
+| 2026-08-19 | `docs/decisoes-humanas/2026-08-19-exumacao-tarifa-vigencia.md` | `MAP_MODALIDADE_TARIFARIA`, `MAP_VIGENCIA_TABELA_TARIFARIA` | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
+| 2026-08-19 | `docs/decisoes-humanas/2026-08-19-exumacao-procedimento.md` | procedimento de EXUMAÇÃO: bifurcação de origem, prazos, destinos, valores, semi-intacto, ossuários, documentos, causa da morte, crematório, transporte, momento do valor, solicitação de agendamento | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
+
+Os dois documentos separam explicitamente **DECISÃO HUMANA APROVADA** de
+**OBSERVAÇÃO** de quem registrou. Nada foi inferido ao transcrever, e as lacunas
+encontradas ficaram registradas como lacunas — não foram preenchidas.
+
+O de tarifa e vigência traz três divergências entre a decisão e o catálogo
+atual. O de procedimento traz oito observações, das quais três são lacunas a
+confirmar com o decisor: a assimetria de urna entre Quadra Geral e Jazigo em
+crematório e outro cemitério, a ausência de fluxo para a origem
+`RETIRADA_OU_DESATIVACAO_DE_OSSUARIO`, e o fato de os seis destinos decididos
+não caberem no domínio fechado atual de `transport_destination`, que tem quatro
+valores e não separa ossuário alugado de perpétuo — diferença que vale
+R$ 2.569,05 no total ao munícipe.
 
 **Decidido não é implementado.** Até a implementação chegar ao catálogo e passar
 pelos vetores, os dois continuam declarados como pendentes em
