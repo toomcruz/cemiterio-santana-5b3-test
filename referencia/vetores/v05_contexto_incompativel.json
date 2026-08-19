@@ -1,0 +1,36 @@
+{
+  "vetor": "V5",
+  "titulo": "Contexto incompativel",
+  "prova": "Contexto que contradiz todas as entradas nao vira 'uma entrada qualquer' nem NEEDS_CONTEXT.",
+  "casos": [
+    {
+      "vector_id": "V05-A",
+      "vetor": "V5",
+      "titulo": "Modalidade que nao existe na tabela",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "consultar",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "tipo_informacao": "PRECO",
+        "contexto": {
+          "servico": "EXUMACAO",
+          "modalidade_tarifaria": "CREMACAO"
+        }
+      },
+      "saida_esperada": {
+        "release_id": "exu-1.0-32cc48f26797",
+        "tipo_informacao": "PRECO",
+        "status": "NOT_AVAILABLE",
+        "aplicabilidade": {
+          "servico": "EXUMACAO",
+          "modalidade_tarifaria": "CREMACAO"
+        },
+        "encaminhar_administracao": true,
+        "precisa_de_contexto": false,
+        "motivo": "CONTEXTO_INCOMPATIVEL_COM_AS_ENTRADAS"
+      },
+      "escritas_esperadas": []
+    }
+  ]
+}

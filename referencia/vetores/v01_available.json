@@ -1,0 +1,127 @@
+{
+  "vetor": "V1",
+  "titulo": "AVAILABLE",
+  "prova": "Entrada determinada pela especificidade, com valor exato e proveniencia completa. O desempate entre finalistas de mesma especificidade e por entry_id, nunca pela ordem do arquivo.",
+  "casos": [
+    {
+      "vector_id": "V01-A",
+      "vetor": "V1",
+      "titulo": "Especificidade vence a entrada generica",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "consultar",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "tipo_informacao": "ASSINATURA_EXUMACAO",
+        "contexto": {
+          "situacao_do_conjuge": "VIVO"
+        }
+      },
+      "saida_esperada": {
+        "release_id": "exu-1.0-32cc48f26797",
+        "tipo_informacao": "ASSINATURA_EXUMACAO",
+        "status": "AVAILABLE",
+        "aplicabilidade": {
+          "situacao_do_conjuge": "VIVO"
+        },
+        "encaminhar_administracao": false,
+        "precisa_de_contexto": false,
+        "valor": {
+          "texto": "Com esposo ou companheiro do falecido vivo, ele autoriza e assina junto com o responsavel pelo jazigo (concessionario ou Administrador Provisorio)."
+        },
+        "source_id": "SRC_DOMAIN_RELATIONS_V1",
+        "entry_id": "EXU_ASSINATURA_CONJUGE_VIVO"
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V01-B",
+      "vetor": "V1",
+      "titulo": "Entrada sem criterio de aplicabilidade",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "consultar",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "tipo_informacao": "OSSUARIO",
+        "contexto": {}
+      },
+      "saida_esperada": {
+        "release_id": "exu-1.0-32cc48f26797",
+        "tipo_informacao": "OSSUARIO",
+        "status": "AVAILABLE",
+        "aplicabilidade": {},
+        "encaminhar_administracao": false,
+        "precisa_de_contexto": false,
+        "valor": {
+          "texto": "O ossuario e um destino possivel para os restos apos a exumacao. Condicoes, disponibilidade e custos sao informados pela Administracao."
+        },
+        "source_id": "SRC_DOMAIN_TOPICS_V1",
+        "entry_id": "EXU_OSSUARIO"
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V01-C",
+      "vetor": "V1",
+      "titulo": "Desempate por entry_id, catalogo na ordem ZZZ,AAA",
+      "catalogo_ref": "desempate_ordem_a.v1.json",
+      "release_id_esperado": "exu-1.0-de98985c0717",
+      "operacao": "consultar",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "tipo_informacao": "PRAZO",
+        "contexto": {
+          "servico": "EXUMACAO"
+        }
+      },
+      "saida_esperada": {
+        "release_id": "exu-1.0-de98985c0717",
+        "tipo_informacao": "PRAZO",
+        "status": "AVAILABLE",
+        "aplicabilidade": {
+          "servico": "EXUMACAO"
+        },
+        "encaminhar_administracao": false,
+        "precisa_de_contexto": false,
+        "valor": {
+          "texto": "30 dias"
+        },
+        "source_id": "SRC_FIXTURE_A",
+        "entry_id": "FIX_PRAZO_AAA"
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V01-D",
+      "vetor": "V1",
+      "titulo": "Desempate por entry_id, catalogo na ordem AAA,ZZZ",
+      "catalogo_ref": "desempate_ordem_b.v1.json",
+      "release_id_esperado": "exu-1.0-219e34c82200",
+      "operacao": "consultar",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "tipo_informacao": "PRAZO",
+        "contexto": {
+          "servico": "EXUMACAO"
+        }
+      },
+      "saida_esperada": {
+        "release_id": "exu-1.0-219e34c82200",
+        "tipo_informacao": "PRAZO",
+        "status": "AVAILABLE",
+        "aplicabilidade": {
+          "servico": "EXUMACAO"
+        },
+        "encaminhar_administracao": false,
+        "precisa_de_contexto": false,
+        "valor": {
+          "texto": "30 dias"
+        },
+        "source_id": "SRC_FIXTURE_A",
+        "entry_id": "FIX_PRAZO_AAA"
+      },
+      "escritas_esperadas": []
+    }
+  ]
+}

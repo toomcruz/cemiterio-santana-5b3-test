@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "topic": "EXUMACAO",
+  "nota": "FIXTURE DE TESTE. No catalogo oficial todo tipo sem entradas exige fonte oficial; este cobre o ramo `exige_fonte_oficial: false` sem entradas, que devolve SEM_ENTRADA_VIGENTE por outro caminho.",
+  "fontes": [
+    { "source_id": "SRC_FIXTURE_A", "tipo": "FIXTURE", "referencia": "fixture-a", "aprovada": true }
+  ],
+  "tipos_de_informacao": {
+    "OSSUARIO": {
+      "forma_do_valor": "texto",
+      "campos_de_aplicabilidade": [],
+      "exige_fonte_oficial": false
+    }
+  },
+  "entradas": []
+}

@@ -200,3 +200,48 @@ antes de qualquer uso além de laboratório:
 6. **Pergunta guiada exclusivamente pelo contexto necessário** — resolver o
    over-asking do item C, decidindo se a próxima pergunta do domínio pode ou
    não ser combinada com a desambiguação do Gateway.
+
+---
+
+## Adendo da Fase 2 — a causa do `null` do desvio B
+
+```
+ADENDO. O bruto continua intocado. Esta secao corrige uma LEITURA deste
+documento, feita por quem o escreveu, com informacao que so apareceu na Fase 2.
+```
+
+O desvio B atribuiu o `arguments = null` à serialização do evento. **Estava
+errado.** A causa é o leitor de eventos da POC, em
+`experiments/parlant-poc/santana_parlant_poc/turnos.py` (baseline `714f0fe`):
+
+```python
+"argumentos": chamada.get("arguments") or chamada.get("args"),
+```
+
+`{}` é falsy em Python. Com `arguments == {}`, o `or` cai para `chamada.get("args")`,
+que não existe no evento, e o resultado é `None` — serializado como `null` no
+relatório. **O `null` é nosso.**
+
+Três fatos do Parlant 3.3.2 (tag `v3.3.2`, commit `61bba3b`) sustentam que o
+valor no fio era `{}`:
+
+| Evidência | Local |
+| --- | --- |
+| `ToolCall.arguments: Mapping[str, JSONSerializable]` — o tipo não admite `None` | `src/parlant/core/sessions.py:186` |
+| `validate_tool_arguments` levanta `ToolExecutionError` para chave extra numa tool com `parameters={}` | `src/parlant/core/tools.py:501` |
+| A assinatura real das tools de consulta tem apenas `context` | `agent/tools.py` da POC |
+
+**O que muda e o que não muda:**
+
+| | |
+| --- | --- |
+| O que a C1 provou | **inalterado** — nenhum argumento inventado, nenhum `__missing__`, tool chamada sem parâmetro |
+| A atribuição da causa do `null` | **corrigida** — leitor da POC, não serialização do Parlant |
+| O gate que aceitava `null` e `{}` | era leniência de teste mascarando defeito nosso, não ambiguidade de protocolo |
+| O relatório bruto | **intocado**, como sempre |
+
+O contrato canônico decidido na Fase 2 está em `docs/fase2/CONTRATOS-R1-R6.md`
+(R1) e é provado pelo vetor V12. O leitor corrigido vive em
+`referencia/santana_referencia/argumentos.py`. O `turnos.py` da baseline
+**permanece como está**: é registro histórico, e um registro histórico não se
+conserta — se anota.

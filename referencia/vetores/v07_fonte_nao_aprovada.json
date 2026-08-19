@@ -1,0 +1,67 @@
+{
+  "vetor": "V7",
+  "titulo": "source_id e aprovacao",
+  "prova": "Fonte com aprovada:false e descartada na CARGA, nao filtrada na resposta.",
+  "casos": [
+    {
+      "vector_id": "V07-A",
+      "vetor": "V7",
+      "titulo": "Entrada de fonte reprovada nao entra no catalogo carregado",
+      "catalogo_ref": "fonte_nao_aprovada.v1.json",
+      "release_id_esperado": "exu-1.0-85766a6d79ca",
+      "operacao": "carregar",
+      "referencia": "2026-03-01",
+      "entrada": {},
+      "saida_esperada": {
+        "release_id": "exu-1.0-85766a6d79ca",
+        "topic": "EXUMACAO",
+        "tipos_de_informacao": [
+          "PRAZO",
+          "TRANSPORTE"
+        ],
+        "fontes_aprovadas": [
+          "SRC_FIXTURE_APROVADA"
+        ],
+        "entradas_vigentes": 1
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V07-B",
+      "vetor": "V7",
+      "titulo": "O tipo servido so pela fonte reprovada fica indisponivel",
+      "catalogo_ref": "fonte_nao_aprovada.v1.json",
+      "release_id_esperado": "exu-1.0-85766a6d79ca",
+      "operacao": "consultar",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "tipo_informacao": "TRANSPORTE",
+        "contexto": {}
+      },
+      "saida_esperada": {
+        "release_id": "exu-1.0-85766a6d79ca",
+        "tipo_informacao": "TRANSPORTE",
+        "status": "NOT_AVAILABLE",
+        "aplicabilidade": {},
+        "encaminhar_administracao": true,
+        "precisa_de_contexto": false,
+        "motivo": "SEM_FONTE_OFICIAL_CARREGADA"
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V07-C",
+      "vetor": "V7",
+      "titulo": "Schema desconhecido falha fechada com codigo estruturado",
+      "catalogo_ref": "schema_desconhecido.v1.json",
+      "release_id_esperado": null,
+      "operacao": "carregar",
+      "referencia": "2026-03-01",
+      "entrada": {},
+      "saida_esperada": {
+        "erro_codigo": "SCHEMA_NAO_SUPORTADO"
+      },
+      "escritas_esperadas": []
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "vetor": "V6",
+  "titulo": "Proveniencia",
+  "prova": "Nenhum AVAILABLE sem source_id; nenhum campo de canned fora de AVAILABLE.",
+  "casos": [
+    {
+      "vector_id": "V06-A",
+      "vetor": "V6",
+      "titulo": "AVAILABLE emite campo de canned e carrega proveniencia",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "consultar_com_canned",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "tipo_informacao": "ASSINATURA_EXUMACAO",
+        "contexto": {
+          "situacao_do_conjuge": "SEM_CONJUGE_SOBREVIVENTE"
+        }
+      },
+      "saida_esperada": {
+        "resposta": {
+          "release_id": "exu-1.0-32cc48f26797",
+          "tipo_informacao": "ASSINATURA_EXUMACAO",
+          "status": "AVAILABLE",
+          "aplicabilidade": {
+            "situacao_do_conjuge": "SEM_CONJUGE_SOBREVIVENTE"
+          },
+          "encaminhar_administracao": false,
+          "precisa_de_contexto": false,
+          "valor": {
+            "texto": "Sem conjuge sobrevivente, assina o responsavel pelo jazigo (concessionario ou Administrador Provisorio)."
+          },
+          "source_id": "SRC_DOMAIN_RELATIONS_V1",
+          "entry_id": "EXU_ASSINATURA_SEM_CONJUGE"
+        },
+        "campos_para_canned": {
+          "texto": "Sem conjuge sobrevivente, assina o responsavel pelo jazigo (concessionario ou Administrador Provisorio)."
+        }
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V06-B",
+      "vetor": "V6",
+      "titulo": "NEEDS_CONTEXT nao emite campo nem proveniencia",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "consultar_com_canned",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "tipo_informacao": "PRECO",
+        "contexto": {
+          "servico": "EXUMACAO"
+        }
+      },
+      "saida_esperada": {
+        "resposta": {
+          "release_id": "exu-1.0-32cc48f26797",
+          "tipo_informacao": "PRECO",
+          "status": "NEEDS_CONTEXT",
+          "aplicabilidade": {
+            "servico": "EXUMACAO"
+          },
+          "encaminhar_administracao": false,
+          "precisa_de_contexto": true,
+          "motivo": "CONTEXTO_INSUFICIENTE_PARA_DETERMINAR",
+          "contexto_faltante": [
+            "modalidade_tarifaria"
+          ],
+          "opcoes_por_campo": {
+            "modalidade_tarifaria": [
+              "EXUMACAO_DE_OSSUARIO",
+              "SEPULTURA_CESSAO_GAVETA_UNITARIA_PRAZO_FIXO",
+              "SEPULTURA_CESSAO_TERRENO_PRAZO_INDETERMINADO"
+            ]
+          }
+        },
+        "campos_para_canned": {}
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V06-C",
+      "vetor": "V6",
+      "titulo": "NOT_AVAILABLE nao emite campo nem proveniencia",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "consultar_com_canned",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "tipo_informacao": "DOCUMENTOS",
+        "contexto": {}
+      },
+      "saida_esperada": {
+        "resposta": {
+          "release_id": "exu-1.0-32cc48f26797",
+          "tipo_informacao": "DOCUMENTOS",
+          "status": "NOT_AVAILABLE",
+          "aplicabilidade": {},
+          "encaminhar_administracao": true,
+          "precisa_de_contexto": false,
+          "motivo": "SEM_FONTE_OFICIAL_CARREGADA"
+        },
+        "campos_para_canned": {}
+      },
+      "escritas_esperadas": []
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "vetor": "V3",
+  "titulo": "CONFLICT",
+  "prova": "Fontes aprovadas discordando para o mesmo caso: falha segura, sem escolher.",
+  "casos": [
+    {
+      "vector_id": "V03-A",
+      "vetor": "V3",
+      "titulo": "Mesma especificidade, valores divergentes",
+      "catalogo_ref": "conflito.v1.json",
+      "release_id_esperado": "exu-1.0-b38cf5df8251",
+      "operacao": "consultar",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "tipo_informacao": "PRAZO",
+        "contexto": {
+          "servico": "EXUMACAO"
+        }
+      },
+      "saida_esperada": {
+        "release_id": "exu-1.0-b38cf5df8251",
+        "tipo_informacao": "PRAZO",
+        "status": "CONFLICT",
+        "aplicabilidade": {
+          "servico": "EXUMACAO"
+        },
+        "encaminhar_administracao": true,
+        "precisa_de_contexto": false,
+        "motivo": "FONTES_OFICIAIS_EM_CONFLITO",
+        "entradas_em_conflito": [
+          "FIX_PRAZO_A",
+          "FIX_PRAZO_B"
+        ]
+      },
+      "escritas_esperadas": []
+    }
+  ]
+}
