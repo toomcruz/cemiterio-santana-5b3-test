@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "topic": "EXUMACAO",
+  "nota": "FIXTURE DE TESTE. Nenhuma entrada do catalogo oficial tem `fim`; o V8 precisa das duas fronteiras para provar inclusividade simetrica.",
+  "fontes": [
+    { "source_id": "SRC_FIXTURE_A", "tipo": "FIXTURE", "referencia": "fixture-a", "aprovada": true }
+  ],
+  "tipos_de_informacao": {
+    "PRAZO": {
+      "forma_do_valor": "texto",
+      "campos_de_aplicabilidade": ["servico"],
+      "exige_fonte_oficial": true
+    }
+  },
+  "entradas": [
+    {
+      "entry_id": "FIX_PRAZO_COM_FIM",
+      "tipo_informacao": "PRAZO",
+      "aplicabilidade": { "servico": "EXUMACAO" },
+      "valor": { "texto": "30 dias" },
+      "source_id": "SRC_FIXTURE_A",
+      "vigencia": { "inicio": "2026-01-07", "fim": "2026-06-30" }
+    }
+  ]
+}

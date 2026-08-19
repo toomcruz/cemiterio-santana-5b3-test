@@ -1,0 +1,264 @@
+{
+  "schema_version": "1.0",
+  "topic": "EXUMACAO",
+  "nota": "Conhecimento oficial estruturado do assunto Exumacao. Todo valor aqui tem origem identificavel em `fontes`. Nenhum PDF bruto e lido em runtime; nenhum valor e produzido por LLM.",
+  "fontes": [
+    {
+      "source_id": "SRC_DOMAIN_RELATIONS_V1",
+      "tipo": "CATALOGO_DOMINIO",
+      "referencia": "santana-conversation-domain/relations.v1.json",
+      "aprovada": true,
+      "nota": "decisoes humanas 5 e 6, ja fechadas em 5B.4-A.1"
+    },
+    {
+      "source_id": "SRC_DOMAIN_FACTS_V1",
+      "tipo": "CATALOGO_DOMINIO",
+      "referencia": "santana-conversation-domain/facts.v1.json",
+      "aprovada": true,
+      "nota": "decisoes humanas 1 e 2, ja fechadas em 5B.4-A.1"
+    },
+    {
+      "source_id": "SRC_DOMAIN_TOPICS_V1",
+      "tipo": "CATALOGO_DOMINIO",
+      "referencia": "santana-conversation-domain/topics.v1.json",
+      "aprovada": true,
+      "nota": "capacidades declaradas do topico EXUMACAO"
+    },
+    {
+      "source_id": "SRC_TABELA_TARIFARIA_2026_01_07",
+      "tipo": "TABELA_TARIFARIA_OFICIAL",
+      "referencia": "Tabela_Politica_Tarifaria_07_01_2026",
+      "aprovada": true,
+      "nota": "Fornecida pelo usuario como fonte tarifaria oficial. A data de inicio de vigencia (2026-01-07) foi lida do proprio nome do arquivo no formato dd_mm_aaaa; precisa de confirmacao humana — ver mapeamentos_pendentes."
+    }
+  ],
+  "tipos_de_informacao": {
+    "PRECO": {
+      "forma_do_valor": "MONETARIO_CONTEXTUAL",
+      "campos_de_aplicabilidade": [
+        "servico",
+        "modalidade_tarifaria"
+      ],
+      "exige_fonte_oficial": true,
+      "nota": "Nao existe 'o preco da exumacao'. A tabela tarifaria distingue modalidades, e cada uma tem valor proprio. `modalidade_tarifaria` usa os nomes da propria tabela — nao ha equivalencia declarada entre eles e os conceitos internos Santana (ver mapeamentos_pendentes). Sem a modalidade no contexto, a resposta e NEEDS_CONTEXT, nunca uma das tarifas escolhida por conta propria."
+    },
+    "DOCUMENTOS": {
+      "forma_do_valor": "LISTA_CONTEXTUAL",
+      "campos_de_aplicabilidade": [
+        "tipo_de_destino",
+        "assinante_exigido"
+      ],
+      "exige_fonte_oficial": true,
+      "nota": "A lista muda conforme quem assina e para onde vao os restos."
+    },
+    "PRAZO": {
+      "forma_do_valor": "PRAZO_CONTEXTUAL",
+      "campos_de_aplicabilidade": [
+        "servico",
+        "tipo_de_destino"
+      ],
+      "exige_fonte_oficial": true
+    },
+    "PROCEDIMENTO_ADMINISTRATIVO": {
+      "forma_do_valor": "TEXTO_CONTEXTUAL",
+      "campos_de_aplicabilidade": [
+        "servico"
+      ],
+      "exige_fonte_oficial": true
+    },
+    "ASSINATURA_EXUMACAO": {
+      "forma_do_valor": "TEXTO_CONTEXTUAL",
+      "campos_de_aplicabilidade": [
+        "situacao_do_conjuge"
+      ],
+      "exige_fonte_oficial": false
+    },
+    "JAZIGO_DESTINO": {
+      "forma_do_valor": "TEXTO_CONTEXTUAL",
+      "campos_de_aplicabilidade": [],
+      "exige_fonte_oficial": false
+    },
+    "OSSUARIO": {
+      "forma_do_valor": "TEXTO_CONTEXTUAL",
+      "campos_de_aplicabilidade": [],
+      "exige_fonte_oficial": false
+    },
+    "RESTOS_JA_EXUMADOS": {
+      "forma_do_valor": "TEXTO_CONTEXTUAL",
+      "campos_de_aplicabilidade": [],
+      "exige_fonte_oficial": false
+    },
+    "REGULARIDADE_DO_JAZIGO": {
+      "forma_do_valor": "TEXTO_CONTEXTUAL",
+      "campos_de_aplicabilidade": [],
+      "exige_fonte_oficial": true,
+      "nota": "Regularidade e recadastro dependem da Administracao; nao ha texto publicado."
+    },
+    "SEMI_INTACTO": {
+      "forma_do_valor": "TEXTO_CONTEXTUAL",
+      "campos_de_aplicabilidade": [],
+      "exige_fonte_oficial": true,
+      "nota": "Tratamento de restos semi-intactos exige fonte oficial; nao ha texto publicado."
+    },
+    "TRANSPORTE": {
+      "forma_do_valor": "TEXTO_CONTEXTUAL",
+      "campos_de_aplicabilidade": [
+        "tipo_de_destino"
+      ],
+      "exige_fonte_oficial": true
+    }
+  },
+  "entradas": [
+    {
+      "entry_id": "EXU_ASSINATURA_CONJUGE_VIVO",
+      "tipo_informacao": "ASSINATURA_EXUMACAO",
+      "aplicabilidade": {
+        "situacao_do_conjuge": "VIVO"
+      },
+      "valor": {
+        "texto": "Com esposo ou companheiro do falecido vivo, ele autoriza e assina junto com o responsavel pelo jazigo (concessionario ou Administrador Provisorio)."
+      },
+      "vigencia": {
+        "inicio": null,
+        "fim": null
+      },
+      "source_id": "SRC_DOMAIN_RELATIONS_V1"
+    },
+    {
+      "entry_id": "EXU_ASSINATURA_SEM_CONJUGE",
+      "tipo_informacao": "ASSINATURA_EXUMACAO",
+      "aplicabilidade": {
+        "situacao_do_conjuge": "SEM_CONJUGE_SOBREVIVENTE"
+      },
+      "valor": {
+        "texto": "Sem conjuge sobrevivente, assina o responsavel pelo jazigo (concessionario ou Administrador Provisorio)."
+      },
+      "vigencia": {
+        "inicio": null,
+        "fim": null
+      },
+      "source_id": "SRC_DOMAIN_RELATIONS_V1"
+    },
+    {
+      "entry_id": "EXU_ASSINATURA_GERAL",
+      "tipo_informacao": "ASSINATURA_EXUMACAO",
+      "aplicabilidade": {},
+      "valor": {
+        "texto": "Quem assina a autorizacao depende da situacao do conjuge sobrevivente: com conjuge vivo, ele assina junto com o responsavel pelo jazigo; sem conjuge sobrevivente, assina o responsavel pelo jazigo."
+      },
+      "vigencia": {
+        "inicio": null,
+        "fim": null
+      },
+      "source_id": "SRC_DOMAIN_RELATIONS_V1"
+    },
+    {
+      "entry_id": "EXU_JAZIGO_DESTINO",
+      "tipo_informacao": "JAZIGO_DESTINO",
+      "aplicabilidade": {},
+      "valor": {
+        "texto": "Quando o destino e jazigo da familia, a situacao do jazigo precisa ser verificada pela Administracao e a colocacao dos restos exige autorizacao do concessionario ou do Administrador Provisorio. A declaracao do municipe nao confirma esses pontos."
+      },
+      "vigencia": {
+        "inicio": null,
+        "fim": null
+      },
+      "source_id": "SRC_DOMAIN_FACTS_V1"
+    },
+    {
+      "entry_id": "EXU_OSSUARIO",
+      "tipo_informacao": "OSSUARIO",
+      "aplicabilidade": {},
+      "valor": {
+        "texto": "O ossuario e um destino possivel para os restos apos a exumacao. Condicoes, disponibilidade e custos sao informados pela Administracao."
+      },
+      "vigencia": {
+        "inicio": null,
+        "fim": null
+      },
+      "source_id": "SRC_DOMAIN_TOPICS_V1"
+    },
+    {
+      "entry_id": "EXU_RESTOS_JA_EXUMADOS",
+      "tipo_informacao": "RESTOS_JA_EXUMADOS",
+      "aplicabilidade": {},
+      "valor": {
+        "texto": "Se os restos ja foram exumados neste atendimento, a exumacao deixa de ser exigida para este caso. Isso vale apenas para este caso, nao e proibicao permanente."
+      },
+      "vigencia": {
+        "inicio": null,
+        "fim": null
+      },
+      "source_id": "SRC_DOMAIN_RELATIONS_V1"
+    },
+    {
+      "entry_id": "EXU_PRECO_EXUMACAO_DE_OSSUARIO",
+      "tipo_informacao": "PRECO",
+      "aplicabilidade": {
+        "servico": "EXUMACAO",
+        "modalidade_tarifaria": "EXUMACAO_DE_OSSUARIO"
+      },
+      "valor": {
+        "valor": "R$ 106,57",
+        "modalidade": "Exumação de ossuário"
+      },
+      "vigencia": {
+        "inicio": "2026-01-07",
+        "fim": null
+      },
+      "source_id": "SRC_TABELA_TARIFARIA_2026_01_07"
+    },
+    {
+      "entry_id": "EXU_PRECO_SEPULTURA_TERRENO_PRAZO_INDETERMINADO",
+      "tipo_informacao": "PRECO",
+      "aplicabilidade": {
+        "servico": "EXUMACAO",
+        "modalidade_tarifaria": "SEPULTURA_CESSAO_TERRENO_PRAZO_INDETERMINADO"
+      },
+      "valor": {
+        "valor": "R$ 586,04",
+        "modalidade": "Exumação de sepultura em cessão de terreno a prazo indeterminado"
+      },
+      "vigencia": {
+        "inicio": "2026-01-07",
+        "fim": null
+      },
+      "source_id": "SRC_TABELA_TARIFARIA_2026_01_07"
+    },
+    {
+      "entry_id": "EXU_PRECO_SEPULTURA_GAVETA_UNITARIA_PRAZO_FIXO",
+      "tipo_informacao": "PRECO",
+      "aplicabilidade": {
+        "servico": "EXUMACAO",
+        "modalidade_tarifaria": "SEPULTURA_CESSAO_GAVETA_UNITARIA_PRAZO_FIXO"
+      },
+      "valor": {
+        "valor": "R$ 351,67",
+        "modalidade": "Exumação de sepultura em cessão de gaveta unitária a prazo fixo"
+      },
+      "vigencia": {
+        "inicio": "2026-01-07",
+        "fim": null
+      },
+      "source_id": "SRC_TABELA_TARIFARIA_2026_01_07"
+    }
+  ],
+  "mapeamentos_pendentes": [
+    {
+      "id": "MAP_MODALIDADE_TARIFARIA",
+      "de": "fatos do caso Santana (transport_destination, tipo de sepultura, tipo de cessao)",
+      "para": "PRECO.modalidade_tarifaria",
+      "situacao": "PENDENTE_DE_DECISAO_HUMANA",
+      "motivo": "A tabela tarifaria nomeia 'ossuário', 'cessão de terreno a prazo indeterminado' e 'cessão de gaveta unitária a prazo fixo'. O catalogo Santana nao declara equivalencia entre esses nomes e 'jazigo de familia', 'quadra geral' ou 'gaveta'. Atencao especial ao homonimo: 'Exumação de ossuário' e a exumacao FEITA NUM ossuario, enquanto `transport_destination=OSSUARIO` e o destino PARA ONDE os restos vao. Sao coisas diferentes e nao podem ser ligadas sem decisao autoritativa.",
+      "efeito_hoje": "O contexto derivado do caso nunca determina `modalidade_tarifaria`, entao a pergunta generica de preco responde NEEDS_CONTEXT e o atendimento pergunta."
+    },
+    {
+      "id": "MAP_VIGENCIA_TABELA_TARIFARIA",
+      "de": "nome do arquivo Tabela_Politica_Tarifaria_07_01_2026",
+      "para": "vigencia.inicio das entradas de PRECO",
+      "situacao": "PENDENTE_DE_CONFIRMACAO_HUMANA",
+      "motivo": "07_01_2026 foi lido como 2026-01-07 (dd_mm_aaaa). A leitura mm_dd_aaaa daria 2026-07-01. Nenhuma das duas esta declarada na fonte.",
+      "efeito_hoje": "As tarifas respondem como vigentes a partir de 2026-01-07."
+    }
+  ]
+}

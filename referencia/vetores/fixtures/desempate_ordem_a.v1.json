@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "topic": "EXUMACAO",
+  "nota": "FIXTURE DE TESTE. Duas entradas de mesma especificidade e MESMO valor, diferindo apenas em entry_id e source_id. Existe em duas ordens de arquivo (ordem_a e ordem_b) para provar que a escolha nao depende da ordem do catalogo. Par de: desempate_ordem_b.v1.json.",
+  "fontes": [
+    { "source_id": "SRC_FIXTURE_A", "tipo": "FIXTURE", "referencia": "fixture-a", "aprovada": true },
+    { "source_id": "SRC_FIXTURE_B", "tipo": "FIXTURE", "referencia": "fixture-b", "aprovada": true }
+  ],
+  "tipos_de_informacao": {
+    "PRAZO": { "forma_do_valor": "texto", "campos_de_aplicabilidade": ["servico"], "exige_fonte_oficial": true }
+  },
+  "entradas": [
+    { "entry_id": "FIX_PRAZO_ZZZ", "tipo_informacao": "PRAZO", "aplicabilidade": { "servico": "EXUMACAO" }, "valor": { "texto": "30 dias" }, "source_id": "SRC_FIXTURE_B", "vigencia": { "inicio": null, "fim": null } },
+    { "entry_id": "FIX_PRAZO_AAA", "tipo_informacao": "PRAZO", "aplicabilidade": { "servico": "EXUMACAO" }, "valor": { "texto": "30 dias" }, "source_id": "SRC_FIXTURE_A", "vigencia": { "inicio": null, "fim": null } }
+  ]
+}

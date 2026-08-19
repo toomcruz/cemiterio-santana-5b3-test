@@ -1,0 +1,16 @@
+{
+  "nota": "FIXTURE DE TESTE. Nao e catalogo de dominio autoritativo e nunca deve ser carregada em runtime. Declara APENAS o acrescimo: o catalogo autoritativo e lido de santana-conversation-domain/facts.v1.json e este arquivo so anexa um fato ao final. Nenhum fato existente e alterado, e nao ha copia de facts.v1.json em lugar nenhum.",
+  "base": "santana-conversation-domain/facts.v1.json",
+  "motivo": "O V11 precisa de um fato no estado ai_extractable=false SEM ser derived nem authoritative_only. Esse estado e permitido pelo contrato (ver referencia/tests/test_invariantes_dominio.py), mas nao ocorre no catalogo autoritativo. Fabrica-lo la seria alterar dado autoritativo para fazer teste passar.",
+  "acrescenta_fatos": [
+    {
+      "fact_code": "fixture_non_extractable_fact",
+      "display_name": "Fato de fixture nao extraivel pelo atendimento",
+      "scope": "CASE",
+      "value_type": "TEXT",
+      "priority_class": "DEPENDENCY",
+      "allowed_sources": ["DOCUMENT", "SYSTEM"],
+      "ai_extractable": false
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "topic": "EXUMACAO",
+  "nota": "FIXTURE DE TESTE. Nao e catalogo autoritativo e nunca deve ser carregado em runtime. Existe porque o catalogo oficial nao tem conflito entre fontes, e o V3 precisa provar que duas fontes aprovadas discordando produzem falha segura em vez de escolha.",
+  "fontes": [
+    { "source_id": "SRC_FIXTURE_A", "tipo": "FIXTURE", "referencia": "fixture-a", "aprovada": true },
+    { "source_id": "SRC_FIXTURE_B", "tipo": "FIXTURE", "referencia": "fixture-b", "aprovada": true }
+  ],
+  "tipos_de_informacao": {
+    "PRAZO": {
+      "forma_do_valor": "texto",
+      "campos_de_aplicabilidade": ["servico"],
+      "exige_fonte_oficial": true
+    }
+  },
+  "entradas": [
+    {
+      "entry_id": "FIX_PRAZO_A",
+      "tipo_informacao": "PRAZO",
+      "aplicabilidade": { "servico": "EXUMACAO" },
+      "valor": { "texto": "30 dias" },
+      "source_id": "SRC_FIXTURE_A",
+      "vigencia": { "inicio": null, "fim": null }
+    },
+    {
+      "entry_id": "FIX_PRAZO_B",
+      "tipo_informacao": "PRAZO",
+      "aplicabilidade": { "servico": "EXUMACAO" },
+      "valor": { "texto": "60 dias" },
+      "source_id": "SRC_FIXTURE_B",
+      "vigencia": { "inicio": null, "fim": null }
+    }
+  ]
+}

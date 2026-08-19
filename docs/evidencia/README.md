@@ -102,8 +102,8 @@ testados, 0 violações) e `isolamento`.
 
 | Não copiado | Motivo |
 | --- | --- |
-| `catalogo/exumacao.v1.json` | É catálogo autoritativo, não evidência. Copiá-lo criaria uma segunda fonte de verdade. Permanece congelado sob a tag e é lido de lá. |
-| Código executável (`santana_parlant_poc/`, `scripts/`, `tests/`) | Nenhum teste deste repositório depende dele. Fica preservado sob a tag; movê-lo para cá o transformaria em código de manutenção sem executá-lo. |
+| `catalogo/exumacao.v1.json` | Era catálogo autoritativo, não evidência. **Superado na Fase 2** — ver nota abaixo. |
+| Código executável (`santana_parlant_poc/`, `scripts/`, `tests/`) | Nenhum teste deste repositório dependia dele. **Superado na Fase 2** — ver nota abaixo. |
 | Instrumentação do sandbox local (`nono/`) | Ambiente de execução específico da POC. A prova de zero rede externa que importa é o `NetworkGuard`, e ela já está contabilizada no relatório da bateria. |
 | Secrets, chaves, tokens | Nunca existiram em arquivo — a chave da POC vinha de secret de CI e o laboratório só reportava presença. Varredura executada antes da cópia: nenhuma ocorrência. |
 | `PARLANT_HOME`, caches, índices | Estado temporário de execução, sem valor de registro. |
@@ -123,3 +123,32 @@ arquivos:
 git show poc/exumacao-fase4a --stat
 git checkout poc/exumacao-fase4a -- experiments/parlant-poc
 ```
+
+## Nota da Fase 2 — o Gateway saiu da baseline
+
+As duas primeiras linhas da tabela acima valiam enquanto **nenhum teste deste
+repositório dependia** do código da POC. A Fase 2 acabou com essa condição: ela
+exige corrigir a implementação de referência do Gateway e rodar os vetores de
+conformidade contra ela em CI, a cada PR — e nenhuma das duas coisas se faz
+contra um commit congelado, que é justamente o que ele deve continuar sendo.
+
+O Gateway e o catálogo oficial passaram a viver em `referencia/`:
+
+| | |
+| --- | --- |
+| Código | `santana_parlant_poc` → `referencia/santana_referencia`, com as correções da Fase 2 |
+| Catálogo oficial | `santana-authority/catalogo/`, caminho **neutro** — cópia byte-idêntica, SHA256 `22e1e1f0f03e5c1d77ee437fa5dfcd5f23502cc31a3bb575cb6a8dc56cd03f51` |
+| Catálogos de domínio | continuam em `santana-conversation-domain/`, sem cópia |
+
+Não há duas fontes de verdade, e a fonte autoritativa **não pertence a
+`referencia/`**: o catálogo vive em `santana-authority/`, ao lado de
+`santana-conversation-domain/`, para que a referência Python e o futuro Gateway
+TS/Deno leiam exatamente o mesmo arquivo. `referencia/` é implementação de
+referência para conformidade, nada além disso. A cópia sob a baseline passa a
+ser registro histórico como o resto da POC. A prova
+de que a mudança de lugar não mudou o conhecimento é o `release_id`, derivado do
+conteúdo: `exu-1.0-32cc48f26797`, o mesmo da C1 real da Fase 1B.
+
+As branches `lab/parlant-poc` e `claude/parlant-poc-gemini-bjab09` continuam
+sendo os únicos ponteiros para a baseline `714f0fe` enquanto a tag não puder ser
+publicada. **Não apagar.**

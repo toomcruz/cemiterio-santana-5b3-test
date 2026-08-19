@@ -1,0 +1,8 @@
+{
+  "schema_version": "9.9",
+  "topic": "EXUMACAO",
+  "nota": "FIXTURE DE TESTE. Schema fora do suportado: prova que a carga falha fechada com codigo estruturado em vez de mensagem textual.",
+  "fontes": [],
+  "tipos_de_informacao": {},
+  "entradas": []
+}

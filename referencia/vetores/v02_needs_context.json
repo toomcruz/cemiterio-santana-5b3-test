@@ -1,0 +1,81 @@
+{
+  "vetor": "V2",
+  "titulo": "NEEDS_CONTEXT",
+  "prova": "Falta de contexto nao e indisponibilidade. As opcoes vem POR CAMPO e ordenadas.",
+  "casos": [
+    {
+      "vector_id": "V02-A",
+      "vetor": "V2",
+      "titulo": "Um campo faltante",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "consultar",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "tipo_informacao": "PRECO",
+        "contexto": {
+          "servico": "EXUMACAO"
+        }
+      },
+      "saida_esperada": {
+        "release_id": "exu-1.0-32cc48f26797",
+        "tipo_informacao": "PRECO",
+        "status": "NEEDS_CONTEXT",
+        "aplicabilidade": {
+          "servico": "EXUMACAO"
+        },
+        "encaminhar_administracao": false,
+        "precisa_de_contexto": true,
+        "motivo": "CONTEXTO_INSUFICIENTE_PARA_DETERMINAR",
+        "contexto_faltante": [
+          "modalidade_tarifaria"
+        ],
+        "opcoes_por_campo": {
+          "modalidade_tarifaria": [
+            "EXUMACAO_DE_OSSUARIO",
+            "SEPULTURA_CESSAO_GAVETA_UNITARIA_PRAZO_FIXO",
+            "SEPULTURA_CESSAO_TERRENO_PRAZO_INDETERMINADO"
+          ]
+        }
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V02-B",
+      "vetor": "V2",
+      "titulo": "Dois campos faltantes: opcoes nao se misturam",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "consultar",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "tipo_informacao": "PRECO",
+        "contexto": {}
+      },
+      "saida_esperada": {
+        "release_id": "exu-1.0-32cc48f26797",
+        "tipo_informacao": "PRECO",
+        "status": "NEEDS_CONTEXT",
+        "aplicabilidade": {},
+        "encaminhar_administracao": false,
+        "precisa_de_contexto": true,
+        "motivo": "CONTEXTO_INSUFICIENTE_PARA_DETERMINAR",
+        "contexto_faltante": [
+          "modalidade_tarifaria",
+          "servico"
+        ],
+        "opcoes_por_campo": {
+          "modalidade_tarifaria": [
+            "EXUMACAO_DE_OSSUARIO",
+            "SEPULTURA_CESSAO_GAVETA_UNITARIA_PRAZO_FIXO",
+            "SEPULTURA_CESSAO_TERRENO_PRAZO_INDETERMINADO"
+          ],
+          "servico": [
+            "EXUMACAO"
+          ]
+        }
+      },
+      "escritas_esperadas": []
+    }
+  ]
+}

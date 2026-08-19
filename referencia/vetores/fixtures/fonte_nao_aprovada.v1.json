@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "topic": "EXUMACAO",
+  "nota": "FIXTURE DE TESTE. O catalogo oficial nao tem fonte reprovada; o V7 precisa provar que aprovacao e filtro de CARGA e nao de resposta.",
+  "fontes": [
+    { "source_id": "SRC_FIXTURE_APROVADA", "tipo": "FIXTURE", "referencia": "fixture-ok", "aprovada": true },
+    { "source_id": "SRC_FIXTURE_REPROVADA", "tipo": "FIXTURE", "referencia": "fixture-nao", "aprovada": false }
+  ],
+  "tipos_de_informacao": {
+    "PRAZO": {
+      "forma_do_valor": "texto",
+      "campos_de_aplicabilidade": ["servico"],
+      "exige_fonte_oficial": true
+    },
+    "TRANSPORTE": {
+      "forma_do_valor": "texto",
+      "campos_de_aplicabilidade": [],
+      "exige_fonte_oficial": true
+    }
+  },
+  "entradas": [
+    {
+      "entry_id": "FIX_PRAZO_APROVADO",
+      "tipo_informacao": "PRAZO",
+      "aplicabilidade": { "servico": "EXUMACAO" },
+      "valor": { "texto": "30 dias" },
+      "source_id": "SRC_FIXTURE_APROVADA",
+      "vigencia": { "inicio": null, "fim": null }
+    },
+    {
+      "entry_id": "FIX_TRANSPORTE_REPROVADO",
+      "tipo_informacao": "TRANSPORTE",
+      "aplicabilidade": {},
+      "valor": { "texto": "ESTE VALOR NUNCA PODE SER RESPONDIDO" },
+      "source_id": "SRC_FIXTURE_REPROVADA",
+      "vigencia": { "inicio": null, "fim": null }
+    }
+  ]
+}

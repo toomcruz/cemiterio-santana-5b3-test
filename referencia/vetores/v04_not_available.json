@@ -1,0 +1,103 @@
+{
+  "vetor": "V4",
+  "titulo": "NOT_AVAILABLE com motivos distintos",
+  "prova": "Os tres motivos de indisponibilidade nao colapsam num codigo generico.",
+  "casos": [
+    {
+      "vector_id": "V04-A",
+      "vetor": "V4",
+      "titulo": "Tipo de informacao desconhecido",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "consultar",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "tipo_informacao": "PRECO_FUNERAL",
+        "contexto": {}
+      },
+      "saida_esperada": {
+        "release_id": "exu-1.0-32cc48f26797",
+        "tipo_informacao": "PRECO_FUNERAL",
+        "status": "NOT_AVAILABLE",
+        "aplicabilidade": {},
+        "encaminhar_administracao": true,
+        "precisa_de_contexto": false,
+        "motivo": "TIPO_DE_INFORMACAO_DESCONHECIDO"
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V04-B",
+      "vetor": "V4",
+      "titulo": "Tipo declarado, exige fonte oficial, nada publicado",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "consultar",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "tipo_informacao": "DOCUMENTOS",
+        "contexto": {}
+      },
+      "saida_esperada": {
+        "release_id": "exu-1.0-32cc48f26797",
+        "tipo_informacao": "DOCUMENTOS",
+        "status": "NOT_AVAILABLE",
+        "aplicabilidade": {},
+        "encaminhar_administracao": true,
+        "precisa_de_contexto": false,
+        "motivo": "SEM_FONTE_OFICIAL_CARREGADA"
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V04-C",
+      "vetor": "V4",
+      "titulo": "Entradas existem, nenhuma vigente na data",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "consultar",
+      "referencia": "2026-01-06",
+      "entrada": {
+        "tipo_informacao": "PRECO",
+        "contexto": {
+          "servico": "EXUMACAO"
+        }
+      },
+      "saida_esperada": {
+        "release_id": "exu-1.0-32cc48f26797",
+        "tipo_informacao": "PRECO",
+        "status": "NOT_AVAILABLE",
+        "aplicabilidade": {
+          "servico": "EXUMACAO"
+        },
+        "encaminhar_administracao": true,
+        "precisa_de_contexto": false,
+        "motivo": "SEM_ENTRADA_VIGENTE"
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V04-D",
+      "vetor": "V4",
+      "titulo": "Tipo que dispensa fonte oficial e nao tem entradas",
+      "catalogo_ref": "tipo_sem_fonte_oficial.v1.json",
+      "release_id_esperado": "exu-1.0-7ef9d436b6ff",
+      "operacao": "consultar",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "tipo_informacao": "OSSUARIO",
+        "contexto": {}
+      },
+      "saida_esperada": {
+        "release_id": "exu-1.0-7ef9d436b6ff",
+        "tipo_informacao": "OSSUARIO",
+        "status": "NOT_AVAILABLE",
+        "aplicabilidade": {},
+        "encaminhar_administracao": true,
+        "precisa_de_contexto": false,
+        "motivo": "SEM_ENTRADA_VIGENTE"
+      },
+      "escritas_esperadas": []
+    }
+  ]
+}

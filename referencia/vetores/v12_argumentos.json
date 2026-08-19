@@ -1,0 +1,420 @@
+{
+  "vetor": "V12",
+  "titulo": "Contrato canonico de argumentos",
+  "prova": "A forma canonica de uma tool de zero argumentos e {}; o bruto do evento e preservado; nenhum argumento inventado passa.",
+  "casos": [
+    {
+      "vector_id": "V12-A",
+      "vetor": "V12",
+      "titulo": "Forma canonica: arguments = {} lido como {}, nunca como null",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "canonizar_argumentos",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "contrato": {
+          "nome": "consultar_preco_exumacao",
+          "parametros": [],
+          "obrigatorios": []
+        },
+        "evento": {
+          "arguments": {}
+        }
+      },
+      "saida_esperada": {
+        "contrato": "consultar_preco_exumacao",
+        "aceito": true,
+        "bruto": {},
+        "canonico": {}
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V12-B",
+      "vetor": "V12",
+      "titulo": "Chave ausente numa tool de zero argumentos normaliza para {}",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "canonizar_argumentos",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "contrato": {
+          "nome": "consultar_preco_exumacao",
+          "parametros": [],
+          "obrigatorios": []
+        },
+        "evento": {
+          "tool_id": "consultar_preco_exumacao"
+        }
+      },
+      "saida_esperada": {
+        "contrato": "consultar_preco_exumacao",
+        "aceito": true,
+        "bruto": null,
+        "canonico": {}
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V12-C",
+      "vetor": "V12",
+      "titulo": "null numa tool de zero argumentos normaliza para {}, e o bruto e preservado",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "canonizar_argumentos",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "contrato": {
+          "nome": "consultar_preco_exumacao",
+          "parametros": [],
+          "obrigatorios": []
+        },
+        "evento": {
+          "arguments": null
+        }
+      },
+      "saida_esperada": {
+        "contrato": "consultar_preco_exumacao",
+        "aceito": true,
+        "bruto": null,
+        "canonico": {}
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V12-D",
+      "vetor": "V12",
+      "titulo": "Modalidade injetada numa consulta de preco e recusada",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "canonizar_argumentos",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "contrato": {
+          "nome": "consultar_preco_exumacao",
+          "parametros": [],
+          "obrigatorios": []
+        },
+        "evento": {
+          "arguments": {
+            "modalidade_tarifaria": "EXUMACAO_DE_OSSUARIO"
+          }
+        }
+      },
+      "saida_esperada": {
+        "contrato": "consultar_preco_exumacao",
+        "aceito": false,
+        "bruto": {
+          "modalidade_tarifaria": "EXUMACAO_DE_OSSUARIO"
+        },
+        "codigo": "ARGUMENTOS_NAO_CANONICOS",
+        "motivos": [
+          "CHAVE_EXTRA:modalidade_tarifaria"
+        ]
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V12-E",
+      "vetor": "V12",
+      "titulo": "Argumento que nao e mapa e recusado",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "canonizar_argumentos",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "contrato": {
+          "nome": "consultar_preco_exumacao",
+          "parametros": [],
+          "obrigatorios": []
+        },
+        "evento": {
+          "arguments": []
+        }
+      },
+      "saida_esperada": {
+        "contrato": "consultar_preco_exumacao",
+        "aceito": false,
+        "bruto": [],
+        "codigo": "ARGUMENTOS_NAO_CANONICOS",
+        "motivos": [
+          "TIPO_INVALIDO:list"
+        ]
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V12-F",
+      "vetor": "V12",
+      "titulo": "__missing__ nunca vira valor",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "canonizar_argumentos",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "contrato": {
+          "nome": "registrar_finalidade_exumacao",
+          "parametros": [
+            "finalidade"
+          ],
+          "obrigatorios": [
+            "finalidade"
+          ]
+        },
+        "evento": {
+          "arguments": {
+            "finalidade": "<<__missing__>>"
+          }
+        }
+      },
+      "saida_esperada": {
+        "contrato": "registrar_finalidade_exumacao",
+        "aceito": false,
+        "bruto": {
+          "finalidade": "<<__missing__>>"
+        },
+        "codigo": "ARGUMENTOS_NAO_CANONICOS",
+        "motivos": [
+          "VALOR_MISSING:finalidade"
+        ]
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V12-G",
+      "vetor": "V12",
+      "titulo": "Tool com obrigatorio NAO normaliza ausencia para {}",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "canonizar_argumentos",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "contrato": {
+          "nome": "registrar_finalidade_exumacao",
+          "parametros": [
+            "finalidade"
+          ],
+          "obrigatorios": [
+            "finalidade"
+          ]
+        },
+        "evento": {}
+      },
+      "saida_esperada": {
+        "contrato": "registrar_finalidade_exumacao",
+        "aceito": false,
+        "bruto": null,
+        "codigo": "ARGUMENTOS_NAO_CANONICOS",
+        "motivos": [
+          "OBRIGATORIO_AUSENTE:finalidade"
+        ]
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V12-H",
+      "vetor": "V12",
+      "titulo": "Tool com parametros: chave extra continua recusada",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "canonizar_argumentos",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "contrato": {
+          "nome": "registrar_finalidade_exumacao",
+          "parametros": [
+            "finalidade"
+          ],
+          "obrigatorios": [
+            "finalidade"
+          ]
+        },
+        "evento": {
+          "arguments": {
+            "finalidade": "TRANSPORTE",
+            "modalidade_tarifaria": "X"
+          }
+        }
+      },
+      "saida_esperada": {
+        "contrato": "registrar_finalidade_exumacao",
+        "aceito": false,
+        "bruto": {
+          "finalidade": "TRANSPORTE",
+          "modalidade_tarifaria": "X"
+        },
+        "codigo": "ARGUMENTOS_NAO_CANONICOS",
+        "motivos": [
+          "CHAVE_EXTRA:modalidade_tarifaria"
+        ]
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V12-I",
+      "vetor": "V12",
+      "titulo": "Tool com parametros opcionais: ausencia e {} sem criar valor",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "canonizar_argumentos",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "contrato": {
+          "nome": "consultar_prazo_exumacao",
+          "parametros": [
+            "detalhe"
+          ],
+          "obrigatorios": []
+        },
+        "evento": {}
+      },
+      "saida_esperada": {
+        "contrato": "consultar_prazo_exumacao",
+        "aceito": true,
+        "bruto": null,
+        "canonico": {}
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V12-J",
+      "vetor": "V12",
+      "titulo": "Valor null numa chave declarada e recusado, nao virou default",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "canonizar_argumentos",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "contrato": {
+          "nome": "registrar_finalidade_exumacao",
+          "parametros": [
+            "finalidade"
+          ],
+          "obrigatorios": [
+            "finalidade"
+          ]
+        },
+        "evento": {
+          "arguments": {
+            "finalidade": null
+          }
+        }
+      },
+      "saida_esperada": {
+        "contrato": "registrar_finalidade_exumacao",
+        "aceito": false,
+        "bruto": {
+          "finalidade": null
+        },
+        "codigo": "ARGUMENTOS_NAO_CANONICOS",
+        "motivos": [
+          "VALOR_NULO:finalidade"
+        ]
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V12-K",
+      "vetor": "V12",
+      "titulo": "Fronteira do Gateway: zero-arg canonico consulta normalmente",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "consultar_via_tool",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "contrato": {
+          "nome": "consultar_preco_exumacao",
+          "parametros": [],
+          "obrigatorios": []
+        },
+        "evento": {
+          "arguments": {}
+        },
+        "tipo_informacao": "PRECO",
+        "contexto": {
+          "servico": "EXUMACAO"
+        }
+      },
+      "saida_esperada": {
+        "resposta": {
+          "release_id": "exu-1.0-32cc48f26797",
+          "tipo_informacao": "PRECO",
+          "status": "NEEDS_CONTEXT",
+          "aplicabilidade": {
+            "servico": "EXUMACAO"
+          },
+          "encaminhar_administracao": false,
+          "precisa_de_contexto": true,
+          "motivo": "CONTEXTO_INSUFICIENTE_PARA_DETERMINAR",
+          "contexto_faltante": [
+            "modalidade_tarifaria"
+          ],
+          "opcoes_por_campo": {
+            "modalidade_tarifaria": [
+              "EXUMACAO_DE_OSSUARIO",
+              "SEPULTURA_CESSAO_GAVETA_UNITARIA_PRAZO_FIXO",
+              "SEPULTURA_CESSAO_TERRENO_PRAZO_INDETERMINADO"
+            ]
+          }
+        },
+        "argumentos": {
+          "contrato": "consultar_preco_exumacao",
+          "aceito": true,
+          "bruto": {},
+          "canonico": {}
+        }
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V12-L",
+      "vetor": "V12",
+      "titulo": "Fronteira do Gateway: argumento injetado nao produz preco",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "consultar_via_tool",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "contrato": {
+          "nome": "consultar_preco_exumacao",
+          "parametros": [],
+          "obrigatorios": []
+        },
+        "evento": {
+          "arguments": {
+            "modalidade_tarifaria": "EXUMACAO_DE_OSSUARIO"
+          }
+        },
+        "tipo_informacao": "PRECO",
+        "contexto": {
+          "servico": "EXUMACAO"
+        }
+      },
+      "saida_esperada": {
+        "resposta": {
+          "release_id": "exu-1.0-32cc48f26797",
+          "tipo_informacao": "PRECO",
+          "status": "NOT_AVAILABLE",
+          "aplicabilidade": {
+            "servico": "EXUMACAO"
+          },
+          "encaminhar_administracao": true,
+          "precisa_de_contexto": false,
+          "motivo": "ARGUMENTOS_NAO_CANONICOS"
+        },
+        "argumentos": {
+          "contrato": "consultar_preco_exumacao",
+          "aceito": false,
+          "bruto": {
+            "modalidade_tarifaria": "EXUMACAO_DE_OSSUARIO"
+          },
+          "codigo": "ARGUMENTOS_NAO_CANONICOS",
+          "motivos": [
+            "CHAVE_EXTRA:modalidade_tarifaria"
+          ]
+        }
+      },
+      "escritas_esperadas": []
+    }
+  ]
+}

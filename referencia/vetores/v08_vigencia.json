@@ -1,0 +1,127 @@
+{
+  "vetor": "V8",
+  "titulo": "Vigencia",
+  "prova": "Fronteiras inclusivas nas duas pontas, sem efeito de fuso horario.",
+  "casos": [
+    {
+      "vector_id": "V08-2026-01-06",
+      "vetor": "V8",
+      "titulo": "Fora de vigencia em 2026-01-06",
+      "catalogo_ref": "vigencia_com_fim.v1.json",
+      "release_id_esperado": "exu-1.0-a220d6597da9",
+      "operacao": "consultar",
+      "referencia": "2026-01-06",
+      "entrada": {
+        "tipo_informacao": "PRAZO",
+        "contexto": {
+          "servico": "EXUMACAO"
+        }
+      },
+      "saida_esperada": {
+        "release_id": "exu-1.0-a220d6597da9",
+        "tipo_informacao": "PRAZO",
+        "status": "NOT_AVAILABLE",
+        "aplicabilidade": {
+          "servico": "EXUMACAO"
+        },
+        "encaminhar_administracao": true,
+        "precisa_de_contexto": false,
+        "motivo": "SEM_ENTRADA_VIGENTE"
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V08-2026-01-07",
+      "vetor": "V8",
+      "titulo": "Vigente em 2026-01-07",
+      "catalogo_ref": "vigencia_com_fim.v1.json",
+      "release_id_esperado": "exu-1.0-a220d6597da9",
+      "operacao": "consultar",
+      "referencia": "2026-01-07",
+      "entrada": {
+        "tipo_informacao": "PRAZO",
+        "contexto": {
+          "servico": "EXUMACAO"
+        }
+      },
+      "saida_esperada": {
+        "release_id": "exu-1.0-a220d6597da9",
+        "tipo_informacao": "PRAZO",
+        "status": "AVAILABLE",
+        "aplicabilidade": {
+          "servico": "EXUMACAO"
+        },
+        "encaminhar_administracao": false,
+        "precisa_de_contexto": false,
+        "valor": {
+          "texto": "30 dias"
+        },
+        "source_id": "SRC_FIXTURE_A",
+        "entry_id": "FIX_PRAZO_COM_FIM",
+        "vigencia_inicio": "2026-01-07",
+        "vigencia_fim": "2026-06-30"
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V08-2026-06-30",
+      "vetor": "V8",
+      "titulo": "Vigente em 2026-06-30",
+      "catalogo_ref": "vigencia_com_fim.v1.json",
+      "release_id_esperado": "exu-1.0-a220d6597da9",
+      "operacao": "consultar",
+      "referencia": "2026-06-30",
+      "entrada": {
+        "tipo_informacao": "PRAZO",
+        "contexto": {
+          "servico": "EXUMACAO"
+        }
+      },
+      "saida_esperada": {
+        "release_id": "exu-1.0-a220d6597da9",
+        "tipo_informacao": "PRAZO",
+        "status": "AVAILABLE",
+        "aplicabilidade": {
+          "servico": "EXUMACAO"
+        },
+        "encaminhar_administracao": false,
+        "precisa_de_contexto": false,
+        "valor": {
+          "texto": "30 dias"
+        },
+        "source_id": "SRC_FIXTURE_A",
+        "entry_id": "FIX_PRAZO_COM_FIM",
+        "vigencia_inicio": "2026-01-07",
+        "vigencia_fim": "2026-06-30"
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V08-2026-07-01",
+      "vetor": "V8",
+      "titulo": "Fora de vigencia em 2026-07-01",
+      "catalogo_ref": "vigencia_com_fim.v1.json",
+      "release_id_esperado": "exu-1.0-a220d6597da9",
+      "operacao": "consultar",
+      "referencia": "2026-07-01",
+      "entrada": {
+        "tipo_informacao": "PRAZO",
+        "contexto": {
+          "servico": "EXUMACAO"
+        }
+      },
+      "saida_esperada": {
+        "release_id": "exu-1.0-a220d6597da9",
+        "tipo_informacao": "PRAZO",
+        "status": "NOT_AVAILABLE",
+        "aplicabilidade": {
+          "servico": "EXUMACAO"
+        },
+        "encaminhar_administracao": true,
+        "precisa_de_contexto": false,
+        "motivo": "SEM_ENTRADA_VIGENTE"
+      },
+      "escritas_esperadas": []
+    }
+  ]
+}

@@ -1,0 +1,120 @@
+{
+  "vetor": "V10",
+  "titulo": "Nenhuma escolha de tarifa pelo LLM",
+  "prova": "Consulta de preco sem modalidade_tarifaria nunca devolve uma das tres tarifas.",
+  "casos": [
+    {
+      "vector_id": "V10-A",
+      "vetor": "V10",
+      "titulo": "Sem contexto algum",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "consultar",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "tipo_informacao": "PRECO",
+        "contexto": {}
+      },
+      "saida_esperada": {
+        "release_id": "exu-1.0-32cc48f26797",
+        "tipo_informacao": "PRECO",
+        "status": "NEEDS_CONTEXT",
+        "aplicabilidade": {},
+        "encaminhar_administracao": false,
+        "precisa_de_contexto": true,
+        "motivo": "CONTEXTO_INSUFICIENTE_PARA_DETERMINAR",
+        "contexto_faltante": [
+          "modalidade_tarifaria",
+          "servico"
+        ],
+        "opcoes_por_campo": {
+          "modalidade_tarifaria": [
+            "EXUMACAO_DE_OSSUARIO",
+            "SEPULTURA_CESSAO_GAVETA_UNITARIA_PRAZO_FIXO",
+            "SEPULTURA_CESSAO_TERRENO_PRAZO_INDETERMINADO"
+          ],
+          "servico": [
+            "EXUMACAO"
+          ]
+        }
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V10-B",
+      "vetor": "V10",
+      "titulo": "Servico conhecido, modalidade nao",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "consultar",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "tipo_informacao": "PRECO",
+        "contexto": {
+          "servico": "EXUMACAO"
+        }
+      },
+      "saida_esperada": {
+        "release_id": "exu-1.0-32cc48f26797",
+        "tipo_informacao": "PRECO",
+        "status": "NEEDS_CONTEXT",
+        "aplicabilidade": {
+          "servico": "EXUMACAO"
+        },
+        "encaminhar_administracao": false,
+        "precisa_de_contexto": true,
+        "motivo": "CONTEXTO_INSUFICIENTE_PARA_DETERMINAR",
+        "contexto_faltante": [
+          "modalidade_tarifaria"
+        ],
+        "opcoes_por_campo": {
+          "modalidade_tarifaria": [
+            "EXUMACAO_DE_OSSUARIO",
+            "SEPULTURA_CESSAO_GAVETA_UNITARIA_PRAZO_FIXO",
+            "SEPULTURA_CESSAO_TERRENO_PRAZO_INDETERMINADO"
+          ]
+        }
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V10-C",
+      "vetor": "V10",
+      "titulo": "HOMONIMO: destino OSSUARIO nao seleciona EXUMACAO_DE_OSSUARIO",
+      "catalogo_ref": "oficial",
+      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "operacao": "consultar",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "tipo_informacao": "PRECO",
+        "contexto": {
+          "servico": "EXUMACAO",
+          "tipo_de_destino": "OSSUARIO"
+        }
+      },
+      "saida_esperada": {
+        "release_id": "exu-1.0-32cc48f26797",
+        "tipo_informacao": "PRECO",
+        "status": "NEEDS_CONTEXT",
+        "aplicabilidade": {
+          "servico": "EXUMACAO",
+          "tipo_de_destino": "OSSUARIO"
+        },
+        "encaminhar_administracao": false,
+        "precisa_de_contexto": true,
+        "motivo": "CONTEXTO_INSUFICIENTE_PARA_DETERMINAR",
+        "contexto_faltante": [
+          "modalidade_tarifaria"
+        ],
+        "opcoes_por_campo": {
+          "modalidade_tarifaria": [
+            "EXUMACAO_DE_OSSUARIO",
+            "SEPULTURA_CESSAO_GAVETA_UNITARIA_PRAZO_FIXO",
+            "SEPULTURA_CESSAO_TERRENO_PRAZO_INDETERMINADO"
+          ]
+        }
+      },
+      "escritas_esperadas": []
+    }
+  ]
+}
