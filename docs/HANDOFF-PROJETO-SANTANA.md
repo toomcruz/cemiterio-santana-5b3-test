@@ -236,11 +236,12 @@ A regra que produziu essa forma, aprendida por correção:
 | 2026-08-19 | `docs/decisoes-humanas/2026-08-19-recadastro-sucessao-administracao-provisoria.md` | RECADASTRO: condução do atendimento, sucessão, Administração Provisória, conflito familiar, linha lateral, validade e segunda Administração Provisória, troca voluntária, GOV.BR, falecimento do Administrador Provisório, consulta e divergência cadastral | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
 | 2026-08-19 | `docs/decisoes-humanas/2026-08-19-transporte-falecidos-e-restos-mortais.md` | TRANSPORTE DE FALECIDOS E RESTOS MORTAIS: escopo e três eixos (origem, situação atual, destino), ossuário alugado e perpétuo, taxa de desativação, jazigo, cremação, outro cemitério, entrada de restos externos, cinzas, documentação de transporte, valores e solicitação de agendamento | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
 | 2026-08-19 | `docs/decisoes-humanas/2026-08-19-processo-de-concessao.md` | PROCESSO DE CONCESSÃO: responsabilidade pelo processo e Setor de Concessões, iniciativa da família, pré-requisito de Recadastro, taxa inicial de R$ 94,00, dados da solicitação, pagamento, os três documentos, interpretação dos termos, documentação incompleta, assinaturas, prazo de até 180 dias, acompanhamento de processo existente e fronteira de autoridade | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
+| 2026-08-19 | `docs/decisoes-humanas/2026-08-19-comercial-basico-e-reclamacoes.md` | COMERCIAL em versão básica (`BASIC_CONSOLIDATED / FUTURE_ENRICHMENT_ALLOWED`): aquisição de jazigo, lápide, zeladoria, portão/tranca, reforma/construção e regra geral; RECLAMAÇÕES E OCORRÊNCIAS: intenção invisível, categoria operacional, ausência de gravidade automática e preservação do assunto original | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
 
 Os documentos separam explicitamente **DECISÃO HUMANA APROVADA** do que não é
 decisão — **OBSERVAÇÃO** de quem registrou, nos de EXUMAÇÃO; **REQUISITO
 CONVERSACIONAL** e **GAP / REQUISITO TÉCNICO FUTURO**, nos de RECADASTRO,
-TRANSPORTE e CONCESSÃO. Nada foi inferido ao transcrever, e as lacunas encontradas ficaram
+TRANSPORTE, CONCESSÃO e COMERCIAL/RECLAMAÇÕES. Nada foi inferido ao transcrever, e as lacunas encontradas ficaram
 registradas como lacunas — não foram preenchidas.
 
 O de tarifa e vigência traz três divergências entre a decisão e o catálogo
@@ -323,6 +324,28 @@ R$ 94,00, que agora nomeia dois componentes distintos: "abertura/movimentação 
 jazigo" (Transporte) e "taxa inicial do Processo de Concessão". **Não foram
 tratados como o mesmo componente**, e a escolha de publicá-los em uma ou duas
 entradas fica como decisão humana.
+
+O de COMERCIAL e RECLAMAÇÕES registra o Comercial como deliberadamente básico —
+`BASIC_CONSOLIDATED / FUTURE_ENRICHMENT_ALLOWED` —, o que é **escopo escolhido, e
+não lacuna**. Sua regra geral é: quer comprar → orientar o autorizado e abrir
+solicitação; **já comprou → não vender de novo**, abrir acompanhamento; sem preço
+fixo consolidado → **não inventar valor**, abrir orçamento. O robô não fecha
+venda.
+
+RECLAMAÇÕES é o tópico **mais completamente representado** do domínio: a decisão
+— intenção invisível, sem setor exclusivo, sem gravidade automática, sem apagar o
+assunto original — já está versionada em `RECLAMACOES` (`layer: OVERLAY`),
+`REL_RECLAMACAO_OVERLAY`, no `forbidden` do evento `COMPLAINT` e no invariante
+`I12` do desenho de persistência. O exemplo do decisor ("comprei uma lápide e não
+instalaram") é literalmente o exemplo já declarado na relação, e a fixture `M08`
+já o cobre. **Nenhuma contradição foi encontrada nos dois tópicos.**
+
+Fica registrado que **categoria de solicitação e overlay de goal não são a mesma
+coisa**: `GOAL_RECLAMACAO` tem `creates_case: false`, e a categoria `RECLAMAÇÃO`
+pedida pela decisão não existe como campo. E o gap de **estado de solicitação e
+acompanhamento** reaparece aqui, no Comercial — é o mesmo problema técnico já
+registrado em Concessão, visto de outro tópico, e **não foi unificado por conta
+própria**.
 
 **Decidido não é implementado.** Até a implementação chegar ao catálogo e passar
 pelos vetores, os dois primeiros continuam declarados como pendentes em
