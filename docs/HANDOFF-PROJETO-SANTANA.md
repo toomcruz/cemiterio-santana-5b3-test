@@ -239,8 +239,18 @@ pelos vetores, os dois continuam declarados como pendentes em
 POC permanece nos documentos de fase e no próprio catálogo.
 
 Implementá-las altera o catálogo oficial e, portanto, o `release_id`: os 36 casos
-que rodam contra o catálogo oficial passarão a `INVALIDO` e precisarão ser
-regerados sob o novo release. Ver seção 4 do documento de decisão.
+que rodam contra o catálogo oficial passarão a `INVALIDO` — comportamento
+esperado, **não** `FAIL` — e precisarão ser regerados sob o novo release.
+
+> **Os vetores congelados da Fase 2 não são reescritos agora.** Eles ficam
+> preservados como evidência do release `exu-1.0-32cc48f26797`. Quando a decisão
+> for implementada, a conformidade do novo release deve ser versionada de modo
+> que o conjunto antigo continue recuperável. No novo conjunto, o teste
+> equivalente ao `V04-C` precisa de uma data realmente anterior a `2026-01-01`
+> (por exemplo `2025-12-31`) para continuar provando indisponibilidade por
+> vigência.
+
+Ver seção 4 do documento de decisão.
 
 ## 11. O que o LLM nunca infere
 

@@ -52,6 +52,10 @@ vigente_ate  = 2026-12-31
 **Ambas as extremidades são inclusivas.** `2026-01-01` e `2026-12-31` são dias
 vigentes.
 
+> Esta decisão **SUBSTITUI** o estado atual do catálogo, que ainda representa
+> início em `2026-01-07` e **ausência de fim**. Não é confirmação da leitura
+> anterior: é outra data em cada uma das duas pontas. Ver 3.3 e a seção 4.
+
 | Data de referência | Comportamento exigido |
 | --- | --- |
 | anterior a `2026-01-01` | **não aplicar** esta tabela |
@@ -156,9 +160,37 @@ Um caso muda de resultado esperado por mérito, e não só por `release_id`:
 | --- | --- | --- |
 | `V04-C` — `PRECO` em `2026-01-06` | `SEM_ENTRADA_VIGENTE` | passa a estar **vigente**, porque o início recua para `2026-01-01` |
 
-Quem implementar precisa escolher outra data de referência para o `V04-C`
-continuar provando o que ele existe para provar — indisponibilidade por
-vigência —, ou mover essa prova para uma fixture.
+Consequências previstas, em ordem:
+
+1. implementar a nova vigência **altera o conteúdo autoritativo**;
+2. portanto o **`release_id` deverá mudar**;
+3. vetores ligados ao release anterior **deverão resultar `INVALIDO`** quando
+   executados contra o novo release;
+4. isso é **comportamento esperado, e não `FAIL`**;
+5. o **`V04-C` deixa de provar "antes da vigência"**, porque `2026-01-06` passa a
+   estar **dentro** da vigência decidida.
+
+### Ressalva de versionamento — não reescrever agora
+
+```
+NAO alterar nem reescrever agora os vetores congelados da Fase 2.
+```
+
+Os vetores atuais **permanecem preservados como evidência do release anterior**.
+Eles não estão errados: eles descrevem, com fidelidade, o conhecimento que
+vigorava sob `exu-1.0-32cc48f26797`. Apagá-los ou editá-los agora destruiria a
+única prova de que aquele release se comportava como se afirmou que ele se
+comportava.
+
+Quando a decisão for implementada, em fase posterior, **a conformidade do novo
+release deverá ser versionada de forma que o conjunto antigo continue
+recuperável**. O mecanismo fica a critério de quem implementar; o requisito não:
+recuperabilidade do conjunto anterior, sem depender de branch viva.
+
+No novo release, o teste equivalente ao `V04-C` deverá usar uma data
+**realmente anterior** a `2026-01-01` — por exemplo `2025-12-31` — de modo a
+continuar provando indisponibilidade por vigência. Isso vale para o **novo**
+conjunto. **O vetor congelado não é alterado agora.**
 
 ---
 
