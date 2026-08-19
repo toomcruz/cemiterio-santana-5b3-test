@@ -220,15 +220,27 @@ A regra que produziu essa forma, aprendida por correção:
 
 ## 10. Decisões humanas necessárias
 
-| Decisão | O que bloqueia |
-| --- | --- |
-| **`MAP_MODALIDADE_TARIFARIA`** | a jornada de preço terminar em valor. Hoje `PENDENTE_DE_DECISAO_HUMANA` |
-| **`MAP_VIGENCIA_TABELA_TARIFARIA`** | `07_01_2026` foi lido como dd_mm_aaaa; a leitura mm_dd_aaaa daria outra data. Nenhuma das duas está declarada na fonte |
-| Fonte oficial para 6 tipos sem entradas | `DOCUMENTOS`, `PRAZO`, `PROCEDIMENTO_ADMINISTRATIVO`, `TRANSPORTE`, `REGULARIDADE_DO_JAZIGO`, `SEMI_INTACTO` |
-| Plano/organização do GitHub | proteção técnica real de `main` |
+| Decisão | Estado | O que ainda bloqueia |
+| --- | --- | --- |
+| **`MAP_MODALIDADE_TARIFARIA`** | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** (2026-08-19) | a jornada de preço continua sem terminar em valor **até a implementação** |
+| **`MAP_VIGENCIA_TABELA_TARIFARIA`** | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** (2026-08-19) | idem |
+| Fonte oficial para 6 tipos sem entradas | pendente | `DOCUMENTOS`, `PRAZO`, `PROCEDIMENTO_ADMINISTRATIVO`, `TRANSPORTE`, `REGULARIDADE_DO_JAZIGO`, `SEMI_INTACTO` |
+| Plano/organização do GitHub | pendente | proteção técnica real de `main` |
 
-As duas primeiras estão declaradas em `mapeamentos_pendentes`, dentro do próprio
-catálogo oficial.
+As duas primeiras foram decididas em **2026-08-19** e estão registradas em
+**`docs/decisoes-humanas/2026-08-19-exumacao-tarifa-vigencia.md`**, com três
+divergências entre a decisão e o catálogo atual que precisam ser resolvidas na
+implementação.
+
+**Decidido não é implementado.** Até a implementação chegar ao catálogo e passar
+pelos vetores, os dois continuam declarados como pendentes em
+`mapeamentos_pendentes`, dentro de `santana-authority/catalogo/exumacao.v1.json`
+— que é a fonte que o runtime lê. O histórico de que estiveram pendentes desde a
+POC permanece nos documentos de fase e no próprio catálogo.
+
+Implementá-las altera o catálogo oficial e, portanto, o `release_id`: os 36 casos
+que rodam contra o catálogo oficial passarão a `INVALIDO` e precisarão ser
+regerados sob o novo release. Ver seção 4 do documento de decisão.
 
 ## 11. O que o LLM nunca infere
 
