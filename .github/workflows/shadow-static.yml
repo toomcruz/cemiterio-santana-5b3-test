@@ -24,9 +24,9 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.1.4
-      - run: deno fmt --check edge-functions contracts tests santana-conversation-domain
-      - run: deno lint edge-functions contracts tests santana-conversation-domain
-      - run: deno check edge-functions/*/index.ts contracts/*.ts santana-conversation-domain/engine/*.ts santana-conversation-domain/tools/*.ts
+      - run: deno fmt --check edge-functions contracts tests santana-conversation-domain santana-authority-gateway
+      - run: deno lint edge-functions contracts tests santana-conversation-domain santana-authority-gateway
+      - run: deno check edge-functions/*/index.ts contracts/*.ts santana-conversation-domain/engine/*.ts santana-conversation-domain/tools/*.ts santana-authority-gateway/gateway.ts santana-authority-gateway/conformidade/executar_vetores.ts
       - run: deno test --allow-env --allow-read tests/unit tests/shadow
       - name: P0 conversacional 5B.4-A (C01-C16, sem rede)
         run: deno test --allow-read santana-conversation-domain/tests/p0
@@ -38,11 +38,20 @@ jobs:
           deno run --allow-read --allow-write santana-conversation-domain/tools/emit_roundtrip.ts
           deno run --allow-read --allow-write santana-conversation-domain/tools/emit_language_e2e.ts
           git diff --exit-code -- tests/postgres/p23_roundtrip_generated.sql tests/postgres/p26_language_e2e_generated.sql
-      - name: Fase 2 - vetores de conformidade V1-V12 na implementacao de referencia
+      - name: Vetores V1-V12 na implementacao de referencia (Python, offline)
         # Offline: so stdlib do Python, nenhuma rede, nenhum modelo, nenhuma chave.
-        run: python3 referencia/runner/executar_vetores.py
-      - name: Fase 2 - testes da referencia (inclui mutacoes que exigem reprovacao dos vetores)
+        run: VETORES_RELATORIO=/tmp/rel-referencia.json VETORES_DESPEJO=/tmp/dump-referencia.json python3 referencia/runner/executar_vetores.py
+      - name: Testes da referencia (inclui mutacoes que exigem reprovacao dos vetores)
         run: python3 -m unittest discover -s referencia/tests -t referencia/tests
+      - name: Vetores V1-V12 no Gateway TS/Deno (offline)
+        run: VETORES_RELATORIO=/tmp/rel-ts.json VETORES_DESPEJO=/tmp/dump-ts.json deno run --allow-env --allow-read --allow-write --allow-sys santana-authority-gateway/conformidade/executar_vetores.ts
+      - name: Testes do Gateway TS/Deno (conformidade e garantias estruturais)
+        run: deno test --allow-env --allow-read --allow-write --allow-sys santana-authority-gateway/tests
+      - name: Conformidade Python x TS/Deno, byte a byte
+        run: |
+          python3 conformidade/comparar.py \
+            --relatorio referencia=/tmp/rel-referencia.json --relatorio ts=/tmp/rel-ts.json \
+            --despejo referencia=/tmp/dump-referencia.json --despejo ts=/tmp/dump-ts.json
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq ripgrep >/dev/null
       - run: rg --version
       - run: bash tests/postgres/verify_migration_manifest.sh

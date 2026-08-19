@@ -1,0 +1,305 @@
+{
+  "implementacao": "referencia-python",
+  "total_de_casos": 47,
+  "pass": 47,
+  "fail": 0,
+  "invalido": 0,
+  "por_vetor": {
+    "V1": "PASS",
+    "V10": "PASS",
+    "V11": "PASS",
+    "V12": "PASS",
+    "V2": "PASS",
+    "V3": "PASS",
+    "V4": "PASS",
+    "V5": "PASS",
+    "V6": "PASS",
+    "V7": "PASS",
+    "V8": "PASS",
+    "V9": "PASS"
+  },
+  "casos": [
+    {
+      "vector_id": "V01-A",
+      "vetor": "V1",
+      "titulo": "Especificidade vence a entrada generica",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V01-B",
+      "vetor": "V1",
+      "titulo": "Entrada sem criterio de aplicabilidade",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V01-C",
+      "vetor": "V1",
+      "titulo": "Desempate por entry_id, catalogo na ordem ZZZ,AAA",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V01-D",
+      "vetor": "V1",
+      "titulo": "Desempate por entry_id, catalogo na ordem AAA,ZZZ",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V02-A",
+      "vetor": "V2",
+      "titulo": "Um campo faltante",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V02-B",
+      "vetor": "V2",
+      "titulo": "Dois campos faltantes: opcoes nao se misturam",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V03-A",
+      "vetor": "V3",
+      "titulo": "Mesma especificidade, valores divergentes",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V04-A",
+      "vetor": "V4",
+      "titulo": "Tipo de informacao desconhecido",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V04-B",
+      "vetor": "V4",
+      "titulo": "Tipo declarado, exige fonte oficial, nada publicado",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V04-C",
+      "vetor": "V4",
+      "titulo": "Entradas existem, nenhuma vigente na data",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V04-D",
+      "vetor": "V4",
+      "titulo": "Tipo que dispensa fonte oficial e nao tem entradas",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V05-A",
+      "vetor": "V5",
+      "titulo": "Modalidade que nao existe na tabela",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V06-A",
+      "vetor": "V6",
+      "titulo": "AVAILABLE emite campo de canned e carrega proveniencia",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V06-B",
+      "vetor": "V6",
+      "titulo": "NEEDS_CONTEXT nao emite campo nem proveniencia",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V06-C",
+      "vetor": "V6",
+      "titulo": "NOT_AVAILABLE nao emite campo nem proveniencia",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V07-A",
+      "vetor": "V7",
+      "titulo": "Entrada de fonte reprovada nao entra no catalogo carregado",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V07-B",
+      "vetor": "V7",
+      "titulo": "O tipo servido so pela fonte reprovada fica indisponivel",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V07-C",
+      "vetor": "V7",
+      "titulo": "Schema desconhecido falha fechada com codigo estruturado",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V08-2026-01-06",
+      "vetor": "V8",
+      "titulo": "Fora de vigencia em 2026-01-06",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V08-2026-01-07",
+      "vetor": "V8",
+      "titulo": "Vigente em 2026-01-07",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V08-2026-06-30",
+      "vetor": "V8",
+      "titulo": "Vigente em 2026-06-30",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V08-2026-07-01",
+      "vetor": "V8",
+      "titulo": "Fora de vigencia em 2026-07-01",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V09-A",
+      "vetor": "V9",
+      "titulo": "Texto adversarial como valor de fato: recusa e zero escrita",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V09-B",
+      "vetor": "V9",
+      "titulo": "Texto adversarial como contexto: nao seleciona entrada",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V09-C",
+      "vetor": "V9",
+      "titulo": "Texto adversarial como argumento de tool: recusado na fronteira",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V10-A",
+      "vetor": "V10",
+      "titulo": "Sem contexto algum",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V10-B",
+      "vetor": "V10",
+      "titulo": "Servico conhecido, modalidade nao",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V10-C",
+      "vetor": "V10",
+      "titulo": "HOMONIMO: destino OSSUARIO nao seleciona EXUMACAO_DE_OSSUARIO",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V11-A",
+      "vetor": "V11",
+      "titulo": "Fato desconhecido no catalogo",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V11-B",
+      "vetor": "V11",
+      "titulo": "Fato autoritativo: so a Administracao confirma",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V11-C",
+      "vetor": "V11",
+      "titulo": "Fato derivado por regra deterministica",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V11-D",
+      "vetor": "V11",
+      "titulo": "Origem que nao registra fato de municipe",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V11-E",
+      "vetor": "V11",
+      "titulo": "Valor vazio",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V11-F",
+      "vetor": "V11",
+      "titulo": "Valor fora do dominio fechado",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V11-G",
+      "vetor": "V11",
+      "titulo": "Fato nao extraivel SEM ser derivado nem autoritativo",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V12-A",
+      "vetor": "V12",
+      "titulo": "Forma canonica: arguments = {} lido como {}, nunca como null",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V12-B",
+      "vetor": "V12",
+      "titulo": "Chave ausente numa tool de zero argumentos normaliza para {}",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V12-C",
+      "vetor": "V12",
+      "titulo": "null numa tool de zero argumentos normaliza para {}, e o bruto e preservado",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V12-D",
+      "vetor": "V12",
+      "titulo": "Modalidade injetada numa consulta de preco e recusada",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V12-E",
+      "vetor": "V12",
+      "titulo": "Argumento que nao e mapa e recusado",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V12-F",
+      "vetor": "V12",
+      "titulo": "__missing__ nunca vira valor",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V12-G",
+      "vetor": "V12",
+      "titulo": "Tool com obrigatorio NAO normaliza ausencia para {}",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V12-H",
+      "vetor": "V12",
+      "titulo": "Tool com parametros: chave extra continua recusada",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V12-I",
+      "vetor": "V12",
+      "titulo": "Tool com parametros opcionais: ausencia e {} sem criar valor",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V12-J",
+      "vetor": "V12",
+      "titulo": "Valor null numa chave declarada e recusado, nao virou default",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V12-K",
+      "vetor": "V12",
+      "titulo": "Fronteira do Gateway: zero-arg canonico consulta normalmente",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V12-L",
+      "vetor": "V12",
+      "titulo": "Fronteira do Gateway: argumento injetado nao produz preco",
+      "resultado": "PASS"
+    }
+  ]
+}

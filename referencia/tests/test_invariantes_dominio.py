@@ -37,7 +37,7 @@ from santana_referencia.dominio import catalog  # noqa: E402
 FACTS = REPO / "santana-conversation-domain" / "facts.v1.json"
 VALIDATE_TS = REPO / "santana-conversation-domain" / "engine" / "validate.ts"
 CATALOG_TS = REPO / "santana-conversation-domain" / "engine" / "catalog.ts"
-FIXTURE = RAIZ / "vetores" / "fixtures" / "dominio_fato_nao_extraivel.json"
+FIXTURE = REPO / "conformidade" / "vetores" / "fixtures" / "dominio_fato_nao_extraivel.json"
 
 CAMPOS = ("ai_extractable", "derived", "authoritative_only")
 
@@ -153,7 +153,7 @@ class AFixtureNaoContaminaODominio(unittest.TestCase):
 
     def test_o_escopo_de_fixture_e_vazio_por_padrao(self) -> None:
         catalog.definir_escopo_de_fixture(())
-        self.assertEqual(catalog.escopo_de_fatos(), catalog.POC_FACT_CODES)
+        self.assertEqual(catalog.escopo_de_fatos(), catalog.fact_codes_do_perfil())
         self.assertNotIn("fixture_non_extractable_fact", catalog.fact_specs())
 
 
@@ -185,13 +185,39 @@ class OCatalogoOficialViveForaDaReferencia(unittest.TestCase):
         self.assertEqual(catalogo_oficial.release_id(), "exu-1.0-32cc48f26797")
 
     def test_uma_unica_copia_operacional_do_catalogo(self) -> None:
-        copias = [
-            p
-            for p in REPO.rglob("exumacao.v1.json")
-            if ".git" not in p.parts and "node_modules" not in p.parts
-        ]
-        self.assertEqual([p.relative_to(REPO).as_posix() for p in copias],
-                         ["santana-authority/catalogo/exumacao.v1.json"])
+        """Uma unica copia OPERACIONAL, identificada por conteudo.
+
+        A versao anterior deste teste casava por NOME de arquivo e reprovou
+        quando o perfil de conformidade nasceu tambem como `exumacao.v1.json`.
+        O nome era o criterio errado: o que nao pode existir em duplicata e um
+        documento com a FORMA de catalogo oficial. O perfil de conformidade nao
+        tem essa forma — ele nao declara tipo de informacao nem entrada — e as
+        fixtures tem, mas vivem confinadas ao diretorio de fixtures.
+        """
+        fixtures = REPO / "conformidade" / "vetores" / "fixtures"
+        catalogos = []
+        for caminho in REPO.rglob("*.json"):
+            if ".git" in caminho.parts or fixtures in caminho.parents:
+                continue
+            try:
+                doc = json.loads(caminho.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                continue
+            if not isinstance(doc, dict):
+                continue
+            if {"schema_version", "tipos_de_informacao", "entradas"} <= set(doc):
+                catalogos.append(caminho.relative_to(REPO).as_posix())
+        self.assertEqual(sorted(catalogos), ["santana-authority/catalogo/exumacao.v1.json"])
+
+    def test_o_perfil_de_conformidade_nao_e_catalogo(self) -> None:
+        """O perfil declara escopo tecnico, nunca conhecimento administrativo."""
+        perfil = json.loads(
+            (REPO / "conformidade" / "perfis" / "exumacao.v1.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(set(perfil) & {"tipos_de_informacao", "entradas", "fontes"}, set())
+        self.assertEqual(perfil["topic_code"], "EXUMACAO")
+        self.assertEqual(perfil["primary_goal"], "GOAL_EXUMACAO")
+        self.assertEqual(tuple(perfil["fact_codes"]), catalog.fact_codes_do_perfil())
 
 
 if __name__ == "__main__":

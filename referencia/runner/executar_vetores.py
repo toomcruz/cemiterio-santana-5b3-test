@@ -35,10 +35,11 @@ from santana_referencia.dominio import authority, catalog  # noqa: E402
 from santana_referencia.gateway import catalogo_oficial  # noqa: E402
 from santana_referencia.gateway.gateway import GATEWAY  # noqa: E402
 
-VETORES = RAIZ / "vetores"
+RAIZ_DO_REPO_ = RAIZ.parent
+VETORES = RAIZ_DO_REPO_ / "conformidade" / "vetores"
 FIXTURES = VETORES / "fixtures"
 
-RAIZ_DO_REPO = RAIZ.parent
+RAIZ_DO_REPO = RAIZ_DO_REPO_
 DOMINIO = "santana-conversation-domain"
 
 PASS = "PASS"
@@ -68,8 +69,10 @@ def montar_dominio(ref: str) -> Path:
     final. Assim e estruturalmente impossivel a fixture alterar um fato que ja
     existe — ela nao tem onde escrever isso.
 
-    `santana-authority` entra como link simbolico para a raiz real: a resolucao
-    padrao do catalogo oficial continua sendo exercitada de verdade.
+    `santana-authority` e `conformidade` entram como links simbolicos para os
+    reais: a resolucao padrao do catalogo oficial e do perfil de conformidade
+    continua sendo exercitada de verdade, e a fixture nao ganha um perfil
+    proprio pela porta dos fundos.
     """
     if ref in _dominios_montados:
         return _dominios_montados[ref]
@@ -92,7 +95,12 @@ def montar_dominio(ref: str) -> Path:
         doc["facts"].append(fato)
     alvo.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
-    (raiz / "santana-authority").symlink_to(RAIZ_DO_REPO / "santana-authority")
+    # Os dois diretorios neutros entram como link simbolico para os reais: a
+    # fixture troca APENAS o catalogo de dominio. O catalogo oficial e o perfil
+    # de conformidade continuam sendo os de verdade, resolvidos pelo caminho
+    # padrao.
+    for neutro in ("santana-authority", "conformidade"):
+        (raiz / neutro).symlink_to(RAIZ_DO_REPO / neutro)
     _dominios_montados[ref] = raiz
     return raiz
 
@@ -269,7 +277,32 @@ def carregar_vetores() -> list[dict[str, Any]]:
     return vetores
 
 
+def despejar() -> dict[str, dict[str, str]]:
+    """Saida REAL canonizada de cada caso, para comparacao byte a byte.
+
+    E o modo forte da comparacao entre implementacoes: em vez de confiar que
+    dois PASS implicam saidas iguais, compara-se o que cada uma realmente
+    emitiu.
+    """
+    despejo: dict[str, dict[str, str]] = {}
+    for vetor in carregar_vetores():
+        real = executar(vetor)
+        despejo[vetor["vector_id"]] = {
+            "saida": canonizar_json(real["saida"]),
+            "escritas": canonizar_json(real["escritas"]),
+            "release_id": real["release_id"] or "",
+        }
+    return despejo
+
+
 def main() -> int:
+    destino_despejo = os.environ.get("VETORES_DESPEJO")
+    if destino_despejo:
+        Path(destino_despejo).write_text(
+            json.dumps(despejar(), ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
     vetores = carregar_vetores()
     resultados = [avaliar(v) for v in vetores]
 
