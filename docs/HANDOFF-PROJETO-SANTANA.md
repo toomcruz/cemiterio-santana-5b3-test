@@ -239,13 +239,28 @@ Os dois documentos separam explicitamente **DECISÃO HUMANA APROVADA** de
 encontradas ficaram registradas como lacunas — não foram preenchidas.
 
 O de tarifa e vigência traz três divergências entre a decisão e o catálogo
-atual. O de procedimento traz oito observações, das quais três são lacunas a
-confirmar com o decisor: a assimetria de urna entre Quadra Geral e Jazigo em
-crematório e outro cemitério, a ausência de fluxo para a origem
-`RETIRADA_OU_DESATIVACAO_DE_OSSUARIO`, e o fato de os seis destinos decididos
-não caberem no domínio fechado atual de `transport_destination`, que tem quatro
-valores e não separa ossuário alugado de perpétuo — diferença que vale
-R$ 2.569,05 no total ao munícipe.
+atual. O de procedimento traz oito observações. Duas são lacunas a confirmar com
+o decisor — a assimetria de urna entre Quadra Geral e Jazigo em crematório e
+outro cemitério, e a ausência de fluxo para a origem
+`RETIRADA_OU_DESATIVACAO_DE_OSSUARIO`. A terceira não é lacuna de decisão:
+
+```
+O5   DOMAIN_MODEL_GAP / DECIDED_KNOWLEDGE_AWAITING_FUTURE_IMPLEMENTATION
+```
+
+O conhecimento humano está decidido; o **modelo técnico** é que ainda não o
+representa. `transport_destination` colapsa num campo único eixos que a decisão
+separa: destino principal, subtipo de ossuário (alugado × perpétuo, diferença de
+R$ 2.569,05 ao munícipe) e relação com o jazigo (próprio × outro). E
+`AINDA_NAO_SABE` **não é destino** — é estado conversacional, pendência de
+decisão do munícipe.
+
+O documento registra o desenho conceitual desses eixos **como documentação do
+gap**, explicitamente não como enum, schema ou código. Os quatro valores novos
+(R$ 386,65 · R$ 2.955,70 · R$ 250,00 · R$ 1.427,86) são registrados como
+**componentes autoritativos distintos de cobrança**, não como modalidades
+tarifárias equivalentes: os totais ao munícipe são composições desses componentes
+com a tarifa de exumação da origem.
 
 **Decidido não é implementado.** Até a implementação chegar ao catálogo e passar
 pelos vetores, os dois continuam declarados como pendentes em

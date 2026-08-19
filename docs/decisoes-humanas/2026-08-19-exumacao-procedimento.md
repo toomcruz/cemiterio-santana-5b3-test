@@ -310,17 +310,52 @@ Pode ser deliberado — nada na decisão diz que deveria ser simétrico, e a
 operação pode ter razão para isso. **Não ajustei nada.** Fica registrado para
 confirmação antes de virar tabela publicada.
 
-## O3. Quatro valores desta decisão ainda não existem no catálogo
+## O3. Quatro valores ainda não existem no catálogo — e são componentes, não modalidades
 
 O catálogo oficial (`santana-authority/catalogo/exumacao.v1.json`) publica hoje
 exatamente três valores: `R$ 106,57`, `R$ 351,67` e `R$ 586,04`.
 
-Não existem lá: **R$ 386,65** (ossuário alugado), **R$ 2.955,70** (ossuário
-perpétuo), **R$ 250,00** (urna para ossos) e **R$ 1.427,86** (permanência +3
-anos por semi-intacto).
+Não existem lá quatro valores desta decisão. E eles **não devem ser tratados
+automaticamente como novas `modalidade_tarifaria` equivalentes entre si**: cada
+um é um **componente autoritativo distinto de cobrança**, com natureza própria.
 
-Implementar exige publicá-los como entradas com fonte, aplicabilidade e vigência
-declaradas — o mesmo rito das três tarifas atuais.
+| Valor | Componente | Natureza |
+| --- | --- | --- |
+| R$ 386,65 | ossuário alugado | contratação por período (5 anos, renovável — item 7) |
+| R$ 2.955,70 | aquisição de ossuário perpétuo | aquisição individual, sem renovação (item 8) |
+| R$ 250,00 | urna para ossos | item físico, cobrado "quando aplicável" (item 5) |
+| R$ 1.427,86 | permanência por mais 3 anos | decorrência de semi-intacto (item 6) |
+
+Os totais apresentados ao munícipe **podem ser composições** desses componentes
+com a tarifa de exumação aplicável à origem:
+
+```
+QUADRA GERAL -> OSSUARIO ALUGADO
+
+  EXUMACAO_QUADRA_GERAL   R$   351,67
+  OSSUARIO_ALUGADO        R$   386,65
+                          -----------
+  TOTAL                   R$   738,32
+```
+
+**Não criar agora uma tarifa monolítica apenas para representar essa
+combinação.** Uma entrada única de R$ 738,32 perderia a informação de que ali há
+dois fatos administrativos diferentes.
+
+> **JUSTIFICATIVA TÉCNICA / INFERÊNCIA — não é decisão humana.**
+>
+> O parágrafo a seguir é raciocínio de quem registrou, sobre por que a fusão
+> quebraria a implementação. Ele **não** foi aprovado pelo decisor e **não**
+> vincula ninguém; se conflitar com decisão futura, a decisão prevalece.
+>
+> O item 6 depende da separação entre os componentes: quando dá semi-intacto e o
+> destino era ossuário, cobra-se a permanência e **não** se cobra o ossuário
+> naquele momento. Uma tarifa fundida não consegue deixar de cobrar metade de si
+> mesma.
+
+Implementar exige publicar cada componente com fonte, aplicabilidade e vigência
+declaradas — o mesmo rito das três tarifas atuais —, e decidir como a composição
+é representada. **Como compor não está decidido aqui**, e não presumi.
 
 ## O4. A origem "retirada/desativação de ossuário" não aparece nestas decisões
 
@@ -334,23 +369,66 @@ regra de semi-intacto.
 Isso pode ser deliberado — talvez aquele caso não se atenda por este fluxo.
 **Não inventei o fluxo que falta.** Fica registrado como lacuna a confirmar.
 
-## O5. Os destinos decididos não cabem no domínio fechado atual
+## O5. Modelo de domínio não representa os destinos decididos
+
+```
+DOMAIN_MODEL_GAP / DECIDED_KNOWLEDGE_AWAITING_FUTURE_IMPLEMENTATION
+```
+
+**O conhecimento humano está decidido.** O gap está no **modelo técnico atual**,
+que ainda não representa corretamente todas as decisões consolidadas. Não é
+decisão pendente; é implementação pendente.
 
 `transport_destination`, em `santana-conversation-domain/facts.v1.json`, aceita
 hoje quatro valores: `OUTRO_CEMITERIO`, `JAZIGO_FAMILIA`, `CREMATORIO`,
-`OSSUARIO`.
+`OSSUARIO`. As decisões dos itens 4 e 9 falam de coisas que esse campo único não
+distingue: dois tipos de ossuário (alugado e perpétuo, que diferem em
+**R$ 2.569,05** no total ao munícipe), o próprio jazigo versus outro jazigo, e a
+situação em que o munícipe **ainda não decidiu**.
 
-A decisão do item 4 apresenta **seis** opções e separa dois tipos de ossuário
-(alugado e perpétuo), que hoje colapsam num único `OSSUARIO` — e a diferença
-entre eles vale **R$ 2.569,05** no total ao munícipe. A opção "ainda não sabe"
-também não existe como valor.
+### `AINDA_NAO_SABE` não é destino
 
-O item 9 acrescenta ainda **"outro jazigo"**, que não é `JAZIGO_FAMILIA` (o
-próprio) nem `OUTRO_CEMITERIO`.
+**Correção conceitual registrada:** `AINDA_NAO_SABE` **não é um destino
+administrativo**. É um **estado conversacional** — pendência de decisão do
+munícipe. Tratá-lo como valor de destino colocaria uma ausência de decisão no
+mesmo campo que decisões reais, e o item 4 exige justamente que o destino esteja
+**definido** antes de abrir a solicitação de agendamento.
 
-Implementar exige revisar o domínio fechado. **Não presumi qual valor novo
-corresponde a qual opção** — isso é decisão de domínio, e mapear por semelhança
-de nome é exatamente o erro que `MAP_MODALIDADE_TARIFARIA` existe para impedir.
+### Não assumir seis novos valores num campo só
+
+**Não se deve assumir** que os destinos precisam virar seis novos valores dentro
+de `transport_destination`. O que a decisão expõe é que há **eixos diferentes**
+hoje colapsados num campo único. Separá-los conceitualmente é o desenho futuro:
+
+```
+DESTINO PRINCIPAL
+  OSSUARIO
+  JAZIGO
+  CREMATORIO
+  OUTRO_CEMITERIO
+
+SUBTIPO / MODALIDADE DE OSSUARIO
+  ALUGADO_SANTANA
+  PERPETUO_SANTANA
+
+RELACAO COM JAZIGO
+  PROPRIO_JAZIGO
+  OUTRO_JAZIGO
+
+ESTADO CONVERSACIONAL
+  AINDA_NAO_SABE
+```
+
+> **Isto é representação conceitual para documentar o gap.** Não é enum, não é
+> schema, não é código, e **não deve ser transformado em nenhum dos três agora**.
+> Os nomes acima são ilustrativos do eixo, não identificadores propostos.
+
+### O que continua proibido
+
+Nada disto autoriza mapear caso novo por semelhança de nome. `JAZIGO_FAMILIA`
+(valor atual de destino) e `JAZIGO_DE_FAMILIA` (origem, na decisão de tarifa do
+mesmo dia) continuam sendo coisas diferentes, e a proximidade dos nomes é
+precisamente o risco que `MAP_MODALIDADE_TARIFARIA` existe para impedir.
 
 ## O6. Seis tipos de informação seguem sem entradas publicadas
 
