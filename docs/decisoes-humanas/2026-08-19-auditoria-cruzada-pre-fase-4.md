@@ -19,6 +19,18 @@ enums, vetores, Gateway, referência Python, Supabase, n8n, workflows nem
 `docs/decisoes-humanas/`. Onde a auditoria e uma decisão humana divergirem, a
 decisão humana prevalece.
 
+> **ATUALIZAÇÃO — fechamento de P1 a P6.**
+> As seis decisões humanas pendentes identificadas em §21 foram **decididas** e
+> registradas em `docs/decisoes-humanas/2026-08-19-fechamento-p1-p6.md`. Esta
+> auditoria foi atualizada em §19 (`C-01`), §20 (`G19`, `G20`), §21 e §22. O
+> corpo analítico das seções 1 a 18 **não foi reescrito**: ele descreve o estado
+> auditado, e as seções de resultado registram o que mudou depois.
+>
+> ```
+> DECISOES_HUMANAS_PENDENTES = 0
+> PRE_PHASE_4_GATE           = PASS
+> ```
+
 ---
 
 # 1. Base documental validada
@@ -676,12 +688,38 @@ verdadeiros.
 
 | ID | Tópicos | Arquivo A | Arquivo B | Contradição | Severidade | Decisão humana existente? | Ação necessária |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| **C-01** | Exumação × Transporte | `2026-08-19-exumacao-procedimento.md`, item 7, linha 142: *"Sem renovação, **caracteriza abandono** e os despojos vão para **ossuário geral**"* | `2026-08-19-transporte-falecidos-e-restos-mortais.md`, `A2`: *"poderá ser desativado"*; **não afirmar** automaticidade nem prazo exato de 1 mês | A não renovação produz consequência automática (A) ou apenas possibilidade sujeita a verificação (B) | **MEDIUM** | **SIM, parcial.** O decisor determinou que a formulação de `A2` prevalece sobre a automaticidade | Resíduo aberto: **o que passa a acionar** a desativação, e se "abandono" segue caracterizado pela falta de renovação. Registrado como `PENDENCIA_DE_RECONCILIACAO_DOCUMENTAL` na seção "Correção de A2" |
+| **C-01** | Exumação × Transporte | `2026-08-19-exumacao-procedimento.md`, item 7, linha 142: *"Sem renovação, **caracteriza abandono** e os despojos vão para **ossuário geral**"* | `2026-08-19-transporte-falecidos-e-restos-mortais.md`, `A2`: *"poderá ser desativado"*; **não afirmar** automaticidade nem prazo exato de 1 mês | A não renovação produz consequência automática (A) ou apenas possibilidade sujeita a verificação (B) | **MEDIUM** | **SIM, integral** (era parcial) | **RESOLVIDA / SUPERADA por `P1`** — ver abaixo |
 
 ```
-CONTRADICOES FUNCIONAIS = 1
-CRITICAL = 0   HIGH = 0   MEDIUM = 1   LOW = 0
+CONTRADICOES FUNCIONAIS   = 1
+CONTRADICOES EM ABERTO    = 0
+CRITICAL = 0   HIGH = 0   MEDIUM = 1 (resolvida)   LOW = 0
 ```
+
+## `C-01` — resolvida por `P1`
+
+**O achado não é apagado.** Ele fica registrado acima como encontrado, e aqui
+como resolvido.
+
+`P1` respondeu diretamente as duas metades do resíduo:
+
+| Pergunta que estava aberta | Resposta de `P1` |
+| --- | --- |
+| "abandono" segue caracterizado pela simples falta de renovação? | **não** — *"A falta de renovação NÃO caracteriza automaticamente abandono"* |
+| o que passa a acionar a desativação? | **a verificação da Administração** — *"a Administração verifica a situação atual"*; a desativação também não é afirmada automaticamente |
+
+`P1` acrescenta ainda a faixa de **1 ano**, que não existia em nenhuma decisão
+anterior: até 1 ano de vencimento não se alerta automaticamente; acima de 1 ano
+informa-se que a situação precisa ser verificada — e ainda assim **sem** afirmar
+abandono ou desativação.
+
+O trecho do item 7 fica **explicitamente superado** quanto à automaticidade, e
+**permanece versionado** como histórico. A `PENDENCIA_DE_RECONCILIACAO_DOCUMENTAL`
+registrada na decisão de Transporte está **encerrada**.
+
+Registro que `P1` **não** afirma que abandono e ossuário geral deixaram de
+existir como desfecho possível: ela remove a automaticidade e o anúncio
+automático, e encaminha à verificação. Nada além disso foi inferido.
 
 ## Pontos de atenção que **não** são contradições
 
@@ -1008,54 +1046,112 @@ conforme §20.
 
 ---
 
+### `G19` — Gap de proveniência: decisão humana não é um tipo de fonte
+
+| | |
+| --- | --- |
+| **Domínio** | catálogo autoritativo — modelo de proveniência |
+| **Descrição** | os cinco valores de `P6` têm decisão humana e vigência, mas **nenhuma fonte documental formal**. O catálogo exige `source_id` em toda entrada, e `fontes[]` só conhece os tipos `CATALOGO_DOMINIO` e `TABELA_TARIFARIA_OFICIAL` |
+| **Evidência** | `santana-authority/catalogo/exumacao.v1.json`: quatro fontes declaradas, nenhuma cobre R$ 386,65 · R$ 2.955,70 · R$ 250,00 · R$ 1.427,86 · R$ 94,00 |
+| **Decisão que o exige** | `P6` — e `P6` proíbe expressamente inventar portaria, decreto, URL ou documento inexistente |
+| **Representação atual** | nenhuma — não existe tipo de fonte para "decisão humana operacional consolidada" |
+| **Impacto** | bloqueia a **publicação** dos cinco valores; não bloqueia o registro da decisão |
+| **Dependências** | `G08` |
+| **Risco** | `HIGH` |
+| **FASE 4 REQUIRED** | **YES** |
+| **Ressalva** | resolver **estendendo o modelo de proveniência**, nunca fabricando um documento que não foi fornecido |
+
+---
+
+### `G20` — Origem administrativa como eixo próprio, separada da localização física
+
+| | |
+| --- | --- |
+| **Domínio** | domínio de Exumação/Transporte |
+| **Descrição** | `P3` decide que a origem é informação própria, com três categorias, e que a **localização física** (Quadra Geral 1/2/3, terreno, rua) é **outro eixo** que não determina a modalidade tarifária |
+| **Evidência** | nenhuma das três categorias existe no domínio; `burial_reference` é `TEXT` livre e mistura os dois eixos |
+| **Decisão que o exige** | `P3`; Exumação tarifa, divergência 3.2 (agora encerrada) |
+| **Representação atual** | nenhuma |
+| **Impacto** | sem a origem, a modalidade tarifária não é resolvível — e derivá-la do destino é proibido |
+| **Dependências** | — |
+| **Risco** | `HIGH` |
+| **FASE 4 REQUIRED** | **YES** |
+| **Ressalva** | duas colisões de nome registradas em `P3` e **não resolvidas**: `OSSUARIO` existe como valor de **destino** e agora como categoria de **origem**; e a terceira categoria aparece como `OSSUARIO` em `P3` e `RETIRADA_OU_DESATIVACAO_DE_OSSUARIO` na decisão de tarifa. **Não** presumir identidade nem distinção — `P3` regra 5 mantém os eixos separados |
+
+---
+
 ## Resumo por risco
 
 ```
-CRITICAL   G01  G02  G03  G05  G12                    5
-HIGH       G04  G06  G07  G08  G09  G10  G11          7
-MEDIUM     G13  G16  G17  G18                         4
-LOW        G14  G15                                   2
-                                                     --
-                                            TOTAL    18
-FASE 4 REQUIRED = YES                                16
-FASE 4 REQUIRED = NO                                  2
+CRITICAL   G01  G02  G03  G05  G12                          5
+HIGH       G04  G06  G07  G08  G09  G10  G11  G19  G20      9
+MEDIUM     G13  G16  G17  G18                               4
+LOW        G14  G15                                         2
+                                                           --
+                                                  TOTAL    20
+FASE 4 REQUIRED = YES                                      18
+FASE 4 REQUIRED = NO                                        2
 ```
+
+`G19` e `G20` **nascem do fechamento de P1–P6**: são o resíduo técnico das
+decisões, e não pendências humanas. `P6` decidiu a vigência e deixou explícito
+que a fonte não deve ser fabricada; `P3` decidiu que a origem é eixo próprio e
+deixou o desenho para a Fase 4.
 
 ---
 
 # 21. Decisões humanas ainda pendentes
 
-Critério aplicado, conforme §21: entram apenas questões em que **falta uma regra
-operacional humana** sem a qual a implementação não pode ser feita
-corretamente. Ficaram **de fora** decisões já documentadas, perguntas
-respondíveis pelo repositório e escolhas puramente técnicas projetáveis na
-Fase 4.
+```
+DECISOES_HUMANAS_PENDENTES = 0
+```
 
-| ID | Questão | Por que só um humano responde | Origem |
+As seis pendências identificadas nesta auditoria foram **todas decididas** e
+registradas em `docs/decisoes-humanas/2026-08-19-fechamento-p1-p6.md`. A tabela
+original é preservada abaixo com o desfecho de cada uma — **o histórico do
+achado não é apagado**.
+
+| ID | Questão que estava aberta | Estado | Desfecho |
 | --- | --- | --- | --- |
-| **P1** | O que passa a **acionar** a desativação do ossuário alugado, agora que ela não é automática — e se "abandono" segue caracterizado pela simples falta de renovação | é regra operacional do cemitério; nenhuma fonte no repositório responde | resíduo de `C-01`; `PENDENCIA_DE_RECONCILIACAO_DOCUMENTAL` em Transporte |
-| **P2** | Os códigos de modalidade levam ou não o prefixo `EXUMACAO_` | renomear código de dado autoritativo altera `release_id`; não é escolha técnica | Exumação tarifa, divergência 3.1 |
-| **P3** | Como a **situação de origem** chega ao caso: fato novo de domínio fechado, ou pergunta direta ao munícipe | as três chaves de origem não existem no domínio, e derivar do destino é **proibido** pela própria decisão | Exumação tarifa, divergência 3.2 |
-| **P4** | A urna de R$ 250,00 deve mesmo ser assimétrica entre Quadra Geral e Jazigo nos destinos crematório e outro cemitério | pode ser deliberado; a decisão não diz, e inferir simetria seria inventar | Exumação `O2` |
-| **P5** | R$ 94,00 é **um** componente ou **dois** (movimentação em jazigo × taxa inicial de Concessão) | depende de os dois serem administrativamente a mesma cobrança — fato do cemitério, não do software | Concessão `C3` |
-| **P6** | **Vigência e fonte oficial** dos cinco componentes novos de cobrança | `MAP_VIGENCIA` cobre a tabela de exumação; os componentes não têm vigência declarada, e publicar sem ela viola o rito das três tarifas atuais | Exumação `O3`, Transporte `C3` |
+| **P1** | O que aciona a desativação do ossuário alugado, e se "abandono" segue caracterizado pela falta de renovação | **RESOLVIDA** | falta de renovação **não** caracteriza abandono automaticamente; desativação **não** é afirmada automaticamente; a Administração verifica. Nova faixa: até 1 ano não alertar; acima de 1 ano informar que a situação precisa ser verificada. **Supera** o item 7 da decisão de Exumação quanto à automaticidade |
+| **P2** | Os códigos de modalidade levam ou não o prefixo `EXUMACAO_` | **RESOLVIDA** | **manter os códigos do catálogo**; o prefixo em documentação não é pedido de renomeação; `release_id` não muda por este motivo. Encerra a divergência 3.1 |
+| **P3** | Como a situação de origem chega ao caso | **RESOLVIDA** | origem é **eixo próprio**, com `QUADRA_GERAL` / `JAZIGO_DE_FAMILIA` / `OSSUARIO`, separada de destino e de localização física; nunca derivar modalidade de número ou localização. Encerra a divergência 3.2 → **`G20`** |
+| **P4** | A urna de R$ 250,00 deve ser assimétrica entre Quadra Geral e Jazigo | **RESOLVIDA** | a assimetria é **deliberada**: em Quadra Geral → cremação/outro cemitério a urna é **opcional** (R$ 351,67 sem, R$ 601,67 com); não adicionar automaticamente; não estender ao Jazigo. Encerra `O2` |
+| **P5** | R$ 94,00 é um componente ou dois | **RESOLVIDA** | **mesma taxa interna**, com **contextos de aplicação diferentes** preservados; não duplicar. A regra ossuário → jazigo (somente R$ 106,57) permanece integral |
+| **P6** | Vigência e fonte dos cinco valores novos | **RESOLVIDA** | vigência **01/01/2026 a 31/12/2026** para os cinco; fonte é decisão humana operacional, **sem fabricar documento** → **`G19`** |
+
+## Resíduos técnicos gerados, que **não** são decisões humanas
+
+| | |
+| --- | --- |
+| `G19` | proveniência: o catálogo exige `source_id`, e não existe tipo de fonte para decisão humana operacional |
+| `G20` | origem administrativa como eixo próprio, separada da localização física |
+
+Ambos são **desenho da Fase 4**. Nenhum deles exige nova regra operacional
+humana.
+
+## Duas colisões de nome registradas em `P3`, deliberadamente não resolvidas
 
 ```
-DECISOES_HUMANAS_PENDENTES = 6
+OSSUARIO  como valor de DESTINO   (transport_destination, ja existe)
+OSSUARIO  como categoria de ORIGEM (P3)
+
+OSSUARIO                            (nome em P3)
+RETIRADA_OU_DESATIVACAO_DE_OSSUARIO (nome na decisao de tarifa)
 ```
 
-**Nenhuma delas bloqueia o planejamento da Fase 4.** Todas bloqueiam a
-**publicação** dos dados autoritativos correspondentes — que é etapa distinta e
-posterior ao desenho. P1 e P5 são as únicas com efeito conversacional direto.
+**Não são pendências humanas.** Pelo princípio estabelecido em `P2` — *nome
+escrito em documentação não é pedido de renomeação de dado autoritativo* —, o
+identificador publicado é escolha de publicação. A regra que **permanece
+obrigatória** é a de `P3` regra 5: origem e destino são eixos separados, e a
+modalidade nunca vem do destino.
 
-Excluídos deliberadamente da lista, com motivo:
+## O que continua fora desta lista, com motivo
 
-- *"valor vigente da aquisição" em Transporte `A8`* — resolvível contra a tabela
-  vigente; é lookup, não decisão (fica coberto por P6);
 - *conteúdo oficial de preços, prazos e documentos* — já registrado como
   `A_CONFIRMAR` em `docs/dependencies-and-open-items.md`;
-- *como representar solicitação, documentos ou reclassificação* — desenho
-  técnico, projetável na Fase 4.
+- *como representar solicitação, documentos, reclassificação, origem ou
+  proveniência* — desenho técnico, projetável na Fase 4.
 
 ---
 
@@ -1064,28 +1160,31 @@ Excluídos deliberadamente da lista, com motivo:
 ## A. Contradições funcionais
 
 ```
-QUANTIDADE = 1
+QUANTIDADE ENCONTRADA = 1
+EM ABERTO             = 0
 ```
 
 | ID | Severidade | Estado |
 | --- | --- | --- |
-| `C-01` — automaticidade da desativação do ossuário alugado | `MEDIUM` | **decidida em favor de Transporte `A2`**; resíduo em `P1` |
+| `C-01` — automaticidade da desativação do ossuário alugado | `MEDIUM` | **RESOLVIDA / SUPERADA por `P1`**; histórico preservado |
 
-**Zero contradições `CRITICAL` ou `HIGH`.** Seis pontos de atenção (`A-01`–`A-06`)
-e duas inconsistências de índice (`I-01`, `I-02`) auditados e classificados como
-**não-contradições**.
+**Zero contradições em aberto.** Seis pontos de atenção (`A-01`–`A-06`) e duas
+inconsistências de índice (`I-01`, `I-02`) auditados e classificados como
+**não-contradições**. `A-02` (colisão de R$ 94,00) foi **decidida** por `P5`:
+mesma taxa, contextos distintos preservados.
 
 ## B. `DOMAIN_MODEL_GAPS`
 
 ```
-QUANTIDADE = 13
+QUANTIDADE = 15   (13 + G19 e G20, nascidos do fechamento de P1-P6)
 ```
 
 `G01` solicitação · `G02` criação de solicitação · `G03` reclassificação ·
 `G04` documentos · `G05` Administração Provisória · `G06` eixos de restos ·
 `G07` agendamento · `G08` componentes de cobrança · `G11` sessão × processo ·
 `G12` assunto da solicitação · `G13` pós-venda · `G14` itens comerciais ·
-`G15` localização física
+`G15` localização física · **`G19` proveniência** · **`G20` origem como eixo
+próprio**
 
 ## C. `CONVERSATIONAL_GAPS`
 
@@ -1112,12 +1211,18 @@ pode decidir.
 ## E. Decisões humanas pendentes
 
 ```
-QUANTIDADE = 6
+QUANTIDADE = 0
 ```
 
-`P1` gatilho da desativação · `P2` prefixo dos códigos de modalidade ·
-`P3` como a origem chega ao caso · `P4` assimetria da urna ·
-`P5` R$ 94,00 é um ou dois componentes · `P6` vigência dos componentes novos
+As seis pendências `P1`–`P6` foram **todas decididas** — ver §21 e
+`docs/decisoes-humanas/2026-08-19-fechamento-p1-p6.md`. Nenhuma nova pendência
+humana foi criada pelo fechamento: os dois resíduos (`G19`, `G20`) são desenho
+técnico.
+
+```
+NAO EXISTE, NESTE MOMENTO, DECISAO HUMANA INDISPENSAVEL
+PENDENTE PARA O PLANEJAMENTO OU PARA A PUBLICACAO.
+```
 
 ## F. Riscos para a Fase 4
 
@@ -1127,7 +1232,9 @@ QUANTIDADE = 6
 | R2 | Implementar a **Administração Provisória** e, ao fazê-lo, **remover a proteção por ausência** que hoje impede confundi-la com Concessão | `CRITICAL` | separação explícita desde o primeiro desenho de `G05` |
 | R3 | Implementar `G03` como `NEW_GOAL` "porque é o que mais se parece" — o que **viola** a decisão que `G03` existe para atender | `HIGH` | o invariante *"nunca reutiliza facts de outro case"* é o teste; se ele dispara, o desenho está errado |
 | R4 | Implementar `G09` usando `UNCERTAIN`, colapsando incerteza do sistema com incerteza do munícipe | `HIGH` | são objetos distintos (§14) |
-| R5 | Publicar componentes de cobrança **sem** vigência e fonte, quebrando o rito das três tarifas atuais | `HIGH` | bloqueado por `P6` |
+| R5 | Publicar componentes de cobrança sem proveniência válida — ou **fabricar** portaria, decreto ou URL para preencher o campo `source_id` | `HIGH` | `P6` decidiu a vigência e **proibiu** inventar fonte; resolver por `G19`, estendendo o modelo de proveniência |
+| R9 | Colapsar `OSSUARIO`-origem com `OSSUARIO`-destino por coincidência de texto, reintroduzindo exatamente o erro que `MAP_MODALIDADE_TARIFARIA` existe para impedir | `HIGH` | `P3` regra 5: eixos separados; `G20` registra a colisão sem resolvê-la |
+| R10 | Inferir `QUADRA_GERAL` a partir de um número de quadra informado pelo munícipe — uma numeração de quadra também pertence a Jazigo de Família | `HIGH` | `P3` proíbe explicitamente; `P3` regra 4 |
 | R6 | Tratar a mudança de `release_id` como regressão: os vetores antigos passam a `INVALIDO`, que é **esperado** | `MEDIUM` | já documentado; `INVALIDO` ≠ `FAIL`; congelados não se reescrevem |
 | R7 | "Harmonizar" os sete documentos consolidados para eliminar `I-01`/`I-02` | `MEDIUM` | proibido por §23; a auditoria é o lugar do registro |
 | R8 | Enriquecer o Comercial além do básico sem decisão, tratando `A1` como lacuna | `LOW` | `A1` declara o escopo básico como **escolhido** |
@@ -1145,10 +1252,11 @@ Derivada das dependências declaradas em §20 — `G01` é raiz de nove gaps.
 6  G17 -> G03   topico armazenado, depois reclassificacao com vinculo
 7  G09 + G16 + G18   condicao do fallback, primeira mensagem, rota informativa
 8  G06 + G07    eixos de restos e os tres estados de agendamento
-9  G08          componentes de cobranca -> novo release_id -> nova conformidade
-10 G05          Administracao Provisoria como instrumento
-11 G13          ciclo de acompanhamento pos-venda
-12 G14 + G15    enriquecimento comercial e localizacao fisica  (opcionais)
+9  G20          origem administrativa como eixo proprio (habilita a tarifa)
+10 G19 + G08    proveniencia, depois componentes -> novo release_id -> conformidade
+11 G05          Administracao Provisoria como instrumento
+12 G13          ciclo de acompanhamento pos-venda
+13 G14 + G15    enriquecimento comercial e localizacao fisica  (opcionais)
 ```
 
 Justificativa das três posições menos óbvias:
@@ -1161,7 +1269,14 @@ Justificativa das três posições menos óbvias:
   Fazê-lo cedo obrigaria a reconformar o conjunto a cada iteração seguinte. Ele
   também depende de `P6`.
 
-`G05` em décimo **não** é despriorização: é o gap mais arriscado (`R2`), e
+- **`G20` antes de `G08`**: a origem é o que **seleciona** a modalidade
+  tarifária. Publicar componentes sem o eixo de origem deixaria a tarifa sem
+  quem a resolva, e a alternativa proibida — derivar do destino — é justamente o
+  erro que `P3` regra 4 e `MAP_MODALIDADE_TARIFARIA` vedam.
+- **`G19` imediatamente antes de `G08`**: sem tipo de fonte válido, publicar os
+  cinco valores exigiria fabricar proveniência, o que `P6` proíbe.
+
+`G05` em décimo primeiro **não** é despriorização: é o gap mais arriscado (`R2`), e
 precisa da solicitação, dos documentos e das ações já estabilizados para ser
 desenhado sem improviso.
 
@@ -1174,17 +1289,23 @@ PRE_PHASE_4_GATE = PASS
 | Critério | Situação |
 | --- | --- |
 | conhecimento funcional suficientemente consolidado | **sim** — sete tópicos, sete documentos, cadeia de commits íntegra |
-| contradições críticas inexistentes ou resolvidas | **sim** — 1 contradição, `MEDIUM`, já decidida; resíduo isolado em `P1` |
-| gaps identificados | **sim** — 18, deduplicados, com evidência, dependência e risco |
-| Fase 4 pode ser planejada com segurança | **sim** — com os riscos `R1`–`R8` explícitos |
+| contradições críticas inexistentes ou resolvidas | **sim** — a única contradição (`C-01`, `MEDIUM`) está **resolvida** por `P1`; **zero em aberto** |
+| gaps identificados | **sim** — 20, deduplicados, com evidência, dependência e risco |
+| Fase 4 pode ser planejada com segurança | **sim** — com os riscos `R1`–`R10` explícitos |
+| decisões humanas indispensáveis pendentes | **nenhuma** — `P1`–`P6` fechadas |
 
 ```
 PASS NAO AUTORIZA IMPLEMENTACAO.
 FASE 4 NAO FOI INICIADA NESTA TAREFA.
 ```
 
-As seis decisões humanas pendentes **não bloqueiam o planejamento**. Bloqueiam a
-publicação dos dados autoritativos correspondentes, que é etapa posterior.
+O `PASS` era anterior ao fechamento de `P1`–`P6` e **continua válido, agora mais
+forte**: a contradição foi resolvida, as seis pendências humanas foram decididas,
+e os dois resíduos gerados (`G19`, `G20`) são desenho técnico, não decisão.
+
+A publicação dos dados autoritativos deixou de depender de decisão humana e passa
+a depender de `G19` (proveniência) e `G20` (origem) — ambos projetáveis na
+Fase 4.
 
 ---
 

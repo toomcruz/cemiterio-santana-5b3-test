@@ -239,6 +239,7 @@ A regra que produziu essa forma, aprendida por correção:
 | 2026-08-19 | `docs/decisoes-humanas/2026-08-19-comercial-basico-e-reclamacoes.md` | COMERCIAL em versão básica (`BASIC_CONSOLIDATED / FUTURE_ENRICHMENT_ALLOWED`): aquisição de jazigo, lápide, zeladoria, portão/tranca, reforma/construção e regra geral; RECLAMAÇÕES E OCORRÊNCIAS: intenção invisível, categoria operacional, ausência de gravidade automática e preservação do assunto original | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
 | 2026-08-19 | `docs/decisoes-humanas/2026-08-19-outros-assuntos.md` | OUTROS ASSUNTOS: papel de intenção invisível / rede de segurança, exemplos como lista aberta, resposta direta, ausência de resposta segura, preservação do motivo real, proibição de forçar classificação, demanda mal explicada, migração para tópico especializado e separação em relação a Reclamações | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
 | 2026-08-19 | `docs/decisoes-humanas/2026-08-19-auditoria-cruzada-pre-fase-4.md` | **AUDITORIA** (não é decisão): auditoria cruzada dos sete tópicos, inventário de contradições, gaps, decisões humanas pendentes e gate pré-Fase 4 | **PRE_PHASE_4_GATE = PASS** |
+| 2026-08-19 | `docs/decisoes-humanas/2026-08-19-fechamento-p1-p6.md` | fechamento das seis decisões humanas pendentes: ossuário alugado vencido, códigos de modalidade, descoberta da origem, urna opcional, taxa única de R$ 94,00 e vigência dos cinco valores novos | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
 
 Os documentos separam explicitamente **DECISÃO HUMANA APROVADA** do que não é
 decisão — **OBSERVAÇÃO** de quem registrou, nos de EXUMAÇÃO; **REQUISITO
@@ -400,6 +401,38 @@ harmonizados nos documentos originais, conforme a instrução: a observação `O
 decisão de Exumação já foi materialmente fechada pela decisão de Transporte, e a
 linha deste handoff que lista `TRANSPORTE` entre os tipos sem fonte oficial está
 defasada pelo mesmo motivo.
+
+### Fechamento de P1–P6
+
+As seis decisões humanas pendentes apontadas pela auditoria foram **decididas** e
+registradas em `docs/decisoes-humanas/2026-08-19-fechamento-p1-p6.md`. A auditoria
+foi atualizada em §19, §20, §21 e §22; seu corpo analítico não foi reescrito.
+
+```
+DECISOES_HUMANAS_PENDENTES = 0
+CONTRADICOES EM ABERTO     = 0
+GAPS                       = 20   (18 + G19 e G20)
+PRE_PHASE_4_GATE           = PASS
+```
+
+| | |
+| --- | --- |
+| `P1` | falta de renovação **não** caracteriza abandono automaticamente; desativação não é afirmada automaticamente; a Administração verifica. Nova faixa: até 1 ano não alertar, acima de 1 ano informar que a situação precisa ser verificada. **Supera** o item 7 da decisão de Exumação quanto à automaticidade — e com isso **resolve `C-01`** |
+| `P2` | **manter** os códigos do catálogo; prefixo em documentação não é pedido de renomeação; `release_id` não muda por este motivo |
+| `P3` | origem é **eixo próprio** (`QUADRA_GERAL` / `JAZIGO_DE_FAMILIA` / `OSSUARIO`), separada de destino e de localização física; nunca inferir `QUADRA_GERAL` de um número de quadra |
+| `P4` | a assimetria da urna é **deliberada**: em Quadra Geral → cremação/outro cemitério ela é **opcional** (R$ 351,67 sem, R$ 601,67 com) |
+| `P5` | R$ 94,00 é **uma** taxa interna, com contextos de aplicação preservados; ossuário → jazigo continua sem acréscimo |
+| `P6` | vigência **01/01/2026–31/12/2026** para os cinco valores; fonte é decisão humana operacional, **sem fabricar documento** |
+
+O fechamento gerou dois resíduos **técnicos**, não humanos: **`G19`**, o catálogo
+exige `source_id` e não existe tipo de fonte para decisão humana operacional; e
+**`G20`**, a origem administrativa não existe como eixo, e a localização física
+hoje se confunde com ela. Ambos entram na ordem de implementação **antes** da
+publicação dos componentes de cobrança.
+
+Nenhum valor foi alterado, nenhum código renomeado, `release_id` intacto em
+`exu-1.0-32cc48f26797`, e os trechos superados **permanecem versionados** nos
+documentos originais como histórico.
 
 **Decidido não é implementado.** Até a implementação chegar ao catálogo e passar
 pelos vetores, os dois primeiros continuam declarados como pendentes em
