@@ -238,6 +238,7 @@ A regra que produziu essa forma, aprendida por correção:
 | 2026-08-19 | `docs/decisoes-humanas/2026-08-19-processo-de-concessao.md` | PROCESSO DE CONCESSÃO: responsabilidade pelo processo e Setor de Concessões, iniciativa da família, pré-requisito de Recadastro, taxa inicial de R$ 94,00, dados da solicitação, pagamento, os três documentos, interpretação dos termos, documentação incompleta, assinaturas, prazo de até 180 dias, acompanhamento de processo existente e fronteira de autoridade | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
 | 2026-08-19 | `docs/decisoes-humanas/2026-08-19-comercial-basico-e-reclamacoes.md` | COMERCIAL em versão básica (`BASIC_CONSOLIDATED / FUTURE_ENRICHMENT_ALLOWED`): aquisição de jazigo, lápide, zeladoria, portão/tranca, reforma/construção e regra geral; RECLAMAÇÕES E OCORRÊNCIAS: intenção invisível, categoria operacional, ausência de gravidade automática e preservação do assunto original | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
 | 2026-08-19 | `docs/decisoes-humanas/2026-08-19-outros-assuntos.md` | OUTROS ASSUNTOS: papel de intenção invisível / rede de segurança, exemplos como lista aberta, resposta direta, ausência de resposta segura, preservação do motivo real, proibição de forçar classificação, demanda mal explicada, migração para tópico especializado e separação em relação a Reclamações | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
+| 2026-08-19 | `docs/decisoes-humanas/2026-08-19-auditoria-cruzada-pre-fase-4.md` | **AUDITORIA** (não é decisão): auditoria cruzada dos sete tópicos, inventário de contradições, gaps, decisões humanas pendentes e gate pré-Fase 4 | **PRE_PHASE_4_GATE = PASS** |
 
 Os documentos separam explicitamente **DECISÃO HUMANA APROVADA** do que não é
 decisão — **OBSERVAÇÃO** de quem registrou, nos de EXUMAÇÃO; **REQUISITO
@@ -369,6 +370,36 @@ O gap de **estado de solicitação e acompanhamento** reaparece pelo terceiro
 tópico — Concessão, Comercial e agora Outros Assuntos —, sempre com o mesmo
 formato: o goal existe, a solicitação que ele deveria abrir não é representada.
 **Não foi unificado por conta própria.**
+
+## Auditoria cruzada pré-Fase 4
+
+Com os sete tópicos consolidados, a auditoria cruzada final está registrada em
+`docs/decisoes-humanas/2026-08-19-auditoria-cruzada-pre-fase-4.md`. Ela **não
+decide nada** — audita o que foi decidido, mede contra o que está versionado e
+produz o inventário de entrada da Fase 4.
+
+```
+PRE_PHASE_4_GATE = PASS        (nao autoriza implementacao)
+
+CONTRADICOES FUNCIONAIS   1    (MEDIUM, ja decidida; residuo em P1)
+DOMAIN_MODEL_GAPS        13
+CONVERSATIONAL_GAPS       3
+AUTHORITY_GAPS            2
+DECISOES HUMANAS PENDENTES 6
+```
+
+Os 18 gaps estão deduplicados, com evidência, dependências e risco. `G01` — a
+**solicitação não existe como objeto** — é raiz de nove deles e encabeça a ordem
+de implementação recomendada. A fronteira de permissão do LLM, por outro lado,
+está **fechada e declarada** (`ai_boundary`, `authoritative_signal_policy`,
+`pending_action.executor`, `handoff`): os gaps de autoridade são de destinatário
+e de estado de espera, não de o que o modelo pode decidir.
+
+Dois achados de índice ficam registrados na auditoria e **não** foram
+harmonizados nos documentos originais, conforme a instrução: a observação `O4` da
+decisão de Exumação já foi materialmente fechada pela decisão de Transporte, e a
+linha deste handoff que lista `TRANSPORTE` entre os tipos sem fonte oficial está
+defasada pelo mesmo motivo.
 
 **Decidido não é implementado.** Até a implementação chegar ao catálogo e passar
 pelos vetores, os dois primeiros continuam declarados como pendentes em
