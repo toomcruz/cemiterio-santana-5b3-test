@@ -13,6 +13,8 @@ export interface BenchmarkExpectation {
 }
 export interface BenchmarkCase {
   id: string;
+  /** Fixture the case was generated from, so adversarial failures can be grouped safely. */
+  source_id: string;
   category: string;
   input: InterpreterInput;
   expect: BenchmarkExpectation;
@@ -113,6 +115,7 @@ export function loadBenchmarkCorpus(): BenchmarkCase[] {
     suffixes.map((suffix, variant) => ({
       id: `B${String(messageIndex * suffixes.length + variant + 1).padStart(3, "0")}`,
       category: categories[messageIndex % categories.length]!,
+      source_id: message.id,
       adversarial: ["A01", "A02", "A03", "A04", "A05", "A06", "A07", "A08", "A12", "M14", "M17"].includes(message.id),
       input: {
         message_id: `B${String(messageIndex * suffixes.length + variant + 1).padStart(3, "0")}`,

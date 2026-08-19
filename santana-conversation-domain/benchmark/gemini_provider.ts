@@ -1,8 +1,100 @@
 import type { LlmProvider } from "../runtime/adapter/adapter.ts";
+import type { NetworkBoundary, NetworkRequest } from "../runtime/adapter/network.ts";
 
 const GEMINI_API_ROOT = "https://generativelanguage.googleapis.com/v1beta/models";
 
-export const GEMINI_MODEL = "gemini-2.5-flash";
+const STABLE_FLASH_PREFERENCE = [
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+  "gemini-flash-latest",
+  "gemini-flash-lite-latest",
+] as const;
+
+/** Model ids carrying these markers are not stable enough for a controlled benchmark. */
+const UNSTABLE_MODEL_MARKERS = ["preview", "exp", "thinking", "tuning", "live", "image", "tts", "native-audio"];
+
+const MAX_DISCOVERED_CANDIDATES = 6;
+
+/**
+ * `json_schema` uses the newer `responseJsonSchema` field ($ref/$defs aware); `openapi` uses the
+ * long-standing `responseSchema` field, which needs a dereferenced OpenAPI-subset schema.
+ */
+export type GeminiSchemaMode = "json_schema" | "openapi";
+
+export interface GeminiModelSummary {
+  id: string;
+  supports_generate_content: boolean;
+}
+
+export class GeminiProviderError extends Error {
+  constructor(readonly category: string) {
+    super(category);
+  }
+}
+
+export function classifyGeminiError(status: number, responseBody: string, scope: "models_list" | "model_call"): string {
+  try {
+    const code = (JSON.parse(responseBody) as { error?: { status?: unknown } }).error?.status;
+    if (scope === "model_call" && code === "NOT_FOUND") return "PROVIDER_MODEL_NOT_FOUND";
+    if (code === "RESOURCE_EXHAUSTED") return "PROVIDER_QUOTA";
+    if (code === "UNAUTHENTICATED") return "PROVIDER_HTTP_401";
+    if (code === "PERMISSION_DENIED") return "PROVIDER_HTTP_403";
+    if (code === "INVALID_ARGUMENT") return "PROVIDER_INVALID_ARGUMENT";
+  } catch {
+    // The aggregate HTTP category below is intentionally sufficient and safe.
+  }
+  return status >= 500 ? "PROVIDER_HTTP_5XX" : `PROVIDER_HTTP_${status}`;
+}
+
+/**
+ * Picks the Gemini Flash models this credential can actually call, preferring the documented
+ * stable ids and then falling back to any other stable Flash id the API itself reported.
+ * A specific id being absent never invalidates the credential.
+ */
+export function selectStableFlashModels(models: readonly GeminiModelSummary[]): string[] {
+  const available = models.filter((model) => model.supports_generate_content).map((model) => model.id);
+  const availableSet = new Set(available);
+  const preferred = STABLE_FLASH_PREFERENCE.filter((model) => availableSet.has(model));
+  const discovered = available
+    .filter((model) => model.startsWith("gemini-") && model.includes("flash"))
+    .filter((model) => !UNSTABLE_MODEL_MARKERS.some((marker) => model.includes(marker)))
+    .filter((model) => !preferred.includes(model as typeof STABLE_FLASH_PREFERENCE[number]))
+    .sort((a, b) => b.localeCompare(a));
+  return [...preferred, ...discovered].slice(0, MAX_DISCOVERED_CANDIDATES);
+}
+
+export async function listGeminiModels(
+  apiKey: string,
+  network: NetworkBoundary,
+  signal: AbortSignal,
+): Promise<GeminiModelSummary[]> {
+  const request: NetworkRequest = {
+    method: "GET",
+    url: GEMINI_API_ROOT,
+    headers: { "x-goog-api-key": apiKey },
+    body: "",
+  };
+  const response = await network(request, signal);
+  if (response.status < 200 || response.status >= 300) {
+    throw new GeminiProviderError(classifyGeminiError(response.status, response.body, "models_list"));
+  }
+  try {
+    const parsed = JSON.parse(response.body) as {
+      models?: Array<{ name?: unknown; supportedGenerationMethods?: unknown }>;
+    };
+    if (!Array.isArray(parsed.models)) throw new Error("models missing");
+    return parsed.models.flatMap((model) => {
+      if (typeof model.name !== "string" || !model.name.startsWith("models/")) return [];
+      const methods = Array.isArray(model.supportedGenerationMethods) ? model.supportedGenerationMethods : [];
+      return [{
+        id: model.name.slice("models/".length),
+        supports_generate_content: methods.includes("generateContent"),
+      }];
+    });
+  } catch {
+    throw new GeminiProviderError("PROVIDER_MODELS_LIST_PARSE_ERROR");
+  }
+}
 
 /**
  * Provider implementation used only by the manually-dispatched benchmark.
@@ -15,6 +107,7 @@ export class GeminiBenchmarkProvider implements LlmProvider {
     readonly model: string,
     private readonly apiKey: string,
     private readonly responseSchema: Record<string, unknown>,
+    private readonly schemaMode: GeminiSchemaMode = "json_schema",
   ) {}
 
   createRequest(prompt: string): { url: string; headers: Readonly<Record<string, string>>; body: string } {
@@ -25,7 +118,9 @@ export class GeminiBenchmarkProvider implements LlmProvider {
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
           responseMimeType: "application/json",
-          responseJsonSchema: this.responseSchema,
+          ...(this.schemaMode === "openapi"
+            ? { responseSchema: this.responseSchema }
+            : { responseJsonSchema: this.responseSchema }),
           temperature: 0,
         },
       }),
@@ -41,23 +136,30 @@ export class GeminiBenchmarkProvider implements LlmProvider {
     return text;
   }
 
-  usageFromResponse(responseBody: string): { input_tokens: number; output_tokens: number } | null {
-    const usage =
-      (JSON.parse(responseBody) as { usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number } })
-        .usageMetadata;
+  usageFromResponse(
+    responseBody: string,
+  ): { input_tokens: number; output_tokens: number; total_tokens: number } | null {
+    const usage = (JSON.parse(responseBody) as {
+      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number };
+    })
+      .usageMetadata;
     if (!usage || typeof usage.promptTokenCount !== "number" || typeof usage.candidatesTokenCount !== "number") {
       return null;
     }
-    return { input_tokens: usage.promptTokenCount, output_tokens: usage.candidatesTokenCount };
+    return {
+      input_tokens: usage.promptTokenCount,
+      output_tokens: usage.candidatesTokenCount,
+      total_tokens: typeof usage.totalTokenCount === "number"
+        ? usage.totalTokenCount
+        : usage.promptTokenCount + usage.candidatesTokenCount,
+    };
   }
 
   classifyErrorResponse(status: number, responseBody: string): string {
     try {
-      const code = (JSON.parse(responseBody) as { error?: { status?: unknown } }).error?.status;
-      if (typeof code === "string" && /^[A-Z_]+$/.test(code)) return `PROVIDER_${code}`;
+      return classifyGeminiError(status, responseBody, "model_call");
     } catch {
-      // The aggregate HTTP category below is intentionally sufficient and safe.
+      return `PROVIDER_HTTP_${status}`;
     }
-    return `PROVIDER_HTTP_${status}`;
   }
 }
