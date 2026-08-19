@@ -2,10 +2,10 @@
 
 Duas coisas precisam ser verdade, e a segunda importa tanto quanto a primeira:
 
-1. os 46 casos de V1-V12 passam contra a implementacao de referencia;
+1. os 47 casos de V1-V12 passam contra a implementacao de referencia;
 2. os vetores REPROVAM quando a referencia regride.
 
-Sem (2), "46 PASS" nao prova nada: um vetor que nao consegue falhar nao e prova,
+Sem (2), "47 PASS" nao prova nada: um vetor que nao consegue falhar nao e prova,
 e apenas decoracao. Por isso os testes de mutacao abaixo reintroduzem, um por
 vez, exatamente os defeitos que a Fase 2 corrigiu, e exigem que o vetor
 correspondente vire FAIL.

@@ -1,7 +1,7 @@
 {
   "vetor": "V11",
   "titulo": "Nenhuma escrita autoritativa indevida",
-  "prova": "Cada barreira de escrita recusa pelo SEU codigo, e nenhuma delas escreve.",
+  "prova": "Cada barreira de escrita recusa pelo SEU codigo, e nenhuma delas escreve. Os dois ramos de FATO_NAO_GRAVAVEL_PELO_ATENDIMENTO — derivado e nao extraivel — sao cobertos separadamente.",
   "casos": [
     {
       "vector_id": "V11-A",
@@ -145,6 +145,30 @@
           "CREMACAO",
           "OUTRA"
         ]
+      },
+      "escritas_esperadas": []
+    },
+    {
+      "vector_id": "V11-G",
+      "vetor": "V11",
+      "titulo": "Fato nao extraivel SEM ser derivado nem autoritativo",
+      "catalogo_ref": "oficial",
+      "dominio_ref": "dominio_fato_nao_extraivel.json",
+      "release_id_esperado": "exu-1.0-389f8e7bad5b",
+      "operacao": "registrar_fato",
+      "referencia": "2026-03-01",
+      "entrada": {
+        "fact_code": "fixture_non_extractable_fact",
+        "valor": "QUALQUER",
+        "source": "USER_EXPLICIT"
+      },
+      "saida_esperada": {
+        "fact_code": "fixture_non_extractable_fact",
+        "outcome": "REJECTED",
+        "reason": "FATO_NAO_GRAVAVEL_PELO_ATENDIMENTO",
+        "message": "'Fato de fixture nao extraivel pelo atendimento' e derivado por regra deterministica ou nao pode ser extraido do atendimento.",
+        "release_id": "exu-1.0-389f8e7bad5b",
+        "gateway": "SantanaAuthorityGateway/v1"
       },
       "escritas_esperadas": []
     }

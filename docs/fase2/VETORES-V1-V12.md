@@ -1,7 +1,7 @@
 # Especificação final dos vetores de conformidade V1–V12
 
 ```
-STATUS: CONGELADOS · 46 casos · PASS 46 / FAIL 0 / INVALIDO 0 na referência
+STATUS: CONGELADOS · 47 casos · PASS 47 / FAIL 0 / INVALIDO 0 na referência
 ```
 
 Formato neutro, regras de canonização, definição de PASS/FAIL/INVÁLIDO e política
@@ -20,7 +20,7 @@ do vetor, corrige-se a referência.**
 
 ## Prova de que os vetores conseguem reprovar
 
-"46 PASS" não significaria nada se os vetores não pudessem falhar. Três mutações
+"47 PASS" não significaria nada se os vetores não pudessem falhar. Três mutações
 reintroduzem, uma por vez, os defeitos que a Fase 2 corrigiu, e exigem
 reprovação (`referencia/tests/test_vetores.py`):
 
@@ -154,9 +154,9 @@ extra, escrita inesperada e `release_id` divergente (este último como
 
 ### V11 — Nenhuma escrita autoritativa indevida
 
-**Prova:** Cada barreira de escrita recusa pelo SEU codigo, e nenhuma delas escreve.
+**Prova:** Cada barreira de escrita recusa pelo SEU codigo, e nenhuma delas escreve. Os dois ramos de FATO_NAO_GRAVAVEL_PELO_ATENDIMENTO — derivado e nao extraivel — sao cobertos separadamente.
 
-**Casos:** 6 · **Catálogo:** oficial
+**Casos:** 7 · **Catálogo:** dominio_fato_nao_extraivel.json, oficial
 
 | Caso | O que prova |
 | --- | --- |
@@ -166,6 +166,7 @@ extra, escrita inesperada e `release_id` divergente (este último como
 | `V11-D` | Origem que nao registra fato de municipe |
 | `V11-E` | Valor vazio |
 | `V11-F` | Valor fora do dominio fechado |
+| `V11-G` | Fato nao extraivel SEM ser derivado nem autoritativo |
 
 ### V12 — Contrato canonico de argumentos
 
@@ -187,11 +188,49 @@ extra, escrita inesperada e `release_id` divergente (este último como
 | `V12-J` | Valor null numa chave declarada e recusado, nao virou default |
 | `V12-K` | Fronteira do Gateway: zero-arg canonico consulta normalmente |
 | `V12-L` | Fronteira do Gateway: argumento injetado nao produz preco |
+## O 7º caso do V11 — resolvido por contrato, não por observação
+
+A pergunta era se o estado
+
+```
+ai_extractable     = false
+derived            != true
+authoritative_only != true
+```
+
+é **permitido pelo contrato** ou **proibido por invariante**. "Não existe hoje no
+catálogo" é observação sobre dados, não prova sobre contrato, e não foi aceita.
+
+**Resposta: é PERMITIDO.** Provado em
+`referencia/tests/test_invariantes_dominio.py`:
+
+| Prova | Onde |
+| --- | --- |
+| `FactDef` exige `ai_extractable`, mas `derived?` e `authoritative_only?` são **opcionais** — a combinação é expressável no tipo | `engine/catalog.ts` |
+| A única invariante sobre `ai_extractable` condiciona fato **autoritativo**: `authoritative_only ⇒ !ai_extractable`. Não existe a recíproca | `engine/validate.ts:167` |
+| A única invariante sobre `derived` exige origem `DERIVED_RULE` para fato derivado — não alcança fato não derivado | `engine/validate.ts:119` |
+| Nenhuma regra exige `ai_extractable` de fato comum | conjunto pinado das 4 linhas que mencionam os três campos |
+
+O quarto item é um **detector de deriva**: o teste fixa o conjunto exato de
+linhas de `validate.ts` que mencionam os três campos. Se alguém acrescentar uma
+invariante, o teste quebra e obriga a reexaminar esta conclusão, em vez de
+deixar o `V11-G` apoiado numa leitura que envelheceu em silêncio.
+
+Como o estado é permitido, o 7º caso foi **restaurado** com fixture isolada de
+domínio, e não declarado inalcançável. `V11-G` prova
+`FATO_NAO_GRAVAVEL_PELO_ATENDIMENTO` pelo ramo **não extraível**, com
+`escritas_esperadas: []`, enquanto `V11-C` cobre o ramo **derivado**.
+
+`santana-conversation-domain/facts.v1.json` não foi alterado. A fixture declara
+apenas o acréscimo, e o domínio autoritativo é copiado sem edição para um
+diretório temporário — há teste comparando o documento montado com o
+autoritativo, fato a fato.
+
 ## O que bloqueia a Fase 3
 
 **Bloqueio absoluto:** um único FAIL em qualquer vetor bloqueia o porte TS/Deno.
 Divergência não se resolve ajustando o vetor. O Gateway TS/Deno só substitui a
-referência quando os 46 casos passarem com **saída idêntica**, sobre o mesmo
+referência quando os 47 casos passarem com **saída idêntica**, sobre o mesmo
 catálogo e o mesmo `release_id`.
 
 Pré-condições que a Fase 2 já removeu:
@@ -203,6 +242,8 @@ Pré-condições que a Fase 2 já removeu:
 | 3 | Leitor de argumentos com `or` falsy | **resolvido** — `ler_argumentos_do_evento`, provado por V12-A |
 | 4 | `opcoes_possiveis` plana | **resolvido** — `opcoes_por_campo`, provado por V02-B |
 | 5 | V12 inexistente | **resolvido** — 12 casos congelados |
+| 6 | 7º caso do V11 em aberto | **resolvido** — estado provado permitido, caso restaurado |
+| 7 | Catálogo oficial dentro de `referencia/` | **resolvido** — `santana-authority/`, caminho neutro |
 
 Continuam bloqueando o **encerramento do assunto**, não o porte:
 
@@ -210,15 +251,6 @@ Continuam bloqueando o **encerramento do assunto**, não o porte:
 | --- | --- |
 | `MAP_MODALIDADE_TARIFARIA` | `PENDENTE_DE_DECISAO_HUMANA` — a jornada de preço não termina em valor |
 | `MAP_VIGENCIA_TABELA_TARIFARIA` | `PENDENTE_DE_CONFIRMACAO_HUMANA` — `07_01_2026` lido como dd_mm_aaaa |
-
-## Lacuna de cobertura declarada
-
-O V11 tem **6 casos, não 7**. A sétima situação prevista — fato com
-`ai_extractable: false` **sem** ser derivado nem autoritativo — não existe no
-catálogo de domínio: todo fato não extraível é também derivado ou autoritativo.
-Cobri-la exigiria alterar `santana-conversation-domain/facts.v1.json`, que é
-autoritativo. Fica registrada como lacuna, não como caso silenciosamente
-omitido. Se um fato assim for criado no futuro, o caso passa a ser exigível.
 
 ## O que os vetores não provam
 

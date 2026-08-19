@@ -47,11 +47,18 @@ class ErroDeCatalogo(Exception):
 
 
 def catalogo_path() -> Path:
+    """Caminho do catalogo oficial.
+
+    Ele **nao** vive dentro de `referencia/`. A implementacao Python e apenas
+    implementacao de referencia para conformidade; ela nao pode ser dona da
+    fonte autoritativa. O catalogo fica num caminho neutro, `santana-authority/`,
+    ao lado de `santana-conversation-domain/`, para que o Gateway TS/Deno leia
+    exatamente o mesmo arquivo quando existir. Uma unica copia operacional.
+    """
     override = os.environ.get("SANTANA_CATALOGO_OFICIAL")
     if override:
         return Path(override).resolve()
-    # .../referencia/santana_referencia/gateway/catalogo_oficial.py
-    return Path(__file__).resolve().parents[2] / "catalogo" / "exumacao.v1.json"
+    return catalog.repo_root() / "santana-authority" / "catalogo" / "exumacao.v1.json"
 
 
 @dataclass(frozen=True)

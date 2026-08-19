@@ -20,7 +20,9 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import sys
+import tempfile
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -29,13 +31,15 @@ RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
 from santana_referencia import argumentos as arg  # noqa: E402
-from santana_referencia.dominio import authority  # noqa: E402
+from santana_referencia.dominio import authority, catalog  # noqa: E402
 from santana_referencia.gateway import catalogo_oficial  # noqa: E402
 from santana_referencia.gateway.gateway import GATEWAY  # noqa: E402
 
 VETORES = RAIZ / "vetores"
 FIXTURES = VETORES / "fixtures"
-CATALOGO_OFICIAL = RAIZ / "catalogo" / "exumacao.v1.json"
+
+RAIZ_DO_REPO = RAIZ.parent
+DOMINIO = "santana-conversation-domain"
 
 PASS = "PASS"
 FAIL = "FAIL"
@@ -51,13 +55,80 @@ def canonizar_json(valor: Any) -> str:
     return json.dumps(valor, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
 
 
-def caminho_do_catalogo(ref: str) -> Path:
+_dominios_montados: dict[str, Path] = {}
+_dominio_atual: str | None = None
+
+
+def montar_dominio(ref: str) -> Path:
+    """Monta uma raiz temporaria com o dominio autoritativo MAIS um acrescimo.
+
+    A fixture declara apenas o que acrescenta. Os cinco catalogos de dominio sao
+    lidos de `santana-conversation-domain/` e copiados sem edicao; so
+    `facts.v1.json` recebe os fatos declarados em `acrescenta_fatos`, anexados ao
+    final. Assim e estruturalmente impossivel a fixture alterar um fato que ja
+    existe — ela nao tem onde escrever isso.
+
+    `santana-authority` entra como link simbolico para a raiz real: a resolucao
+    padrao do catalogo oficial continua sendo exercitada de verdade.
+    """
+    if ref in _dominios_montados:
+        return _dominios_montados[ref]
+
+    fixture = json.loads((FIXTURES / ref).read_text(encoding="utf-8"))
+    raiz = Path(tempfile.mkdtemp(prefix="vetores-dominio-"))
+    (raiz / DOMINIO).mkdir()
+    for arquivo in (RAIZ_DO_REPO / DOMINIO).glob("*.json"):
+        shutil.copy2(arquivo, raiz / DOMINIO / arquivo.name)
+
+    alvo = raiz / DOMINIO / "facts.v1.json"
+    doc = json.loads(alvo.read_text(encoding="utf-8"))
+    existentes = {f["fact_code"] for f in doc["facts"]}
+    for fato in fixture["acrescenta_fatos"]:
+        if fato["fact_code"] in existentes:
+            raise ValueError(
+                f"fixture {ref} tentaria sobrescrever o fato autoritativo "
+                f"{fato['fact_code']!r}; fixture so acrescenta"
+            )
+        doc["facts"].append(fato)
+    alvo.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    (raiz / "santana-authority").symlink_to(RAIZ_DO_REPO / "santana-authority")
+    _dominios_montados[ref] = raiz
+    return raiz
+
+
+def aplicar_dominio(ref: str | None) -> None:
+    global _dominio_atual
+    if ref == _dominio_atual:
+        return
+    if ref is None:
+        os.environ.pop("SANTANA_REPO_ROOT", None)
+        catalog.definir_escopo_de_fixture(())
+    else:
+        os.environ["SANTANA_REPO_ROOT"] = str(montar_dominio(ref))
+        fixture = json.loads((FIXTURES / ref).read_text(encoding="utf-8"))
+        catalog.definir_escopo_de_fixture(
+            tuple(f["fact_code"] for f in fixture["acrescenta_fatos"])
+        )
+    catalog.limpar_caches()
+    catalogo_oficial._carregar.cache_clear()
+    _dominio_atual = ref
+
+
+def aplicar_catalogo(ref: str) -> None:
+    """Aponta o catalogo da execucao.
+
+    Para `oficial` a variavel de ambiente e REMOVIDA, e nao apontada para o
+    caminho conhecido: assim o vetor exercita a resolucao padrao de
+    `catalogo_path()` de verdade, e uma mudanca errada nela reprova.
+    """
     if ref == "oficial":
-        return CATALOGO_OFICIAL
+        os.environ.pop("SANTANA_CATALOGO_OFICIAL", None)
+        return
     caminho = FIXTURES / ref
     if not caminho.exists():
         raise FileNotFoundError(f"fixture inexistente: {ref}")
-    return caminho
+    os.environ["SANTANA_CATALOGO_OFICIAL"] = str(caminho)
 
 
 def _caso(estado: dict[str, Any] | None) -> authority.ExhumationCase:
@@ -80,8 +151,9 @@ def _escritas(caso: authority.ExhumationCase) -> list[dict[str, Any]]:
 
 def executar(vetor: dict[str, Any]) -> dict[str, Any]:
     """Roda um vetor e devolve saida real, escritas observadas e release_id."""
+    aplicar_dominio(vetor.get("dominio_ref"))
     catalogo_oficial._carregar.cache_clear()
-    os.environ["SANTANA_CATALOGO_OFICIAL"] = str(caminho_do_catalogo(vetor["catalogo_ref"]))
+    aplicar_catalogo(vetor["catalogo_ref"])
 
     operacao = vetor["operacao"]
     entrada = vetor.get("entrada") or {}

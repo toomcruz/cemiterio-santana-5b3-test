@@ -1,7 +1,7 @@
 {
   "implementacao": "referencia-python",
-  "total_de_casos": 46,
-  "pass": 46,
+  "total_de_casos": 47,
+  "pass": 47,
   "fail": 0,
   "invalido": 0,
   "por_vetor": {
@@ -221,6 +221,12 @@
       "vector_id": "V11-F",
       "vetor": "V11",
       "titulo": "Valor fora do dominio fechado",
+      "resultado": "PASS"
+    },
+    {
+      "vector_id": "V11-G",
+      "vetor": "V11",
+      "titulo": "Fato nao extraivel SEM ser derivado nem autoritativo",
       "resultado": "PASS"
     },
     {

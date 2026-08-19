@@ -114,13 +114,35 @@ POC_FACT_CODES: tuple[str, ...] = (
 )
 
 
+# Escopo adicional, usado APENAS pelas fixtures dos vetores. Vazio em runtime, e
+# ha teste que exige que continue vazio por padrao. Existe porque
+# `POC_FACT_CODES` e escopo de assunto: dos 26 fatos declarados no dominio, 15
+# pertencem a recadastro, comercial e reclamacao, e deixa-los entrar num caso de
+# EXUMACAO seria pior do que a inconveniencia que este seam resolve.
+_ESCOPO_DE_FIXTURE: tuple[str, ...] = ()
+
+
+def definir_escopo_de_fixture(codigos: tuple[str, ...]) -> None:
+    """Acrescenta fatos ao escopo. So os vetores chamam isto."""
+    global _ESCOPO_DE_FIXTURE
+    if codigos == _ESCOPO_DE_FIXTURE:
+        return
+    _ESCOPO_DE_FIXTURE = codigos
+    fact_specs.cache_clear()
+
+
+def escopo_de_fatos() -> tuple[str, ...]:
+    return POC_FACT_CODES + _ESCOPO_DE_FIXTURE
+
+
 @lru_cache(maxsize=1)
 def fact_specs() -> Mapping[str, FactSpec]:
     facts = {f["fact_code"]: f for f in _raw_catalogs()["facts"]["facts"]}
-    missing = [code for code in POC_FACT_CODES if code not in facts]
+    escopo = escopo_de_fatos()
+    missing = [code for code in escopo if code not in facts]
     if missing:
         raise KeyError(f"Fatos ausentes em facts.v1.json: {missing}")
-    return {code: _fact_spec(facts[code]) for code in POC_FACT_CODES}
+    return {code: _fact_spec(facts[code]) for code in escopo}
 
 
 @lru_cache(maxsize=1)
@@ -179,3 +201,23 @@ def topic_spec() -> Mapping[str, Any]:
         if topic["topic_code"] == TOPIC_CODE:
             return topic
     raise KeyError(f"{TOPIC_CODE} nao encontrado em topics.v1.json")
+
+
+def limpar_caches() -> None:
+    """Zera todos os caches deste modulo.
+
+    Existe para os vetores: eles trocam o diretorio de dominio entre casos, e
+    caches sem chave devolveriam o catalogo do caso anterior. Fora dos vetores
+    ninguem chama isto — em runtime o dominio nao muda no meio da execucao.
+    """
+    for funcao in (
+        _raw_catalogs,
+        fact_specs,
+        ai_boundary,
+        goal_spec,
+        priority_rank,
+        questions_by_fact,
+        exhumation_relations,
+        topic_spec,
+    ):
+        funcao.cache_clear()

@@ -12,6 +12,7 @@ em qualquer vetor bloqueia o porte — e **não se resolve ajustando o vetor**.
 | `vetor` | `V1`…`V12` |
 | `titulo` | o que este caso, especificamente, prova |
 | `catalogo_ref` | `oficial` ou nome de arquivo em `fixtures/` |
+| `dominio_ref` | opcional; fixture de **domínio** em `fixtures/`, quando o caso precisa de um fato que o domínio autoritativo não declara |
 | `release_id_esperado` | divergência ⇒ vetor **INVÁLIDO**, não reprovado |
 | `operacao` | `carregar` · `consultar` · `consultar_com_canned` · `consultar_via_tool` · `canonizar_argumentos` · `registrar_fato` |
 | `referencia` | data civil explícita — nunca "hoje" |
@@ -59,6 +60,14 @@ recebe um caso. Nas operações de consulta a lista é sempre vazia porque não 
 caso a observar, não porque uma escrita foi impedida. Onde o V9 precisa provar
 ausência de escrita, ele usa `registrar_fato`.
 
+## Catálogo oficial
+
+O caso `oficial` **remove** a variável de ambiente em vez de apontá-la para o
+caminho conhecido: assim o vetor exercita a resolução padrão de
+`catalogo_path()` de verdade, e uma mudança errada nela reprova em vez de passar
+despercebida. O catálogo vive em `santana-authority/catalogo/`, fora de
+`referencia/` — a implementação de referência não é dona da fonte autoritativa.
+
 ## Fixtures
 
 `fixtures/` existe porque quatro situações **não são alcançáveis** com o
@@ -68,3 +77,21 @@ tipo sem entradas exige fonte oficial, e nenhuma entrada tem `fim` de vigência.
 Regra: fixture nunca entra no caminho do catálogo autoritativo, tem `release_id`
 próprio, e traz `nota` dizendo que é fixture. **Não se fabrica conflito na base
 oficial para testar o V3.**
+
+### Fixture de domínio
+
+Uma quinta situação — fato com `ai_extractable: false` **sem** ser `derived` nem
+`authoritative_only` — depende do catálogo de **domínio**, não do oficial. A
+fixture correspondente é de outra natureza e obedece a uma regra mais dura:
+
+- ela declara **apenas o que acrescenta** (`acrescenta_fatos`). Não há campo
+  onde escrever alteração ou remoção de fato existente;
+- os cinco catálogos de domínio são lidos de `santana-conversation-domain/` e
+  copiados **sem edição** para um diretório temporário; só `facts.v1.json`
+  recebe os fatos declarados, anexados ao final;
+- `santana-authority` entra no diretório temporário como link simbólico para o
+  real, de modo que a resolução do catálogo oficial continua sendo a de
+  verdade.
+
+Assim é estruturalmente impossível a fixture contaminar o domínio autoritativo,
+e há teste comparando o documento montado com o autoritativo, fato a fato.

@@ -28,8 +28,12 @@ do que a POC era.
 | Origem | `714f0fed21d56f9cb7317ba8c9c810029f58376a`, `experiments/parlant-poc/` |
 | Pacote de origem | `santana_parlant_poc` → `santana_referencia` |
 | `domain/` → `dominio/` | mesmos arquivos; `knowledge.py` não veio (nada o importa) |
-| Catálogo oficial | cópia **byte-idêntica**, SHA256 `22e1e1f0f03e5c1d77ee437fa5dfcd5f23502cc31a3bb575cb6a8dc56cd03f51` |
+| Catálogo oficial | **não vive aqui** — `santana-authority/catalogo/exumacao.v1.json`, caminho neutro |
 | Catálogos de domínio | **não** copiados — são lidos de `santana-conversation-domain/`, onde já viviam |
+
+A referência não é dona da fonte autoritativa. Ela é implementação de
+referência para conformidade, e nada mais: o catálogo oficial fica num caminho
+neutro que o Gateway TS/Deno lerá igual.
 
 Prova de que a mudança de lugar não mudou o conhecimento: o `release_id`
 calculado aqui é `exu-1.0-32cc48f26797`, exatamente o mesmo da C1 real da
@@ -46,9 +50,12 @@ de domínio; se qualquer byte tivesse mudado, o identificador mudaria.
 | `argumentos.py` — contrato canônico e leitor de eventos | o `or` falsy da POC transformava `{}` em `null` |
 | `consultar_via_tool` — canonização na fronteira | argumento fora do contrato não pode chegar à consulta |
 | Cache de catálogo por caminho | as fixtures dos vetores carregam catálogos diferentes no mesmo processo |
+| `limpar_caches()` e `definir_escopo_de_fixture()` no catálogo de domínio | os vetores trocam o diretório de domínio entre casos; ambos são vazios/no-op em runtime, e há teste exigindo isso |
 
-O catálogo oficial **não** foi alterado. As fixtures dos vetores ficam em
-`vetores/fixtures/` e nunca no caminho autoritativo.
+O catálogo oficial **não** foi alterado, e o catálogo de domínio tampouco. As
+fixtures ficam em `vetores/fixtures/` e nunca no caminho autoritativo — inclusive
+a fixture de domínio, que declara **apenas o que acrescenta** e é montada em
+diretório temporário sobre os arquivos autoritativos lidos sem edição.
 
 ## Como rodar
 

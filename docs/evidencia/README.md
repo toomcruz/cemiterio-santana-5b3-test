@@ -137,11 +137,15 @@ O Gateway e o catálogo oficial passaram a viver em `referencia/`:
 | | |
 | --- | --- |
 | Código | `santana_parlant_poc` → `referencia/santana_referencia`, com as correções da Fase 2 |
-| Catálogo oficial | cópia **byte-idêntica**, SHA256 `22e1e1f0f03e5c1d77ee437fa5dfcd5f23502cc31a3bb575cb6a8dc56cd03f51` |
+| Catálogo oficial | `santana-authority/catalogo/`, caminho **neutro** — cópia byte-idêntica, SHA256 `22e1e1f0f03e5c1d77ee437fa5dfcd5f23502cc31a3bb575cb6a8dc56cd03f51` |
 | Catálogos de domínio | continuam em `santana-conversation-domain/`, sem cópia |
 
-Não há duas fontes de verdade: a autoritativa agora é `referencia/catalogo/`, e a
-cópia sob a baseline passa a ser registro histórico como o resto da POC. A prova
+Não há duas fontes de verdade, e a fonte autoritativa **não pertence a
+`referencia/`**: o catálogo vive em `santana-authority/`, ao lado de
+`santana-conversation-domain/`, para que a referência Python e o futuro Gateway
+TS/Deno leiam exatamente o mesmo arquivo. `referencia/` é implementação de
+referência para conformidade, nada além disso. A cópia sob a baseline passa a
+ser registro histórico como o resto da POC. A prova
 de que a mudança de lugar não mudou o conhecimento é o `release_id`, derivado do
 conteúdo: `exu-1.0-32cc48f26797`, o mesmo da C1 real da Fase 1B.
 
