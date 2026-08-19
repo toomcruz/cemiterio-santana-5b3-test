@@ -233,10 +233,13 @@ A regra que produziu essa forma, aprendida por correção:
 | --- | --- | --- | --- |
 | 2026-08-19 | `docs/decisoes-humanas/2026-08-19-exumacao-tarifa-vigencia.md` | `MAP_MODALIDADE_TARIFARIA`, `MAP_VIGENCIA_TABELA_TARIFARIA` | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
 | 2026-08-19 | `docs/decisoes-humanas/2026-08-19-exumacao-procedimento.md` | procedimento de EXUMAÇÃO: bifurcação de origem, prazos, destinos, valores, semi-intacto, ossuários, documentos, causa da morte, crematório, transporte, momento do valor, solicitação de agendamento | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
+| 2026-08-19 | `docs/decisoes-humanas/2026-08-19-recadastro-sucessao-administracao-provisoria.md` | RECADASTRO: condução do atendimento, sucessão, Administração Provisória, conflito familiar, linha lateral, validade e segunda Administração Provisória, troca voluntária, GOV.BR, falecimento do Administrador Provisório, consulta e divergência cadastral | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
 
-Os dois documentos separam explicitamente **DECISÃO HUMANA APROVADA** de
-**OBSERVAÇÃO** de quem registrou. Nada foi inferido ao transcrever, e as lacunas
-encontradas ficaram registradas como lacunas — não foram preenchidas.
+Os documentos separam explicitamente **DECISÃO HUMANA APROVADA** do que não é
+decisão — **OBSERVAÇÃO** de quem registrou, nos de EXUMAÇÃO; **REQUISITO
+CONVERSACIONAL** e **GAP / REQUISITO TÉCNICO FUTURO**, no de RECADASTRO. Nada foi
+inferido ao transcrever, e as lacunas encontradas ficaram registradas como
+lacunas — não foram preenchidas.
 
 O de tarifa e vigência traz três divergências entre a decisão e o catálogo
 atual. O de procedimento traz oito observações. Duas são lacunas a confirmar com
@@ -262,8 +265,17 @@ gap**, explicitamente não como enum, schema ou código. Os quatro valores novos
 tarifárias equivalentes: os totais ao munícipe são composições desses componentes
 com a tarifa de exumação da origem.
 
+O de RECADASTRO **corrige** uma interpretação anterior — a de que, vencida a
+primeira Administração Provisória, seria obrigatório seguir imediatamente para
+Processo de Concessão. A regra correta é verificar antes a possibilidade de uma
+segunda. Essa interpretação anterior **não existe versionada neste
+repositório**, então não há documento a retratar. E registra o seu próprio
+`DOMAIN_MODEL_GAP`: a Administração Provisória hoje existe no domínio apenas como
+**papel de quem assina** numa exumação, não como instrumento com vigência,
+titular, ordem ou histórico.
+
 **Decidido não é implementado.** Até a implementação chegar ao catálogo e passar
-pelos vetores, os dois continuam declarados como pendentes em
+pelos vetores, os dois primeiros continuam declarados como pendentes em
 `mapeamentos_pendentes`, dentro de `santana-authority/catalogo/exumacao.v1.json`
 — que é a fonte que o runtime lê. O histórico de que estiveram pendentes desde a
 POC permanece nos documentos de fase e no próprio catálogo.
