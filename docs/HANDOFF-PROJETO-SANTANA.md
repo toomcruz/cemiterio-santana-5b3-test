@@ -240,6 +240,7 @@ A regra que produziu essa forma, aprendida por correção:
 | 2026-08-19 | `docs/decisoes-humanas/2026-08-19-outros-assuntos.md` | OUTROS ASSUNTOS: papel de intenção invisível / rede de segurança, exemplos como lista aberta, resposta direta, ausência de resposta segura, preservação do motivo real, proibição de forçar classificação, demanda mal explicada, migração para tópico especializado e separação em relação a Reclamações | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
 | 2026-08-19 | `docs/decisoes-humanas/2026-08-19-auditoria-cruzada-pre-fase-4.md` | **AUDITORIA** (não é decisão): auditoria cruzada dos sete tópicos, inventário de contradições, gaps, decisões humanas pendentes e gate pré-Fase 4 | **PRE_PHASE_4_GATE = PASS** |
 | 2026-08-19 | `docs/decisoes-humanas/2026-08-19-fechamento-p1-p6.md` | fechamento das seis decisões humanas pendentes: ossuário alugado vencido, códigos de modalidade, descoberta da origem, urna opcional, taxa única de R$ 94,00 e vigência dos cinco valores novos | **DECIDIDO, AGUARDANDO IMPLEMENTAÇÃO** |
+| 2026-08-19 | `docs/decisoes-humanas/2026-08-19-plano-tecnico-fase-4.md` | **PLANO** (não é decisão): plano técnico executável da Fase 4 — dez subfases, G01–G20 com destino técnico, T01–T28, R1–R13, um único bump de `release_id` | **PHASE_4_PLAN_GATE = PASS** |
 
 Os documentos separam explicitamente **DECISÃO HUMANA APROVADA** do que não é
 decisão — **OBSERVAÇÃO** de quem registrou, nos de EXUMAÇÃO; **REQUISITO
@@ -433,6 +434,63 @@ publicação dos componentes de cobrança.
 Nenhum valor foi alterado, nenhum código renomeado, `release_id` intacto em
 `exu-1.0-32cc48f26797`, e os trechos superados **permanecem versionados** nos
 documentos originais como histórico.
+
+## Plano técnico da Fase 4
+
+Com o gate pré-Fase 4 em `PASS` e zero decisões humanas pendentes, o plano
+técnico executável está em
+`docs/decisoes-humanas/2026-08-19-plano-tecnico-fase-4.md`. Ele **planeja** —
+não implementa, não altera nada fora de `docs/`.
+
+```
+PHASE_4_PLAN_GATE = PASS       (nao autoriza implementacao)
+SUBFASES          = 10         4A a 4J
+GAPS COM DESTINO  = 20 / 20
+TESTES            = T01 a T28
+RISCOS            = R1 a R13   (R11-R13 introduzidos pelo proprio plano)
+BUMPS DE RELEASE  = 1          fechado em 4I
+```
+
+### A fronteira que organiza o plano
+
+O achado que reordena tudo está em
+`santana-authority-gateway/catalogo/carregar.ts`: o `release_id` é
+`sha256(catálogo oficial ‖ facts ‖ goals ‖ questions ‖ relations ‖ topics)`.
+**Seis arquivos**, e qualquer byte alterado neles torna `INVALIDO` cada um dos 47
+casos V1–V12.
+
+`state.schema.json`, `conversation-events.v1.json`, o motor, o Gateway e a
+referência ficam **fora** dessa fronteira. Logo a maior parte do trabalho
+estrutural — solicitação, sessão, documentos, reclassificação, ações — cabe em
+4A–4F **sem tocar no `release_id`**, e todas as mudanças de conhecimento são
+agrupadas em 4G–4H para **um único bump**, fechado em 4I. Seis travessias da
+fronteira custariam seis reconformidades completas; uma custa uma.
+
+Agrupar o bump **não** suspende a conformidade: durante 4A–4F os 47 casos
+continuam sendo executados a cada subfase e continuam tendo de resultar `PASS`.
+É por isso que o agrupamento é seguro — e é o risco `R13`, com mitigação
+declarada.
+
+### Decisões de desenho que o plano fixa
+
+| | |
+| --- | --- |
+| solicitação | estado é **ciclo por categoria**, nunca enum global — sete categorias, teste de não-colapso (`T24`, mitiga `R1`) |
+| assunto legível | **composto por regra** a partir de fatos confirmados, fail-closed, nunca redigido pelo LLM |
+| sessão × processo | vínculo **unidirecional**, do processo para a sessão; fechar a sessão não altera um byte do processo (`T17`) |
+| reclassificação | **evento novo e aditivo**, com invariante de preservação; os quatro candidatos não são reaproveitados (`T09`, mitiga `R3`) |
+| documentos | `RECEBIDO → ACEITO` é **autoridade humana ou de sistema**, nunca do LLM |
+| ações | **artefato próprio fora da fronteira**, para não gastar um `release_id` sem mudança de conhecimento; confirmar agenda é `executor: HUMAN` sem exceção |
+| Administração Provisória | instrumento com ciclo próprio, **jamais** dentro de `recadastro_status`; invariante `AP != Concessão` (`T25`, mitiga `R2`) |
+| proveniência | terceiro tipo de fonte apontando para o documento de decisão versionado; teste torna a fabricação de fonte **mecanicamente detectável** (`T21`) |
+| componentes | o teste do cenário semi-intacto é o que prova composicionalidade real — uma tarifa fundida reprova por construção |
+
+### Isolamento
+
+A Fase 4 inteira roda **offline**. Nenhuma subfase conecta Supabase, n8n, W-API
+ou WhatsApp; `T28` prova ausência de rede. Os gates posteriores — `G-PERSIST`,
+`G-SHADOW`, `G-N8N`, `G-WAPI`, `G-PROD` — estão declarados no plano e **nenhum
+deles pertence à Fase 4**.
 
 **Decidido não é implementado.** Até a implementação chegar ao catálogo e passar
 pelos vetores, os dois primeiros continuam declarados como pendentes em
