@@ -85,4 +85,4 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.PARLANT }}
           POC_GEMINI_RPM: ${{ inputs.rpm }}
           POC_GEMINI_RETRIES_429: "0"
-        run: python scripts/smoke_parlant.py --conversas C1-preco
+        run: python scripts/smoke_parlant.py
