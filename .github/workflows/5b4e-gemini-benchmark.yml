@@ -11,6 +11,11 @@ on:
         options:
           - smoke
           - full
+      gemini_model:
+        description: "Pin a Gemini model id; leave empty to discover one from models.list"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -22,9 +27,12 @@ concurrency:
 jobs:
   benchmark:
     runs-on: ubuntu-latest
+    # The full corpus is paced against the provider's per-minute budget; this bounds a stuck run.
+    timeout-minutes: 90
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       BENCHMARK_CASE_LIMIT: ${{ inputs.benchmark_size == 'smoke' && '25' || '300' }}
+      BENCHMARK_GEMINI_MODEL: ${{ inputs.gemini_model }}
     steps:
       - uses: actions/checkout@v4
         with:
