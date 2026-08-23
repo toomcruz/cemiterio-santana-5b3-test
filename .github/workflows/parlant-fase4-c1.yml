@@ -12,10 +12,6 @@ on:
         required: true
         default: "claude/parlant-poc-gemini-bjab09"
         type: string
-      rpm:
-        description: "RPM declarado para a chave Gemini"
-        required: true
-        type: string
 
 permissions:
   contents: read
@@ -83,6 +79,7 @@ jobs:
       - name: Executar somente C1-preco
         env:
           GEMINI_API_KEY: ${{ secrets.PARLANT }}
-          POC_GEMINI_RPM: ${{ inputs.rpm }}
+          # Limite confirmado pela API para esta chave/modelo em 2026-08-23.
+          POC_GEMINI_RPM: "5"
           POC_GEMINI_RETRIES_429: "0"
         run: python scripts/smoke_parlant.py
