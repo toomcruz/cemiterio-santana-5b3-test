@@ -3,10 +3,10 @@ name: Parlant POC (lab)
 # POC isolada em experiments/parlant-poc/. Nao toca em migrations, Supabase,
 # n8n, W-API, WhatsApp nem Vercel. Nao publica nada.
 
-# So roda por disparo explicito. O gatilho `push` fazia cada commit desta
-# branch consumir minutos do Actions — e o objetivo desta etapa e justamente o
-# contrario: rodar isto localmente, em sandbox, por `experiments/parlant-poc/nono`.
 on:
+  push:
+    branches:
+      - "claude/parlant-poc-gemini-bjab09"
   workflow_dispatch:
     inputs:
       run_gemini_smoke:
@@ -49,10 +49,7 @@ jobs:
     name: Smoke Parlant + Gemini (secret PARLANT)
     needs: offline-tests
     timeout-minutes: 45
-    # So roda por disparo explicito. Antes rodava em todo push para a branch do
-    # laboratorio, o que consumia a cota da chave sem ninguem ter pedido — e a
-    # cota do free tier e o recurso escasso desta POC.
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_gemini_smoke == 'true' }}
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_gemini_smoke == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -95,7 +92,5 @@ jobs:
           # A chave da POC entra na aplicacao apenas com este nome.
           GEMINI_API_KEY: ${{ secrets.PARLANT }}
           LAB_PORT: "8801"
-          # Free tier: o throttle da POC espaca as chamadas (ver agent/nlp.py).
-          # Free tier: throttle em agent/nlp.py (10 req/min no gemini-3.x flash).
-          POC_GEMINI_RPM: "10"
+          POC_GEMINI_RPM: "40"
         run: python scripts/smoke_parlant.py
