@@ -1,0 +1,4 @@
+Trigger manual da Fase 4 / Parlant POC em 2026-08-23.
+
+Este arquivo existe apenas para disparar o GitHub Actions na branch claude/parlant-poc-gemini-bjab09.
+Nao altera o laboratorio nem qualquer runtime de producao.
