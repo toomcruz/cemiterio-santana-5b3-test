@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import signal
 import sys
 import time
 from pathlib import Path
@@ -152,8 +153,10 @@ async def _probe() -> int:
 
 async def _stop_server(process: asyncio.subprocess.Process) -> bool:
     """Encerra o Uvicorn auxiliar sem sinalizar o próprio processo do smoke."""
+    termination_requested = False
     if process.returncode is None:
         print("Encerrando servidor auxiliar...", flush=True)
+        termination_requested = True
         process.terminate()
 
     try:
@@ -165,6 +168,13 @@ async def _stop_server(process: asyncio.subprocess.Process) -> bool:
 
     if returncode == 0:
         print("Servidor auxiliar encerrado normalmente.", flush=True)
+        return True
+
+    # Em POSIX, um servidor que recebe o SIGTERM solicitado pelo próprio smoke
+    # pode terminar como -15. Após o probe já concluído, isso é teardown normal,
+    # não uma nova falha da validação.
+    if termination_requested and returncode == -signal.SIGTERM:
+        print("Servidor auxiliar encerrou pelo SIGTERM solicitado.", flush=True)
         return True
 
     print(f"Servidor auxiliar terminou com exit {returncode}.", flush=True)
