@@ -143,10 +143,9 @@ def test_estimativa_local_sobrestima_em_vez_de_subestimar():
 
 
 # ------------------------------------------------------------------ embedder
-def test_embedder_da_poc_nao_usa_o_tokenizer_que_aponta_para_2_5(monkeypatch):
-    """O embedder do Parlant traduz `gemini-embedding-001` -> `gemini-2.5-flash`."""
+def test_embedder_da_poc_e_local_e_nao_consume_cota_do_gemini(monkeypatch):
+    """O índice interno não pode criar chamadas Gemini antes do turno C1."""
     monkeypatch.setenv("GEMINI_API_KEY", "chave-de-teste-nao-usada")
-    monkeypatch.setenv("POC_GEMINI_MODEL", "gemini-3.1-flash-lite")
 
     from parlant.adapters.nlp.gemini_service import GoogleEstimatingTokenizer
 
@@ -160,12 +159,14 @@ def test_embedder_da_poc_nao_usa_o_tokenizer_que_aponta_para_2_5(monkeypatch):
     embedder = nlp.PocEmbedder(_Nulo(), _Nulo(), _Nulo())
     tokenizer = embedder.tokenizer
 
-    assert isinstance(tokenizer, nlp.PocEstimatingTokenizer)
+    assert isinstance(tokenizer, nlp.LocalPocTokenizer)
     assert not isinstance(tokenizer, GoogleEstimatingTokenizer)
-    assert tokenizer._model_name == "gemini-3.1-flash-lite"
-    # O modelo de embedding em si nao muda: so quem conta os tokens dele.
-    assert embedder.model_name == "gemini-embedding-001"
+    assert embedder.model_name == "local-poc-ngram-embedding"
 
+    resultado = asyncio.run(embedder.do_embed(["quanto custa a exumacao?"]))
+    assert len(resultado.vectors) == 1
+    assert len(resultado.vectors[0]) == embedder.dimensions
+    assert any(valor != 0 for valor in resultado.vectors[0])
 
 def test_servico_da_poc_entrega_o_embedder_da_poc(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "chave-de-teste-nao-usada")
