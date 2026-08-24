@@ -157,6 +157,10 @@ async def build_c1_price_agent(server: p.Server) -> tuple[p.Agent, Mapping[str, 
         action=definition["action"],
         tools=[_TOOLS_BY_NAME[name] for name in definition["tools"]],
         criticality=_CRITICALITY[definition["criticality"]],
+        # O C1 envia exatamente uma pergunta de preço. O matcher determinístico
+        # evita apenas a avaliação de bootstrap do SDK (antes do HTTP); o turno,
+        # a geração e a chamada da tool continuam no caminho Gemini real.
+        matcher=p.Guideline.MATCH_ALWAYS,
         metadata={"poc_key": "G_PRECO"},
         on_match=_guideline_tracker("G_PRECO"),
     )
