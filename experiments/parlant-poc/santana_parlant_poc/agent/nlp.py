@@ -19,6 +19,7 @@ Nada disso muda a autoridade das regras: continua toda fora do LLM.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import os
 import re
 import time
@@ -33,6 +34,7 @@ from parlant.adapters.nlp.gemini_service import (
 )
 from parlant.core.loggers import Logger
 from parlant.core.meter import Meter
+from parlant.core.nlp.embedding import BaseEmbedder, EmbeddingResult
 from parlant.core.nlp.generation import SchematicGenerationResult
 from parlant.core.nlp.service import EmbedderHints, ModelSize, NLPService, SchematicGeneratorHints
 from parlant.core.nlp.tokenization import EstimatingTokenizer
@@ -251,22 +253,79 @@ class PocEstimatingTokenizer(EstimatingTokenizer):
         return int(getattr(resultado, "total_tokens", 0) or 0)
 
 
-class PocEmbedder(GeminiTextEmbedding_001):
-    """Embedder da POC: mesmo modelo de embedding, tokenizer da POC.
+class LocalPocTokenizer(EstimatingTokenizer):
+    """Contagem local para o índice interno da POC, sem chamada ao Gemini."""
 
-    O embedding continua em `gemini-embedding-001` — e o modelo de embedding da
-    conta e nao apresenta 404. O que muda e so quem conta os tokens dele.
+    async def estimate_token_count(self, prompt: str) -> int:
+        return max(1, int(len(prompt) / CARACTERES_POR_TOKEN) + 1)
+
+
+class PocLocalEmbedder(BaseEmbedder):
+    """Embedding determinístico, somente para o índice interno do laboratório.
+
+    O C1 valida o Gemini no caminho que decide interpretação e tool call.
+    Embeddings servem apenas para o Parlant localizar as entidades já criadas.
+    Usar a API Gemini também neste passo fazia sete chamadas adicionais antes
+    do primeiro turno e esgotava a cota gratuita, sem aumentar a evidência do
+    teste C1. Este vetor por n-gramas é local, reproduzível e não existe fora
+    desta POC isolada.
     """
 
-    def __init__(self, logger: Logger, tracer: Tracer, meter: Meter) -> None:
-        super().__init__(logger, tracer, meter)
-        self._poc_tokenizer = PocEstimatingTokenizer(
-            client=self._client, model_name=configured_model()
+    _DIMENSIONS = 3072
+
+    def __init__(self, logger: Logger, tracer: Tracer, meter: Meter, health_reporter: Any) -> None:
+        super().__init__(
+            logger,
+            tracer,
+            meter,
+            model_name="local-poc-ngram-embedding",
+            health_reporter=health_reporter,
         )
+        self._tokenizer = LocalPocTokenizer()
 
     @property
-    def tokenizer(self) -> EstimatingTokenizer:  # type: ignore[override]
-        return self._poc_tokenizer
+    def id(self) -> str:
+        return "local/poc-ngram-embedding"
+
+    @property
+    def tokenizer(self) -> EstimatingTokenizer:
+        return self._tokenizer
+
+    @property
+    def max_tokens(self) -> int:
+        return 2048
+
+    @property
+    def dimensions(self) -> int:
+        return self._DIMENSIONS
+
+    @staticmethod
+    def _features(text: str) -> list[str]:
+        normalized = re.sub(r"[^a-z0-9áàâãéêíóôõúç ]+", " ", text.lower())
+        words = [word for word in normalized.split() if word]
+        features = list(words)
+        for word in words:
+            padded = f"^{word}$"
+            features.extend(padded[index : index + 3] for index in range(len(padded) - 2))
+        return features or ["_"]
+
+    async def do_embed(
+        self,
+        texts: list[str],
+        hints: Mapping[str, Any] = {},
+    ) -> EmbeddingResult:
+        vectors: list[list[float]] = []
+        for text in texts:
+            vector = [0.0] * self._DIMENSIONS
+            for feature in self._features(text):
+                digest = hashlib.sha256(feature.encode("utf-8")).digest()
+                index = int.from_bytes(digest[:4], "big") % self._DIMENSIONS
+                vector[index] += 1.0 if digest[4] % 2 else -1.0
+            length = sum(value * value for value in vector) ** 0.5
+            if length:
+                vector = [value / length for value in vector]
+            vectors.append(vector)
+        return EmbeddingResult(vectors=vectors)
 
 
 class ThrottledGemini(GeminiSchematicGenerator[T]):
@@ -342,8 +401,13 @@ class GeminiFlashOnlyService(GeminiService):
         return generator_cls[t](self.logger, self._tracer, self._meter)  # type: ignore[index]
 
     async def get_embedder(self, hints: EmbedderHints = {}) -> Any:
-        """Embedder da POC: o padrao conta tokens em `gemini-2.5-flash` (404)."""
-        return PocEmbedder(self.logger, self._tracer, self._meter)
+        """Índice local da POC; Gemini fica reservado ao caminho decisório real."""
+        return PocLocalEmbedder(
+            self.logger,
+            self._tracer,
+            self._meter,
+            self._health_reporter,
+        )
 
 
 def gemini_flash_only(container: Container) -> NLPService:
