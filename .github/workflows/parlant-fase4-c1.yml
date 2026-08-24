@@ -18,7 +18,8 @@ permissions:
 
 concurrency:
   group: parlant-fase4-c1-${{ inputs.poc_ref }}
-  # Uma nova tentativa substitui a anterior para nao deixar execucoes presas.\n  cancel-in-progress: true
+  # Uma nova tentativa substitui a anterior para nao deixar execucoes presas.
+  cancel-in-progress: true
 
 jobs:
   offline-tests:
@@ -82,4 +83,5 @@ jobs:
           # Limite confirmado pela API para esta chave/modelo em 2026-08-23.
           POC_GEMINI_RPM: "5"
           POC_GEMINI_RETRIES_429: "0"
-        # `timeout` encerra inclusive uma chamada do provedor que deixe de responder.\n        run: timeout --signal=TERM --kill-after=30s 20m python scripts/smoke_parlant.py
+        # `timeout` encerra inclusive uma chamada do provedor que deixe de responder.
+        run: timeout --signal=TERM --kill-after=30s 20m python scripts/smoke_parlant.py
