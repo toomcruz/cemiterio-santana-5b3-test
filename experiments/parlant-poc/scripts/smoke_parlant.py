@@ -13,7 +13,6 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import signal
 import sys
 
 from fastapi import FastAPI
@@ -30,8 +29,6 @@ from santana_parlant_poc.lab.server import (  # noqa: E402
 MENSAGENS = ("quanto custa?",)
 
 PORT = int(os.environ.get("LAB_PORT", "8801"))
-
-RESULTADO = {"codigo": 1}
 
 
 async def _probe(server, state: LabState) -> int:
@@ -102,20 +99,8 @@ async def main() -> int:
     ) as server:
         agent, _ = await build_c1_price_agent(server)
         state.agent_id = agent.id
-
-        async def runner() -> None:
-            try:
-                RESULTADO["codigo"] = await _probe(server, state)
-            finally:
-                os.kill(os.getpid(), signal.SIGINT)
-
-        asyncio.create_task(runner())
-
-    return RESULTADO["codigo"]
+        return await _probe(server, state)
 
 
 if __name__ == "__main__":
-    try:
-        sys.exit(asyncio.run(main()))
-    except KeyboardInterrupt:
-        sys.exit(RESULTADO["codigo"])
+    sys.exit(asyncio.run(main()))
