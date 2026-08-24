@@ -273,13 +273,12 @@ class PocLocalEmbedder(BaseEmbedder):
 
     _DIMENSIONS = 3072
 
-    def __init__(self, logger: Logger, tracer: Tracer, meter: Meter, health_reporter: Any) -> None:
+    def __init__(self, logger: Logger, tracer: Tracer, meter: Meter) -> None:
         super().__init__(
             logger,
             tracer,
             meter,
-            model_name="local-poc-ngram-embedding",
-            health_reporter=health_reporter,
+            "local-poc-ngram-embedding",
         )
         self._tokenizer = LocalPocTokenizer()
 
@@ -402,12 +401,7 @@ class GeminiFlashOnlyService(GeminiService):
 
     async def get_embedder(self, hints: EmbedderHints = {}) -> Any:
         """Índice local da POC; Gemini fica reservado ao caminho decisório real."""
-        return PocLocalEmbedder(
-            self.logger,
-            self._tracer,
-            self._meter,
-            self._health_reporter,
-        )
+        return PocLocalEmbedder(self.logger, self._tracer, self._meter)
 
 
 def gemini_flash_only(container: Container) -> NLPService:
