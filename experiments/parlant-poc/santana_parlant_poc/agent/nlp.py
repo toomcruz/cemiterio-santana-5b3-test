@@ -327,6 +327,11 @@ class PocLocalEmbedder(BaseEmbedder):
         return EmbeddingResult(vectors=vectors)
 
 
+
+# Compatibilidade com os smokes diagnósticos já existentes. O nome antigo
+# continua público, mas agora usa a implementação local da POC.
+PocEmbedder = PocLocalEmbedder
+
 class ThrottledGemini(GeminiSchematicGenerator[T]):
     """Gerador da POC: modelo unico, chamadas espacadas, 429 tratado com espera."""
 
