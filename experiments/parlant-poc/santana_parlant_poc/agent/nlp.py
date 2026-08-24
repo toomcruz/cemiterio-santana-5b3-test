@@ -9,9 +9,10 @@ com a chave desta POC (`PARLANT`):
 3. **Modelo unico e recente.** O padrao e `gemini-3.7-flash`
    (`POC_GEMINI_MODEL` troca). O `gemini-2.5-flash` funciona, mas o free tier
    dele e de 5 requests/minuto, o que torna o start do Parlant inviavel.
-4. **Throttle proprio** — o Parlant avalia todas as entidades em paralelo no
-   start e estoura o limite do free tier (`429 RESOURCE_EXHAUSTED`). O
-   limitador espaca as chamadas e respeita o `retryDelay` devolvido pela API.
+4. **Throttle e timeout próprios** — o limite protege o free tier (`429
+   RESOURCE_EXHAUSTED`) e cada chamada Gemini recebe teto curto. Um `503
+   UNAVAILABLE` temporário ganha uma única retentativa controlada, em vez de
+   manter o turno preso nos retries internos do adaptador.
 
 Nada disso muda a autoridade das regras: continua toda fora do LLM.
 """
@@ -60,6 +61,13 @@ RPM_FAIL_SAFE = 5
 # continuar consumindo cota. `POC_GEMINI_RETRIES_429` permite subir quando a
 # execucao for de producao, nao de teste.
 DEFAULT_RETRIES_ON_429 = 0
+
+# O adaptador do Parlant repete ServerError sem limitar cada requisição. Para o
+# C1, uma indisponibilidade temporária recebe apenas uma nova chance, com teto
+# de 35 s por chamada: suficiente para o caminho real, sem outra espera cega.
+DEFAULT_RETRIES_ON_TRANSIENT = 1
+DEFAULT_CALL_TIMEOUT_S = 35.0
+DEFAULT_TRANSIENT_RETRY_DELAY_S = 4.0
 
 _RETRY_DELAY = re.compile(r"[Pp]lease retry in ([0-9.]+)s")
 
@@ -122,6 +130,37 @@ def configured_retries_on_429() -> int:
         return DEFAULT_RETRIES_ON_429
 
 
+def configured_retries_on_transient() -> int:
+    """No C1, 503/timeout recebe no máximo uma segunda tentativa."""
+    bruto = os.environ.get("POC_GEMINI_RETRIES_TRANSIENT", "").strip()
+    if not bruto:
+        return DEFAULT_RETRIES_ON_TRANSIENT
+    try:
+        return 1 if int(bruto) > 0 else 0
+    except ValueError:
+        return DEFAULT_RETRIES_ON_TRANSIENT
+
+
+def configured_call_timeout_s() -> float:
+    bruto = os.environ.get("POC_GEMINI_CALL_TIMEOUT_S", "").strip()
+    if not bruto:
+        return DEFAULT_CALL_TIMEOUT_S
+    try:
+        return min(60.0, max(5.0, float(bruto)))
+    except ValueError:
+        return DEFAULT_CALL_TIMEOUT_S
+
+
+def configured_transient_retry_delay_s() -> float:
+    bruto = os.environ.get("POC_GEMINI_TRANSIENT_RETRY_DELAY_S", "").strip()
+    if not bruto:
+        return DEFAULT_TRANSIENT_RETRY_DELAY_S
+    try:
+        return min(15.0, max(0.0, float(bruto)))
+    except ValueError:
+        return DEFAULT_TRANSIENT_RETRY_DELAY_S
+
+
 # Tempo total que os limiters passaram esperando, e quantas esperas houve. E o
 # que separa "o Parlant esta lento" de "estamos serializados no rate limit" — sem
 # esse numero, os dois se parecem no relogio.
@@ -172,6 +211,12 @@ def _retry_after(error: BaseException) -> float:
 def _is_rate_limit(error: BaseException) -> bool:
     text = str(error)
     return "429" in text or "RESOURCE_EXHAUSTED" in text
+
+
+def _is_transient_provider_failure(error: BaseException) -> bool:
+    """503/UNAVAILABLE e timeout são transitórios; 4xx de contrato não são."""
+    text = str(error).upper()
+    return isinstance(error, TimeoutError) or "503" in text or "UNAVAILABLE" in text
 
 
 # ------------------------------------------------------- contagem de tokens
@@ -333,7 +378,7 @@ class PocLocalEmbedder(BaseEmbedder):
 PocEmbedder = PocLocalEmbedder
 
 class ThrottledGemini(GeminiSchematicGenerator[T]):
-    """Gerador da POC: modelo unico, chamadas espacadas, 429 tratado com espera."""
+    """Gerador C1: modelo único, quota controlada e falha transitória limitada."""
 
     def __init__(self, logger: Logger, tracer: Tracer, meter: Meter) -> None:
         super().__init__(
@@ -361,6 +406,23 @@ class ThrottledGemini(GeminiSchematicGenerator[T]):
             )
         return self._poc_tokenizer
 
+    async def do_generate(
+        self,
+        prompt: Any,
+        hints: Mapping[str, Any] = {},
+    ) -> SchematicGenerationResult[T]:
+        """Remove o retry longo do adaptador e limita uma chamada Gemini."""
+        timeout_s = configured_call_timeout_s()
+        try:
+            return await asyncio.wait_for(
+                self._do_generate(prompt, hints),
+                timeout=timeout_s,
+            )
+        except TimeoutError as error:
+            raise TimeoutError(
+                f"Gemini não respondeu em {timeout_s:.0f}s; tentativa abortada pelo C1."
+            ) from error
+
     async def generate(
         self,
         prompt: Any,
@@ -370,20 +432,34 @@ class ThrottledGemini(GeminiSchematicGenerator[T]):
         # `thinking_budget` so existe na familia 2.5; nos modelos 3.x a chamada falha.
         base = {"thinking_config": {"thinking_budget": 0}} if self.model_name.startswith("gemini-2.5") else {}
         merged = {**base, **hints}
-        last_error: BaseException | None = None
+        rate_retries_remaining = configured_retries_on_429()
+        transient_retries_remaining = configured_retries_on_transient()
 
-        for _ in range(1 + configured_retries_on_429()):
+        while True:
             await limiter.acquire()
             try:
                 return await super().generate(prompt, merged)
             except Exception as error:
-                if not _is_rate_limit(error):
-                    raise
-                last_error = error
-                await limiter.penalize(_retry_after(error))
+                if _is_rate_limit(error):
+                    if rate_retries_remaining <= 0:
+                        raise
+                    rate_retries_remaining -= 1
+                    await limiter.penalize(_retry_after(error))
+                    continue
 
-        assert last_error is not None
-        raise last_error
+                if _is_transient_provider_failure(error):
+                    if transient_retries_remaining <= 0:
+                        raise
+                    transient_retries_remaining -= 1
+                    delay_s = configured_transient_retry_delay_s()
+                    self.logger.warning(
+                        "Gemini indisponível temporariamente (503/timeout); "
+                        f"nova tentativa em {delay_s:.0f}s."
+                    )
+                    await asyncio.sleep(delay_s)
+                    continue
+
+                raise
 
 
 # Todos os tamanhos usam o mesmo gerador: a chave da POC so tem acesso a um modelo.
