@@ -83,18 +83,25 @@ jobs:
           python -m py_compile \
             santana_parlant_poc/agent/nlp.py \
             santana_parlant_poc/agent/build.py \
+            scripts/serve_c1_price.py \
             scripts/smoke_parlant.py
 
-      - name: Executar smoke C1-preco com limite de 10 minutos
+      - name: Executar smoke C1-preco com limite de 6 minutos
         env:
           GEMINI_API_KEY: ${{ secrets.PARLANT }}
+          PYTHONUNBUFFERED: "1"
           # Limite confirmado pela API para esta chave/modelo em 2026-08-23.
           POC_GEMINI_RPM: "3"
           POC_GEMINI_RETRIES_429: "0"
-        # `timeout` encerra inclusive uma chamada do provedor que deixe de responder.
+          # Limites internos com diagnóstico; evitam outra espera cega de 10 min.
+          POC_C1_READY_TIMEOUT_S: "150"
+          POC_C1_TURN_TIMEOUT_S: "180"
+          POC_C1_STOP_TIMEOUT_S: "15"
+        # `timeout` fica apenas como proteção final: o smoke agora informa em
+        # qual fase parou e encerra o subprocesso do Parlant de forma limpa.
         run: |
           set -o pipefail
-          timeout --signal=TERM --kill-after=30s 10m python scripts/smoke_parlant.py 2>&1 | tee smoke-c1.log
+          timeout --signal=TERM --kill-after=30s 6m python scripts/smoke_parlant.py 2>&1 | tee smoke-c1.log
           status=${PIPESTATUS[0]}
           echo "===== Últimas linhas do smoke ====="
           tail -n 80 smoke-c1.log
