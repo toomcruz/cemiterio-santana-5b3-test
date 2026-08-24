@@ -18,7 +18,8 @@ permissions:
 
 concurrency:
   group: parlant-fase4-c1-${{ inputs.poc_ref }}
-  cancel-in-progress: false
+  # Uma nova tentativa substitui a anterior para nao deixar execucoes presas.
+  cancel-in-progress: true
 
 jobs:
   offline-tests:
@@ -48,7 +49,7 @@ jobs:
   c1-preco:
     name: C1 preco real com Gemini
     needs: offline-tests
-    timeout-minutes: 45
+    timeout-minutes: 25
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -76,10 +77,11 @@ jobs:
           test -n "${GEMINI_API_KEY-}" || { echo "Secret PARLANT ausente."; exit 1; }
           echo "Secret PARLANT presente."
 
-      - name: Executar somente C1-preco
+      - name: Executar smoke C1-preco com limite de 20 minutos
         env:
           GEMINI_API_KEY: ${{ secrets.PARLANT }}
           # Limite confirmado pela API para esta chave/modelo em 2026-08-23.
           POC_GEMINI_RPM: "5"
           POC_GEMINI_RETRIES_429: "0"
-        run: python scripts/smoke_parlant.py
+        # `timeout` encerra inclusive uma chamada do provedor que deixe de responder.
+        run: timeout --signal=TERM --kill-after=30s 20m python scripts/smoke_parlant.py
