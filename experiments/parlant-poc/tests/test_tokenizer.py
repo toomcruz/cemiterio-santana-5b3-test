@@ -9,6 +9,7 @@ Tudo aqui roda offline, com um cliente falso: nenhum teste toca a rede.
 """
 
 import asyncio
+import inspect
 from typing import Any
 
 import pytest
@@ -182,3 +183,23 @@ def test_servico_da_poc_entrega_o_embedder_da_poc(monkeypatch):
     servico = nlp.GeminiFlashOnlyService(_Nulo(), _Nulo(), _Nulo())
     embedder = asyncio.run(servico.get_embedder())
     assert isinstance(embedder, nlp.PocEmbedder)
+
+
+# ------------------------------------------ indisponibilidade temporária
+def test_503_e_timeout_sao_transitorios_sem_tratar_erros_de_contrato() -> None:
+    assert nlp._is_transient_provider_failure(RuntimeError("503 UNAVAILABLE"))
+    assert nlp._is_transient_provider_failure(TimeoutError("tempo esgotado"))
+    assert not nlp._is_transient_provider_failure(RuntimeError("404 NOT_FOUND"))
+
+
+def test_c1_limita_uma_chamada_e_reexecuta_503_uma_unica_vez(monkeypatch) -> None:
+    monkeypatch.delenv("POC_GEMINI_CALL_TIMEOUT_S", raising=False)
+    monkeypatch.delenv("POC_GEMINI_RETRIES_TRANSIENT", raising=False)
+
+    assert nlp.configured_call_timeout_s() == 35.0
+    assert nlp.configured_retries_on_transient() == 1
+
+    source = inspect.getsource(nlp.ThrottledGemini)
+    assert "asyncio.wait_for(" in source
+    assert "self._do_generate(prompt, hints)" in source
+    assert "transient_retries_remaining" in source
