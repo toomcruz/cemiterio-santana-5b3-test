@@ -26,3 +26,23 @@ def test_smoke_separa_cliente_do_servidor_do_parlant() -> None:
     assert "server.ready.wait()" not in smoke
     assert "process.terminate()" in smoke
     assert "async with p.Server(" in servidor
+
+
+def test_c1_evitar_avaliacao_de_bootstrap_antes_do_http() -> None:
+    """O C1 é um probe de turno real, não de classificação semântica.
+
+    Sem um matcher explícito, o SDK 3.3.2 registra uma avaliação com Gemini ao
+    sair do bloco de configuração e a API nunca chega a abrir sob quota baixa.
+    """
+    build = (RAIZ / "santana_parlant_poc" / "agent" / "build.py").read_text(encoding="utf-8")
+    inicio = build.index("async def build_c1_price_agent")
+    fim = build.index("\ndef _build_journey_states", inicio)
+    c1 = build[inicio:fim]
+
+    assert "matcher=p.Guideline.MATCH_ALWAYS" in c1
+
+
+def test_teardown_por_sigterm_solicitado_nao_mascara_sucesso_do_probe() -> None:
+    smoke = (SCRIPTS / "smoke_parlant.py").read_text(encoding="utf-8")
+
+    assert "returncode == -signal.SIGTERM" in smoke
