@@ -131,6 +131,68 @@ async def build_agent(server: p.Server) -> tuple[p.Agent, Mapping[str, Any]]:
     }
 
 
+
+async def build_c1_price_agent(server: p.Server) -> tuple[p.Agent, Mapping[str, Any]]:
+    """Agente mínimo para a validação real C1 de preço.
+
+    O agente completo é validado offline. No C1 real, criar todas as guidelines,
+    relações e estados força o Parlant a avaliar dezenas de entidades antes do
+    primeiro turno — incompatível com a cota real de 5 RPM da chave de laboratório.
+    Este recorte conserva exatamente as duas regras que C1 precisa demonstrar:
+    consultar a ferramenta de preço sem inventar valor e recusar injeção.
+    """
+
+    agent = await server.create_agent(
+        name="Atendente Santana (POC C1 Preço)",
+        description=(
+            "Você atende exclusivamente perguntas sobre preço de exumação. "
+            "Nunca invente ou estime valores e siga as regras do Cemitério Santana."
+        ),
+        composition_mode=p.CompositionMode.FLUID,
+    )
+
+    canned: dict[str, Any] = {}
+    needed_canned = {
+        "PRECO_PRECISA_CONTEXTO",
+        "PRECO_EM_CONFLITO",
+        "SEM_PRECO",
+        "INSTRUCAO_RECUSADA",
+    }
+    for canrep in spec.CANNED_RESPONSES:
+        key = canrep["key"]
+        if key in needed_canned:
+            canned[key] = await agent.create_canned_response(
+                template=canrep["template"],
+                signals=canrep.get("signals", []),
+                metadata={"poc_key": key},
+            )
+
+    guidelines: dict[str, Any] = {}
+    for definition in spec.GUIDELINES:
+        key = definition["key"]
+        if key not in {"G_PRECO", "G_INJECAO"}:
+            continue
+        guidelines[key] = await agent.create_guideline(
+            condition=definition["condition"],
+            action=definition.get("action"),
+            tools=[_TOOLS_BY_NAME[name] for name in definition.get("tools", [])],
+            canned_responses=[canned[k] for k in definition.get("canned_responses", [])],
+            criticality=_CRITICALITY[definition.get("criticality", "MEDIUM")],
+            metadata={"poc_key": key},
+            on_match=_guideline_tracker(key),
+        )
+
+    relationship = await guidelines["G_INJECAO"].prioritize_over(guidelines["G_PRECO"])
+    return agent, {
+        "terms": {},
+        "canned_responses": canned,
+        "guidelines": guidelines,
+        "relationships": [relationship],
+        "journey": None,
+        "journey_states": {},
+    }
+
+
 def _build_journey_states(journey_spec: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
     return {state["key"]: state for state in journey_spec["states"]}
 
