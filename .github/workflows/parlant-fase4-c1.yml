@@ -47,9 +47,9 @@ jobs:
         run: pytest -q
 
   c1-preco:
-    name: C1 preco real com Gemini
+    name: C1 preco real com Gemini (agente focado)
     needs: offline-tests
-    timeout-minutes: 25
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -77,11 +77,11 @@ jobs:
           test -n "${GEMINI_API_KEY-}" || { echo "Secret PARLANT ausente."; exit 1; }
           echo "Secret PARLANT presente."
 
-      - name: Executar smoke C1-preco com limite de 20 minutos
+      - name: Executar smoke C1-preco com limite de 10 minutos
         env:
           GEMINI_API_KEY: ${{ secrets.PARLANT }}
           # Limite confirmado pela API para esta chave/modelo em 2026-08-23.
-          POC_GEMINI_RPM: "5"
+          POC_GEMINI_RPM: "4"
           POC_GEMINI_RETRIES_429: "0"
         # `timeout` encerra inclusive uma chamada do provedor que deixe de responder.
-        run: timeout --signal=TERM --kill-after=30s 20m python scripts/smoke_parlant.py
+        run: timeout --signal=TERM --kill-after=30s 10m python scripts/smoke_parlant.py
