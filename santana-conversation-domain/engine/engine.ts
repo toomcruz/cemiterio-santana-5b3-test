@@ -21,6 +21,7 @@ import {
   relationsDoc,
   requiresAuthoritativeSignal,
 } from "./catalog.ts";
+import type { SolicitacaoRecord } from "./solicitacao.ts";
 
 export interface CaseRecord {
   case_id: string;
@@ -107,6 +108,8 @@ export interface ConversationState {
   forbidden_goals: string[];
   handoff: HandoffModel | null;
   event_log: { seq: number; event_kind: EventKind; note?: string | null }[];
+  /** Fase 4B / R7 — aditivo; ciclo por categoria, sem status global. */
+  solicitacoes?: SolicitacaoRecord[];
 }
 
 export interface FactInput {
@@ -146,6 +149,7 @@ export function initState(conversation_id: string): ConversationState {
     forbidden_goals: [],
     handoff: null,
     event_log: [],
+    solicitacoes: [],
   };
 }
 
