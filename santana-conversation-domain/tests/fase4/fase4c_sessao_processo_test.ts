@@ -6,7 +6,7 @@
 
 import { assert, assertEquals } from "../../../tests/fixtures/assert.ts";
 import { validateState } from "../../engine/validate.ts";
-import { type ConversationState, initState, run } from "../../engine/engine.ts";
+import { type ConversationState, run } from "../../engine/engine.ts";
 import { createSolicitacao } from "../../engine/solicitacao.ts";
 import {
   bindProcessToSession,
@@ -17,7 +17,6 @@ import {
   openNewSessionForExistingProcess,
   processObjectsSnapshot,
   SESSION_STATUSES,
-  type SessionRecord,
   transitionSession,
 } from "../../engine/sessao_processo.ts";
 
@@ -226,7 +225,7 @@ Deno.test("4C-R8: negativo — vínculo é unidirecional (processo→sessão; se
   );
 });
 
-Deno.test("4C-R8: negativo — nenhuma transição de sessão chama rede", async () => {
+Deno.test("4C-R8: negativo — nenhuma transição de sessão chama rede", () => {
   const originalFetch = globalThis.fetch;
   let fetchCalls = 0;
   globalThis.fetch = ((..._args: Parameters<typeof fetch>) => {
