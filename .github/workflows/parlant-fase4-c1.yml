@@ -89,7 +89,7 @@ jobs:
       LITELLM_PROVIDER_API_KEY: ${{ secrets.PARLANT }}
       C1_TETO_CHAMADAS: "250"
       LAB_PORT: "8801"
-      PARLANT_HOME: ${{ runner.temp }}/parlant-c1-omniroute
+      # PARLANT_HOME usa RUNNER_TEMP no step (runner.* nao e valido no env do job no parse do dispatch)
     steps:
       - name: Autorizacao explicita
         shell: bash
@@ -159,6 +159,8 @@ jobs:
 
       - name: Executar somente C1-preco via Omniroute
         shell: bash
+        env:
+          PARLANT_HOME: ${{ runner.temp }}/parlant-c1-omniroute
         run: |
           set -Eeuo pipefail
           unset GEMINI_API_KEY GOOGLE_API_KEY || true
