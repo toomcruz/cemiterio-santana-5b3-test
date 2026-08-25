@@ -93,7 +93,7 @@ jobs:
       LITELLM_PROVIDER_API_KEY: ${{ secrets.PARLANT }}
       C1_TETO_CHAMADAS: "250"
       LAB_PORT: "8801"
-      PARLANT_HOME: ${{ runner.temp }}/parlant-c1-omniroute
+      # PARLANT_HOME usa RUNNER_TEMP no step (runner.* nao e valido no env do job no parse do dispatch)
     steps:
       - name: Autorizacao explicita
         shell: bash
@@ -164,6 +164,7 @@ jobs:
       - name: Executar somente C1-preco via Omniroute
         shell: bash
         env:
+          PARLANT_HOME: ${{ runner.temp }}/parlant-c1-omniroute
           PYTHONUNBUFFERED: "1"
           # Limites internos com diagnostico (main c16d5df); smoke sobe serve
           # como subprocesso separado e nao duplica servidor no workflow.
