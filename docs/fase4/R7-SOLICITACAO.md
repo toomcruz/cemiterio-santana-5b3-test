@@ -24,15 +24,19 @@ Dar à solicitação existência estruturada: categoria, assunto composto por re
 
 ## Ciclos por categoria (sem enum global)
 
-| Categoria                      | Ciclo                                           |
-| ------------------------------ | ----------------------------------------------- |
-| `VENDA`                        | INTERESSE → SOLICITACAO_CONTATO → CONTATO_FEITO |
-| `ACOMPANHAMENTO`               | ABERTO → EM_ANDAMENTO → RESOLVIDO               |
-| `RECLAMACAO`                   | OVERLAY_* (exige `overlay_of_goal_id`)          |
-| `SOLICITACAO_TAXA`             | SOLICITADA → PAGA                               |
-| `SOLICITACAO_AGENDAMENTO`      | PEDIDA → CONFIRMADA_POR_HUMANO                  |
-| `CONSULTA`                     | RESPONDIDA → ENCAMINHADA                        |
-| `ENCAMINHAMENTO_ADMINISTRACAO` | ABERTO → DEVOLVIDO                              |
+| Categoria                      | Ciclo                                                                  |
+| ------------------------------ | ---------------------------------------------------------------------- |
+| `VENDA`                        | INTERESSE → SOLICITACAO_CONTATO → CONTATO_FEITO                        |
+| `ACOMPANHAMENTO`               | ABERTO → EM_ANDAMENTO → RESOLVIDO                                      |
+| `RECLAMACAO`                   | OVERLAY_ABERTO → OVERLAY_EM_TRATAMENTO → OVERLAY_RESOLVIDO (+ overlay) |
+| `SOLICITACAO_TAXA`             | SOLICITADA → PAGA                                                      |
+| `SOLICITACAO_AGENDAMENTO`      | PEDIDA → CONFIRMADA_POR_HUMANO                                         |
+| `CONSULTA`                     | RESPONDIDA → ENCAMINHADA                                               |
+| `ENCAMINHAMENTO_ADMINISTRACAO` | ABERTO → DEVOLVIDO                                                     |
+
+Token autoritativo do meio do ciclo de RECLAMAÇÃO: **`OVERLAY_EM_TRATAMENTO`** (fonte: `engine/solicitacao.ts` @
+`27aa22e`, alinhado ao plano § FASE 4B — “reclamação = overlay + base obrigatória”). `OVERLAY_EM_ANDAMENTO` é drift
+inválido e deve ser rejeitado por engine e schema.
 
 ## Assunto (G12)
 
@@ -61,9 +65,12 @@ A regra estrutural do R7 (_estado_ não é enum global; cada categoria declara o
 
 - `$defs/solicitacao` é um `oneOf` por categoria (`const`) + `estado` no ciclo próprio;
 - `RECLAMACAO` exige `overlay_of_goal_id` string (`minLength: 1`); demais categorias exigem `overlay_of_goal_id: null`.
+- Overlay é **exclusivo** de `RECLAMACAO`: `createSolicitacao` rejeita overlay em qualquer outra categoria (paridade com
+  o schema).
 
-`createSolicitacao` e `validateState` **concordam**: combinação inválida (ex.: `VENDA` + `PAGA`) é rejeitada nos dois
-caminhos. Não há enum global de status.
+`createSolicitacao` e `validateState` **concordam**: combinação inválida (ex.: `VENDA` + `PAGA`, `RECLAMACAO` +
+`OVERLAY_EM_ANDAMENTO`, `CONSULTA` + overlay) é rejeitada nos dois caminhos. Não há enum global de status. Teste
+exaustivo de paridade em `fase4b_solicitacao_test.ts` cobre ciclo aceito/rejeitado + overlay.
 
 ## Persistência (G01 / MIG)
 

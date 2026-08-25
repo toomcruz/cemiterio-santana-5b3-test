@@ -397,7 +397,7 @@
             "estado": {
               "enum": [
                 "OVERLAY_ABERTO",
-                "OVERLAY_EM_ANDAMENTO",
+                "OVERLAY_EM_TRATAMENTO",
                 "OVERLAY_RESOLVIDO"
               ]
             },

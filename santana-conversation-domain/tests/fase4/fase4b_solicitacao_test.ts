@@ -244,6 +244,137 @@ Deno.test("4B-R7: cada categoria usa apenas o próprio ciclo de estado", () => {
   }
 });
 
+/** Planta solicitação crua no estado — para validar schema sem passar pelo engine. */
+function plantSolicitacao(
+  state: ConversationState,
+  patch: {
+    category: SolicitacaoCategory;
+    estado: string;
+    overlay_of_goal_id: string | null;
+  },
+): ConversationState {
+  const skeletonCat: SolicitacaoCategory = patch.category === "RECLAMACAO" ? "RECLAMACAO" : "VENDA";
+  const skeleton = createSolicitacao(fixtureFor(skeletonCat));
+  return {
+    ...state,
+    solicitacoes: [{
+      ...skeleton,
+      category: patch.category,
+      estado: patch.estado as typeof skeleton.estado,
+      overlay_of_goal_id: patch.overlay_of_goal_id,
+    }],
+  };
+}
+
+function createAccepted(input: SolicitacaoInput): boolean {
+  try {
+    createSolicitacao(input);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function schemaAccepted(record: ReturnType<typeof createSolicitacao>): boolean {
+  const state = initState(`parity-${record.solicitacao_id}`);
+  state.solicitacoes = [record];
+  return validateState(state).length === 0;
+}
+
+Deno.test("4B-R7: paridade exaustiva engine×schema — ciclo próprio aceito", () => {
+  for (const category of CATEGORIES) {
+    for (const estado of CATEGORY_CYCLES[category]) {
+      const input = { ...fixtureFor(category), estado };
+      assert(
+        createAccepted(input),
+        `${category}+${estado}: createSolicitacao deveria ACEITAR`,
+      );
+      const record = createSolicitacao(input);
+      assert(
+        schemaAccepted(record),
+        `${category}+${estado}: validateState deveria ACEITAR (paridade)`,
+      );
+    }
+  }
+});
+
+Deno.test("4B-R7: paridade exaustiva engine×schema — estado fora do ciclo rejeitado", () => {
+  const allEstados = new Set<string>();
+  for (const category of CATEGORIES) {
+    for (const estado of CATEGORY_CYCLES[category]) allEstados.add(estado);
+  }
+  // Token fantasma do drift schema (não autoritativo) — deve ser rejeitado nos dois.
+  allEstados.add("OVERLAY_EM_ANDAMENTO");
+
+  for (const category of CATEGORIES) {
+    const own = new Set<string>(CATEGORY_CYCLES[category]);
+    for (const estado of allEstados) {
+      if (own.has(estado)) continue;
+      const input = { ...fixtureFor(category), estado: estado as never };
+      assert(
+        !createAccepted(input),
+        `${category}+${estado}: createSolicitacao deveria REJEITAR`,
+      );
+      const planted = plantSolicitacao(initState(`neg-${category}-${estado}`), {
+        category,
+        estado,
+        overlay_of_goal_id: category === "RECLAMACAO" ? "goal-base" : null,
+      });
+      assert(
+        validateState(planted).length > 0,
+        `${category}+${estado}: validateState deveria REJEITAR (paridade)`,
+      );
+    }
+  }
+});
+
+Deno.test("4B-R7: paridade overlay — exclusivo de RECLAMACAO", () => {
+  // RECLAMACAO sem overlay → ambos rejeitam
+  assert(
+    !createAccepted({ ...fixtureFor("RECLAMACAO"), overlay_of_goal_id: null }),
+    "RECLAMACAO sem overlay: create deveria REJEITAR",
+  );
+  assert(
+    validateState(
+      plantSolicitacao(initState("ov-rec-null"), {
+        category: "RECLAMACAO",
+        estado: "OVERLAY_ABERTO",
+        overlay_of_goal_id: null,
+      }),
+    ).length > 0,
+    "RECLAMACAO sem overlay: schema deveria REJEITAR",
+  );
+
+  // RECLAMACAO com overlay → ambos aceitam
+  const withOv = fixtureFor("RECLAMACAO");
+  assert(createAccepted(withOv), "RECLAMACAO com overlay: create deveria ACEITAR");
+  assert(
+    schemaAccepted(createSolicitacao(withOv)),
+    "RECLAMACAO com overlay: schema deveria ACEITAR",
+  );
+
+  // Não-RECLAMACAO com overlay → ambos rejeitam (overlay exclusivo)
+  for (const category of CATEGORIES) {
+    if (category === "RECLAMACAO") continue;
+    const input = { ...fixtureFor(category), overlay_of_goal_id: "goal-x" };
+    assert(
+      !createAccepted(input),
+      `${category}+overlay: createSolicitacao deveria REJEITAR`,
+    );
+    const estado0 = CATEGORY_CYCLES[category][0];
+    assert(estado0 !== undefined, `${category}: ciclo vazio`);
+    const planted = plantSolicitacao(initState(`ov-${category}`), {
+      category,
+      estado: estado0,
+      overlay_of_goal_id: "goal-x",
+    });
+    assert(
+      validateState(planted).length > 0,
+      `${category}+overlay: validateState deveria REJEITAR (paridade)`,
+    );
+  }
+});
+
 function attachSolicitacao(state: ConversationState, input: SolicitacaoInput): ConversationState {
   const solicitacao = createSolicitacao(input);
   return {

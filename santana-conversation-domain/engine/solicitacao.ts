@@ -136,8 +136,15 @@ export function assertEstadoNoCiclo(
 
 export function createSolicitacao(input: SolicitacaoInput): SolicitacaoRecord {
   assertEstadoNoCiclo(input.category, input.estado);
-  if (input.category === "RECLAMACAO" && !input.overlay_of_goal_id) {
-    throw new Error("RECLAMACAO exige overlay_of_goal_id (base obrigatoria)");
+  if (input.category === "RECLAMACAO") {
+    if (!input.overlay_of_goal_id || input.overlay_of_goal_id.length === 0) {
+      throw new Error("RECLAMACAO exige overlay_of_goal_id (base obrigatoria)");
+    }
+  } else if (input.overlay_of_goal_id !== null) {
+    // Overlay é exclusivo de RECLAMACAO (R7: reclamação = overlay + base obrigatória).
+    throw new Error(
+      `${input.category} nao admite overlay_of_goal_id (exclusivo de RECLAMACAO)`,
+    );
   }
   const assunto = composeAssunto(input.confirmed_facts);
   return {
