@@ -135,6 +135,79 @@ Deno.test("4B-R7: schema aceita solicitação aditiva no estado", () => {
   assertEquals(validateState(state), []);
 });
 
+Deno.test("4B-R7: validateState rejeita category×estado fora do ciclo próprio", () => {
+  // createSolicitacao e validateState devem concordar (fail-closed estrutural).
+  const probes: Array<{
+    name: string;
+    patch: Partial<ReturnType<typeof createSolicitacao>>;
+    create: () => void;
+  }> = [
+    {
+      name: "VENDA+PAGA",
+      patch: { category: "VENDA", estado: "PAGA" as never, overlay_of_goal_id: null },
+      create: () => createSolicitacao({ ...fixtureFor("VENDA"), estado: "PAGA" as never }),
+    },
+    {
+      name: "SOLICITACAO_TAXA+CONTATO_FEITO",
+      patch: {
+        category: "SOLICITACAO_TAXA",
+        estado: "CONTATO_FEITO" as never,
+        overlay_of_goal_id: null,
+      },
+      create: () =>
+        createSolicitacao({
+          ...fixtureFor("SOLICITACAO_TAXA"),
+          estado: "CONTATO_FEITO" as never,
+        }),
+    },
+    {
+      name: "CONSULTA+CONFIRMADA_POR_HUMANO",
+      patch: {
+        category: "CONSULTA",
+        estado: "CONFIRMADA_POR_HUMANO" as never,
+        overlay_of_goal_id: null,
+      },
+      create: () =>
+        createSolicitacao({
+          ...fixtureFor("CONSULTA"),
+          estado: "CONFIRMADA_POR_HUMANO" as never,
+        }),
+    },
+    {
+      name: "RECLAMACAO sem overlay",
+      patch: {
+        category: "RECLAMACAO",
+        estado: "OVERLAY_ABERTO",
+        overlay_of_goal_id: null,
+      },
+      create: () =>
+        createSolicitacao({
+          ...fixtureFor("RECLAMACAO"),
+          overlay_of_goal_id: null,
+        }),
+    },
+  ];
+
+  for (const probe of probes) {
+    let createRejected = false;
+    try {
+      probe.create();
+    } catch {
+      createRejected = true;
+    }
+    assert(createRejected, `${probe.name}: createSolicitacao deveria rejeitar`);
+
+    const valid = createSolicitacao(fixtureFor("VENDA"));
+    const state = initState(`conv-neg-${probe.name}`);
+    state.solicitacoes = [{ ...valid, ...probe.patch }];
+    const errs = validateState(state);
+    assert(
+      errs.length > 0,
+      `${probe.name}: validateState aceitou combinação inválida (divergência do engine)`,
+    );
+  }
+});
+
 Deno.test("4B-R7: não-colapso — sete categorias com estados observáveis distintos", () => {
   const observables = new Map<string, SolicitacaoCategory>();
   for (const category of CATEGORIES) {

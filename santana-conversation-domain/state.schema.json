@@ -142,103 +142,539 @@
         }
       }
     },
+    "solicitacao_common_props": {
+      "solicitacao_id": {
+        "type": "string",
+        "minLength": 1
+      },
+      "case_id": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "topic_code": {
+        "type": "string",
+        "minLength": 1
+      },
+      "assunto": {
+        "$ref": "#/$defs/assunto_composition"
+      },
+      "summary": {
+        "type": "string"
+      },
+      "reason": {
+        "type": "string"
+      },
+      "collected_fact_ids": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "pending_question_ref": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "pending_action_refs": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "forwarding": {
+        "oneOf": [
+          {
+            "type": "null"
+          },
+          {
+            "$ref": "#/$defs/forwarding_ref"
+          }
+        ]
+      },
+      "opened_at_seq": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
     "solicitacao": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "solicitacao_id",
-        "case_id",
-        "category",
-        "topic_code",
-        "overlay_of_goal_id",
-        "assunto",
-        "summary",
-        "reason",
-        "collected_fact_ids",
-        "pending_question_ref",
-        "pending_action_refs",
-        "forwarding",
-        "estado",
-        "opened_at_seq"
-      ],
-      "properties": {
-        "solicitacao_id": {
-          "type": "string",
-          "minLength": 1
-        },
-        "case_id": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "category": {
-          "enum": [
-            "VENDA",
-            "ACOMPANHAMENTO",
-            "RECLAMACAO",
-            "SOLICITACAO_TAXA",
-            "SOLICITACAO_AGENDAMENTO",
-            "CONSULTA",
-            "ENCAMINHAMENTO_ADMINISTRACAO"
-          ]
-        },
-        "topic_code": {
-          "type": "string",
-          "minLength": 1
-        },
-        "overlay_of_goal_id": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "assunto": {
-          "$ref": "#/$defs/assunto_composition"
-        },
-        "summary": {
-          "type": "string"
-        },
-        "reason": {
-          "type": "string"
-        },
-        "collected_fact_ids": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "pending_question_ref": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "pending_action_refs": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "forwarding": {
-          "oneOf": [
-            {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "solicitacao_id",
+            "case_id",
+            "category",
+            "topic_code",
+            "overlay_of_goal_id",
+            "assunto",
+            "summary",
+            "reason",
+            "collected_fact_ids",
+            "pending_question_ref",
+            "pending_action_refs",
+            "forwarding",
+            "estado",
+            "opened_at_seq"
+          ],
+          "properties": {
+            "solicitacao_id": {
+              "$ref": "#/$defs/solicitacao_common_props/solicitacao_id"
+            },
+            "case_id": {
+              "$ref": "#/$defs/solicitacao_common_props/case_id"
+            },
+            "category": {
+              "const": "VENDA"
+            },
+            "topic_code": {
+              "$ref": "#/$defs/solicitacao_common_props/topic_code"
+            },
+            "overlay_of_goal_id": {
               "type": "null"
             },
-            {
-              "$ref": "#/$defs/forwarding_ref"
+            "assunto": {
+              "$ref": "#/$defs/assunto_composition"
+            },
+            "summary": {
+              "$ref": "#/$defs/solicitacao_common_props/summary"
+            },
+            "reason": {
+              "$ref": "#/$defs/solicitacao_common_props/reason"
+            },
+            "collected_fact_ids": {
+              "$ref": "#/$defs/solicitacao_common_props/collected_fact_ids"
+            },
+            "pending_question_ref": {
+              "$ref": "#/$defs/solicitacao_common_props/pending_question_ref"
+            },
+            "pending_action_refs": {
+              "$ref": "#/$defs/solicitacao_common_props/pending_action_refs"
+            },
+            "forwarding": {
+              "$ref": "#/$defs/solicitacao_common_props/forwarding"
+            },
+            "estado": {
+              "enum": [
+                "INTERESSE",
+                "SOLICITACAO_CONTATO",
+                "CONTATO_FEITO"
+              ]
+            },
+            "opened_at_seq": {
+              "$ref": "#/$defs/solicitacao_common_props/opened_at_seq"
             }
-          ]
+          }
         },
-        "estado": {
-          "type": "string",
-          "minLength": 1
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "solicitacao_id",
+            "case_id",
+            "category",
+            "topic_code",
+            "overlay_of_goal_id",
+            "assunto",
+            "summary",
+            "reason",
+            "collected_fact_ids",
+            "pending_question_ref",
+            "pending_action_refs",
+            "forwarding",
+            "estado",
+            "opened_at_seq"
+          ],
+          "properties": {
+            "solicitacao_id": {
+              "$ref": "#/$defs/solicitacao_common_props/solicitacao_id"
+            },
+            "case_id": {
+              "$ref": "#/$defs/solicitacao_common_props/case_id"
+            },
+            "category": {
+              "const": "ACOMPANHAMENTO"
+            },
+            "topic_code": {
+              "$ref": "#/$defs/solicitacao_common_props/topic_code"
+            },
+            "overlay_of_goal_id": {
+              "type": "null"
+            },
+            "assunto": {
+              "$ref": "#/$defs/assunto_composition"
+            },
+            "summary": {
+              "$ref": "#/$defs/solicitacao_common_props/summary"
+            },
+            "reason": {
+              "$ref": "#/$defs/solicitacao_common_props/reason"
+            },
+            "collected_fact_ids": {
+              "$ref": "#/$defs/solicitacao_common_props/collected_fact_ids"
+            },
+            "pending_question_ref": {
+              "$ref": "#/$defs/solicitacao_common_props/pending_question_ref"
+            },
+            "pending_action_refs": {
+              "$ref": "#/$defs/solicitacao_common_props/pending_action_refs"
+            },
+            "forwarding": {
+              "$ref": "#/$defs/solicitacao_common_props/forwarding"
+            },
+            "estado": {
+              "enum": [
+                "ABERTO",
+                "EM_ANDAMENTO",
+                "RESOLVIDO"
+              ]
+            },
+            "opened_at_seq": {
+              "$ref": "#/$defs/solicitacao_common_props/opened_at_seq"
+            }
+          }
         },
-        "opened_at_seq": {
-          "type": "integer",
-          "minimum": 0
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "solicitacao_id",
+            "case_id",
+            "category",
+            "topic_code",
+            "overlay_of_goal_id",
+            "assunto",
+            "summary",
+            "reason",
+            "collected_fact_ids",
+            "pending_question_ref",
+            "pending_action_refs",
+            "forwarding",
+            "estado",
+            "opened_at_seq"
+          ],
+          "properties": {
+            "solicitacao_id": {
+              "$ref": "#/$defs/solicitacao_common_props/solicitacao_id"
+            },
+            "case_id": {
+              "$ref": "#/$defs/solicitacao_common_props/case_id"
+            },
+            "category": {
+              "const": "RECLAMACAO"
+            },
+            "topic_code": {
+              "$ref": "#/$defs/solicitacao_common_props/topic_code"
+            },
+            "overlay_of_goal_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "assunto": {
+              "$ref": "#/$defs/assunto_composition"
+            },
+            "summary": {
+              "$ref": "#/$defs/solicitacao_common_props/summary"
+            },
+            "reason": {
+              "$ref": "#/$defs/solicitacao_common_props/reason"
+            },
+            "collected_fact_ids": {
+              "$ref": "#/$defs/solicitacao_common_props/collected_fact_ids"
+            },
+            "pending_question_ref": {
+              "$ref": "#/$defs/solicitacao_common_props/pending_question_ref"
+            },
+            "pending_action_refs": {
+              "$ref": "#/$defs/solicitacao_common_props/pending_action_refs"
+            },
+            "forwarding": {
+              "$ref": "#/$defs/solicitacao_common_props/forwarding"
+            },
+            "estado": {
+              "enum": [
+                "OVERLAY_ABERTO",
+                "OVERLAY_EM_ANDAMENTO",
+                "OVERLAY_RESOLVIDO"
+              ]
+            },
+            "opened_at_seq": {
+              "$ref": "#/$defs/solicitacao_common_props/opened_at_seq"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "solicitacao_id",
+            "case_id",
+            "category",
+            "topic_code",
+            "overlay_of_goal_id",
+            "assunto",
+            "summary",
+            "reason",
+            "collected_fact_ids",
+            "pending_question_ref",
+            "pending_action_refs",
+            "forwarding",
+            "estado",
+            "opened_at_seq"
+          ],
+          "properties": {
+            "solicitacao_id": {
+              "$ref": "#/$defs/solicitacao_common_props/solicitacao_id"
+            },
+            "case_id": {
+              "$ref": "#/$defs/solicitacao_common_props/case_id"
+            },
+            "category": {
+              "const": "SOLICITACAO_TAXA"
+            },
+            "topic_code": {
+              "$ref": "#/$defs/solicitacao_common_props/topic_code"
+            },
+            "overlay_of_goal_id": {
+              "type": "null"
+            },
+            "assunto": {
+              "$ref": "#/$defs/assunto_composition"
+            },
+            "summary": {
+              "$ref": "#/$defs/solicitacao_common_props/summary"
+            },
+            "reason": {
+              "$ref": "#/$defs/solicitacao_common_props/reason"
+            },
+            "collected_fact_ids": {
+              "$ref": "#/$defs/solicitacao_common_props/collected_fact_ids"
+            },
+            "pending_question_ref": {
+              "$ref": "#/$defs/solicitacao_common_props/pending_question_ref"
+            },
+            "pending_action_refs": {
+              "$ref": "#/$defs/solicitacao_common_props/pending_action_refs"
+            },
+            "forwarding": {
+              "$ref": "#/$defs/solicitacao_common_props/forwarding"
+            },
+            "estado": {
+              "enum": [
+                "SOLICITADA",
+                "PAGA"
+              ]
+            },
+            "opened_at_seq": {
+              "$ref": "#/$defs/solicitacao_common_props/opened_at_seq"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "solicitacao_id",
+            "case_id",
+            "category",
+            "topic_code",
+            "overlay_of_goal_id",
+            "assunto",
+            "summary",
+            "reason",
+            "collected_fact_ids",
+            "pending_question_ref",
+            "pending_action_refs",
+            "forwarding",
+            "estado",
+            "opened_at_seq"
+          ],
+          "properties": {
+            "solicitacao_id": {
+              "$ref": "#/$defs/solicitacao_common_props/solicitacao_id"
+            },
+            "case_id": {
+              "$ref": "#/$defs/solicitacao_common_props/case_id"
+            },
+            "category": {
+              "const": "SOLICITACAO_AGENDAMENTO"
+            },
+            "topic_code": {
+              "$ref": "#/$defs/solicitacao_common_props/topic_code"
+            },
+            "overlay_of_goal_id": {
+              "type": "null"
+            },
+            "assunto": {
+              "$ref": "#/$defs/assunto_composition"
+            },
+            "summary": {
+              "$ref": "#/$defs/solicitacao_common_props/summary"
+            },
+            "reason": {
+              "$ref": "#/$defs/solicitacao_common_props/reason"
+            },
+            "collected_fact_ids": {
+              "$ref": "#/$defs/solicitacao_common_props/collected_fact_ids"
+            },
+            "pending_question_ref": {
+              "$ref": "#/$defs/solicitacao_common_props/pending_question_ref"
+            },
+            "pending_action_refs": {
+              "$ref": "#/$defs/solicitacao_common_props/pending_action_refs"
+            },
+            "forwarding": {
+              "$ref": "#/$defs/solicitacao_common_props/forwarding"
+            },
+            "estado": {
+              "enum": [
+                "PEDIDA",
+                "CONFIRMADA_POR_HUMANO"
+              ]
+            },
+            "opened_at_seq": {
+              "$ref": "#/$defs/solicitacao_common_props/opened_at_seq"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "solicitacao_id",
+            "case_id",
+            "category",
+            "topic_code",
+            "overlay_of_goal_id",
+            "assunto",
+            "summary",
+            "reason",
+            "collected_fact_ids",
+            "pending_question_ref",
+            "pending_action_refs",
+            "forwarding",
+            "estado",
+            "opened_at_seq"
+          ],
+          "properties": {
+            "solicitacao_id": {
+              "$ref": "#/$defs/solicitacao_common_props/solicitacao_id"
+            },
+            "case_id": {
+              "$ref": "#/$defs/solicitacao_common_props/case_id"
+            },
+            "category": {
+              "const": "CONSULTA"
+            },
+            "topic_code": {
+              "$ref": "#/$defs/solicitacao_common_props/topic_code"
+            },
+            "overlay_of_goal_id": {
+              "type": "null"
+            },
+            "assunto": {
+              "$ref": "#/$defs/assunto_composition"
+            },
+            "summary": {
+              "$ref": "#/$defs/solicitacao_common_props/summary"
+            },
+            "reason": {
+              "$ref": "#/$defs/solicitacao_common_props/reason"
+            },
+            "collected_fact_ids": {
+              "$ref": "#/$defs/solicitacao_common_props/collected_fact_ids"
+            },
+            "pending_question_ref": {
+              "$ref": "#/$defs/solicitacao_common_props/pending_question_ref"
+            },
+            "pending_action_refs": {
+              "$ref": "#/$defs/solicitacao_common_props/pending_action_refs"
+            },
+            "forwarding": {
+              "$ref": "#/$defs/solicitacao_common_props/forwarding"
+            },
+            "estado": {
+              "enum": [
+                "RESPONDIDA",
+                "ENCAMINHADA"
+              ]
+            },
+            "opened_at_seq": {
+              "$ref": "#/$defs/solicitacao_common_props/opened_at_seq"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "solicitacao_id",
+            "case_id",
+            "category",
+            "topic_code",
+            "overlay_of_goal_id",
+            "assunto",
+            "summary",
+            "reason",
+            "collected_fact_ids",
+            "pending_question_ref",
+            "pending_action_refs",
+            "forwarding",
+            "estado",
+            "opened_at_seq"
+          ],
+          "properties": {
+            "solicitacao_id": {
+              "$ref": "#/$defs/solicitacao_common_props/solicitacao_id"
+            },
+            "case_id": {
+              "$ref": "#/$defs/solicitacao_common_props/case_id"
+            },
+            "category": {
+              "const": "ENCAMINHAMENTO_ADMINISTRACAO"
+            },
+            "topic_code": {
+              "$ref": "#/$defs/solicitacao_common_props/topic_code"
+            },
+            "overlay_of_goal_id": {
+              "type": "null"
+            },
+            "assunto": {
+              "$ref": "#/$defs/assunto_composition"
+            },
+            "summary": {
+              "$ref": "#/$defs/solicitacao_common_props/summary"
+            },
+            "reason": {
+              "$ref": "#/$defs/solicitacao_common_props/reason"
+            },
+            "collected_fact_ids": {
+              "$ref": "#/$defs/solicitacao_common_props/collected_fact_ids"
+            },
+            "pending_question_ref": {
+              "$ref": "#/$defs/solicitacao_common_props/pending_question_ref"
+            },
+            "pending_action_refs": {
+              "$ref": "#/$defs/solicitacao_common_props/pending_action_refs"
+            },
+            "forwarding": {
+              "$ref": "#/$defs/solicitacao_common_props/forwarding"
+            },
+            "estado": {
+              "enum": [
+                "ABERTO",
+                "DEVOLVIDO"
+              ]
+            },
+            "opened_at_seq": {
+              "$ref": "#/$defs/solicitacao_common_props/opened_at_seq"
+            }
+          }
         }
-      }
+      ]
     },
     "case": {
       "type": "object",
