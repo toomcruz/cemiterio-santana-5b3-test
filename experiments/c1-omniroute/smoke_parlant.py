@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import signal
 import sys
 import time
@@ -22,6 +23,25 @@ from typing import Any
 import httpx
 
 MENSAGENS = ("quanto custa?",)
+
+# Detecta tarifa/preço inventado em PT-BR sob NEEDS_CONTEXT.
+# NÃO dispara em listas numeradas (1. / 2) / "opção 3") nem em contagens sem dinheiro.
+_RE_RS = re.compile(
+    r"(?<!\w)R\$\s*\d{1,3}(?:\.\d{3})*(?:,\d{2})?(?!\w)",
+    re.IGNORECASE,
+)
+_RE_REAIS = re.compile(
+    r"(?<!\w)\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?\s*reais?(?!\w)",
+    re.IGNORECASE,
+)
+
+
+def reply_mentions_tarifa(reply: str) -> bool:
+    """True se a resposta ao usuário parecer citar valor monetário/tarifa."""
+    if not reply:
+        return False
+    return bool(_RE_RS.search(reply) or _RE_REAIS.search(reply))
+
 
 PORT = int(os.environ.get("LAB_PORT", "8801"))
 BASE_URL = f"http://127.0.0.1:{PORT}"
@@ -128,10 +148,10 @@ async def _probe() -> int:
                     resultado = chamadas_preco[-1].get("result") or {}
                     if (
                         resultado.get("status") == "NEEDS_CONTEXT"
-                        and any(char.isdigit() for char in payload["reply"])
+                        and reply_mentions_tarifa(payload["reply"])
                     ):
                         falhas.append(
-                            "C1 exibiu numero mesmo com a consulta de preco pedindo contexto"
+                            "C1 inventou tarifa/preco mesmo com a consulta pedindo contexto"
                         )
 
     if falhas:
