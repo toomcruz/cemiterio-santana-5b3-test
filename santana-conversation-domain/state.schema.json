@@ -97,6 +97,14 @@
       "items": {
         "$ref": "#/$defs/solicitacao"
       }
+    },
+    "last_touched_session_id": {
+      "description": "Fase 4C / R8 — referência unidirecional processo→sessão. Não implica ownership. Fechar sessão não muta objetos de processo.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
     }
   },
   "$defs": {

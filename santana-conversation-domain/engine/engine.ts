@@ -110,6 +110,12 @@ export interface ConversationState {
   event_log: { seq: number; event_kind: EventKind; note?: string | null }[];
   /** Fase 4B / R7 — aditivo; ciclo por categoria, sem status global. */
   solicitacoes?: SolicitacaoRecord[];
+  /**
+   * Fase 4C / R8 — vínculo unidirecional processo → sessão.
+   * Metadado de referência; NÃO faz parte dos objetos de processo hasheados.
+   * Fechar a sessão não limpa cases/facts/solicitacoes/documentos.
+   */
+  last_touched_session_id?: string | null;
 }
 
 export interface FactInput {
