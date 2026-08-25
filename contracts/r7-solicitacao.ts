@@ -20,8 +20,8 @@ export type {
 } from "../santana-conversation-domain/engine/solicitacao.ts";
 
 export {
-  CATEGORY_CYCLES,
   assertEstadoNoCiclo,
+  CATEGORY_CYCLES,
   composeAssunto,
   createSolicitacao,
   observableSolicitacaoState,

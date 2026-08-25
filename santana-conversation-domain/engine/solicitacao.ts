@@ -152,9 +152,7 @@ export function createSolicitacao(input: SolicitacaoInput): SolicitacaoRecord {
     collected_fact_ids: [...input.collected_fact_ids],
     pending_question_ref: input.pending_question_ref,
     pending_action_refs: [...input.pending_action_refs],
-    forwarding: input.forwarding
-      ? { ...input.forwarding }
-      : null,
+    forwarding: input.forwarding ? { ...input.forwarding } : null,
     estado: input.estado,
     opened_at_seq: input.opened_at_seq,
   };

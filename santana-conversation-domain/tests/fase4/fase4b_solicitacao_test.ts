@@ -4,7 +4,7 @@
 
 import { assert, assertEquals } from "../../../tests/fixtures/assert.ts";
 import { validateState } from "../../engine/validate.ts";
-import { initState, type ConversationState } from "../../engine/engine.ts";
+import { type ConversationState, initState } from "../../engine/engine.ts";
 import {
   CATEGORY_CYCLES,
   composeAssunto,
