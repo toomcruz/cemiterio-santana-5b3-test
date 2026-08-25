@@ -160,6 +160,16 @@ jobs:
           test -n "${LITELLM_PROVIDER_API_KEY-}" || { echo "Secret PARLANT ausente."; exit 1; }
           echo "Secret PARLANT presente (len=${#LITELLM_PROVIDER_API_KEY})."
 
+      # Unit do detector de tarifa: barato, sem modelo. Deve falhar antes do live.
+      - name: Unit detector de tarifa inventada (sem modelo)
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -Eeuo pipefail
+          python -m pip install --quiet pytest
+          PYTHONPATH=experiments/c1-omniroute \
+            pytest -q experiments/c1-omniroute/test_price_mention.py
+
       - name: Preflight curto Omniroute local (models + chat nonce)
         shell: bash
         working-directory: ${{ github.workspace }}

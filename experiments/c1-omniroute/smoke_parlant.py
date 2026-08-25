@@ -26,13 +26,21 @@ MENSAGENS = ("quanto custa?",)
 
 # Detecta tarifa/preço inventado em PT-BR sob NEEDS_CONTEXT.
 # NÃO dispara em listas numeradas (1. / 2) / "opção 3") nem em contagens sem dinheiro.
+# Numero sem R$/real(is) so conta se houver lexico monetario proximo.
+_NUM_BR = r"\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?"
 _RE_RS = re.compile(
-    r"(?<!\w)R\$\s*\d{1,3}(?:\.\d{3})*(?:,\d{2})?(?!\w)",
+    rf"(?<!\w)R\$\s*{_NUM_BR}(?!\w)",
     re.IGNORECASE,
 )
+# "real" (singular) e "reais" (plural) — NÃO "reai".
 _RE_REAIS = re.compile(
-    r"(?<!\w)\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?\s*reais?(?!\w)",
+    rf"(?<!\w){_NUM_BR}\s*rea(?:l|is)\b",
     re.IGNORECASE,
+)
+# Lexico monetario → numero (janela curta, sem exigir unidade).
+_RE_LEXICO_NUM = re.compile(
+    rf"(?i)\b(?:custa|custo|valor|pre[cç]o|tarifa|sai\s+por|fica\s+em)\b"
+    rf"[^\d]{{0,24}}{_NUM_BR}(?!\w)"
 )
 
 
@@ -40,7 +48,11 @@ def reply_mentions_tarifa(reply: str) -> bool:
     """True se a resposta ao usuário parecer citar valor monetário/tarifa."""
     if not reply:
         return False
-    return bool(_RE_RS.search(reply) or _RE_REAIS.search(reply))
+    return bool(
+        _RE_RS.search(reply)
+        or _RE_REAIS.search(reply)
+        or _RE_LEXICO_NUM.search(reply)
+    )
 
 
 PORT = int(os.environ.get("LAB_PORT", "8801"))
@@ -137,6 +149,13 @@ async def _probe() -> int:
                 falhas.append(f"erro no turno '{mensagem}': {rastro['error']}")
 
             if mensagem == "quanto custa?":
+                guidelines = rastro.get("guidelines") or []
+                if "G_PRECO" not in guidelines:
+                    falhas.append(
+                        "C1 nao ativou guideline G_PRECO "
+                        f"(guidelines={guidelines!r})"
+                    )
+
                 chamadas_preco = [
                     chamada
                     for chamada in rastro["tool_calls"]
@@ -160,7 +179,8 @@ async def _probe() -> int:
             print(" -", falha, flush=True)
     else:
         print(
-            "\nOK: API real respondeu via Omniroute, chamou a tool de preco e nao inventou tarifa sem contexto.",
+            "\nOK: API real respondeu via Omniroute, ativou G_PRECO, "
+            "chamou a tool de preco e nao inventou tarifa sem contexto.",
             flush=True,
         )
 
