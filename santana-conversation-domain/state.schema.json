@@ -91,9 +91,155 @@
       "items": {
         "$ref": "#/$defs/event_record"
       }
+    },
+    "solicitacoes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/solicitacao"
+      }
     }
   },
   "$defs": {
+    "assunto_composition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "fell_back",
+        "rule_id"
+      ],
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fell_back": {
+          "type": "boolean"
+        },
+        "rule_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "forwarding_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "destinatario",
+        "executor"
+      ],
+      "properties": {
+        "destinatario": {
+          "type": "string",
+          "minLength": 1
+        },
+        "executor": {
+          "enum": [
+            "SYSTEM",
+            "HUMAN"
+          ]
+        }
+      }
+    },
+    "solicitacao": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "solicitacao_id",
+        "case_id",
+        "category",
+        "topic_code",
+        "overlay_of_goal_id",
+        "assunto",
+        "summary",
+        "reason",
+        "collected_fact_ids",
+        "pending_question_ref",
+        "pending_action_refs",
+        "forwarding",
+        "estado",
+        "opened_at_seq"
+      ],
+      "properties": {
+        "solicitacao_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "case_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "category": {
+          "enum": [
+            "VENDA",
+            "ACOMPANHAMENTO",
+            "RECLAMACAO",
+            "SOLICITACAO_TAXA",
+            "SOLICITACAO_AGENDAMENTO",
+            "CONSULTA",
+            "ENCAMINHAMENTO_ADMINISTRACAO"
+          ]
+        },
+        "topic_code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "overlay_of_goal_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "assunto": {
+          "$ref": "#/$defs/assunto_composition"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "collected_fact_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pending_question_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pending_action_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "forwarding": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/forwarding_ref"
+            }
+          ]
+        },
+        "estado": {
+          "type": "string",
+          "minLength": 1
+        },
+        "opened_at_seq": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
     "case": {
       "type": "object",
       "additionalProperties": false,
