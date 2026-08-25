@@ -41,6 +41,9 @@ async def main() -> None:
     os.environ.pop("GEMINI_API_KEY", None)
     os.environ.pop("GOOGLE_API_KEY", None)
 
+    # Overlay do lab/server.py: espera ready+completed (nao o preambulo).
+    # Este script roda em experiments/parlant-poc/scripts/; o arquivo
+    # lab_server.py e copiado para santana_parlant_poc/lab/server.py no job.
     import parlant.sdk as p
 
     from omniroute_nlp import CONTADOR, servico_omniroute

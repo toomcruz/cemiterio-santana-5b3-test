@@ -123,8 +123,10 @@ jobs:
           cp experiments/c1-omniroute/smoke_parlant.py experiments/parlant-poc/scripts/smoke_parlant.py
           cp experiments/c1-omniroute/preflight_omniroute.py experiments/parlant-poc/scripts/preflight_omniroute.py
           cp experiments/c1-omniroute/preflight_omniroute.sh experiments/parlant-poc/scripts/preflight_omniroute.sh
+          # Lab server overlaid: espera ready+completed (nao preambulo).
+          cp experiments/c1-omniroute/lab_server.py experiments/parlant-poc/santana_parlant_poc/lab/server.py
           chmod +x experiments/parlant-poc/scripts/preflight_omniroute.sh experiments/parlant-poc/scripts/preflight_omniroute.py
-          ls experiments/parlant-poc/*.py experiments/parlant-poc/scripts/serve_c1_price.py experiments/parlant-poc/scripts/smoke_parlant.py experiments/parlant-poc/scripts/preflight_omniroute.py
+          ls experiments/parlant-poc/*.py experiments/parlant-poc/scripts/serve_c1_price.py experiments/parlant-poc/scripts/smoke_parlant.py experiments/parlant-poc/scripts/preflight_omniroute.py experiments/parlant-poc/santana_parlant_poc/lab/server.py
 
       - uses: actions/setup-python@v5
         with:

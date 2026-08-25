@@ -24,7 +24,7 @@ LITELLM_PROVIDER_MODEL_NAME=openai/claude/claude-sonnet-4-6
 
 1. `runs-on: self-hosted`
 2. Materializa a POC Gemini sem mesclar em main
-3. Sobrepoe `omniroute_nlp.py`, `serve_c1_price.py`, `smoke_parlant.py`
+3. Sobrepoe `omniroute_nlp.py`, `serve_c1_price.py`, `smoke_parlant.py`, `lab_server.py`
 4. Preflight curto: `GET /v1/models` + 1 chat com nonce em loopback
 5. Smoke C1
 
