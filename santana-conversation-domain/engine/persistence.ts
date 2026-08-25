@@ -1,8 +1,22 @@
 // Ponte entre o reducer canonico (TypeScript) e a persistencia (migration 0020).
 // Produz a transicao (lista de operacoes) e a projecao canonica que o banco
 // recalcula. Nao contem regra conversacional: apenas diferenca de estado.
+//
+// Fase 4C / R8 (G11): ciclo de sessão vive em sessao_processo.ts e NÃO gera
+// TransitionOp de processo. Fechar sessão não emite ops sobre cases/facts/
+// solicitacoes/documentos. Ver docs/fase4/R8-SESSAO-PROCESSO.md.
 
 import type { ConversationState, FactRecord, GoalRecord, QuestionRef } from "./engine.ts";
+export { DOCUMENTOS_FUTURE_KEY } from "./sessao_processo.ts";
+import { DOCUMENTOS_FUTURE_KEY } from "./sessao_processo.ts";
+
+/** Chaves de objeto de PROCESSO protegidas pela garantia R8 (offline). */
+export const R8_PROCESS_OBJECT_KEYS = [
+  "cases",
+  "facts",
+  "solicitacoes",
+  DOCUMENTOS_FUTURE_KEY,
+] as const;
 
 export interface TransitionOp {
   op: string;

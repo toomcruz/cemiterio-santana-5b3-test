@@ -11,3 +11,13 @@ Correções incorporadas:
 - `A_CONFIRMAR`: não pode resolver preço, prazo, SLA ou documento obrigatório; não pode construir proposta administrativa nem consultar legado.
 
 Qualquer alteração nesses limites exige uma revisão posterior do blueprint, não uma alteração local silenciosa.
+
+## Fase 4C / R8 — Sessão × processo (G11)
+
+- Garantia: `SESSION CLOSED != PROCESS CLOSED`.
+- Ciclo de sessão inalterado: `ACTIVE → WARNING_PENDING → WARNING_SENT → CLOSED`.
+- Vínculo **unidirecional**: `ConversationState.last_touched_session_id` → sessão.
+- Sessão **não** é dona do processo; fechar sessão não muta `cases` / `facts` /
+  `solicitacoes` / documentos futuros.
+- Política 3+2 permanece; worker/timers **fora** desta subfase.
+- Contrato: `contracts/r8-sessao-processo.ts` · docs: `docs/fase4/R8-SESSAO-PROCESSO.md`.
