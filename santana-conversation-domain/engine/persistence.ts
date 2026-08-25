@@ -7,6 +7,7 @@
 // solicitacoes/documentos. Ver docs/fase4/R8-SESSAO-PROCESSO.md.
 
 import type { ConversationState, FactRecord, GoalRecord, QuestionRef } from "./engine.ts";
+export { DOCUMENTOS_FUTURE_KEY } from "./sessao_processo.ts";
 import { DOCUMENTOS_FUTURE_KEY } from "./sessao_processo.ts";
 
 /** Chaves de objeto de PROCESSO protegidas pela garantia R8 (offline). */
