@@ -33,8 +33,8 @@ export interface SessionRecord {
 }
 
 const ALLOWED_TRANSITIONS: Record<SessionStatus, readonly SessionStatus[]> = {
-  ACTIVE: ["WARNING_PENDING", "CLOSED"],
-  WARNING_PENDING: ["WARNING_SENT", "CLOSED"],
+  ACTIVE: ["WARNING_PENDING"],
+  WARNING_PENDING: ["WARNING_SENT"],
   WARNING_SENT: ["CLOSED"],
   CLOSED: [],
 };
@@ -100,9 +100,26 @@ export function processObjectsSnapshot(state: ConversationState): {
     cases: structuredClone(state.cases),
     facts: structuredClone(state.facts),
     solicitacoes: structuredClone(state.solicitacoes ?? []),
-    // 4E ainda não existe: coleção futura reservada e protegida no hash.
-    [DOCUMENTOS_FUTURE_KEY]: [],
+    // 4E ainda não declara schema; adaptador estrutural fail-closed.
+    [DOCUMENTOS_FUTURE_KEY]: readDocumentosCollection(state),
   };
+}
+
+/**
+ * Lê a coleção futura `documentos` sem declarar semântica 4E.
+ * ausente → []; array → clone canônico; presente e não-array → erro.
+ */
+function readDocumentosCollection(state: ConversationState): unknown[] {
+  const raw = (state as ConversationState & Record<string, unknown>)[
+    DOCUMENTOS_FUTURE_KEY
+  ];
+  if (raw === undefined) return [];
+  if (!Array.isArray(raw)) {
+    throw new Error(
+      "documentos: formato inesperado (esperado array ou ausente)",
+    );
+  }
+  return structuredClone(raw);
 }
 
 function canonicalize(value: unknown): unknown {

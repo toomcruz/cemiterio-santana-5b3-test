@@ -23,6 +23,17 @@ import {
 const SESSION_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const SESSION_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
+function rejects(fn: () => unknown, fragment: string): void {
+  try {
+    fn();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    assert(message.includes(fragment), `mensagem inesperada: ${message}`);
+    return;
+  }
+  throw new Error(`esperava rejeicao contendo "${fragment}"`);
+}
+
 /** Monta processo não trivial: case + fact + solicitação 4B (sem documentos — 4E). */
 function plantNonTrivialProcess(conversationId: string): ConversationState {
   let state = run(conversationId, [
@@ -83,6 +94,31 @@ Deno.test("4C-R8: ciclo de sessão ACTIVE→…→CLOSED é o contrato offline (
   assertEquals(session.status, "CLOSED");
 });
 
+Deno.test("4C-R8: negativo — atalho ACTIVE→CLOSED não é autorizado pelo contrato", () => {
+  const session = createSession({
+    session_id: SESSION_A,
+    conversation_id: "conv-4c-no-atalho-active",
+  });
+  assertEquals(session.status, "ACTIVE");
+  rejects(
+    () => transitionSession(session, "CLOSED"),
+    "transicao de sessao invalida",
+  );
+});
+
+Deno.test("4C-R8: negativo — atalho WARNING_PENDING→CLOSED não é autorizado pelo contrato", () => {
+  let session = createSession({
+    session_id: SESSION_A,
+    conversation_id: "conv-4c-no-atalho-wp",
+  });
+  session = transitionSession(session, "WARNING_PENDING");
+  assertEquals(session.status, "WARNING_PENDING");
+  rejects(
+    () => transitionSession(session, "CLOSED"),
+    "transicao de sessao invalida",
+  );
+});
+
 Deno.test("4C-R8: sobrevivência — fechar sessão não muda hash dos objetos de processo", () => {
   const conversationId = "conv-4c-sobrevivencia";
   let state = plantNonTrivialProcess(conversationId);
@@ -120,6 +156,9 @@ Deno.test("4C-R8: retomada — nova sessão recupera o mesmo processo (identidad
   const factIds = state.facts.map((f) => f.fact_id).slice().sort();
   const solIds = (state.solicitacoes ?? []).map((s) => s.solicitacao_id).slice().sort();
 
+  // Fechamento só pelo ciclo declarado (sem atalho ACTIVE→CLOSED).
+  sessionA = transitionSession(sessionA, "WARNING_PENDING");
+  sessionA = transitionSession(sessionA, "WARNING_SENT");
   sessionA = closeSession(sessionA);
   assertEquals(sessionA.status, "CLOSED");
 
@@ -166,6 +205,9 @@ Deno.test("4C-R8: negativo — fechar sessão não fecha case / não apaga facts
   const factsBefore = structuredClone(state.facts);
   const solsBefore = structuredClone(state.solicitacoes ?? []);
 
+  // Fechamento só pelo ciclo declarado (sem atalho ACTIVE→CLOSED).
+  session = transitionSession(session, "WARNING_PENDING");
+  session = transitionSession(session, "WARNING_SENT");
   session = closeSession(session);
   assertEquals(session.status, "CLOSED");
 
@@ -256,23 +298,51 @@ Deno.test("4C-R8: negativo — nenhuma transição de sessão chama rede", () =>
   }
 });
 
-Deno.test("4C-R8: documentos futuros (4E) já entram na fronteira do hash, sem implementar 4E", () => {
-  const state = plantNonTrivialProcess("conv-4c-docs-future");
-  const snap = processObjectsSnapshot(state) as Record<string, unknown>;
+Deno.test("4C-R8: hash documental real — ausente/array/mutação/sessão (sem schema 4E)", () => {
+  // A) estado sem documentos → snapshot.documentos == []
+  const base = plantNonTrivialProcess("conv-4c-docs-hash");
+  const snapA = processObjectsSnapshot(base) as Record<string, unknown>;
+  assertEquals(snapA[DOCUMENTOS_FUTURE_KEY], []);
+
+  // Probe estrutural: não declara semântica 4E; só prova a superfície do hash.
+  type ProbeState = ConversationState & Record<string, unknown>;
+
+  // B) estado sintético com documentos RECEIVED → hash1
+  const withReceived = {
+    ...base,
+    [DOCUMENTOS_FUTURE_KEY]: [{ document_id: "doc-1", status: "RECEIVED" }],
+  } as ProbeState;
+  const snapB = processObjectsSnapshot(withReceived) as Record<string, unknown>;
+  assertEquals(snapB[DOCUMENTOS_FUTURE_KEY], [
+    { document_id: "doc-1", status: "RECEIVED" },
+  ]);
+  const hash1 = hashProcessObjects(withReceived);
+
+  // C) alterar SOMENTE documentos → hash2 != hash1
+  const withRefused = {
+    ...base,
+    [DOCUMENTOS_FUTURE_KEY]: [{ document_id: "doc-1", status: "REFUSED" }],
+  } as ProbeState;
+  const hash2 = hashProcessObjects(withRefused);
   assert(
-    DOCUMENTOS_FUTURE_KEY in snap,
-    "snapshot de processo deve reservar coleção documental futura",
+    hash1 !== hash2,
+    "hashProcessObjects deve detectar mutação só em documentos",
   );
-  assertEquals(snap[DOCUMENTOS_FUTURE_KEY], []);
-  // Mutar só a coleção futura mudaria o hash — proteção contratual.
-  const mutated = {
-    ...snap,
-    [DOCUMENTOS_FUTURE_KEY]: [{ document_id: "doc-fake" }],
-  };
-  assert(
-    JSON.stringify(mutated) !== JSON.stringify(snap),
-    "documentos futuros fazem parte da superfície protegida",
+
+  // D) alterar somente last_touched_session_id → hash do processo igual
+  const sessionMetaOnly = bindProcessToSession(withReceived, SESSION_B);
+  assertEquals(
+    hashProcessObjects(sessionMetaOnly),
+    hash1,
+    "metadado de sessão não pertence à superfície do processo",
   );
+
+  // Fail-closed: propriedade presente com formato inesperado.
+  const malformed = {
+    ...base,
+    [DOCUMENTOS_FUTURE_KEY]: { not: "an-array" },
+  } as ProbeState;
+  rejects(() => processObjectsSnapshot(malformed), "documentos");
 });
 
 Deno.test("4C-R8: schema aceita last_touched_session_id aditivo no estado", () => {

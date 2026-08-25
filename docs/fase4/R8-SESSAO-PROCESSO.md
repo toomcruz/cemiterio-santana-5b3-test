@@ -10,20 +10,19 @@ RELEASE       exu-1.0-32cc48f26797 (inalterado)
 
 ## Objetivo
 
-Declarar e testar a fronteira entre **sessão** (ciclo de atendimento/conexão) e
-**processo** (cases, facts, documentos, solicitações), de modo que fechar a
-sessão **não** altere nenhum byte dos objetos de processo.
+Declarar e testar a fronteira entre **sessão** (ciclo de atendimento/conexão) e **processo** (cases, facts, documentos,
+solicitações), de modo que fechar a sessão **não** altere nenhum byte dos objetos de processo.
 
 ## Componentes
 
-| Artefato | Papel |
-| -------- | ----- |
-| `santana-conversation-domain/engine/sessao_processo.ts` | ciclo de sessão + hash/snapshot de processo + vínculo unidirecional |
-| `santana-conversation-domain/state.schema.json` | `last_touched_session_id?` aditivo |
-| `santana-conversation-domain/engine/engine.ts` | campo aditivo no `ConversationState` |
-| `santana-conversation-domain/engine/persistence.ts` | âncora: sessão fora das ops de processo |
-| `contracts/r8-sessao-processo.ts` | contrato R8 (reexport) |
-| `santana-conversation-domain/tests/fase4/fase4c_sessao_processo_test.ts` | sobrevivência + negativos |
+| Artefato                                                                 | Papel                                                               |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| `santana-conversation-domain/engine/sessao_processo.ts`                  | ciclo de sessão + hash/snapshot de processo + vínculo unidirecional |
+| `santana-conversation-domain/state.schema.json`                          | `last_touched_session_id?` aditivo                                  |
+| `santana-conversation-domain/engine/engine.ts`                           | campo aditivo no `ConversationState`                                |
+| `santana-conversation-domain/engine/persistence.ts`                      | âncora: sessão fora das ops de processo                             |
+| `contracts/r8-sessao-processo.ts`                                        | contrato R8 (reexport)                                              |
+| `santana-conversation-domain/tests/fase4/fase4c_sessao_processo_test.ts` | sobrevivência + negativos                                           |
 
 ## Modelo
 
@@ -33,6 +32,8 @@ sessão **não** altere nenhum byte dos objetos de processo.
 ACTIVE → WARNING_PENDING → WARNING_SENT → CLOSED
 ```
 
+- **Somente** este ciclo; atalhos `ACTIVE→CLOSED` / `WARNING_PENDING→CLOSED` **não** são autorizados pela fonte oficial
+  4C.
 - Política 3+2 **já existe**; **não** alterada nesta subfase.
 - **Não** implementar worker/timers aqui.
 - Sessão **não** declara ownership do processo (sem `case_ids`, `process_id`, etc.).
@@ -42,8 +43,8 @@ ACTIVE → WARNING_PENDING → WARNING_SENT → CLOSED
 - `cases`
 - `facts`
 - `solicitacoes` (4B / R7)
-- `documentos` — **ainda não existem** (4E); a coleção futura já entra no
-  snapshot/hash como `[]` para proteger regressão quando 4E chegar.
+- `documentos` — **ainda não existem** no schema (4E). O hash usa adaptador estrutural: ausente → `[]`; array → clone
+  canônico; presente e não-array → erro fail-closed. Assim a 4E não exige alteração manual do R8.
 
 ### Vínculo (unidirecional)
 
@@ -53,9 +54,8 @@ processo.last_touched_session_id  →  session_id
 
 - O processo pode saber em qual sessão foi tocado.
 - A sessão **não** é dona do processo.
-- Fechar sessão **não** tem caminho para: encerrar case, limpar facts,
-  limpar documentos, limpar solicitações, resolver/abandonar goals, resetar
-  processo.
+- Fechar sessão **não** tem caminho para: encerrar case, limpar facts, limpar documentos, limpar solicitações,
+  resolver/abandonar goals, resetar processo.
 
 ## Gate PASS
 
@@ -80,8 +80,8 @@ Qualquer objeto de processo muda quando a sessão é fechada.
 
 ## Offline
 
-Nenhuma transição de sessão chama rede (`fetch` = 0 no caminho testado).
-Sem Supabase, n8n, W-API, WhatsApp, worker real.
+Nenhuma transição de sessão chama rede (`fetch` = 0 no caminho testado). Sem Supabase, n8n, W-API, WhatsApp, worker
+real.
 
 ## Autoridade
 
@@ -110,7 +110,6 @@ Documentos pertencem à Fase 4E. Em 4C:
 Não toca:
 
 - `exumacao.v1.json`
-- `facts.v1.json` / `goals.v1.json` / `questions.v1.json` / `relations.v1.json` /
-  `topics.v1.json`
+- `facts.v1.json` / `goals.v1.json` / `questions.v1.json` / `relations.v1.json` / `topics.v1.json`
 
 `release_id` permanece `exu-1.0-32cc48f26797`.
