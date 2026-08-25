@@ -117,6 +117,26 @@
         "nao presumir valor",
         "incerteza bloqueadora tem prioridade 3"
       ]
+    },
+    {
+      "event_kind": "RECLASSIFICATION",
+      "description": "A mesma demanda passa a ser reconhecida como outro topico. Nao e novo objetivo, nao e correcao de fato, nao e mudanca de ideia e nao e incerteza sobre um fato.",
+      "effects": [
+        "update_topic(goal_atual)",
+        "preserve_facts",
+        "preserve_documents",
+        "record_origin_topic"
+      ],
+      "forbidden": [
+        "create_case",
+        "supersede_fact",
+        "reset_goal"
+      ],
+      "invariants": [
+        "nenhum fact muda de status por efeito deste evento",
+        "mesmo case_id",
+        "mesmo goal_id"
+      ]
     }
   ],
   "authoritative_signal": {

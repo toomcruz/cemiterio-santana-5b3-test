@@ -105,6 +105,22 @@
         "null"
       ],
       "minLength": 1
+    },
+    "current_topic": {
+      "description": "Fase 4D / R9 / G17 — tópico explícito no estado.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "origin_topic": {
+      "description": "Fase 4D / R9 / G03 — tópico de origem após RECLASSIFICATION.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
     }
   },
   "$defs": {
@@ -1103,7 +1119,8 @@
             "COMPLAINT",
             "HUMAN_REQUEST",
             "SOCIAL",
-            "UNCERTAIN"
+            "UNCERTAIN",
+            "RECLASSIFICATION"
           ]
         },
         "note": {

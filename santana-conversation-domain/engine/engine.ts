@@ -116,6 +116,14 @@ export interface ConversationState {
    * Fechar a sessão não limpa cases/facts/solicitacoes/documentos.
    */
   last_touched_session_id?: string | null;
+  /**
+   * Fase 4D / R9 / G17 — tópico explícito no estado (não só derivado do goal).
+   */
+  current_topic?: string | null;
+  /**
+   * Fase 4D / R9 / G03 — tópico de origem após RECLASSIFICATION.
+   */
+  origin_topic?: string | null;
 }
 
 export interface FactInput {
@@ -156,6 +164,8 @@ export function initState(conversation_id: string): ConversationState {
     handoff: null,
     event_log: [],
     solicitacoes: [],
+    current_topic: null,
+    origin_topic: null,
   };
 }
 
@@ -777,7 +787,33 @@ export function applyEvent(previous: ConversationState, event: ConversationEvent
         }
       }
       const created = pushGoal(state, event.goal_code, { case_ref: event.case_ref });
+      // G17: tópico explícito no estado (derivado do goal criado).
+      state.current_topic = goalDef(created.goal_code).topic_code;
       for (const f of event.facts ?? []) recordFact(state, created, f, "ASSERT");
+      break;
+    }
+
+    case "RECLASSIFICATION": {
+      // R9: mesma demanda → outro tópico. Proibido create_case / supersede_fact / reset_goal.
+      if (!event.goal_code) throw new Error("RECLASSIFICATION exige goal_code");
+      // Preferir goal em foco; se OUTROS já resolveu após o fato, reusa o goal mais recente
+      // (mesmo goal_id — não é reset_goal).
+      const target = goal ??
+        [...state.goals].reverse().find((g) => g.status !== "ABANDONED" && g.overlay_of === null) ??
+        null;
+      if (!target) throw new Error("RECLASSIFICATION exige goal da demanda");
+      const next = goalDef(event.goal_code);
+      const origin = state.current_topic ?? goalDef(target.goal_code).topic_code;
+      if (state.origin_topic == null) state.origin_topic = origin;
+      target.goal_code = event.goal_code;
+      target.informational = next.informational === true;
+      if (target.status === "RESOLVED" || target.status === "WAITING") {
+        target.status = "ACTIVE";
+        target.status_reason = null;
+        target.closed_at_seq = null;
+      }
+      state.current_topic = next.topic_code;
+      // Sem pushGoal / recordFact / create_case.
       break;
     }
 

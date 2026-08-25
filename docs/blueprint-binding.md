@@ -21,3 +21,11 @@ Qualquer alteração nesses limites exige uma revisão posterior do blueprint, n
   `solicitacoes` / documentos futuros.
 - Política 3+2 permanece; worker/timers **fora** desta subfase.
 - Contrato: `contracts/r8-sessao-processo.ts` · docs: `docs/fase4/R8-SESSAO-PROCESSO.md`.
+
+## Fase 4D / R9 — Reclassificação (G17, G03, G16)
+
+- Evento aditivo `RECLASSIFICATION` (não reusa NEW_GOAL/CORRECTION/CHANGE_OF_MIND/UNCERTAIN).
+- Tópico explícito: `current_topic` / `origin_topic`.
+- G16: primeira mensagem específica vence menu genérico (`runtime/interpreter/first_message.ts`).
+- Divergência inventário G03→R8 vs seção 4D→R9: seção específica 4D vigente.
+- Contrato: `contracts/r9-reclassificacao.ts` · docs: `docs/fase4/R9-RECLASSIFICACAO.md`.
