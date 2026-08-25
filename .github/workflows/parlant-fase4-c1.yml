@@ -1,8 +1,18 @@
-name: Fase 4 - C1 preco (Parlant + Gemini)
+name: Fase 4 - C1 preco (Parlant + Omniroute local)
 
-# Disparador manual da POC. O workflow precisa estar na branch padrao para o
-# botao "Run workflow" aparecer; todo o codigo executado vem da branch informada.
+# Disparador manual da POC no runner self-hosted do Hermes.
+# Usa Omniroute em http://127.0.0.1:20128/v1 via LiteLLM.
+# Nao chama Google Gemini direto.
 # Nao toca em Supabase, n8n, W-API, WhatsApp, Vercel ou producao.
+#
+# A POC Parlant nao esta em main. Este job traz a baseline da branch
+# claude/parlant-poc-gemini-bjab09 para o runner, sem mescla-la em main, e
+# sobrescreve apenas os arquivos de integracao Omniroute versionados em
+# experiments/c1-omniroute/.
+#
+# Seguranca do smoke (herdada de main c16d5df): servidor e cliente
+# desacoplados via smoke_parlant.py, timeouts READY/TURN/STOP explicitos,
+# PYTHONUNBUFFERED=1 e protecao final de ~6 minutos.
 
 on:
   workflow_dispatch:
@@ -12,32 +22,55 @@ on:
         required: true
         default: "claude/parlant-poc-gemini-bjab09"
         type: string
+      confirmation:
+        description: "Digite FASE4_OMNIROUTE_LOCAL para autorizar"
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: parlant-fase4-c1-${{ inputs.poc_ref }}
-  # Uma nova tentativa substitui a anterior para nao deixar execucoes presas.
-  cancel-in-progress: true
+  group: parlant-fase4-c1-omniroute-${{ inputs.poc_ref }}
+  cancel-in-progress: false
 
 jobs:
   offline-tests:
     name: Testes offline da POC
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: experiments/parlant-poc
     steps:
+      - name: Autorizacao explicita
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -Eeuo pipefail
+          if [ "$CONFIRMATION" != "FASE4_OMNIROUTE_LOCAL" ]; then
+            echo "confirmacao ausente ou incorreta: nada foi chamado" >&2
+            exit 1
+          fi
+          echo "autorizacao confirmada"
+
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.poc_ref }}
+          fetch-depth: 0
+
+      - name: Materializar a POC sem mesclar em main
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git fetch --no-tags origin "${{ inputs.poc_ref }}"
+          git checkout FETCH_HEAD -- experiments/parlant-poc
+          echo "poc materializada de ${{ inputs.poc_ref }}: $(git rev-parse --short FETCH_HEAD)"
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Instalar dependencias
+      - name: Instalar dependencias offline
         run: |
           set -Eeuo pipefail
           python -m pip install --upgrade pip
@@ -47,62 +80,106 @@ jobs:
         run: pytest -q
 
   c1-preco:
-    name: C1 preco real com Gemini (agente focado)
+    name: C1 preco real via Omniroute local
     needs: offline-tests
-    timeout-minutes: 15
-    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: experiments/parlant-poc
+    env:
+      LITELLM_PROVIDER_BASE_URL: http://127.0.0.1:20128/v1
+      LITELLM_PROVIDER_MODEL_NAME: openai/gweb/gemini-3.1-flash-lite
+      LITELLM_PROVIDER_API_KEY: ${{ secrets.PARLANT }}
+      C1_TETO_CHAMADAS: "250"
+      LAB_PORT: "8801"
+      PARLANT_HOME: ${{ runner.temp }}/parlant-c1-omniroute
     steps:
+      - name: Autorizacao explicita
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -Eeuo pipefail
+          if [ "$CONFIRMATION" != "FASE4_OMNIROUTE_LOCAL" ]; then
+            echo "confirmacao ausente ou incorreta: nada foi chamado" >&2
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.poc_ref }}
+          fetch-depth: 0
+
+      - name: Materializar POC + overlay Omniroute
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git fetch --no-tags origin "${{ inputs.poc_ref }}"
+          git checkout FETCH_HEAD -- experiments/parlant-poc
+          cp experiments/c1-omniroute/omniroute_nlp.py experiments/parlant-poc/
+          cp experiments/c1-omniroute/serve_c1_price.py experiments/parlant-poc/scripts/serve_c1_price.py
+          cp experiments/c1-omniroute/smoke_parlant.py experiments/parlant-poc/scripts/smoke_parlant.py
+          cp experiments/c1-omniroute/preflight_omniroute.py experiments/parlant-poc/scripts/preflight_omniroute.py
+          cp experiments/c1-omniroute/preflight_omniroute.sh experiments/parlant-poc/scripts/preflight_omniroute.sh
+          chmod +x experiments/parlant-poc/scripts/preflight_omniroute.sh experiments/parlant-poc/scripts/preflight_omniroute.py
+          ls experiments/parlant-poc/*.py experiments/parlant-poc/scripts/serve_c1_price.py experiments/parlant-poc/scripts/smoke_parlant.py experiments/parlant-poc/scripts/preflight_omniroute.py
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Instalar dependencias
+      - name: Instalar dependencias LiteLLM (sem google-genai no caminho critico)
+        shell: bash
         run: |
           set -Eeuo pipefail
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+          python -m pip install --upgrade pip --quiet
+          # Mesmo padrao da C1 NVIDIA: torch CPU + transformers<5 para o
+          # JinaAIEmbedder local do LiteLLMService do Parlant.
+          pip install --quiet torch --index-url https://download.pytorch.org/whl/cpu
+          pip install --quiet "parlant[litellm]==3.3.2" "transformers>=4.53,<5" httpx fastapi uvicorn
+          python - <<'PY'
+          from importlib.metadata import version
+          for pacote in ("parlant", "litellm", "torch", "transformers"):
+              print(pacote, version(pacote))
+          from parlant.adapters.nlp.litellm_service import LiteLLMService  # noqa: F401
+          print("LiteLLMService importavel")
+          PY
 
-      - name: Verificar o secret sem expor valor
+      - name: Verificar secret sem expor valor
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test -n "${LITELLM_PROVIDER_API_KEY-}" || { echo "Secret PARLANT ausente."; exit 1; }
+          echo "Secret PARLANT presente (len=${#LITELLM_PROVIDER_API_KEY})."
+
+      - name: Preflight curto Omniroute local (models + chat nonce)
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -Eeuo pipefail
+          # Garante que nao ha preflight Google residual neste job.
+          unset GEMINI_API_KEY GOOGLE_API_KEY || true
+          bash experiments/parlant-poc/scripts/preflight_omniroute.sh
+
+      - name: Executar somente C1-preco via Omniroute
+        shell: bash
         env:
-          GEMINI_API_KEY: ${{ secrets.PARLANT }}
-        run: |
-          set -Eeuo pipefail
-          test -n "${GEMINI_API_KEY-}" || { echo "Secret PARLANT ausente."; exit 1; }
-          echo "Secret PARLANT presente."
-
-      - name: Validar sintaxe da POC antes de consumir cota
-        run: |
-          set -Eeuo pipefail
-          python -m py_compile \
-            santana_parlant_poc/agent/nlp.py \
-            santana_parlant_poc/agent/build.py \
-            scripts/serve_c1_price.py \
-            scripts/smoke_parlant.py
-
-      - name: Executar smoke C1-preco com limite de 6 minutos
-        env:
-          GEMINI_API_KEY: ${{ secrets.PARLANT }}
           PYTHONUNBUFFERED: "1"
-          # Limite confirmado pela API para esta chave/modelo em 2026-08-23.
-          POC_GEMINI_RPM: "3"
-          POC_GEMINI_RETRIES_429: "0"
-          # Limites internos com diagnóstico; evitam outra espera cega de 10 min.
+          # Limites internos com diagnostico (main c16d5df); smoke sobe serve
+          # como subprocesso separado e nao duplica servidor no workflow.
           POC_C1_READY_TIMEOUT_S: "150"
           POC_C1_TURN_TIMEOUT_S: "180"
           POC_C1_STOP_TIMEOUT_S: "15"
-        # `timeout` fica apenas como proteção final: o smoke agora informa em
-        # qual fase parou e encerra o subprocesso do Parlant de forma limpa.
+        # timeout ~6m so como protecao final; o smoke informa a fase e encerra limpo.
         run: |
           set -o pipefail
-          timeout --signal=TERM --kill-after=30s 6m python scripts/smoke_parlant.py 2>&1 | tee smoke-c1.log
+          unset GEMINI_API_KEY GOOGLE_API_KEY || true
+          mkdir -p "$PARLANT_HOME"
+          echo "base_url=$LITELLM_PROVIDER_BASE_URL"
+          echo "model=$LITELLM_PROVIDER_MODEL_NAME"
+          echo "teto=$C1_TETO_CHAMADAS"
+          timeout --signal=TERM --kill-after=30s 6m python -u scripts/smoke_parlant.py 2>&1 | tee smoke-c1.log
           status=${PIPESTATUS[0]}
-          echo "===== Últimas linhas do smoke ====="
+          echo "===== Ultimas linhas do smoke ====="
           tail -n 80 smoke-c1.log
           exit "${status}"
