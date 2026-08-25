@@ -92,11 +92,12 @@ jobs:
         working-directory: experiments/parlant-poc
     env:
       LITELLM_PROVIDER_BASE_URL: http://127.0.0.1:20128/v1
-      LITELLM_PROVIDER_MODEL_NAME: openai/gweb/gemini-3.1-flash-lite
+      LITELLM_PROVIDER_MODEL_NAME: openai/claude/claude-sonnet-4-6
       LITELLM_PROVIDER_API_KEY: ${{ secrets.PARLANT }}
       C1_TETO_CHAMADAS: "250"
       LAB_PORT: "8801"
       # PARLANT_HOME usa RUNNER_TEMP no step (runner.* nao e valido no env do job no parse do dispatch)
+      # wait_for_data do lab (server.py) fica em 150s; Claude tool-call ~2s no probe.
     steps:
       - name: Autorizacao explicita
         shell: bash

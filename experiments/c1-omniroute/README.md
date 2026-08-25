@@ -15,7 +15,7 @@ Omniroute local em `http://127.0.0.1:20128/v1` via LiteLLM do Parlant.
 ```bash
 LITELLM_PROVIDER_BASE_URL=http://127.0.0.1:20128/v1
 LITELLM_PROVIDER_API_KEY=***   # secret PARLANT / chave Omniroute
-LITELLM_PROVIDER_MODEL_NAME=openai/gweb/gemini-3.1-flash-lite
+LITELLM_PROVIDER_MODEL_NAME=openai/claude/claude-sonnet-4-6
 ```
 
 ## Workflow
