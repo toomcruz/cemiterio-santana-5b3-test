@@ -38,8 +38,10 @@ jobs:
       run:
         working-directory: experiments/parlant-poc
     steps:
+      # defaults.working-directory so existe DEPOIS do checkout+materialize.
       - name: Autorizacao explicita
         shell: bash
+        working-directory: ${{ github.workspace }}
         env:
           CONFIRMATION: ${{ inputs.confirmation }}
         run: |
@@ -56,6 +58,7 @@ jobs:
 
       - name: Materializar a POC sem mesclar em main
         shell: bash
+        working-directory: ${{ github.workspace }}
         run: |
           set -Eeuo pipefail
           git fetch --no-tags origin "${{ inputs.poc_ref }}"
@@ -93,6 +96,7 @@ jobs:
     steps:
       - name: Autorizacao explicita
         shell: bash
+        working-directory: ${{ github.workspace }}
         env:
           CONFIRMATION: ${{ inputs.confirmation }}
         run: |
@@ -108,6 +112,7 @@ jobs:
 
       - name: Materializar POC + overlay Omniroute
         shell: bash
+        working-directory: ${{ github.workspace }}
         run: |
           set -Eeuo pipefail
           git fetch --no-tags origin "${{ inputs.poc_ref }}"
