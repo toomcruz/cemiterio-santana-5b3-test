@@ -1,4 +1,4 @@
-import { assertEquals, assert } from "../fixtures/assert.ts";
+import { assert, assertEquals } from "../fixtures/assert.ts";
 import { detectSupervisorToken } from "../../edge-functions/_shared/supervisor-token.ts";
 
 Deno.test("@super with objective activates supervisor", () => {

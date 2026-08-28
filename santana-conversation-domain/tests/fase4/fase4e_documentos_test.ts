@@ -1,5 +1,5 @@
 // Fase 4E — Documentos: estados, ciclo, invalidação seletiva
-import { assertEquals, assert } from "../../../tests/fixtures/assert.ts";
+import { assert, assertEquals } from "../../../tests/fixtures/assert.ts";
 
 // Tipos (refletem contrato R7-extension)
 interface Documento {

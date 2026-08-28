@@ -6,10 +6,10 @@ export type DocumentoAutoridade = "HUMANO" | "SISTEMA"; // Nunca LLM
 
 export interface Documento {
   estado: DocumentoEstado;
-  recebido_em?: string;        // ISO timestamp
+  recebido_em?: string; // ISO timestamp
   aceito_por?: DocumentoAutoridade;
-  invalidado?: boolean;          // Seletivo por mudança de fato
-  tipo?: string;                 // Foto, ID, Contrato, etc
+  invalidado?: boolean; // Seletivo por mudança de fato
+  tipo?: string; // Foto, ID, Contrato, etc
   descricao?: string;
 }
 
