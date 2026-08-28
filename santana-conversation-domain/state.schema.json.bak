@@ -182,20 +182,6 @@
         "minLength": 1
       },
       "assunto": {
-        "documentos": {
-          "type": "object",
-          "description": "Documentos de apoio (aditivo, fora da fronteira de release_id)",
-          "additionalProperties": {
-            "type": "object",
-            "properties": {
-              "estado": { "enum": ["SOLICITADO", "RECEBIDO", "ACEITO", "ILEGÍVEL_INADEQUADO"] },
-              "recebido_em": { "type": "string" },
-              "aceito_por": { "enum": ["HUMANO", "SISTEMA"] },
-              "invalidado": { "type": "boolean" }
-            },
-            "required": ["estado"]
-          }
-        },
         "$ref": "#/$defs/assunto_composition"
       },
       "summary": {
@@ -275,20 +261,6 @@
               "type": "null"
             },
             "assunto": {
-              "documentos": {
-                "type": "object",
-                "description": "Documentos de apoio (aditivo, fora da fronteira de release_id)",
-                "additionalProperties": {
-                  "type": "object",
-                  "properties": {
-                    "estado": { "enum": ["SOLICITADO", "RECEBIDO", "ACEITO", "ILEGÍVEL_INADEQUADO"] },
-                    "recebido_em": { "type": "string" },
-                    "aceito_por": { "enum": ["HUMANO", "SISTEMA"] },
-                    "invalidado": { "type": "boolean" }
-                  },
-                  "required": ["estado"]
-                }
-              },
               "$ref": "#/$defs/assunto_composition"
             },
             "summary": {
@@ -357,20 +329,6 @@
               "type": "null"
             },
             "assunto": {
-              "documentos": {
-                "type": "object",
-                "description": "Documentos de apoio (aditivo, fora da fronteira de release_id)",
-                "additionalProperties": {
-                  "type": "object",
-                  "properties": {
-                    "estado": { "enum": ["SOLICITADO", "RECEBIDO", "ACEITO", "ILEGÍVEL_INADEQUADO"] },
-                    "recebido_em": { "type": "string" },
-                    "aceito_por": { "enum": ["HUMANO", "SISTEMA"] },
-                    "invalidado": { "type": "boolean" }
-                  },
-                  "required": ["estado"]
-                }
-              },
               "$ref": "#/$defs/assunto_composition"
             },
             "summary": {
@@ -440,20 +398,6 @@
               "minLength": 1
             },
             "assunto": {
-              "documentos": {
-                "type": "object",
-                "description": "Documentos de apoio (aditivo, fora da fronteira de release_id)",
-                "additionalProperties": {
-                  "type": "object",
-                  "properties": {
-                    "estado": { "enum": ["SOLICITADO", "RECEBIDO", "ACEITO", "ILEGÍVEL_INADEQUADO"] },
-                    "recebido_em": { "type": "string" },
-                    "aceito_por": { "enum": ["HUMANO", "SISTEMA"] },
-                    "invalidado": { "type": "boolean" }
-                  },
-                  "required": ["estado"]
-                }
-              },
               "$ref": "#/$defs/assunto_composition"
             },
             "summary": {
@@ -522,20 +466,6 @@
               "type": "null"
             },
             "assunto": {
-              "documentos": {
-                "type": "object",
-                "description": "Documentos de apoio (aditivo, fora da fronteira de release_id)",
-                "additionalProperties": {
-                  "type": "object",
-                  "properties": {
-                    "estado": { "enum": ["SOLICITADO", "RECEBIDO", "ACEITO", "ILEGÍVEL_INADEQUADO"] },
-                    "recebido_em": { "type": "string" },
-                    "aceito_por": { "enum": ["HUMANO", "SISTEMA"] },
-                    "invalidado": { "type": "boolean" }
-                  },
-                  "required": ["estado"]
-                }
-              },
               "$ref": "#/$defs/assunto_composition"
             },
             "summary": {
@@ -603,20 +533,6 @@
               "type": "null"
             },
             "assunto": {
-              "documentos": {
-                "type": "object",
-                "description": "Documentos de apoio (aditivo, fora da fronteira de release_id)",
-                "additionalProperties": {
-                  "type": "object",
-                  "properties": {
-                    "estado": { "enum": ["SOLICITADO", "RECEBIDO", "ACEITO", "ILEGÍVEL_INADEQUADO"] },
-                    "recebido_em": { "type": "string" },
-                    "aceito_por": { "enum": ["HUMANO", "SISTEMA"] },
-                    "invalidado": { "type": "boolean" }
-                  },
-                  "required": ["estado"]
-                }
-              },
               "$ref": "#/$defs/assunto_composition"
             },
             "summary": {
@@ -684,20 +600,6 @@
               "type": "null"
             },
             "assunto": {
-              "documentos": {
-                "type": "object",
-                "description": "Documentos de apoio (aditivo, fora da fronteira de release_id)",
-                "additionalProperties": {
-                  "type": "object",
-                  "properties": {
-                    "estado": { "enum": ["SOLICITADO", "RECEBIDO", "ACEITO", "ILEGÍVEL_INADEQUADO"] },
-                    "recebido_em": { "type": "string" },
-                    "aceito_por": { "enum": ["HUMANO", "SISTEMA"] },
-                    "invalidado": { "type": "boolean" }
-                  },
-                  "required": ["estado"]
-                }
-              },
               "$ref": "#/$defs/assunto_composition"
             },
             "summary": {
@@ -765,20 +667,6 @@
               "type": "null"
             },
             "assunto": {
-              "documentos": {
-                "type": "object",
-                "description": "Documentos de apoio (aditivo, fora da fronteira de release_id)",
-                "additionalProperties": {
-                  "type": "object",
-                  "properties": {
-                    "estado": { "enum": ["SOLICITADO", "RECEBIDO", "ACEITO", "ILEGÍVEL_INADEQUADO"] },
-                    "recebido_em": { "type": "string" },
-                    "aceito_por": { "enum": ["HUMANO", "SISTEMA"] },
-                    "invalidado": { "type": "boolean" }
-                  },
-                  "required": ["estado"]
-                }
-              },
               "$ref": "#/$defs/assunto_composition"
             },
             "summary": {

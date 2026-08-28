@@ -33,7 +33,9 @@ export type EventKind =
   | "COMPLAINT"
   | "HUMAN_REQUEST"
   | "SOCIAL"
-  | "UNCERTAIN";
+  | "UNCERTAIN"
+  /** Fase 4D / R9 — aditivo; semântica própria (não reusa NEW_GOAL/CORRECTION/…). */
+  | "RECLASSIFICATION";
 
 export interface Condition {
   fact: string;
@@ -164,7 +166,13 @@ interface QuestionsDoc {
   authoritative_resolutions: AuthoritativeResolution[];
 }
 interface EventsDoc {
-  events: { event_kind: EventKind; description: string; effects: string[] }[];
+  events: {
+    event_kind: EventKind;
+    description: string;
+    effects: string[];
+    forbidden?: string[];
+    invariants?: string[];
+  }[];
 }
 
 function load<T>(name: string): T {
