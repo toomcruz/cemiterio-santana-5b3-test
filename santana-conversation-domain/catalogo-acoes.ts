@@ -36,6 +36,6 @@ export interface Acompanhamento {
 }
 
 // Validação: ciclos próprios para não-colapso
-export function verificaNaoColapso(acao: Acao, acompanhamento: Acompanhamento): boolean {
+export function verificaNaoColapso(_acao: Acao, acompanhamento: Acompanhamento): boolean {
   return acompanhamento.ciclo_proprio >= 0;
 }
