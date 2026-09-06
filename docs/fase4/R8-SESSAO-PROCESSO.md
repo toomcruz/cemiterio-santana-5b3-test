@@ -43,7 +43,7 @@ ACTIVE → WARNING_PENDING → WARNING_SENT → CLOSED
 - `cases`
 - `facts`
 - `solicitacoes` (4B / R7)
-- `documentos` — **ainda não existem** no schema (4E). O hash usa adaptador estrutural: ausente → `[]`; array → clone
+- `documentos` — coleção tipada no schema 4E. O hash aceita ausente como `[]` por compatibilidade e clona arrays
   canônico; presente e não-array → erro fail-closed. Assim a 4E não exige alteração manual do R8.
 
 ### Vínculo (unidirecional)
@@ -63,7 +63,7 @@ Fechar a sessão não altera nenhum byte de:
 
 - cases
 - facts
-- documentos (coleção futura protegida)
+- documentos (coleção 4E protegida)
 - solicitacoes
 
 `hash_antes == hash_depois` no teste de sobrevivência.
@@ -101,8 +101,8 @@ Nenhuma nova fonte de autoridade. Sem enum global novo de status de processo.
 
 Documentos pertencem à Fase 4E. Em 4C:
 
-- **não** implementar documentos antecipadamente;
-- snapshot/hash já reserva `documentos: []`;
+- manter o ciclo documental na implementação 4E;
+- snapshot/hash protege `documentos`, aceitando ausência como `[]`;
 - qualquer mutação futura dessa coleção altera o hash (superfície protegida).
 
 ## Fronteira

@@ -22,6 +22,8 @@ import {
   requiresAuthoritativeSignal,
 } from "./catalog.ts";
 import type { SolicitacaoRecord } from "./solicitacao.ts";
+import type { Documento } from "./documento.ts";
+import type { Acao, Acompanhamento } from "../catalogo-acoes.ts";
 
 export interface CaseRecord {
   case_id: string;
@@ -110,6 +112,11 @@ export interface ConversationState {
   event_log: { seq: number; event_kind: EventKind; note?: string | null }[];
   /** Fase 4B / R7 — aditivo; ciclo por categoria, sem status global. */
   solicitacoes?: SolicitacaoRecord[];
+  /** Fase 4E — documentos do processo, preservados entre sessões. */
+  documentos?: Documento[];
+  /** Fase 4F — execução e acompanhamento mantêm ciclos independentes. */
+  acoes?: Acao[];
+  acompanhamentos?: Acompanhamento[];
   /**
    * Fase 4C / R8 — vínculo unidirecional processo → sessão.
    * Metadado de referência; NÃO faz parte dos objetos de processo hasheados.
@@ -164,6 +171,9 @@ export function initState(conversation_id: string): ConversationState {
     handoff: null,
     event_log: [],
     solicitacoes: [],
+    documentos: [],
+    acoes: [],
+    acompanhamentos: [],
     current_topic: null,
     origin_topic: null,
   };

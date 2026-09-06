@@ -7,6 +7,7 @@ import { assert, assertEquals } from "../../../tests/fixtures/assert.ts";
 import { validateState } from "../../engine/validate.ts";
 import { applyEvent, type ConversationState, focusGoal, run } from "../../engine/engine.ts";
 import { createSolicitacao } from "../../engine/solicitacao.ts";
+import { createDocumento, transitionDocumento } from "../../engine/documento.ts";
 import { DOCUMENTOS_FUTURE_KEY, hashProcessObjects } from "../../engine/sessao_processo.ts";
 
 import { eventsDoc as _eventsDoc } from "../../engine/catalog.ts";
@@ -17,8 +18,7 @@ type ProbeState = ConversationState & Record<string, unknown>;
 
 /**
  * Demanda inicialmente em OUTROS_ASSUNTOS, com processo não trivial:
- * case sintético da mesma demanda + fact + solicitação 4B + documentos
- * estruturais (proteção R8, sem schema 4E).
+ * case sintético da mesma demanda + fact + solicitação 4B + documentos 4E.
  */
 function plantOutrosDemand(conversationId: string): ConversationState {
   let state = run(conversationId, [
@@ -75,11 +75,19 @@ function plantOutrosDemand(conversationId: string): ConversationState {
     solicitacoes: [...(state.solicitacoes ?? []), sol],
   };
 
-  // Documentos sintéticos — só superfície R8; sem modelo 4E.
+  const requested = createDocumento({
+    documento_id: "doc-4d-1",
+    case_id: caseId,
+    tipo: "ID_PESSOAL",
+    solicitado_em: "2026-09-06T10:00:00Z",
+  });
+  const received = transitionDocumento(requested, "RECEBIDO", {
+    ocorrido_em: "2026-09-06T10:01:00Z",
+  });
   state = {
     ...state,
-    [DOCUMENTOS_FUTURE_KEY]: [{ document_id: "doc-4d-1", status: "RECEIVED" }],
-  } as ProbeState;
+    [DOCUMENTOS_FUTURE_KEY]: [received],
+  };
 
   return state;
 }

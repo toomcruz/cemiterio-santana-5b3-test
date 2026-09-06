@@ -32,6 +32,8 @@ jobs:
         run: deno test --allow-read santana-conversation-domain/tests/p0
       - name: P0 de linguagem 5B.4-C (interpretador, guarda e bridge, sem rede)
         run: deno test --allow-read santana-conversation-domain/runtime/tests
+      - name: Domínio Fase 4 (solicitações, sessões, documentos e ações)
+        run: deno test --allow-read santana-conversation-domain/tests/fase4
       - name: Arquivos gerados estao sincronizados com o reducer e o interpretador
         run: |
           set -Eeuo pipefail
