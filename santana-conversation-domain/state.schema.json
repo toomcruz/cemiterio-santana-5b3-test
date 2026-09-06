@@ -121,6 +121,24 @@
         "null"
       ],
       "minLength": 1
+    },
+    "documentos": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/documento"
+      }
+    },
+    "acoes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/acao"
+      }
+    },
+    "acompanhamentos": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/acompanhamento_acao"
+      }
     }
   },
   "$defs": {
@@ -182,20 +200,6 @@
         "minLength": 1
       },
       "assunto": {
-        "documentos": {
-          "type": "object",
-          "description": "Documentos de apoio (aditivo, fora da fronteira de release_id)",
-          "additionalProperties": {
-            "type": "object",
-            "properties": {
-              "estado": { "enum": ["SOLICITADO", "RECEBIDO", "ACEITO", "ILEGÍVEL_INADEQUADO"] },
-              "recebido_em": { "type": "string" },
-              "aceito_por": { "enum": ["HUMANO", "SISTEMA"] },
-              "invalidado": { "type": "boolean" }
-            },
-            "required": ["estado"]
-          }
-        },
         "$ref": "#/$defs/assunto_composition"
       },
       "summary": {
@@ -275,20 +279,6 @@
               "type": "null"
             },
             "assunto": {
-              "documentos": {
-                "type": "object",
-                "description": "Documentos de apoio (aditivo, fora da fronteira de release_id)",
-                "additionalProperties": {
-                  "type": "object",
-                  "properties": {
-                    "estado": { "enum": ["SOLICITADO", "RECEBIDO", "ACEITO", "ILEGÍVEL_INADEQUADO"] },
-                    "recebido_em": { "type": "string" },
-                    "aceito_por": { "enum": ["HUMANO", "SISTEMA"] },
-                    "invalidado": { "type": "boolean" }
-                  },
-                  "required": ["estado"]
-                }
-              },
               "$ref": "#/$defs/assunto_composition"
             },
             "summary": {
@@ -357,20 +347,6 @@
               "type": "null"
             },
             "assunto": {
-              "documentos": {
-                "type": "object",
-                "description": "Documentos de apoio (aditivo, fora da fronteira de release_id)",
-                "additionalProperties": {
-                  "type": "object",
-                  "properties": {
-                    "estado": { "enum": ["SOLICITADO", "RECEBIDO", "ACEITO", "ILEGÍVEL_INADEQUADO"] },
-                    "recebido_em": { "type": "string" },
-                    "aceito_por": { "enum": ["HUMANO", "SISTEMA"] },
-                    "invalidado": { "type": "boolean" }
-                  },
-                  "required": ["estado"]
-                }
-              },
               "$ref": "#/$defs/assunto_composition"
             },
             "summary": {
@@ -440,20 +416,6 @@
               "minLength": 1
             },
             "assunto": {
-              "documentos": {
-                "type": "object",
-                "description": "Documentos de apoio (aditivo, fora da fronteira de release_id)",
-                "additionalProperties": {
-                  "type": "object",
-                  "properties": {
-                    "estado": { "enum": ["SOLICITADO", "RECEBIDO", "ACEITO", "ILEGÍVEL_INADEQUADO"] },
-                    "recebido_em": { "type": "string" },
-                    "aceito_por": { "enum": ["HUMANO", "SISTEMA"] },
-                    "invalidado": { "type": "boolean" }
-                  },
-                  "required": ["estado"]
-                }
-              },
               "$ref": "#/$defs/assunto_composition"
             },
             "summary": {
@@ -522,20 +484,6 @@
               "type": "null"
             },
             "assunto": {
-              "documentos": {
-                "type": "object",
-                "description": "Documentos de apoio (aditivo, fora da fronteira de release_id)",
-                "additionalProperties": {
-                  "type": "object",
-                  "properties": {
-                    "estado": { "enum": ["SOLICITADO", "RECEBIDO", "ACEITO", "ILEGÍVEL_INADEQUADO"] },
-                    "recebido_em": { "type": "string" },
-                    "aceito_por": { "enum": ["HUMANO", "SISTEMA"] },
-                    "invalidado": { "type": "boolean" }
-                  },
-                  "required": ["estado"]
-                }
-              },
               "$ref": "#/$defs/assunto_composition"
             },
             "summary": {
@@ -603,20 +551,6 @@
               "type": "null"
             },
             "assunto": {
-              "documentos": {
-                "type": "object",
-                "description": "Documentos de apoio (aditivo, fora da fronteira de release_id)",
-                "additionalProperties": {
-                  "type": "object",
-                  "properties": {
-                    "estado": { "enum": ["SOLICITADO", "RECEBIDO", "ACEITO", "ILEGÍVEL_INADEQUADO"] },
-                    "recebido_em": { "type": "string" },
-                    "aceito_por": { "enum": ["HUMANO", "SISTEMA"] },
-                    "invalidado": { "type": "boolean" }
-                  },
-                  "required": ["estado"]
-                }
-              },
               "$ref": "#/$defs/assunto_composition"
             },
             "summary": {
@@ -684,20 +618,6 @@
               "type": "null"
             },
             "assunto": {
-              "documentos": {
-                "type": "object",
-                "description": "Documentos de apoio (aditivo, fora da fronteira de release_id)",
-                "additionalProperties": {
-                  "type": "object",
-                  "properties": {
-                    "estado": { "enum": ["SOLICITADO", "RECEBIDO", "ACEITO", "ILEGÍVEL_INADEQUADO"] },
-                    "recebido_em": { "type": "string" },
-                    "aceito_por": { "enum": ["HUMANO", "SISTEMA"] },
-                    "invalidado": { "type": "boolean" }
-                  },
-                  "required": ["estado"]
-                }
-              },
               "$ref": "#/$defs/assunto_composition"
             },
             "summary": {
@@ -765,20 +685,6 @@
               "type": "null"
             },
             "assunto": {
-              "documentos": {
-                "type": "object",
-                "description": "Documentos de apoio (aditivo, fora da fronteira de release_id)",
-                "additionalProperties": {
-                  "type": "object",
-                  "properties": {
-                    "estado": { "enum": ["SOLICITADO", "RECEBIDO", "ACEITO", "ILEGÍVEL_INADEQUADO"] },
-                    "recebido_em": { "type": "string" },
-                    "aceito_por": { "enum": ["HUMANO", "SISTEMA"] },
-                    "invalidado": { "type": "boolean" }
-                  },
-                  "required": ["estado"]
-                }
-              },
               "$ref": "#/$defs/assunto_composition"
             },
             "summary": {
@@ -1240,6 +1146,159 @@
             "string",
             "null"
           ]
+        }
+      }
+    },
+    "documento": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "documento_id",
+        "case_id",
+        "tipo",
+        "estado",
+        "solicitado_em"
+      ],
+      "properties": {
+        "documento_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "case_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tipo": {
+          "type": "string",
+          "minLength": 1
+        },
+        "estado": {
+          "enum": [
+            "SOLICITADO",
+            "RECEBIDO",
+            "ACEITO",
+            "ILEGÍVEL_INADEQUADO",
+            "CANCELADO",
+            "INVALIDADO"
+          ]
+        },
+        "solicitado_em": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recebido_em": {
+          "type": "string",
+          "minLength": 1
+        },
+        "aceito_em": {
+          "type": "string",
+          "minLength": 1
+        },
+        "aceito_por": {
+          "enum": [
+            "HUMANO",
+            "SISTEMA"
+          ]
+        },
+        "descricao": {
+          "type": "string"
+        }
+      }
+    },
+    "acao": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "tipo",
+        "estado",
+        "executor"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tipo": {
+          "enum": [
+            "ENVIO_EMAIL",
+            "ENVIO_WHATSAPP",
+            "CHAMADA_HUMANO",
+            "AGENDAR_VISITA",
+            "COBRAR_TAXA",
+            "REGISTRAR_VENDA",
+            "ATUALIZAR_CASO",
+            "FECHAR_CASO"
+          ]
+        },
+        "estado": {
+          "enum": [
+            "AGENDADA",
+            "EXECUTADA",
+            "FALHADA",
+            "CANCELADA"
+          ]
+        },
+        "executor": {
+          "enum": [
+            "SISTEMA",
+            "HUMANO"
+          ]
+        },
+        "agendado_em": {
+          "type": "string",
+          "minLength": 1
+        },
+        "executado_em": {
+          "type": "string",
+          "minLength": 1
+        },
+        "acompanhamento_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "acompanhamento_acao": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "acao_id",
+        "estado",
+        "criado_em",
+        "ultima_atualizacao",
+        "ciclo_proprio"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "acao_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "estado": {
+          "enum": [
+            "ABERTO",
+            "FECHADO",
+            "PAUSADO"
+          ]
+        },
+        "criado_em": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ultima_atualizacao": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ciclo_proprio": {
+          "type": "integer",
+          "minimum": 0
         }
       }
     }

@@ -8,6 +8,7 @@ import { assert, assertEquals } from "../../../tests/fixtures/assert.ts";
 import { validateState } from "../../engine/validate.ts";
 import { type ConversationState, run } from "../../engine/engine.ts";
 import { createSolicitacao } from "../../engine/solicitacao.ts";
+import { createDocumento, transitionDocumento } from "../../engine/documento.ts";
 import {
   bindProcessToSession,
   closeSession,
@@ -298,31 +299,37 @@ Deno.test("4C-R8: negativo — nenhuma transição de sessão chama rede", () =>
   }
 });
 
-Deno.test("4C-R8: hash documental real — ausente/array/mutação/sessão (sem schema 4E)", () => {
+Deno.test("4C-R8: hash documental real — ausente/array/mutação/sessão", () => {
   // A) estado sem documentos → snapshot.documentos == []
   const base = plantNonTrivialProcess("conv-4c-docs-hash");
   const snapA = processObjectsSnapshot(base) as Record<string, unknown>;
   assertEquals(snapA[DOCUMENTOS_FUTURE_KEY], []);
 
-  // Probe estrutural: não declara semântica 4E; só prova a superfície do hash.
-  type ProbeState = ConversationState & Record<string, unknown>;
-
-  // B) estado sintético com documentos RECEIVED → hash1
+  // B) estado com documento RECEBIDO → hash1
+  const requested = createDocumento({
+    documento_id: "doc-1",
+    case_id: base.cases[0]?.case_id ?? null,
+    tipo: "ID_PESSOAL",
+    solicitado_em: "2026-09-06T10:00:00Z",
+  });
+  const received = transitionDocumento(requested, "RECEBIDO", {
+    ocorrido_em: "2026-09-06T10:01:00Z",
+  });
   const withReceived = {
     ...base,
-    [DOCUMENTOS_FUTURE_KEY]: [{ document_id: "doc-1", status: "RECEIVED" }],
-  } as ProbeState;
+    [DOCUMENTOS_FUTURE_KEY]: [received],
+  };
   const snapB = processObjectsSnapshot(withReceived) as Record<string, unknown>;
   assertEquals(snapB[DOCUMENTOS_FUTURE_KEY], [
-    { document_id: "doc-1", status: "RECEIVED" },
+    received,
   ]);
   const hash1 = hashProcessObjects(withReceived);
 
   // C) alterar SOMENTE documentos → hash2 != hash1
-  const withRefused = {
+  const withRefused: ConversationState = {
     ...base,
-    [DOCUMENTOS_FUTURE_KEY]: [{ document_id: "doc-1", status: "REFUSED" }],
-  } as ProbeState;
+    [DOCUMENTOS_FUTURE_KEY]: [{ ...received, estado: "ILEGÍVEL_INADEQUADO" }],
+  };
   const hash2 = hashProcessObjects(withRefused);
   assert(
     hash1 !== hash2,
@@ -341,7 +348,7 @@ Deno.test("4C-R8: hash documental real — ausente/array/mutação/sessão (sem 
   const malformed = {
     ...base,
     [DOCUMENTOS_FUTURE_KEY]: { not: "an-array" },
-  } as ProbeState;
+  } as unknown as ConversationState;
   rejects(() => processObjectsSnapshot(malformed), "documentos");
 });
 

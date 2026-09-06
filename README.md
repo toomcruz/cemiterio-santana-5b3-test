@@ -1,4 +1,25 @@
-# Santana — Fase 5B.2-C2: pacote final para reauditoria shadow
+# Santana — base oficial de implementação
+
+Este é o repositório oficial do sistema Santana. A implementação seguirá nesta
+base, com Supabase para dados e funções, Vercel para a aplicação e integração
+direta com a API do WhatsApp. O n8n não faz parte da arquitetura ativa.
+
+O repositório antigo `atendimento-cemiterio-santana` é uma referência histórica
+para o painel e fluxos já experimentados. Código reaproveitado deve ser revisto,
+adaptado e trazido para esta base sem credenciais ou dependências antigas.
+
+## Situação atual
+
+O motor conversacional, os contratos, migrations e testes shadow já formam uma
+base técnica relevante. O sistema ainda não está pronto para atendimento real:
+as migrations precisam ser validadas em um Supabase isolado, o painel precisa
+ser incorporado, a integração direta com WhatsApp precisa ser fechada e a
+aplicação precisa passar por preview e teste ponta a ponta na Vercel.
+
+O plano de execução e os critérios de conclusão estão em
+[`docs/IMPLEMENTATION-ROADMAP.md`](docs/IMPLEMENTATION-ROADMAP.md).
+
+## Origem do pacote técnico
 
 Este diretório contém código, SQL, contratos e testes **não aplicados**. Ele foi preparado a partir de `Blueprint_Tecnico_Fase_5A_Santana.md`, com as quatro correções vinculantes incorporadas:
 
@@ -7,7 +28,7 @@ Este diretório contém código, SQL, contratos e testes **não aplicados**. Ele
 3. Evidência de modelo é `MODEL_EVIDENCE_SUMMARY`; não existe armazenamento de raciocínio do modelo.
 4. `A_CONFIRMAR` bloqueia preço, prazo/SLA, documento obrigatório, proposta administrativa e fallback legado.
 
-Nenhuma migration deste pacote foi executada, e nenhum componente foi publicado ou conectado ao n8n V7.7, W-API, Gemini produtivo, `service_*` ou banco existente. Esta versão ainda não está aprovada para 5B.3.
+Nenhuma migration deste pacote foi executada, e nenhum componente foi publicado ou conectado à API do WhatsApp, Gemini produtivo, `service_*` ou banco existente. Esta versão ainda não está aprovada para tráfego real.
 
 ## Estado de validação
 
@@ -35,6 +56,6 @@ Mesmo nesse modo, não há chamada W-API. O renderer retorna somente contexto/te
 1. Leia `docs/deployment-plan.md` e `docs/security-review.md`.
 2. Revise migrations e rollback em ordem numérica, sem executá-los.
 3. Execute os testes PostgreSQL P01–P15 somente em ambiente isolado após a reauditoria 5B.2-R.
-4. Não copie funções para `supabase/functions`, não execute SQL e não conecte o V7.7 nesta fase.
+4. Não promova tráfego real antes de concluir a validação isolada e o teste ponta a ponta.
 
 Os testes TypeScript não fazem chamadas externas. Os testes PostgreSQL de concorrência exigem um Supabase isolado e seguem o procedimento em `tests/integration/concurrency-procedures.md`. O provisionamento de publisher e as modalidades de rollback estão em `docs/isolated-installation.md` e `docs/rollback-plan.md`.

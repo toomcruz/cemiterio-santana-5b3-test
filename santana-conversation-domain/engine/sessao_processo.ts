@@ -23,8 +23,10 @@ export const SESSION_STATUSES = [
 
 export type SessionStatus = (typeof SESSION_STATUSES)[number];
 
-/** Coleção documental futura (4E) — já protegida no hash, vazia em 4C. */
-export const DOCUMENTOS_FUTURE_KEY = "documentos" as const;
+/** Coleção documental do processo, preservada entre sessões. */
+export const DOCUMENTOS_KEY = "documentos" as const;
+/** @deprecated Compatibilidade com provas 4C/4D anteriores à implementação 4E. */
+export const DOCUMENTOS_FUTURE_KEY = DOCUMENTOS_KEY;
 
 export interface SessionRecord {
   session_id: string;
@@ -94,32 +96,31 @@ export function processObjectsSnapshot(state: ConversationState): {
   cases: ConversationState["cases"];
   facts: ConversationState["facts"];
   solicitacoes: NonNullable<ConversationState["solicitacoes"]>;
-  [DOCUMENTOS_FUTURE_KEY]: unknown[];
+  [DOCUMENTOS_KEY]: NonNullable<ConversationState["documentos"]>;
 } {
   return {
     cases: structuredClone(state.cases),
     facts: structuredClone(state.facts),
     solicitacoes: structuredClone(state.solicitacoes ?? []),
-    // 4E ainda não declara schema; adaptador estrutural fail-closed.
-    [DOCUMENTOS_FUTURE_KEY]: readDocumentosCollection(state),
+    [DOCUMENTOS_KEY]: readDocumentosCollection(state),
   };
 }
 
 /**
- * Lê a coleção futura `documentos` sem declarar semântica 4E.
+ * Lê a coleção `documentos` com validação estrutural mínima.
  * ausente → []; array → clone canônico; presente e não-array → erro.
  */
-function readDocumentosCollection(state: ConversationState): unknown[] {
-  const raw = (state as ConversationState & Record<string, unknown>)[
-    DOCUMENTOS_FUTURE_KEY
-  ];
+function readDocumentosCollection(
+  state: ConversationState,
+): NonNullable<ConversationState["documentos"]> {
+  const raw = state.documentos;
   if (raw === undefined) return [];
   if (!Array.isArray(raw)) {
     throw new Error(
       "documentos: formato inesperado (esperado array ou ausente)",
     );
   }
-  return structuredClone(raw);
+  return structuredClone(raw) as NonNullable<ConversationState["documentos"]>;
 }
 
 function canonicalize(value: unknown): unknown {
