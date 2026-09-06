@@ -1,23 +1,31 @@
-# Santana — base oficial de implementação
+# Santana — base oficial de regras e implementação
 
-Este é o repositório oficial do sistema Santana. A implementação seguirá nesta
-base, com Supabase para dados e funções, Vercel para a aplicação e integração
-direta com a API do WhatsApp. O n8n não faz parte da arquitetura ativa.
+Este é o repositório oficial das regras, contratos, estados e comportamento
+conversacional do sistema Santana. O n8n não faz parte da arquitetura ativa.
 
-O repositório antigo `atendimento-cemiterio-santana` é uma referência histórica
-para o painel e fluxos já experimentados. Código reaproveitado deve ser revisto,
-adaptado e trazido para esta base sem credenciais ou dependências antigas.
+## Produção atual
 
-## Situação atual
+A aplicação publicada continua no repositório
+`toomcruz/atendimento-cemiterio-santana`, pois é nele que hoje vivem o painel e
+as rotas conectadas à Vercel. O recebimento e o envio do WhatsApp são diretos
+pela W-API; dados, autenticação, armazenamento e funções internas permanecem no
+Supabase `SANTANA`.
 
-O motor conversacional, os contratos, migrations e testes shadow já formam uma
-base técnica relevante. O sistema ainda não está pronto para atendimento real:
-as migrations precisam ser validadas em um Supabase isolado, o painel precisa
-ser incorporado, a integração direta com WhatsApp precisa ser fechada e a
-aplicação precisa passar por preview e teste ponta a ponta na Vercel.
+Portanto, “base oficial” significa autoridade para novas regras e contratos, não
+que todo o painel já foi fisicamente copiado para este repositório. Durante a
+transição existem dois repositórios com responsabilidades diferentes e apenas
+um painel em produção.
 
-O plano de execução e os critérios de conclusão estão em
-[`docs/IMPLEMENTATION-ROADMAP.md`](docs/IMPLEMENTATION-ROADMAP.md).
+A topologia, os limites e o plano de convergência estão em
+[`docs/PRODUCTION-TOPOLOGY.md`](docs/PRODUCTION-TOPOLOGY.md).
+
+## Situação desta base
+
+O motor conversacional, os contratos, migrations e testes shadow formam a base
+técnica oficial. Os componentes shadow continuam isolados e não foram
+promovidos em bloco para o banco de produção. A integração deve ocorrer por
+contratos e módulos pequenos, com validação e rollback, sem substituir o painel
+operacional de uma só vez.
 
 ## Origem do pacote técnico
 
