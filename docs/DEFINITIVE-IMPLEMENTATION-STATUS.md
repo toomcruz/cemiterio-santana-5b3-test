@@ -24,7 +24,7 @@ Não há autorização arquitetural para fallback ao motor antigo.
   interpretação também ocorre com objetivo/pergunta em andamento.
 - O contexto inclui fatos do caso/objetivo em foco, sem fatos de outro caso.
 - O prompt informa `message_id`, evidência literal e regras de continuidade.
-- O provider Gemini fica no runtime oficial, com chave somente em header,
+- O provider Gemini fica em `integrations/` na base oficial, com chave somente em header,
   orçamento de saída e rejeição de respostas truncadas/bloqueadas. Não foi
   executado com uma chave real nesta etapa.
 - Relato de reclamação é atribuído ao overlay correto; declaração do usuário

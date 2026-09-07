@@ -1,5 +1,5 @@
 import { assert, assertEquals, assertRejects } from "../../../tests/fixtures/assert.ts";
-import { GeminiProvider } from "../adapter/gemini.ts";
+import { GeminiProvider } from "../gemini.ts";
 
 const provider = () => new GeminiProvider("gemini-test-model", "synthetic-key");
 

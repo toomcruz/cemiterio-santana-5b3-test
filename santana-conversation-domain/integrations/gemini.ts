@@ -1,7 +1,7 @@
-import type { LlmProvider } from "./adapter.ts";
+import type { LlmProvider } from "../runtime/adapter/adapter.ts";
 
 const schema: Record<string, unknown> = JSON.parse(
-  Deno.readTextFileSync(new URL("../interpretation.schema.json", import.meta.url)),
+  Deno.readTextFileSync(new URL("../runtime/interpretation.schema.json", import.meta.url)),
 );
 
 /** Official server-side transport. The model is configuration, never user input. */
