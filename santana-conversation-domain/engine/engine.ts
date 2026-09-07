@@ -926,6 +926,8 @@ function ownerGoalForFact(state: ConversationState, code: string, focus: GoalRec
     b.stack_index - a.stack_index
   );
   for (const g of open) {
+    // An answer about the focused case cannot fill a gap in another case.
+    if (focus && g.case_id !== focus.case_id) continue;
     if (goalDef(g.goal_code).required_facts.includes(code)) return g;
   }
   return focus;

@@ -171,7 +171,7 @@ export function interpret(input: InterpreterInput): Interpretation {
       value: pattern.value,
       source: correctionMarker ? "USER_CORRECTION" : "USER_EXPLICIT",
       confidence,
-      evidence,
+      evidence: input.text,
       requires_confirmation: confidence === "LOW",
     });
   }
@@ -187,7 +187,7 @@ export function interpret(input: InterpreterInput): Interpretation {
       value: "PENDENTE",
       source: "USER_EXPLICIT",
       confidence: "HIGH",
-      evidence,
+      evidence: input.text,
       requires_confirmation: true,
     });
   }
@@ -216,7 +216,7 @@ export function interpret(input: InterpreterInput): Interpretation {
         value: input.text.trim(),
         source: "USER_EXPLICIT",
         confidence: topic.confidence,
-        evidence,
+        evidence: input.text,
         requires_confirmation: false,
       });
       break;

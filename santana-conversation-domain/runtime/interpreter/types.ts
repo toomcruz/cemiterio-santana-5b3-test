@@ -90,5 +90,7 @@ export interface InterpreterInput {
     open_goal_code: string | null;
     pending_question_fact: string | null;
     known_subject_hints: string[];
+    /** Only facts in the focused case/goal; other cases must never leak here. */
+    known_facts?: Array<{ fact_code: string; value: FactValue; confidence: string; source: string }>;
   };
 }

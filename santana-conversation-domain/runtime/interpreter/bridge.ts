@@ -4,6 +4,8 @@
 
 import type { ConversationEvent, ConversationState } from "../../engine/engine.ts";
 import { focusGoal, missingFacts } from "../../engine/engine.ts";
+import { activeFacts } from "../../engine/engine.ts";
+import { factsDoc, goalDef, questionForFact } from "../../engine/catalog.ts";
 import type { Interpretation, InterpreterInput } from "./types.ts";
 
 export interface BridgeResult {
@@ -18,6 +20,14 @@ export function contextFromState(state: ConversationState, knownHints: string[] 
     open_goal_code: goal ? goal.goal_code : null,
     pending_question_fact: state.pending_question ? state.pending_question.fact_code : null,
     known_subject_hints: knownHints,
+    known_facts: goal
+      ? factsDoc.facts.flatMap((def) => activeFacts(state, def.fact_code, goal)).map((fact) => ({
+        fact_code: fact.fact_code,
+        value: fact.value,
+        confidence: fact.confidence,
+        source: fact.source,
+      }))
+      : [],
   };
 }
 
@@ -65,8 +75,11 @@ export function toConversationEvents(interpretation: Interpretation): BridgeResu
         events.push({ kind: "NEW_GOAL", goal_code: interpretation.goal.goal_code, case_ref: caseRef });
       }
     }
-    if (facts.length > 0) events.push({ kind: "COMPLEMENT", facts });
-    events.push({ kind: "COMPLAINT" });
+    const complaintCodes = new Set(goalDef("GOAL_RECLAMACAO").required_facts);
+    const baseFacts = facts.filter((fact) => !complaintCodes.has(fact.code));
+    const complaintFacts = facts.filter((fact) => complaintCodes.has(fact.code));
+    if (baseFacts.length > 0) events.push({ kind: "COMPLEMENT", facts: baseFacts });
+    events.push({ kind: "COMPLAINT", facts: complaintFacts });
     return { events, clarification: null };
   }
 
@@ -82,5 +95,5 @@ export function clarificationQuestion(state: ConversationState, result: BridgeRe
   }
   const goal = focusGoal(state);
   const missing = goal ? missingFacts(state, goal)[0] : undefined;
-  return missing ? `Pode confirmar ${missing.code}?` : "Pode me explicar um pouco melhor?";
+  return missing ? questionForFact(missing.code).text : "Pode me explicar um pouco melhor?";
 }
