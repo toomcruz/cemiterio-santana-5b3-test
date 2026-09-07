@@ -23,7 +23,7 @@ jobs:
   benchmark:
     runs-on: ubuntu-latest
     env:
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.PARLANT }}
       BENCHMARK_CASE_LIMIT: ${{ inputs.benchmark_size == 'smoke' && '25' || '300' }}
     steps:
       - uses: actions/checkout@v4
