@@ -17,6 +17,7 @@ export function draftReply(input: {
   next_state: ConversationState;
 }): string | null {
   if (input.outcome === "HUMAN_ACTIVE" || input.outcome === "INTERPRETATION_UNAVAILABLE") return null;
+
   if (input.question_draft) return input.question_draft;
 
   if (input.interpretation?.primary_event?.event_kind === "HUMAN_REQUEST") {
