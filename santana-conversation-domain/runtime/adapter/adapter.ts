@@ -58,9 +58,10 @@ function reconcileOfficialAnchors(input: InterpreterInput, llm: Interpretation):
     : llm.facts;
   const deterministicComplaint = deterministic.primary_event?.event_kind === "COMPLAINT";
   const goal = graveContext
-    ? deterministic.goal ?? (input.context.open_goal_code === "GOAL_JAZIGO_SERVICOS"
-      ? { goal_code: "GOAL_JAZIGO_SERVICOS", confidence: "HIGH" as const, evidence: input.text }
-      : llm.goal)
+    ? deterministic.goal ??
+      (input.context.open_goal_code === "GOAL_JAZIGO_SERVICOS"
+        ? { goal_code: "GOAL_JAZIGO_SERVICOS", confidence: "HIGH" as const, evidence: input.text }
+        : llm.goal)
     : llm.goal;
 
   return {
