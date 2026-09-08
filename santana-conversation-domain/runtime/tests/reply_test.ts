@@ -51,3 +51,14 @@ Deno.test("human and provider-unavailable modes produce no sendable reply", asyn
   assertEquals(human.reply_draft, null);
   assertEquals(unavailable.reply_draft, null);
 });
+
+Deno.test("initial greeting uses the service menu instead of a generic clarification", async () => {
+  const result = await planTurn({
+    message_id: "hello-menu",
+    text: "Olá",
+    state: initState("hello-menu"),
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+  assert(result.reply_draft?.includes("recadastro"));
+  assert(!result.reply_draft?.includes("explicar um pouco melhor"));
+});
