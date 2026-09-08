@@ -162,7 +162,8 @@ const SUBJECT_HINTS = [
 
 export function interpret(input: InterpreterInput): Interpretation {
   const text = normalize(input.text);
-  const socialGreeting = !input.context.has_open_goal && /^(oi|ola|bom dia|boa tarde|boa noite)( tudo bem)?$/.test(text);
+  const socialGreeting = !input.context.has_open_goal &&
+    /^(oi|ola|bom dia|boa tarde|boa noite)( tudo bem)?$/.test(text);
   const facts: CandidateFact[] = [];
   const secondary: CandidateEvent[] = [];
   const ambiguities: Ambiguity[] = [];
@@ -386,6 +387,10 @@ export function interpret(input: InterpreterInput): Interpretation {
     primaryKind = "UNCERTAIN";
     primaryEvidence = uncertaintyMarker;
     primaryConfidence = "MEDIUM";
+  } else if (socialGreeting) {
+    primaryKind = "SOCIAL";
+    primaryEvidence = text;
+    primaryConfidence = "HIGH";
   }
 
   if (goal && primaryKind && primaryKind !== "NEW_GOAL" && caseKind === "NEW") {
