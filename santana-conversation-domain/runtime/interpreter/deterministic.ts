@@ -131,9 +131,17 @@ function lower(a: Confidence, b: Confidence): Confidence {
  * parsing this into an authoritative registration, ownership or appointment.
  */
 function graveReference(text: string): string | null {
+  // A reference needs a concrete identifier. Do not mistake prose such as
+  // "jazigo está violado" for a location merely because it follows "jazigo".
+  const identifier = "[0-9][a-z0-9-]{0,23}";
   const match = text.match(
-    /\b(?:quadra\s*(?:n[ºo.]?\s*)?[a-z0-9-]{1,24}(?:\s*(?:,|e|-)\s*)?)?(?:jazigo|sepultura|t[uú]mulo)\s*(?:n[ºo.]?\s*)?[a-z0-9-]{1,24}\b/i,
-  ) ?? text.match(/\bquadra\s*(?:n[ºo.]?\s*)?[a-z0-9-]{1,24}\b/i);
+    new RegExp(
+      `\\bquadra\\s*(?:n[ºo.]?\\s*)?${identifier}\\s*(?:(?:,|e|-)\\s*)?(?:jazigo|sepultura|t[uú]mulo)\\s*(?:n[ºo.]?\\s*)?${identifier}\\b`,
+      "i",
+    ),
+  ) ?? text.match(
+    new RegExp(`\\b(?:jazigo|sepultura|t[uú]mulo)\\s*(?:n[ºo.]?\\s*)?${identifier}\\b`, "i"),
+  ) ?? text.match(new RegExp(`\\bquadra\\s*(?:n[ºo.]?\\s*)?${identifier}\\b`, "i"));
   return match?.[0]?.trim() || null;
 }
 
@@ -164,9 +172,7 @@ export function interpret(input: InterpreterInput): Interpretation {
   const humanHandoffMarker = firstMatch(text, lexicon.human_handoff_markers);
   // "FINALIZAR" só encerra a triagem quando já existe um atendimento aberto.
   // Assim uma palavra solta não converte uma conversa nova em encaminhamento.
-  const completionMarker = input.context.has_open_goal
-    ? firstMatch(text, lexicon.completion_markers)
-    : null;
+  const completionMarker = input.context.has_open_goal ? firstMatch(text, lexicon.completion_markers) : null;
   const complaintMarker = firstMatch(text, lexicon.complaint_markers);
   const newSubjectMarker = firstMatch(text, lexicon.new_subject_markers);
   const uncertaintyMarker = firstMatch(text, lexicon.uncertainty_markers);
@@ -229,9 +235,26 @@ export function interpret(input: InterpreterInput): Interpretation {
   const graveServiceContext = goal?.goal_code === "GOAL_JAZIGO_SERVICOS" ||
     input.context.open_goal_code === "GOAL_JAZIGO_SERVICOS";
   const graveServiceDetail = [
-    "violado", "violaram", "violacao", "arrombado", "quebrado", "quebrada", "quebrou",
-    "quebraram", "danificado", "danificaram", "depredado", "vandalizado", "destruido",
-    "destruiram", "tampa", "lapide", "zeladoria", "limpeza", "manutencao", "agua",
+    "violado",
+    "violaram",
+    "violacao",
+    "arrombado",
+    "quebrado",
+    "quebrada",
+    "quebrou",
+    "quebraram",
+    "danificado",
+    "danificaram",
+    "depredado",
+    "vandalizado",
+    "destruido",
+    "destruiram",
+    "tampa",
+    "lapide",
+    "zeladoria",
+    "limpeza",
+    "manutencao",
+    "agua",
   ].some((marker) => matches(text, marker));
   if (graveServiceContext && graveServiceDetail && !seen.has("grave_service_description")) {
     seen.add("grave_service_description");
@@ -297,6 +320,10 @@ export function interpret(input: InterpreterInput): Interpretation {
       pattern.code === "AMB_SUJEITO_INDEFINIDO" && input.context.has_open_goal &&
       input.context.known_subject_hints.length > 0
     ) continue;
+    // "Jazigo" é ambíguo apenas ao iniciar um assunto. Uma conversa que já
+    // está no atendimento de jazigo deve aceitar referências e complementos
+    // sem voltar a perguntar qual é o destino do atendimento.
+    if (pattern.code === "AMB_DESTINO_JAZIGO_OU_CEMITERIO" && graveServiceContext) continue;
     ambiguities.push({
       code: pattern.code,
       description: pattern.description,

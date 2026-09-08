@@ -1,18 +1,18 @@
 import { assertEquals } from "../../../tests/fixtures/assert.ts";
-import type { RuntimeCommit, RuntimeInbound } from "../../../santana-conversation-domain/runtime/official_turn_service.ts";
+import type {
+  RuntimeCommit,
+  RuntimeInbound,
+} from "../../../santana-conversation-domain/runtime/official_turn_service.ts";
 import { OfficialSupabaseRest } from "../official-rest.ts";
-import {
-  type RuntimeAttachmentProcessor,
-  SupabaseRuntimeStore,
-} from "../official-runtime-store.ts";
+import { type RuntimeAttachmentProcessor, SupabaseRuntimeStore } from "../official-runtime-store.ts";
 
 class FakeRest {
   calls: Array<{ name: string; body: Record<string, unknown> }> = [];
 
-  async rpc(name: string, body: Record<string, unknown>): Promise<unknown> {
+  rpc(name: string, body: Record<string, unknown>): Promise<unknown> {
     this.calls.push({ name, body });
     if (name === "support_runtime_acquire_inbound") {
-      return {
+      return Promise.resolve({
         duplicate: false,
         conversation_id: "11111111-2222-4333-8444-555555555555",
         inbound_message_id: "66666666-7777-4888-8999-aaaaaaaaaaaa",
@@ -20,18 +20,18 @@ class FakeRest {
         automation_mode: "BOT_ACTIVE",
         catalog_hash: "a".repeat(64),
         state: null,
-      };
+      });
     }
     if (name === "support_runtime_commit_turn") {
-      return { replayed: false, revision: 1, outbox_id: "outbox-1" };
+      return Promise.resolve({ replayed: false, revision: 1, outbox_id: "outbox-1" });
     }
     throw new Error("unexpected RPC");
   }
 }
 
 const attachment: RuntimeAttachmentProcessor = {
-  async persist() {
-    return {
+  persist() {
+    return Promise.resolve({
       received_document: {
         documento_id: "doc-1",
         tipo: "application/pdf",
@@ -39,7 +39,7 @@ const attachment: RuntimeAttachmentProcessor = {
         recebido_em: "2026-09-08T15:00:00.000Z",
       },
       failure_code: null,
-    };
+    });
   },
 };
 

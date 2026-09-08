@@ -106,7 +106,11 @@ function receivedDocument(payload: Record<string, unknown>, now: Date): RuntimeR
   const mimeType = text(payload.mime_type);
   const fileName = text(payload.file_name);
   if (!documentId || !mimeType || !fileName) {
-    throw new HttpProblem(502, "ATTACHMENT_STORE_RESPONSE_INVALID", "The attachment store returned an invalid response");
+    throw new HttpProblem(
+      502,
+      "ATTACHMENT_STORE_RESPONSE_INVALID",
+      "The attachment store returned an invalid response",
+    );
   }
   return {
     documento_id: documentId,
@@ -143,10 +147,12 @@ export class WapiAttachmentProcessor implements RuntimeAttachmentProcessor {
     received_document: RuntimeReceivedDocument | null;
     failure_code: string | null;
   }> {
-    const existing = object(await this.rest.rpc<unknown>("support_runtime_get_attachment", {
-      p_inbound_message_id: input.inbound_message_id,
-      p_conversation_id: input.conversation_id,
-    }));
+    const existing = object(
+      await this.rest.rpc<unknown>("support_runtime_get_attachment", {
+        p_inbound_message_id: input.inbound_message_id,
+        p_conversation_id: input.conversation_id,
+      }),
+    );
     if (existing.found === true && existing.stored === true) {
       return { received_document: receivedDocument(existing, this.now()), failure_code: null };
     }
@@ -158,14 +164,16 @@ export class WapiAttachmentProcessor implements RuntimeAttachmentProcessor {
       await this.rest.uploadObject(STORAGE_BUCKET, storagePath, downloaded.bytes, downloaded.mimeType);
       let stored: Record<string, unknown>;
       try {
-        stored = object(await this.rest.rpc<unknown>("support_runtime_store_attachment", {
-          p_inbound_message_id: input.inbound_message_id,
-          p_conversation_id: input.conversation_id,
-          p_file_name: downloaded.fileName,
-          p_mime_type: downloaded.mimeType,
-          p_message_type: input.attachment.message_type,
-          p_storage_path: storagePath,
-        }));
+        stored = object(
+          await this.rest.rpc<unknown>("support_runtime_store_attachment", {
+            p_inbound_message_id: input.inbound_message_id,
+            p_conversation_id: input.conversation_id,
+            p_file_name: downloaded.fileName,
+            p_mime_type: downloaded.mimeType,
+            p_message_type: input.attachment.message_type,
+            p_storage_path: storagePath,
+          }),
+        );
       } catch (error) {
         await this.rest.removeObject(STORAGE_BUCKET, storagePath).catch(() => undefined);
         throw error;

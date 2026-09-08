@@ -79,14 +79,12 @@ function interpreter() {
   return new ControlledLlmAdapter({
     enabled,
     timeoutMs: 12000,
-    provider: enabled
-      ? new GeminiProvider(model, key)
-      : {
-        name: "deterministic",
-        model: "deterministic",
-        createRequest: () => ({ url: "", headers: {}, body: "" }),
-        extractText: () => "{}",
-      },
+    provider: enabled ? new GeminiProvider(model, key) : {
+      name: "deterministic",
+      model: "deterministic",
+      createRequest: () => ({ url: "", headers: {}, body: "" }),
+      extractText: () => "{}",
+    },
     network: fetchBoundary,
     observe: (event) => {
       // Deliberately aggregate-only: it excludes customer text, prompts,

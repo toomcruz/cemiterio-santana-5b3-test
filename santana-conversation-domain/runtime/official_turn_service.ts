@@ -6,7 +6,7 @@
  * details. The store implementation must atomically persist the proposed state
  * and enqueue the reply before any delivery attempt.
  */
-import { focusGoal, initState, type ConversationState } from "../engine/engine.ts";
+import { type ConversationState, focusGoal, initState } from "../engine/engine.ts";
 import { goalDef } from "../engine/catalog.ts";
 import { registerReceivedDocumento } from "../engine/documento.ts";
 import { validateState } from "../engine/validate.ts";

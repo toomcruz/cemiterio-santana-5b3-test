@@ -6,22 +6,25 @@
  * a payload suitable for `conv_apply_transition`.  It contains no W-API, UI or
  * legacy-panel dependency.
  */
-import {
-  type ConversationState,
-  initState,
-  type PendingAction,
-  type QuestionRef,
-} from "../engine/engine.ts";
+import { type ConversationState, initState, type PendingAction, type QuestionRef } from "../engine/engine.ts";
 import {
   canonicalState,
   diffTransition,
+  type IdMap,
   newIdMap,
   questionKey,
-  type IdMap,
   type SubjectResolver,
   uuidFor,
 } from "../engine/persistence.ts";
-import { eventsDoc, factsDoc, goalsDoc, questionsDoc, relationsDoc, stateSchema, topicsDoc } from "../engine/catalog.ts";
+import {
+  eventsDoc,
+  factsDoc,
+  goalsDoc,
+  questionsDoc,
+  relationsDoc,
+  stateSchema,
+  topicsDoc,
+} from "../engine/catalog.ts";
 
 export interface PersistedConversationState {
   exists: boolean;
@@ -71,9 +74,15 @@ export async function sha256(value: string): Promise<string> {
 }
 
 export async function hmacSha256(secret: string, value: string): Promise<string> {
-  const key = await crypto.subtle.importKey("raw", textEncoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, [
-    "sign",
-  ]);
+  const key = await crypto.subtle.importKey(
+    "raw",
+    textEncoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    [
+      "sign",
+    ],
+  );
   const signature = await crypto.subtle.sign("HMAC", key, textEncoder.encode(value));
   return [...new Uint8Array(signature)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
@@ -81,9 +90,11 @@ export async function hmacSha256(secret: string, value: string): Promise<string>
 export function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
   if (value && typeof value === "object") {
-    return `{${Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([key, nested]) =>
-      `${JSON.stringify(key)}:${canonicalJson(nested)}`
-    ).join(",")}}`;
+    return `{${
+      Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([key, nested]) =>
+        `${JSON.stringify(key)}:${canonicalJson(nested)}`
+      ).join(",")
+    }}`;
   }
   // JSON.stringify(undefined) returns undefined even though this helper's
   // contract is a string.  Treat it like JSON null so the hash stays total and
@@ -92,7 +103,7 @@ export function canonicalJson(value: unknown): string {
 }
 
 /** Stable hash pinned in every persisted conversation transition. */
-export async function currentCatalogHash(): Promise<string> {
+export function currentCatalogHash(): Promise<string> {
   return sha256(canonicalJson({ topicsDoc, factsDoc, goalsDoc, relationsDoc, questionsDoc, eventsDoc, stateSchema }));
 }
 
@@ -189,22 +200,32 @@ export function hydratePersistedState(raw: PersistedConversationState, conversat
     ids.ids[`action:${key}`] = String(row.action_id);
   }
   const focus = state.goals.filter((goal) => goal.status === "ACTIVE").sort((a, b) => b.stack_index - a.stack_index)[0];
-  state.current_topic = focus ? goalsDoc.goals.find((goal) => goal.goal_code === focus.goal_code)?.topic_code ?? null : null;
+  state.current_topic = focus
+    ? goalsDoc.goals.find((goal) => goal.goal_code === focus.goal_code)?.topic_code ?? null
+    : null;
   return { state, ids, subjects };
 }
 
 function ensureIdsForNext(prev: ConversationState, next: ConversationState, ids: IdMap): void {
-  for (const item of next.cases) if (!prev.cases.some((before) => before.case_id === item.case_id)) {
-    ids.ids[`case:${item.case_id}`] ??= crypto.randomUUID();
+  for (const item of next.cases) {
+    if (!prev.cases.some((before) => before.case_id === item.case_id)) {
+      ids.ids[`case:${item.case_id}`] ??= crypto.randomUUID();
+    }
   }
-  for (const item of next.goals) if (!prev.goals.some((before) => before.goal_id === item.goal_id)) {
-    ids.ids[`goal:${item.goal_id}`] ??= crypto.randomUUID();
+  for (const item of next.goals) {
+    if (!prev.goals.some((before) => before.goal_id === item.goal_id)) {
+      ids.ids[`goal:${item.goal_id}`] ??= crypto.randomUUID();
+    }
   }
-  for (const item of next.facts) if (!prev.facts.some((before) => before.fact_id === item.fact_id)) {
-    ids.ids[`fact:${item.fact_id}`] ??= crypto.randomUUID();
+  for (const item of next.facts) {
+    if (!prev.facts.some((before) => before.fact_id === item.fact_id)) {
+      ids.ids[`fact:${item.fact_id}`] ??= crypto.randomUUID();
+    }
   }
-  for (const item of [next.pending_question, ...next.parked_questions]) if (item) {
-    ids.ids[`question:${questionKey(item)}`] ??= crypto.randomUUID();
+  for (const item of [next.pending_question, ...next.parked_questions]) {
+    if (item) {
+      ids.ids[`question:${questionKey(item)}`] ??= crypto.randomUUID();
+    }
   }
   for (const item of next.pending_actions) {
     const key = `${item.goal_id}:${item.action_code}:${item.requested_at_seq}`;

@@ -1,6 +1,12 @@
 import { assert, assertEquals, assertRejects } from "../../../tests/fixtures/assert.ts";
 import { ControlledLlmAdapter } from "../adapter/adapter.ts";
-import { processOfficialTurn, type RuntimeCommit, type RuntimeInbound, type RuntimeLease, type RuntimeStore } from "../official_turn_service.ts";
+import {
+  processOfficialTurn,
+  type RuntimeCommit,
+  type RuntimeInbound,
+  type RuntimeLease,
+  type RuntimeStore,
+} from "../official_turn_service.ts";
 import { initState } from "../../engine/engine.ts";
 
 class MemoryStore implements RuntimeStore {
@@ -11,9 +17,9 @@ class MemoryStore implements RuntimeStore {
   automation: RuntimeLease["automation_mode"] = "BOT_ACTIVE";
   commits: RuntimeCommit[] = [];
 
-  async acquireInbound(input: RuntimeInbound & { catalog_hash: string }): Promise<RuntimeLease> {
+  acquireInbound(input: RuntimeInbound & { catalog_hash: string }): Promise<RuntimeLease> {
     this.catalogHash ??= input.catalog_hash;
-    return {
+    return Promise.resolve({
       duplicate: this.duplicate,
       conversation_id: "11111111-2222-4333-8444-555555555555",
       inbound_message_id: "66666666-7777-4888-8999-aaaaaaaaaaaa",
@@ -21,26 +27,31 @@ class MemoryStore implements RuntimeStore {
       automation_mode: this.automation,
       catalog_hash: this.catalogHash,
       state: this.state,
-    };
+    });
   }
 
-  async commitTurn(input: RuntimeCommit) {
+  commitTurn(input: RuntimeCommit) {
     if (input.expected_revision !== this.revision) throw new Error("conversation revision moved");
     this.state = structuredClone(input.state);
     this.revision += 1;
     this.commits.push(input);
-    return { replayed: false, revision: this.revision, outbox_id: input.reply_body ? "outbox-1" : null };
+    return Promise.resolve({
+      replayed: false,
+      revision: this.revision,
+      outbox_id: input.reply_body ? "outbox-1" : null,
+    });
   }
 }
 
 const deterministicAdapter = new ControlledLlmAdapter({
   enabled: false,
   provider: {
-    name: "test", model: "test",
+    name: "test",
+    model: "test",
     createRequest: () => ({ url: "https://invalid.local", headers: {}, body: "" }),
     extractText: () => "{}",
   },
-  network: async () => ({ status: 500, body: "" }),
+  network: () => Promise.resolve({ status: 500, body: "" }),
 });
 
 function inbound(body: string): RuntimeInbound {

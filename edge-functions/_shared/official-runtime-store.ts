@@ -30,7 +30,7 @@ function object(value: unknown): JsonRecord {
   return value as JsonRecord;
 }
 
-function text(value: unknown, field: string): string {
+function text(value: unknown, _field: string): string {
   if (typeof value !== "string" || !value) {
     throw new HttpProblem(502, "SUPABASE_RUNTIME_RESPONSE_INVALID", "The runtime store response is incomplete");
   }
@@ -50,7 +50,11 @@ function revision(value: unknown): number {
 
 function mode(value: unknown): RuntimeLease["automation_mode"] {
   if (value === "BOT_ACTIVE" || value === "HUMAN_ACTIVE") return value;
-  throw new HttpProblem(502, "SUPABASE_RUNTIME_RESPONSE_INVALID", "The runtime store returned an invalid automation mode");
+  throw new HttpProblem(
+    502,
+    "SUPABASE_RUNTIME_RESPONSE_INVALID",
+    "The runtime store returned an invalid automation mode",
+  );
 }
 
 /**
@@ -64,15 +68,17 @@ export class SupabaseRuntimeStore implements RuntimeStore {
   ) {}
 
   async acquireInbound(input: RuntimeInbound & { catalog_hash: string }): Promise<RuntimeLease> {
-    const payload = object(await this.rest.rpc<unknown>("support_runtime_acquire_inbound", {
-      p_external_message_id: input.external_message_id,
-      p_phone_e164: input.phone_e164,
-      p_contact_name: input.contact_name,
-      p_body: input.body,
-      p_message_type: input.message_type,
-      p_metadata: input.metadata ?? {},
-      p_catalog_hash: input.catalog_hash,
-    }));
+    const payload = object(
+      await this.rest.rpc<unknown>("support_runtime_acquire_inbound", {
+        p_external_message_id: input.external_message_id,
+        p_phone_e164: input.phone_e164,
+        p_contact_name: input.contact_name,
+        p_body: input.body,
+        p_message_type: input.message_type,
+        p_metadata: input.metadata ?? {},
+        p_catalog_hash: input.catalog_hash,
+      }),
+    );
     const lease: RuntimeLease = {
       duplicate: payload.duplicate === true,
       conversation_id: text(payload.conversation_id, "conversation_id"),
@@ -98,18 +104,20 @@ export class SupabaseRuntimeStore implements RuntimeStore {
   }
 
   async commitTurn(input: RuntimeCommit): Promise<{ replayed: boolean; revision: number; outbox_id: string | null }> {
-    const payload = object(await this.rest.rpc<unknown>("support_runtime_commit_turn", {
-      p_conversation_id: input.conversation_id,
-      p_inbound_message_id: input.inbound_message_id,
-      p_expected_revision: input.expected_revision,
-      p_catalog_hash: input.catalog_hash,
-      p_state_hash: input.state_hash,
-      p_state: input.state,
-      p_outcome: input.outcome,
-      p_event_kind: input.event_kind,
-      p_reply_body: input.reply_body,
-      p_projection: input.projection,
-    }));
+    const payload = object(
+      await this.rest.rpc<unknown>("support_runtime_commit_turn", {
+        p_conversation_id: input.conversation_id,
+        p_inbound_message_id: input.inbound_message_id,
+        p_expected_revision: input.expected_revision,
+        p_catalog_hash: input.catalog_hash,
+        p_state_hash: input.state_hash,
+        p_state: input.state,
+        p_outcome: input.outcome,
+        p_event_kind: input.event_kind,
+        p_reply_body: input.reply_body,
+        p_projection: input.projection,
+      }),
+    );
     return {
       replayed: payload.replayed === true,
       revision: revision(payload.revision),

@@ -6,26 +6,29 @@ class FakeRest {
   calls: Array<{ name: string; body: Record<string, unknown> }> = [];
   uploads: Array<{ bucket: string; path: string; mimeType: string; size: number }> = [];
 
-  async rpc(name: string, body: Record<string, unknown>): Promise<unknown> {
+  rpc(name: string, body: Record<string, unknown>): Promise<unknown> {
     this.calls.push({ name, body });
-    if (name === "support_runtime_get_attachment") return { found: false };
+    if (name === "support_runtime_get_attachment") return Promise.resolve({ found: false });
     if (name === "support_runtime_store_attachment") {
-      return {
+      return Promise.resolve({
         stored: true,
         document_id: "doc-1",
         file_name: "teste.pdf",
         mime_type: "application/pdf",
-      };
+      });
     }
-    if (name === "support_runtime_fail_attachment") return { stored: false, status: "FAILED" };
+    if (name === "support_runtime_fail_attachment") return Promise.resolve({ stored: false, status: "FAILED" });
     throw new Error("unexpected RPC");
   }
 
-  async uploadObject(bucket: string, path: string, bytes: ArrayBuffer, mimeType: string): Promise<void> {
+  uploadObject(bucket: string, path: string, bytes: ArrayBuffer, mimeType: string): Promise<void> {
     this.uploads.push({ bucket, path, mimeType, size: bytes.byteLength });
+    return Promise.resolve();
   }
 
-  async removeObject(): Promise<void> {}
+  removeObject(): Promise<void> {
+    return Promise.resolve();
+  }
 }
 
 function attachmentInput(mediaUrl = "") {
@@ -45,15 +48,17 @@ function attachmentInput(mediaUrl = "") {
 
 Deno.test("official attachment processor stores a W-API file without persisting its media reference", async () => {
   const rest = new FakeRest();
-  const fetcher: typeof fetch = async (input) => {
+  const fetcher: typeof fetch = (input) => {
     const url = String(input);
     if (url.includes("download-media")) {
-      return Response.json({ fileLink: "https://files.example.test/teste.pdf" });
+      return Promise.resolve(Response.json({ fileLink: "https://files.example.test/teste.pdf" }));
     }
-    return new Response(new Uint8Array([37, 80, 68, 70]).buffer, {
-      status: 200,
-      headers: { "content-type": "application/pdf", "content-length": "4" },
-    });
+    return Promise.resolve(
+      new Response(new Uint8Array([37, 80, 68, 70]).buffer, {
+        status: 200,
+        headers: { "content-type": "application/pdf", "content-length": "4" },
+      }),
+    );
   };
   const processor = new WapiAttachmentProcessor(rest as unknown as OfficialSupabaseRest, {
     token: "token",

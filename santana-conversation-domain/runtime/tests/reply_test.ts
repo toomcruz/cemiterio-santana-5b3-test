@@ -37,9 +37,11 @@ Deno.test("human and provider-unavailable modes produce no sendable reply", asyn
     text: "olá",
     state: initState("reply-human"),
     automation_mode: "HUMAN_ACTIVE",
-  }, { interpret: () => {
-    throw new Error("human mode must not interpret");
-  } });
+  }, {
+    interpret: () => {
+      throw new Error("human mode must not interpret");
+    },
+  });
   const unavailable = await planTurn({
     message_id: "reply-unavailable",
     text: "olá",

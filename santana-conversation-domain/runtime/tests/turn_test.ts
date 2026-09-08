@@ -308,7 +308,11 @@ Deno.test("jazigo reference and later damage detail are preserved without reopen
     "later details must reuse the same occurrence overlay",
   );
   assertEquals(activeFact(detailed.next_state, "grave_service_description", base)?.confidence, "CONFIRMED");
-  assert(detailed.next_state.facts.filter((fact) => fact.fact_code === "grave_service_description" && fact.status === "ACTIVE").length >= 2);
+  assert(
+    detailed.next_state.facts.filter((fact) =>
+      fact.fact_code === "grave_service_description" && fact.status === "ACTIVE"
+    ).length >= 2,
+  );
   assert(detailed.reply_draft?.includes("FINALIZAR"));
 });
 
@@ -318,13 +322,19 @@ Deno.test("handoff context excludes facts from another jazigo case", () => {
     goal_code: "GOAL_JAZIGO_SERVICOS",
     case_ref: "grave-a",
   });
-  state = applyEvent(state, { kind: "COMPLEMENT", facts: [{ code: "grave_service_description", value: "Ocorrência A" }] });
+  state = applyEvent(state, {
+    kind: "COMPLEMENT",
+    facts: [{ code: "grave_service_description", value: "Ocorrência A" }],
+  });
   state = applyEvent(state, {
     kind: "NEW_GOAL",
     goal_code: "GOAL_JAZIGO_SERVICOS",
     case_ref: "grave-b",
   });
-  state = applyEvent(state, { kind: "COMPLEMENT", facts: [{ code: "grave_service_description", value: "Ocorrência B" }] });
+  state = applyEvent(state, {
+    kind: "COMPLEMENT",
+    facts: [{ code: "grave_service_description", value: "Ocorrência B" }],
+  });
   state = applyEvent(state, { kind: "HUMAN_REQUEST" });
 
   const confirmed = state.handoff?.confirmed_facts.map((fact) => String(fact.value)) ?? [];

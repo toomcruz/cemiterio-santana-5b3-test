@@ -96,7 +96,9 @@ export function clarificationQuestion(state: ConversationState, result: BridgeRe
     return `Preciso confirmar: ${result.clarification.options.join(" ou ")}?`;
   }
   const goal = focusGoal(state);
-  if (goal && goalDef(goal.goal_code).completion_mode === "EXPLICIT_HANDOFF" && missingFacts(state, goal).length === 0) {
+  if (
+    goal && goalDef(goal.goal_code).completion_mode === "EXPLICIT_HANDOFF" && missingFacts(state, goal).length === 0
+  ) {
     return "Você pode continuar explicando a situação ou enviar uma foto e outras referências do jazigo. Quando terminar de enviar as informações, escreva FINALIZAR para encaminhar o atendimento à equipe.";
   }
   const missing = goal ? missingFacts(state, goal)[0] : undefined;

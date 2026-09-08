@@ -1,11 +1,7 @@
 import { assert, assertEquals, assertRejects } from "../../../tests/fixtures/assert.ts";
 import { initState } from "../../engine/engine.ts";
 import { interpret } from "../interpreter/deterministic.ts";
-import {
-  currentCatalogHash,
-  hydratePersistedState,
-  prepareTransition,
-} from "../server_transition.ts";
+import { currentCatalogHash, hydratePersistedState, prepareTransition } from "../server_transition.ts";
 import { planTurn } from "../turn.ts";
 
 const conversationId = "7e764b29-7e0c-4b66-9474-000000000001";
@@ -51,14 +47,15 @@ Deno.test("server transition rejects a persisted state from another catalog befo
   const catalogHash = await currentCatalogHash();
   const state = initState(conversationId);
   await assertRejects(
-    () => prepareTransition({
-      persisted: { exists: true, seq: 4, catalog_hash: "0".repeat(64) },
-      previous: state,
-      next: state,
-      event_kind: "SOCIAL",
-      identity_secret: "laboratory-identity-secret",
-      identity_key_version: 1,
-    }),
+    () =>
+      prepareTransition({
+        persisted: { exists: true, seq: 4, catalog_hash: "0".repeat(64) },
+        previous: state,
+        next: state,
+        event_kind: "SOCIAL",
+        identity_secret: "laboratory-identity-secret",
+        identity_key_version: 1,
+      }),
     /catalog hash mismatch/,
   );
   assertEquals(catalogHash.length, 64);
