@@ -225,7 +225,7 @@ manifest_verifier="$root/verify_migration_manifest.sh"
 [[ -r "$manifest_verifier" ]] || { echo 'migration/manifest verifier missing or unreadable' >&2; exit 1; }
 rg -Fq 'verify_migration_manifest.sh' "$ci" || { echo 'CI does not execute migration/manifest verifier' >&2; exit 1; }
 ! rg -Fq 'head -14' "$ci" || { echo 'CI still truncates migration inventory' >&2; exit 1; }
-for token in 'MIGRATIONS_COVERED: 0001-0020' '0013' '0014' '0015' '0016' '0017' '0018' '0019' '0020'; do
+for token in 'MIGRATIONS_COVERED: 0001-0026' '0013' '0014' '0015' '0016' '0017' '0018' '0019' '0020' '0021' '0022' '0023' '0024' '0025' '0026'; do
   rg -Fq "$token" "$root/../../docs/runtime-object-manifest.md" || { echo "manifest cumulative migration coverage missing: $token" >&2; exit 1; }
 done
 for token in 'oid::regprocedure' 'to_regprocedure(function_identity)' 'p15_expected_functions' 'function_identity text primary key' 'classification' 'PUBLISHER_RPC' 'RUNTIME_RPC' 'INTERNAL_HELPER' 'unclassified function overload' 'expected_public' 'expected_anon' 'expected_authenticated' 'expected_service_role' 'expected_publisher' 'expected_auditor' 'has_function_privilege' 'expected function missing' 'SELECT matrix' 'INSERT matrix' 'UPDATE matrix' 'DELETE matrix' 'unclassified table'; do
