@@ -73,15 +73,26 @@ Deno.test("LLM cannot replace a jazigo occurrence with a generic complaint", asy
   const adapter = new ControlledLlmAdapter({
     enabled: true,
     provider,
-    network: () => Promise.resolve({
-      status: 200,
-      body: valid(message, {
-        primary_event: { event_kind: "COMPLAINT", confidence: "HIGH", evidence: message.text },
-        goal: { goal_code: "GOAL_RECLAMACAO", confidence: "HIGH", evidence: message.text },
-        facts: [{ fact_code: "complaint_description", value: message.text, source: "USER_EXPLICIT", confidence: "HIGH", evidence: message.text, requires_confirmation: false }],
-        ambiguities: [], overall_confidence: "HIGH", needs_clarification: false, clarification_reason: null,
+    network: () =>
+      Promise.resolve({
+        status: 200,
+        body: valid(message, {
+          primary_event: { event_kind: "COMPLAINT", confidence: "HIGH", evidence: message.text },
+          goal: { goal_code: "GOAL_RECLAMACAO", confidence: "HIGH", evidence: message.text },
+          facts: [{
+            fact_code: "complaint_description",
+            value: message.text,
+            source: "USER_EXPLICIT",
+            confidence: "HIGH",
+            evidence: message.text,
+            requires_confirmation: false,
+          }],
+          ambiguities: [],
+          overall_confidence: "HIGH",
+          needs_clarification: false,
+          clarification_reason: null,
+        }),
       }),
-    }),
   });
   const result = await adapter.interpret(message);
   assertEquals(result.goal?.goal_code, "GOAL_JAZIGO_SERVICOS");
@@ -94,18 +105,36 @@ Deno.test("LLM cannot replace a jazigo occurrence with a generic complaint", asy
 Deno.test("LLM cannot consume a jazigo reference as the complaint description", async () => {
   const message: InterpreterInput = {
     ...input("Quadra 3, jazigo 18", "grave-reference-anchor"),
-    context: { has_open_goal: true, open_goal_code: "GOAL_JAZIGO_SERVICOS", pending_question_fact: "grave_service_description", known_subject_hints: [] },
+    context: {
+      has_open_goal: true,
+      open_goal_code: "GOAL_JAZIGO_SERVICOS",
+      pending_question_fact: "grave_service_description",
+      known_subject_hints: [],
+    },
   };
   const adapter = new ControlledLlmAdapter({
-    enabled: true, provider,
-    network: () => Promise.resolve({
-      status: 200,
-      body: valid(message, {
-        primary_event: { event_kind: "ANSWER", confidence: "HIGH", evidence: message.text }, goal: null,
-        facts: [{ fact_code: "complaint_description", value: message.text, source: "USER_EXPLICIT", confidence: "HIGH", evidence: message.text, requires_confirmation: false }],
-        ambiguities: [], overall_confidence: "HIGH", needs_clarification: false, clarification_reason: null,
+    enabled: true,
+    provider,
+    network: () =>
+      Promise.resolve({
+        status: 200,
+        body: valid(message, {
+          primary_event: { event_kind: "ANSWER", confidence: "HIGH", evidence: message.text },
+          goal: null,
+          facts: [{
+            fact_code: "complaint_description",
+            value: message.text,
+            source: "USER_EXPLICIT",
+            confidence: "HIGH",
+            evidence: message.text,
+            requires_confirmation: false,
+          }],
+          ambiguities: [],
+          overall_confidence: "HIGH",
+          needs_clarification: false,
+          clarification_reason: null,
+        }),
       }),
-    }),
   });
   const result = await adapter.interpret(message);
   assert(result.facts.some((fact) => fact.fact_code === "grave_reference"));
@@ -115,10 +144,16 @@ Deno.test("LLM cannot consume a jazigo reference as the complaint description", 
 Deno.test("LLM cannot ignore explicit FINALIZAR in an open attendance", async () => {
   const message: InterpreterInput = {
     ...input("FINALIZAR", "grave-finish-anchor"),
-    context: { has_open_goal: true, open_goal_code: "GOAL_JAZIGO_SERVICOS", pending_question_fact: null, known_subject_hints: [] },
+    context: {
+      has_open_goal: true,
+      open_goal_code: "GOAL_JAZIGO_SERVICOS",
+      pending_question_fact: null,
+      known_subject_hints: [],
+    },
   };
   const adapter = new ControlledLlmAdapter({
-    enabled: true, provider,
+    enabled: true,
+    provider,
     network: () => Promise.resolve({ status: 200, body: valid(message) }),
   });
   const result = await adapter.interpret(message);
