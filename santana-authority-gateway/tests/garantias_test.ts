@@ -161,25 +161,25 @@ Deno.test("o catalogo oficial vive em caminho neutro, fora das implementacoes", 
   assert(!caminho.includes("/referencia/"), "a referencia nao e dona do catalogo");
 });
 
-Deno.test("o release_id calculado pelo TS e o mesmo da referencia e da C1 real", async () => {
+Deno.test("o release_id calculado pelo TS e o mesmo da referencia para o catálogo oficial atual", async () => {
   Deno.env.delete("SANTANA_CATALOGO_OFICIAL");
   Deno.env.delete("SANTANA_REPO_ROOT");
   definirEscopoDeFixture([]);
   const oficial = await carregar();
-  assertEquals(oficial.release_id, "exu-1.0-32cc48f26797");
+  assertEquals(oficial.release_id, "exu-1.0-1841dd869332");
 });
 
 // ------------------------------------------------------- Fase 4A — fronteira
 
-Deno.test("4A: release_id recalculado permanece exu-1.0-32cc48f26797", async () => {
-  // Guarda (a): qualquer byte na fronteira muda o identificador. Esta subfase
-  // so acrescenta testes/docs — o valor tem de continuar o da C1/Fase 3.
+Deno.test("4A: release_id recalculado corresponde ao catálogo oficial atual", async () => {
+  // Guarda (a): qualquer byte na fronteira muda o identificador. Este valor
+  // é o snapshot do catálogo que inclui a triagem oficial de jazigo.
   Deno.env.delete("SANTANA_CATALOGO_OFICIAL");
   Deno.env.delete("SANTANA_REPO_ROOT");
   limparCache();
   definirEscopoDeFixture([]);
   const oficial = await carregar();
-  assertEquals(oficial.release_id, "exu-1.0-32cc48f26797");
+  assertEquals(oficial.release_id, "exu-1.0-1841dd869332");
 });
 
 Deno.test("4A: ARQUIVOS_DE_DOMINIO tem tamanho e ordem alfabetica fixos", () => {
@@ -236,7 +236,7 @@ Deno.test("4A: state.schema e conversation-events nao entram no release_id", asy
     limparCache();
     definirEscopoDeFixture([]);
     const antes = await carregar();
-    assertEquals(antes.release_id, "exu-1.0-32cc48f26797");
+    assertEquals(antes.release_id, "exu-1.0-1841dd869332");
 
     Deno.writeTextFileSync(juntar(dom, "state.schema.json"), '{"fase4a":"mutado"}');
     Deno.writeTextFileSync(

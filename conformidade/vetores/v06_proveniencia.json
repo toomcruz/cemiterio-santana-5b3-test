@@ -8,7 +8,7 @@
       "vetor": "V6",
       "titulo": "AVAILABLE emite campo de canned e carrega proveniencia",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "release_id_esperado": "exu-1.0-1841dd869332",
       "operacao": "consultar_com_canned",
       "referencia": "2026-03-01",
       "entrada": {
@@ -19,7 +19,7 @@
       },
       "saida_esperada": {
         "resposta": {
-          "release_id": "exu-1.0-32cc48f26797",
+          "release_id": "exu-1.0-1841dd869332",
           "tipo_informacao": "ASSINATURA_EXUMACAO",
           "status": "AVAILABLE",
           "aplicabilidade": {
@@ -44,7 +44,7 @@
       "vetor": "V6",
       "titulo": "NEEDS_CONTEXT nao emite campo nem proveniencia",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "release_id_esperado": "exu-1.0-1841dd869332",
       "operacao": "consultar_com_canned",
       "referencia": "2026-03-01",
       "entrada": {
@@ -55,7 +55,7 @@
       },
       "saida_esperada": {
         "resposta": {
-          "release_id": "exu-1.0-32cc48f26797",
+          "release_id": "exu-1.0-1841dd869332",
           "tipo_informacao": "PRECO",
           "status": "NEEDS_CONTEXT",
           "aplicabilidade": {
@@ -84,7 +84,7 @@
       "vetor": "V6",
       "titulo": "NOT_AVAILABLE nao emite campo nem proveniencia",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "release_id_esperado": "exu-1.0-1841dd869332",
       "operacao": "consultar_com_canned",
       "referencia": "2026-03-01",
       "entrada": {
@@ -93,7 +93,7 @@
       },
       "saida_esperada": {
         "resposta": {
-          "release_id": "exu-1.0-32cc48f26797",
+          "release_id": "exu-1.0-1841dd869332",
           "tipo_informacao": "DOCUMENTOS",
           "status": "NOT_AVAILABLE",
           "aplicabilidade": {},

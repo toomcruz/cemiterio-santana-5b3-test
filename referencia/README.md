@@ -35,10 +35,11 @@ A referência não é dona da fonte autoritativa. Ela é implementação de
 referência para conformidade, e nada mais: o catálogo oficial fica num caminho
 neutro que o Gateway TS/Deno lerá igual.
 
-Prova de que a mudança de lugar não mudou o conhecimento: o `release_id`
-calculado aqui é `exu-1.0-32cc48f26797`, exatamente o mesmo da C1 real da
-Fase 1B. Ele é derivado do conteúdo do catálogo oficial mais os cinco catálogos
-de domínio; se qualquer byte tivesse mudado, o identificador mudaria.
+O `release_id` do catálogo oficial atual é `exu-1.0-1841dd869332`. Ele é
+derivado do conteúdo do catálogo oficial mais os cinco catálogos de domínio;
+por isso mudou de forma auditável quando a triagem oficial de jazigo foi
+incluída. A referência e o Gateway TS/Deno devem calcular exatamente o mesmo
+identificador.
 
 ## O que foi alterado em relação à baseline
 
