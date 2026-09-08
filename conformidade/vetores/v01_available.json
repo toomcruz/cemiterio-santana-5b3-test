@@ -8,7 +8,7 @@
       "vetor": "V1",
       "titulo": "Especificidade vence a entrada generica",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "release_id_esperado": "exu-1.0-1841dd869332",
       "operacao": "consultar",
       "referencia": "2026-03-01",
       "entrada": {
@@ -18,7 +18,7 @@
         }
       },
       "saida_esperada": {
-        "release_id": "exu-1.0-32cc48f26797",
+        "release_id": "exu-1.0-1841dd869332",
         "tipo_informacao": "ASSINATURA_EXUMACAO",
         "status": "AVAILABLE",
         "aplicabilidade": {
@@ -39,7 +39,7 @@
       "vetor": "V1",
       "titulo": "Entrada sem criterio de aplicabilidade",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "release_id_esperado": "exu-1.0-1841dd869332",
       "operacao": "consultar",
       "referencia": "2026-03-01",
       "entrada": {
@@ -47,7 +47,7 @@
         "contexto": {}
       },
       "saida_esperada": {
-        "release_id": "exu-1.0-32cc48f26797",
+        "release_id": "exu-1.0-1841dd869332",
         "tipo_informacao": "OSSUARIO",
         "status": "AVAILABLE",
         "aplicabilidade": {},
@@ -66,7 +66,7 @@
       "vetor": "V1",
       "titulo": "Desempate por entry_id, catalogo na ordem ZZZ,AAA",
       "catalogo_ref": "desempate_ordem_a.v1.json",
-      "release_id_esperado": "exu-1.0-de98985c0717",
+      "release_id_esperado": "exu-1.0-333264da5492",
       "operacao": "consultar",
       "referencia": "2026-03-01",
       "entrada": {
@@ -76,7 +76,7 @@
         }
       },
       "saida_esperada": {
-        "release_id": "exu-1.0-de98985c0717",
+        "release_id": "exu-1.0-333264da5492",
         "tipo_informacao": "PRAZO",
         "status": "AVAILABLE",
         "aplicabilidade": {
@@ -97,7 +97,7 @@
       "vetor": "V1",
       "titulo": "Desempate por entry_id, catalogo na ordem AAA,ZZZ",
       "catalogo_ref": "desempate_ordem_b.v1.json",
-      "release_id_esperado": "exu-1.0-219e34c82200",
+      "release_id_esperado": "exu-1.0-95e2faaf72c4",
       "operacao": "consultar",
       "referencia": "2026-03-01",
       "entrada": {
@@ -107,7 +107,7 @@
         }
       },
       "saida_esperada": {
-        "release_id": "exu-1.0-219e34c82200",
+        "release_id": "exu-1.0-95e2faaf72c4",
         "tipo_informacao": "PRAZO",
         "status": "AVAILABLE",
         "aplicabilidade": {

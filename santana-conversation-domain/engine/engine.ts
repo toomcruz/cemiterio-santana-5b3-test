@@ -148,6 +148,8 @@ export interface ConversationEvent {
   goal_code?: string;
   case_ref?: string;
   facts?: FactInput[];
+  /** Facts that belong to the base subject of a complaint, never to its overlay. */
+  base_facts?: FactInput[];
   target_fact?: string;
   abandon_current?: boolean;
   base_goal_code?: string;
@@ -207,6 +209,23 @@ export function activeFacts(state: ConversationState, code: string, goal: GoalRe
 
 export function activeFact(state: ConversationState, code: string, goal: GoalRecord | null): FactRecord | null {
   return activeFacts(state, code, goal)[0] ?? null;
+}
+
+/**
+ * Facts visible to the current operational case. Goal-scoped overlay facts are
+ * included only when their owner belongs to the same case; this prevents an
+ * older case from bleeding into a human handoff or model context.
+ */
+export function activeFactsForGoalCase(state: ConversationState, goal: GoalRecord): FactRecord[] {
+  return state.facts.filter((fact) => {
+    if (fact.status !== "ACTIVE") return false;
+    const definition = factDef(fact.fact_code);
+    if (definition.scope === "CONVERSATION") return true;
+    if (definition.scope === "CASE") return fact.case_id === goal.case_id;
+    if (fact.goal_id === goal.goal_id) return true;
+    if (goal.case_id === null) return false;
+    return state.goals.some((owner) => owner.goal_id === fact.goal_id && owner.case_id === goal.case_id);
+  });
 }
 
 function conditionsHold(
@@ -296,6 +315,10 @@ function recordFact(
   const incumbent = existing[0] ?? null;
   const sameValue = existing.find((f) => f.value === input.value) ?? null;
 
+  // Narrative facts are append-only evidence. Repeating an already stored
+  // sentence is idempotent, but must not supersede complementary statements.
+  if (sameValue && def.repeatable) return sameValue;
+
   // Uma alegacao nao autoritativa nunca e "promovida" no lugar: o sinal externo
   // cria um fato novo e supera a alegacao, preservando o historico. (5B.4-B.2)
   if (sameValue && authoritative && !sameValue.authoritative) {
@@ -340,7 +363,7 @@ function recordFact(
     derived_from: derivedFrom,
   };
 
-  if (incumbent) {
+  if (incumbent && !def.repeatable) {
     if (mode === "SUPERSEDE" || mode === "DERIVE") {
       const reason = mode === "DERIVE"
         ? "SYSTEM_REPLACEMENT"
@@ -623,6 +646,12 @@ function resolveCompletedGoals(state: ConversationState): boolean {
   for (const goal of [...state.goals].sort((a, b) => b.stack_index - a.stack_index)) {
     if (goal.status !== "ACTIVE") continue;
     if (missingFacts(state, goal).length > 0) continue;
+    // Ocorrências operacionais sensíveis continuam abertas mesmo depois de a
+    // descrição mínima ter sido coletada. Isso permite acrescentar foto,
+    // referência e contexto; somente um pedido explícito de encaminhamento
+    // coloca a conversa no modo humano. Nunca transformar silêncio, anexo ou
+    // ausência de regra pronta em encaminhamento automático.
+    if (goalDef(goal.goal_code).completion_mode === "EXPLICIT_HANDOFF") continue;
     goal.status = "RESOLVED";
     goal.closed_at_seq = state.seq;
     changed = true;
@@ -747,8 +776,7 @@ function refreshPendingQuestion(state: ConversationState): void {
 
 export function buildHandoff(state: ConversationState): HandoffModel {
   const goal = focusGoal(state) ?? state.goals.filter((g) => OPEN_STATUSES.includes(g.status)).at(-1) ?? null;
-  const confirmed = state.facts
-    .filter((f) => f.status === "ACTIVE" && (!goal || !f.case_id || f.case_id === goal.case_id))
+  const confirmed = (goal ? activeFactsForGoalCase(state, goal) : state.facts.filter((f) => f.status === "ACTIVE"))
     .map((f) => ({ fact_code: f.fact_code, value: f.value, source: f.source, confidence: f.confidence }));
   return {
     requested_at_seq: state.seq,
@@ -833,14 +861,29 @@ export function applyEvent(previous: ConversationState, event: ConversationEvent
         base = pushGoal(state, event.base_goal_code, { case_ref: event.case_ref });
       }
       if (!base) throw new Error("COMPLAINT exige um assunto-base");
+      for (const f of event.base_facts ?? []) recordFact(state, base, f, "ASSERT");
       // Overlay transversal: o goal-base permanece ACTIVE e nao e substituido.
-      const overlay = pushGoal(state, "GOAL_RECLAMACAO", {
-        parent: base,
-        suspend_parent: false,
-        return_to_parent: false,
-        overlay_of: base.goal_id,
-        reuse_case_id: base.case_id,
-      });
+      // Reaproveitar a mesma ocorrência evita criar uma nova reclamação a cada
+      // complemento do munícipe. A narrativa permanece em fatos repetíveis e
+      // nas mensagens brutas do atendimento.
+      let overlay = [...state.goals].reverse().find((candidate) =>
+        candidate.goal_code === "GOAL_RECLAMACAO" &&
+        candidate.overlay_of === base.goal_id &&
+        candidate.status !== "ABANDONED"
+      );
+      if (!overlay) {
+        overlay = pushGoal(state, "GOAL_RECLAMACAO", {
+          parent: base,
+          suspend_parent: false,
+          return_to_parent: false,
+          overlay_of: base.goal_id,
+          reuse_case_id: base.case_id,
+        });
+      } else if (overlay.status === "RESOLVED") {
+        overlay.status = "ACTIVE";
+        overlay.status_reason = null;
+        overlay.closed_at_seq = null;
+      }
       for (const f of event.facts ?? []) recordFact(state, overlay, f, "ASSERT");
       break;
     }
@@ -921,12 +964,18 @@ export function applyAuthoritativeSignal(
 // Um fato pertence ao goal aberto que o declara como necessario; nunca e movido
 // entre cases, mesmo quando o codigo do fato e o mesmo.
 function ownerGoalForFact(state: ConversationState, code: string, focus: GoalRecord | null): GoalRecord | null {
-  if (focus && goalDef(focus.goal_code).required_facts.includes(code)) return focus;
+  const declares = (goal: GoalRecord) => {
+    const definition = goalDef(goal.goal_code);
+    return definition.required_facts.includes(code) || (definition.optional_facts ?? []).includes(code);
+  };
+  if (focus && declares(focus)) return focus;
   const open = state.goals.filter((g) => OPEN_STATUSES.includes(g.status)).sort((a, b) =>
     b.stack_index - a.stack_index
   );
   for (const g of open) {
-    if (goalDef(g.goal_code).required_facts.includes(code)) return g;
+    // An answer about the focused case cannot fill a gap in another case.
+    if (focus && g.case_id !== focus.case_id) continue;
+    if (declares(g)) return g;
   }
   return focus;
 }

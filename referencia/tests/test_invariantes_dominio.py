@@ -172,7 +172,7 @@ class OCatalogoOficialViveForaDaReferencia(unittest.TestCase):
         # A referencia nao e dona da fonte autoritativa.
         self.assertNotIn(RAIZ, caminho.parents)
 
-    def test_o_release_id_nao_mudou_com_a_mudanca_de_lugar(self) -> None:
+    def test_o_release_id_do_catalogo_oficial_atual_e_estavel(self) -> None:
         import os
 
         from santana_referencia.gateway import catalogo_oficial
@@ -182,7 +182,7 @@ class OCatalogoOficialViveForaDaReferencia(unittest.TestCase):
         catalog.limpar_caches()
         catalogo_oficial._carregar.cache_clear()
         catalog.definir_escopo_de_fixture(())
-        self.assertEqual(catalogo_oficial.release_id(), "exu-1.0-32cc48f26797")
+        self.assertEqual(catalogo_oficial.release_id(), "exu-1.0-1841dd869332")
 
     def test_uma_unica_copia_operacional_do_catalogo(self) -> None:
         """Uma unica copia OPERACIONAL, identificada por conteudo.

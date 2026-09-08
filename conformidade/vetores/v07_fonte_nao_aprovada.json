@@ -8,12 +8,12 @@
       "vetor": "V7",
       "titulo": "Entrada de fonte reprovada nao entra no catalogo carregado",
       "catalogo_ref": "fonte_nao_aprovada.v1.json",
-      "release_id_esperado": "exu-1.0-85766a6d79ca",
+      "release_id_esperado": "exu-1.0-d59876c2c551",
       "operacao": "carregar",
       "referencia": "2026-03-01",
       "entrada": {},
       "saida_esperada": {
-        "release_id": "exu-1.0-85766a6d79ca",
+        "release_id": "exu-1.0-d59876c2c551",
         "topic": "EXUMACAO",
         "tipos_de_informacao": [
           "PRAZO",
@@ -31,7 +31,7 @@
       "vetor": "V7",
       "titulo": "O tipo servido so pela fonte reprovada fica indisponivel",
       "catalogo_ref": "fonte_nao_aprovada.v1.json",
-      "release_id_esperado": "exu-1.0-85766a6d79ca",
+      "release_id_esperado": "exu-1.0-d59876c2c551",
       "operacao": "consultar",
       "referencia": "2026-03-01",
       "entrada": {
@@ -39,7 +39,7 @@
         "contexto": {}
       },
       "saida_esperada": {
-        "release_id": "exu-1.0-85766a6d79ca",
+        "release_id": "exu-1.0-d59876c2c551",
         "tipo_informacao": "TRANSPORTE",
         "status": "NOT_AVAILABLE",
         "aplicabilidade": {},

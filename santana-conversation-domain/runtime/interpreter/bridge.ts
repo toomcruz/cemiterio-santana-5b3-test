@@ -3,7 +3,8 @@
 // ao reducer — a conversa pede a informacao em vez de adivinhar.
 
 import type { ConversationEvent, ConversationState } from "../../engine/engine.ts";
-import { focusGoal, missingFacts } from "../../engine/engine.ts";
+import { activeFactsForGoalCase, focusGoal, missingFacts } from "../../engine/engine.ts";
+import { goalDef, questionForFact } from "../../engine/catalog.ts";
 import type { Interpretation, InterpreterInput } from "./types.ts";
 
 export interface BridgeResult {
@@ -18,6 +19,14 @@ export function contextFromState(state: ConversationState, knownHints: string[] 
     open_goal_code: goal ? goal.goal_code : null,
     pending_question_fact: state.pending_question ? state.pending_question.fact_code : null,
     known_subject_hints: knownHints,
+    known_facts: goal
+      ? activeFactsForGoalCase(state, goal).map((fact) => ({
+        fact_code: fact.fact_code,
+        value: fact.value,
+        confidence: fact.confidence,
+        source: fact.source,
+      }))
+      : [],
   };
 }
 
@@ -60,13 +69,19 @@ export function toConversationEvents(interpretation: Interpretation): BridgeResu
   }
 
   if (kind === "COMPLAINT") {
-    for (const secondary of interpretation.secondary_events) {
-      if (secondary.event_kind === "NEW_GOAL" && interpretation.goal) {
-        events.push({ kind: "NEW_GOAL", goal_code: interpretation.goal.goal_code, case_ref: caseRef });
-      }
-    }
-    if (facts.length > 0) events.push({ kind: "COMPLEMENT", facts });
-    events.push({ kind: "COMPLAINT" });
+    const complaintCodes = new Set(goalDef("GOAL_RECLAMACAO").required_facts);
+    const baseFacts = facts.filter((fact) => !complaintCodes.has(fact.code));
+    const complaintFacts = facts.filter((fact) => complaintCodes.has(fact.code));
+    // A queixa abre/usa o assunto-base em uma unica transacao.  Isso impede que
+    // um base goal seja resolvido entre dois eventos e que a ocorrência fique sem
+    // dono quando a primeira mensagem já é uma reclamação.
+    events.push({
+      kind: "COMPLAINT",
+      base_goal_code: interpretation.goal?.goal_code ?? "GOAL_OUTROS_ASSUNTOS",
+      case_ref: caseRef,
+      base_facts: baseFacts,
+      facts: complaintFacts,
+    });
     return { events, clarification: null };
   }
 
@@ -81,6 +96,11 @@ export function clarificationQuestion(state: ConversationState, result: BridgeRe
     return `Preciso confirmar: ${result.clarification.options.join(" ou ")}?`;
   }
   const goal = focusGoal(state);
+  if (
+    goal && goalDef(goal.goal_code).completion_mode === "EXPLICIT_HANDOFF" && missingFacts(state, goal).length === 0
+  ) {
+    return "Você pode continuar explicando a situação ou enviar uma foto e outras referências do jazigo. Quando terminar de enviar as informações, escreva FINALIZAR para encaminhar o atendimento à equipe.";
+  }
   const missing = goal ? missingFacts(state, goal)[0] : undefined;
-  return missing ? `Pode confirmar ${missing.code}?` : "Pode me explicar um pouco melhor?";
+  return missing ? questionForFact(missing.code).text : "Pode me explicar um pouco melhor?";
 }

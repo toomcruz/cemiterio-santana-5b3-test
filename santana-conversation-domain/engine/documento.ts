@@ -58,6 +58,37 @@ export function createDocumento(input: {
   return { ...input, estado: "SOLICITADO" };
 }
 
+/**
+ * Registra somente o recebimento técnico de um arquivo. Não equivale a aceite,
+ * conferência humana, validade documental nem autorização administrativa.
+ *
+ * Alguns canais permitem que o munícipe envie um arquivo sem que o robô tenha
+ * feito uma solicitação formal antes. Nesse caso não inventamos uma etapa de
+ * "SOLICITADO": preservamos o fato observável, que é RECEBIDO.
+ */
+export function registerReceivedDocumento(input: {
+  documento_id: string;
+  case_id: string | null;
+  tipo: string;
+  recebido_em: string;
+  descricao?: string;
+}): Documento {
+  assertNonEmpty(input.documento_id, "documento_id");
+  assertNonEmpty(input.tipo, "tipo");
+  assertTimestamp(input.recebido_em, "recebido_em");
+  return {
+    documento_id: input.documento_id,
+    case_id: input.case_id,
+    tipo: input.tipo,
+    estado: "RECEBIDO",
+    // Para arquivo não solicitado, este carimbo representa quando entrou na
+    // fila documental; não afirma que alguém o tenha solicitado ou revisado.
+    solicitado_em: input.recebido_em,
+    recebido_em: input.recebido_em,
+    ...(input.descricao ? { descricao: input.descricao } : {}),
+  };
+}
+
 export function valideAccept(
   doc: Documento,
   authority: DocumentoAutoridade,

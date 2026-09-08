@@ -94,7 +94,7 @@
       "required": ["kind", "subject_kind", "subject_hint", "confidence"],
       "properties": {
         "kind": { "enum": ["CURRENT", "NEW", "AMBIGUOUS"] },
-        "subject_kind": { "enum": ["DECEASED", "CONCESSION", "ORDER", "GENERIC"] },
+        "subject_kind": { "enum": ["DECEASED", "GRAVE", "CONCESSION", "ORDER", "GENERIC"] },
         "subject_hint": { "type": ["string", "null"] },
         "confidence": { "$ref": "#/$defs/confidence" }
       }

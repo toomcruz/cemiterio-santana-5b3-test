@@ -38,6 +38,43 @@ export interface AdapterOptions {
   observe?: (event: AdapterObservation) => void;
 }
 
+const GRAVE_ANCHOR_FACTS = new Set(["grave_reference", "grave_service_description", "complaint_description"]);
+
+/** Keep explicit official routing anchors authoritative over valid-looking LLM output. */
+function reconcileOfficialAnchors(input: InterpreterInput, llm: Interpretation): Interpretation {
+  const deterministic = guardInterpretation(deterministicInterpret(input));
+  const graveContext = input.context.open_goal_code === "GOAL_JAZIGO_SERVICOS" ||
+    deterministic.goal?.goal_code === "GOAL_JAZIGO_SERVICOS" ||
+    deterministic.facts.some((fact) =>
+      fact.fact_code === "grave_reference" || fact.fact_code === "grave_service_description"
+    );
+  const explicitCompletion = deterministic.primary_event?.event_kind === "HUMAN_REQUEST";
+  if (!graveContext && !explicitCompletion) return llm;
+  if (explicitCompletion) return { ...deterministic, produced_by: llm.produced_by };
+
+  const deterministicAnchors = deterministic.facts.filter((fact) => GRAVE_ANCHOR_FACTS.has(fact.fact_code));
+  const facts = graveContext
+    ? [...llm.facts.filter((fact) => !GRAVE_ANCHOR_FACTS.has(fact.fact_code)), ...deterministicAnchors]
+    : llm.facts;
+  const deterministicComplaint = deterministic.primary_event?.event_kind === "COMPLAINT";
+  const goal = graveContext
+    ? deterministic.goal ??
+      (input.context.open_goal_code === "GOAL_JAZIGO_SERVICOS"
+        ? { goal_code: "GOAL_JAZIGO_SERVICOS", confidence: "HIGH" as const, evidence: input.text }
+        : llm.goal)
+    : llm.goal;
+
+  return {
+    ...llm,
+    facts,
+    goal,
+    primary_event: deterministicComplaint ? deterministic.primary_event : llm.primary_event,
+    overall_confidence: deterministicComplaint ? deterministic.overall_confidence : llm.overall_confidence,
+    needs_clarification: deterministicComplaint ? deterministic.needs_clarification : llm.needs_clarification,
+    clarification_reason: deterministicComplaint ? deterministic.clarification_reason : llm.clarification_reason,
+  };
+}
+
 export interface LanguageInterpreter {
   interpret(input: InterpreterInput): Promise<Interpretation>;
 }
@@ -61,7 +98,7 @@ export class ControlledLlmAdapter implements LanguageInterpreter {
         );
       }
       const parsed = parseStrictInterpretation(this.options.provider.extractText(response.body), input);
-      const guarded = guardInterpretation(parsed);
+      const guarded = reconcileOfficialAnchors(input, guardInterpretation(parsed));
       const unsafeToAdvance = guarded.overall_confidence === "LOW" || guarded.ambiguities.some((a) => a.blocking) ||
         guarded.facts.some((f) => f.requires_confirmation) || guarded.case_reference.kind === "AMBIGUOUS";
       const result = unsafeToAdvance

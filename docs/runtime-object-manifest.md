@@ -1,9 +1,9 @@
 # Manifesto de objetos runtime C4
 
-MIGRATIONS_COVERED: 0001-0020
+MIGRATIONS_COVERED: 0001-0026
 
-O manifesto descreve o estado cumulativo das migrations `0001`–`0020`. Ele é usado
-na 5B.3 para comparar instalação e remoção. Nenhum item abaixo reativa legado.
+O manifesto descreve o estado cumulativo das migrations `0001`–`0026`. Ele é usado
+para comparar instalação e remoção. Nenhum item abaixo reativa legado.
 
 | Migration | Objetos criados/alterados | Uso | Rollback operacional | Rollback físico |
 |---|---|---|---|---|
@@ -28,6 +28,12 @@ na 5B.3 para comparar instalação e remoção. Nenhum item abaixo reativa legad
 | 0018 | retira os overloads legados `persist_inbound_classification(8 args)` e `propose_request_transaction(13 args)` | elimina caminhos de escrita sem fronteira de autoridade | sem efeito operacional separado | removidos com o schema |
 | 0019 | `revoke all on all functions/routines in schema support_vnext_shadow from public` | fecha o EXECUTE default do PUBLIC criado por 0011/0013/0014 | revoke PUBLIC | removidas com o schema |
 | 0020 | 9 tabelas `conv_*` (estado conversacional), 8 tipos enum do catalogo v1, 7 triggers de guarda, 4 RPCs (`conv_get_state`, `conv_apply_transition`, `conv_apply_authoritative_signal`, `conv_rollback_to_seq`) e 4 helpers internos | persiste conversation/case/goal/fact/pergunta/acao/evento do Santana Conversation Domain v1; o reducer semantico permanece no TypeScript | `conv_get_state`/`conv_apply_transition` para `service_role`; `conv_apply_authoritative_signal`/`conv_rollback_to_seq` apenas para `support_vnext_admin`; helpers sem grant | removidas com o schema |
+| 0021 | extensão aditiva dos enums conversacionais para `GOAL_JAZIGO_SERVICOS`, `grave_service_description`, `Q_GRAVE_SERVICE_DESCRIPTION` e `RECLASSIFICATION` | permite persistir a triagem oficial de jazigo | sem superfície pública nova | removidos com o schema |
+| 0022 | schema privado `support_runtime`; estado, recibos de entrada, eventos e fila de saída; RPCs service-only | estado canônico, deduplicação e outbox do runtime oficial | revogar EXECUTE das RPCs públicas service-only e parar o adaptador | schema privado e funções removidos por rollback controlado |
+| 0023 | `support_runtime.attachments` e RPC de armazenamento de anexo | preserva arquivo recebido sem tratá-lo como validado ou como solicitação | revogar EXECUTE e interromper ingestão | tabela e função removidas por rollback controlado |
+| 0024 | recuperação segura de recibos recebidos sem commit | permite retomar somente entradas pendentes e preserva deduplicação | interromper consumidor; nenhum replay após commit | função restaurada pelo rollback versionado |
+| 0025 | leitura idempotente e nova tentativa controlada de anexo | evita perda de anexo após falha transitória sem inventar validação | interromper retry e revogar EXECUTE | funções restauradas pelo rollback versionado |
+| 0026 | `support_runtime_upgrade_catalog` service-only | troca explícita e auditável de hash de catálogo compatível | não chamar a RPC; runtime continua no hash atual | função removida pelo rollback versionado |
 
 ## Modalidades
 

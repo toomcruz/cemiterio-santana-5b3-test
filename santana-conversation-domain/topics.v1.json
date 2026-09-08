@@ -46,6 +46,14 @@
       "entities": ["GRAVE", "PRODUCT", "ORDER"]
     },
     {
+      "topic_code": "JAZIGO_SERVICOS",
+      "display_name": "Jazigo, Lapide e Zeladoria",
+      "layer": "BASE",
+      "primary_goal": "GOAL_JAZIGO_SERVICOS",
+      "capabilities": ["OCORRENCIA_JAZIGO", "LAPIDE", "ZELADORIA", "MANUTENCAO"],
+      "entities": ["GRAVE"]
+    },
+    {
       "topic_code": "RECLAMACOES",
       "display_name": "Reclamacoes e Ocorrencias",
       "layer": "OVERLAY",

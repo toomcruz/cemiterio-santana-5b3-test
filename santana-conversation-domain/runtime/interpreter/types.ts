@@ -37,7 +37,7 @@ export interface CandidateGoal {
 export interface CaseReference {
   /** CURRENT: segue o case em foco. NEW: outro falecido/pedido. AMBIGUOUS: nao da para decidir. */
   kind: "CURRENT" | "NEW" | "AMBIGUOUS";
-  subject_kind: "DECEASED" | "CONCESSION" | "ORDER" | "GENERIC";
+  subject_kind: "DECEASED" | "GRAVE" | "CONCESSION" | "ORDER" | "GENERIC";
   /** Pista textual do sujeito (nunca PII estruturada; o HMAC e calculado fora daqui). */
   subject_hint: string | null;
   confidence: Confidence;
@@ -90,5 +90,7 @@ export interface InterpreterInput {
     open_goal_code: string | null;
     pending_question_fact: string | null;
     known_subject_hints: string[];
+    /** Only facts in the focused case/goal; other cases must never leak here. */
+    known_facts?: Array<{ fact_code: string; value: FactValue; confidence: string; source: string }>;
   };
 }

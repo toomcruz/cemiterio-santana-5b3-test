@@ -31,7 +31,7 @@ jobs:
       - name: P0 conversacional 5B.4-A (C01-C16, sem rede)
         run: deno test --allow-read santana-conversation-domain/tests/p0
       - name: P0 de linguagem 5B.4-C (interpretador, guarda e bridge, sem rede)
-        run: deno test --allow-read santana-conversation-domain/runtime/tests
+        run: deno test --allow-read santana-conversation-domain/runtime/tests santana-conversation-domain/integrations/tests
       - name: Domínio Fase 4 (solicitações, sessões, documentos e ações)
         run: deno test --allow-read santana-conversation-domain/tests/fase4
       - name: Arquivos gerados estao sincronizados com o reducer e o interpretador

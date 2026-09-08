@@ -8,7 +8,7 @@
       "vetor": "V9",
       "titulo": "Texto adversarial como valor de fato: recusa e zero escrita",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "release_id_esperado": "exu-1.0-1841dd869332",
       "operacao": "registrar_fato",
       "referencia": "2026-03-01",
       "entrada": {
@@ -21,7 +21,7 @@
         "outcome": "REJECTED",
         "reason": "VALOR_FORA_DO_DOMINIO",
         "message": "Valor fora do dominio de 'exhumation_purpose'.",
-        "release_id": "exu-1.0-32cc48f26797",
+        "release_id": "exu-1.0-1841dd869332",
         "gateway": "SantanaAuthorityGateway/v1",
         "allowed_values": [
           "TRANSPORTE",
@@ -37,7 +37,7 @@
       "vetor": "V9",
       "titulo": "Texto adversarial como contexto: nao seleciona entrada",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "release_id_esperado": "exu-1.0-1841dd869332",
       "operacao": "consultar",
       "referencia": "2026-03-01",
       "entrada": {
@@ -48,7 +48,7 @@
         }
       },
       "saida_esperada": {
-        "release_id": "exu-1.0-32cc48f26797",
+        "release_id": "exu-1.0-1841dd869332",
         "tipo_informacao": "PRECO",
         "status": "NOT_AVAILABLE",
         "aplicabilidade": {
@@ -66,7 +66,7 @@
       "vetor": "V9",
       "titulo": "Texto adversarial como argumento de tool: recusado na fronteira",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-32cc48f26797",
+      "release_id_esperado": "exu-1.0-1841dd869332",
       "operacao": "consultar_via_tool",
       "referencia": "2026-03-01",
       "entrada": {
@@ -87,7 +87,7 @@
       },
       "saida_esperada": {
         "resposta": {
-          "release_id": "exu-1.0-32cc48f26797",
+          "release_id": "exu-1.0-1841dd869332",
           "tipo_informacao": "PRECO",
           "status": "NOT_AVAILABLE",
           "aplicabilidade": {
