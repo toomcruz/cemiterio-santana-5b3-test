@@ -420,6 +420,32 @@
       "ai_extractable": true
     },
     {
+      "fact_code": "grave_service_description",
+      "display_name": "Descricao do atendimento sobre jazigo, lapide ou zeladoria",
+      "scope": "CASE",
+      "value_type": "TEXT",
+      "priority_class": "NEXT_ACTION_DATA",
+      "allowed_sources": [
+        "USER_EXPLICIT",
+        "USER_CORRECTION"
+      ],
+      "ai_extractable": true,
+      "repeatable": true
+    },
+    {
+      "fact_code": "grave_reference",
+      "display_name": "Referencia informada do jazigo",
+      "scope": "CASE",
+      "value_type": "TEXT",
+      "priority_class": "ADMINISTRATIVE",
+      "allowed_sources": [
+        "USER_EXPLICIT",
+        "USER_CORRECTION"
+      ],
+      "ai_extractable": true,
+      "human_rule_note": "Quadra e número informados pelo munícipe ajudam a localizar o jazigo, mas não confirmam titularidade, situação cadastral ou agendamento."
+    },
+    {
       "fact_code": "complaint_description",
       "display_name": "Descricao da ocorrencia",
       "scope": "GOAL",
@@ -429,7 +455,8 @@
         "USER_EXPLICIT",
         "USER_CORRECTION"
       ],
-      "ai_extractable": true
+      "ai_extractable": true,
+      "repeatable": true
     },
     {
       "fact_code": "ossuary_information_request",

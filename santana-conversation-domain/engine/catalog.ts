@@ -1,5 +1,15 @@
 // Carrega e tipa os catalogos versionados do dominio conversacional.
 // Fase 5B.4-A: artefato de modelagem e validacao. Nenhuma integracao externa.
+// Os dados são gerados dos JSONs canônicos para também existirem no bundle de Edge Functions.
+import {
+  eventsDoc as generatedEventsDoc,
+  factsDoc as generatedFactsDoc,
+  goalsDoc as generatedGoalsDoc,
+  questionsDoc as generatedQuestionsDoc,
+  relationsDoc as generatedRelationsDoc,
+  stateSchema as generatedStateSchema,
+  topicsDoc as generatedTopicsDoc,
+} from "../runtime/generated_assets.ts";
 
 export type PriorityClass =
   | "FLOW_BRANCH"
@@ -63,6 +73,8 @@ export interface FactDef {
   blocking_values?: FactValue[];
   resolution_action?: string;
   deterministic_rule?: boolean;
+  /** Multiple complementary statements can coexist without becoming a conflict. */
+  repeatable?: boolean;
 }
 
 export interface GoalDef {
@@ -72,7 +84,16 @@ export interface GoalDef {
   case_subject?: string;
   overlay?: boolean;
   informational?: boolean;
+  /**
+   * AUTO means that satisfying all required facts resolves the conversational
+   * goal. EXPLICIT_HANDOFF keeps a sensitive operational case open until the
+   * citizen explicitly asks to finish/route it; a missing canned answer must
+   * never be interpreted as that request.
+   */
+  completion_mode?: "AUTO" | "EXPLICIT_HANDOFF";
   required_facts: string[];
+  /** Useful contextual data that may be recorded but is never demanded. */
+  optional_facts?: string[];
 }
 
 export interface TopicDef {
@@ -175,18 +196,13 @@ interface EventsDoc {
   }[];
 }
 
-function load<T>(name: string): T {
-  const url = new URL(`../${name}`, import.meta.url);
-  return JSON.parse(Deno.readTextFileSync(url)) as T;
-}
-
-export const topicsDoc: TopicsDoc = load("topics.v1.json");
-export const factsDoc: FactsDoc = load("facts.v1.json");
-export const goalsDoc: GoalsDoc = load("goals.v1.json");
-export const relationsDoc: RelationsDoc = load("relations.v1.json");
-export const questionsDoc: QuestionsDoc = load("questions.v1.json");
-export const eventsDoc: EventsDoc = load("conversation-events.v1.json");
-export const stateSchema: Record<string, unknown> = load("state.schema.json");
+export const topicsDoc: TopicsDoc = generatedTopicsDoc as TopicsDoc;
+export const factsDoc: FactsDoc = generatedFactsDoc as FactsDoc;
+export const goalsDoc: GoalsDoc = generatedGoalsDoc as GoalsDoc;
+export const relationsDoc: RelationsDoc = generatedRelationsDoc as RelationsDoc;
+export const questionsDoc: QuestionsDoc = generatedQuestionsDoc as QuestionsDoc;
+export const eventsDoc: EventsDoc = generatedEventsDoc as EventsDoc;
+export const stateSchema: Record<string, unknown> = generatedStateSchema as Record<string, unknown>;
 
 const factIndex = new Map<string, FactDef>(factsDoc.facts.map((f) => [f.fact_code, f]));
 const goalIndex = new Map<string, GoalDef>(goalsDoc.goals.map((g) => [g.goal_code, g]));

@@ -5,6 +5,7 @@ import { parseStrictInterpretation } from "./adapter/schema.ts";
 import { clarificationQuestion, contextFromState, toConversationEvents } from "./interpreter/bridge.ts";
 import { guardInterpretation } from "./interpreter/guard.ts";
 import type { Interpretation } from "./interpreter/types.ts";
+import { draftReply } from "./reply.ts";
 
 export interface TurnInput {
   message_id: string;
@@ -20,6 +21,8 @@ export interface TurnPlan {
   interpretation: Interpretation | null;
   /** A draft only: persistence/outbox must commit before it can be sent. */
   question_draft: string | null;
+  /** Human-facing draft; never send it before persistence/outbox commit. */
+  reply_draft: string | null;
 }
 
 /**
@@ -37,6 +40,7 @@ export async function planTurn(input: TurnInput, interpreter: LanguageInterprete
     next_state: structuredClone(previous),
     interpretation: null,
     question_draft: null,
+    reply_draft: null,
   });
   if (input.automation_mode !== "BOT_ACTIVE") return unchanged("HUMAN_ACTIVE");
   const request = {
@@ -64,20 +68,34 @@ export async function planTurn(input: TurnInput, interpreter: LanguageInterprete
   ) interpretation = { ...interpretation, needs_clarification: true };
   const bridge = toConversationEvents(interpretation);
   if (bridge.clarification) {
+    const questionDraft = clarificationQuestion(previous, bridge);
     return {
       ...unchanged("CLARIFICATION"),
       interpretation,
-      question_draft: clarificationQuestion(previous, bridge),
+      question_draft: questionDraft,
+      reply_draft: draftReply({
+        outcome: "CLARIFICATION",
+        question_draft: questionDraft,
+        interpretation,
+        next_state: previous,
+      }),
     };
   }
   try {
     const next = bridge.events.reduce(applyEvent, previous);
+    const questionDraft = next.pending_question ? questionForFact(next.pending_question.fact_code).text : null;
     return {
       outcome: "PROPOSED",
       expected_seq: previous.seq,
       next_state: next,
       interpretation,
-      question_draft: next.pending_question ? questionForFact(next.pending_question.fact_code).text : null,
+      question_draft: questionDraft,
+      reply_draft: draftReply({
+        outcome: "PROPOSED",
+        question_draft: questionDraft,
+        interpretation,
+        next_state: next,
+      }),
     };
   } catch {
     // No partial transition escapes if an event cannot be applied.

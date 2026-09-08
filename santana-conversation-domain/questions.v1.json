@@ -126,6 +126,11 @@
       "text": "Pode descrever o que aconteceu?"
     },
     {
+      "question_code": "Q_GRAVE_SERVICE_DESCRIPTION",
+      "fact_code": "grave_service_description",
+      "text": "Entendi. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo."
+    },
+    {
       "question_code": "Q_OSSUARY_INFO",
       "fact_code": "ossuary_information_request",
       "text": "O que voce gostaria de saber sobre o ossuario?"

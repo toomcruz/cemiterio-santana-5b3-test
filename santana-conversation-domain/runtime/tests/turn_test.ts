@@ -159,3 +159,175 @@ Deno.test("violation report belongs to the complaint overlay and is not asked ag
   assertEquals(result.next_state.handoff, null);
   assertEquals(result.next_state.solicitacoes, [], "a report is not a formal request");
 });
+
+Deno.test("jazigo without a description asks a focused question instead of returning to the menu", async () => {
+  const result = await planTurn({
+    message_id: "grave-start",
+    text: "Estou falando do meu jazigo",
+    state: initState("grave-start"),
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+
+  assertEquals(result.outcome, "PROPOSED");
+  assert(result.next_state.goals.some((goal) => goal.goal_code === "GOAL_JAZIGO_SERVICOS"));
+  assertEquals(result.next_state.pending_question?.fact_code, "grave_service_description");
+  assert(result.question_draft?.includes("jazigo"));
+  assertEquals(result.next_state.handoff, null);
+});
+
+Deno.test("generic problem in a jazigo is not mistaken for a complete occurrence description", async () => {
+  const result = await planTurn({
+    message_id: "grave-generic-problem",
+    text: "Estou com um problema no jazigo",
+    state: initState("grave-generic-problem"),
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+
+  assertEquals(result.outcome, "PROPOSED");
+  assertEquals(result.next_state.pending_question?.fact_code, "grave_service_description");
+  assert(result.reply_draft?.includes("descrever"));
+  assert(!result.reply_draft?.includes("escolha uma opção"));
+});
+
+Deno.test("unknown holder preserves the active jazigo triage and does not repeat a menu", async () => {
+  const started = await planTurn({
+    message_id: "grave-unknown-start",
+    text: "Estou falando do meu jazigo",
+    state: initState("grave-unknown"),
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+  const result = await planTurn({
+    message_id: "grave-unknown-holder",
+    text: "Não sei quem é o titular",
+    state: started.next_state,
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+
+  assertEquals(result.outcome, "CLARIFICATION");
+  assert(result.next_state.goals.some((goal) => goal.goal_code === "GOAL_JAZIGO_SERVICOS"));
+  assertEquals(result.next_state.pending_question?.fact_code, "grave_service_description");
+  assert(result.question_draft?.includes("jazigo"));
+  assertEquals(result.next_state.handoff, null);
+});
+
+Deno.test("violated grave creates the official base and complaint overlay in one turn", async () => {
+  const text = "Meu jazigo está violado";
+  const result = await planTurn({
+    message_id: "grave-violation",
+    text,
+    state: initState("grave-violation"),
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+
+  assertEquals(result.outcome, "PROPOSED");
+  const base = result.next_state.goals.find((goal) => goal.goal_code === "GOAL_JAZIGO_SERVICOS");
+  const complaint = result.next_state.goals.find((goal) => goal.goal_code === "GOAL_RECLAMACAO");
+  assert(base);
+  assert(complaint);
+  assertEquals(complaint.overlay_of, base.goal_id);
+  assertEquals(activeFact(result.next_state, "grave_service_description", base)?.value, text);
+  assertEquals(activeFact(result.next_state, "complaint_description", complaint)?.value, text);
+  assertEquals(base.status, "ACTIVE", "the operational case stays open for evidence and an explicit handoff");
+  assertEquals(complaint.status, "RESOLVED", "the semantic overlay may be complete without closing the base case");
+  assertEquals(result.next_state.handoff, null);
+  assertEquals(result.next_state.solicitacoes, [], "report is not a formal request without confirmation");
+});
+
+Deno.test("an open jazigo occurrence accepts a later explicit FINALIZAR without returning to the menu", async () => {
+  const started = await planTurn({
+    message_id: "grave-finalize-start",
+    text: "Meu jazigo está violado",
+    state: initState("grave-finalize"),
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+
+  const result = await planTurn({
+    message_id: "grave-finalize-request",
+    text: "FINALIZAR",
+    state: started.next_state,
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+
+  assertEquals(result.outcome, "PROPOSED");
+  assertEquals(result.interpretation?.primary_event?.event_kind, "HUMAN_REQUEST");
+  assert(result.next_state.handoff !== null);
+  assert(result.next_state.goals.some((goal) => goal.goal_code === "GOAL_JAZIGO_SERVICOS" && goal.status === "ACTIVE"));
+  assert(result.reply_draft?.includes("pedido de encaminhamento"));
+  assert(!result.reply_draft?.includes("escolha uma opção"));
+});
+
+Deno.test("an unclassified continuation of an open jazigo occurrence stays in context and offers explicit completion", async () => {
+  const started = await planTurn({
+    message_id: "grave-continuation-start",
+    text: "Meu jazigo está violado",
+    state: initState("grave-continuation"),
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+
+  const result = await planTurn({
+    message_id: "grave-continuation-more",
+    text: "Também aconteceu no domingo e estou muito preocupada",
+    state: started.next_state,
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+
+  assertEquals(result.outcome, "CLARIFICATION");
+  assert(result.next_state.goals.some((goal) => goal.goal_code === "GOAL_JAZIGO_SERVICOS" && goal.status === "ACTIVE"));
+  assert(result.reply_draft?.includes("continuar explicando"));
+  assert(result.reply_draft?.includes("FINALIZAR"));
+  assert(!result.reply_draft?.includes("escolha uma opção"));
+  assertEquals(result.next_state.handoff, null);
+});
+
+Deno.test("jazigo reference and later damage detail are preserved without reopening a second complaint", async () => {
+  const first = await planTurn({
+    message_id: "grave-reference-start",
+    text: "Meu jazigo está violado",
+    state: initState("grave-reference"),
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+  const referenced = await planTurn({
+    message_id: "grave-reference-location",
+    text: "Quadra 3, jazigo 18",
+    state: first.next_state,
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+  const detailed = await planTurn({
+    message_id: "grave-reference-detail",
+    text: "A tampa quebrou e entrou água",
+    state: referenced.next_state,
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+
+  const base = detailed.next_state.goals.find((goal) => goal.goal_code === "GOAL_JAZIGO_SERVICOS");
+  assert(base);
+  assertEquals(activeFact(detailed.next_state, "grave_reference", base)?.value, "Quadra 3, jazigo 18");
+  assertEquals(
+    detailed.next_state.goals.filter((goal) => goal.goal_code === "GOAL_RECLAMACAO").length,
+    1,
+    "later details must reuse the same occurrence overlay",
+  );
+  assertEquals(activeFact(detailed.next_state, "grave_service_description", base)?.confidence, "CONFIRMED");
+  assert(detailed.next_state.facts.filter((fact) => fact.fact_code === "grave_service_description" && fact.status === "ACTIVE").length >= 2);
+  assert(detailed.reply_draft?.includes("FINALIZAR"));
+});
+
+Deno.test("handoff context excludes facts from another jazigo case", () => {
+  let state = applyEvent(initState("handoff-case-isolation"), {
+    kind: "NEW_GOAL",
+    goal_code: "GOAL_JAZIGO_SERVICOS",
+    case_ref: "grave-a",
+  });
+  state = applyEvent(state, { kind: "COMPLEMENT", facts: [{ code: "grave_service_description", value: "Ocorrência A" }] });
+  state = applyEvent(state, {
+    kind: "NEW_GOAL",
+    goal_code: "GOAL_JAZIGO_SERVICOS",
+    case_ref: "grave-b",
+  });
+  state = applyEvent(state, { kind: "COMPLEMENT", facts: [{ code: "grave_service_description", value: "Ocorrência B" }] });
+  state = applyEvent(state, { kind: "HUMAN_REQUEST" });
+
+  const confirmed = state.handoff?.confirmed_facts.map((fact) => String(fact.value)) ?? [];
+  assert(confirmed.includes("Ocorrência B"));
+  assert(!confirmed.includes("Ocorrência A"));
+});

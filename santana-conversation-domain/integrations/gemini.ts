@@ -1,8 +1,7 @@
 import type { LlmProvider } from "../runtime/adapter/adapter.ts";
+import { interpretationSchema } from "../runtime/generated_assets.ts";
 
-const schema: Record<string, unknown> = JSON.parse(
-  Deno.readTextFileSync(new URL("../runtime/interpretation.schema.json", import.meta.url)),
-);
+const schema: Record<string, unknown> = interpretationSchema as Record<string, unknown>;
 
 /** Official server-side transport. The model is configuration, never user input. */
 export class GeminiProvider implements LlmProvider {

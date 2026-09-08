@@ -1,11 +1,9 @@
 import { factsDoc, goalsDoc } from "../../engine/catalog.ts";
+import { interpretationSchema } from "../generated_assets.ts";
 import { validateAgainstSchema } from "../../engine/validate.ts";
 import type { Interpretation, InterpreterInput } from "../interpreter/types.ts";
 
-const schema = JSON.parse(Deno.readTextFileSync(new URL("../interpretation.schema.json", import.meta.url))) as Record<
-  string,
-  unknown
->;
+const schema = interpretationSchema as Record<string, unknown>;
 const factCodes = new Set(factsDoc.facts.map((fact) => fact.fact_code));
 const goalCodes = new Set(goalsDoc.goals.map((goal) => goal.goal_code));
 

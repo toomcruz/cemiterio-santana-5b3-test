@@ -24,6 +24,10 @@
     "RESOLVED": "Objetivo concluido no escopo conversacional.",
     "ABANDONED": "Objetivo descartado pelo usuario; nao retorna automaticamente."
   },
+  "completion_modes": {
+    "AUTO": "O objetivo se resolve quando todos os fatos obrigatorios relevantes foram coletados.",
+    "EXPLICIT_HANDOFF": "A descricao minima abre e mantem o atendimento em triagem. Foto, anexos e complementos podem ser adicionados; o encaminhamento humano exige pedido explícito do munícipe."
+  },
   "goals": [
     {
       "goal_code": "GOAL_TRANSPORTE",
@@ -85,6 +89,19 @@
         "commercial_stage",
         "commercial_delivery_status",
         "requester_document"
+      ]
+    },
+    {
+      "goal_code": "GOAL_JAZIGO_SERVICOS",
+      "topic_code": "JAZIGO_SERVICOS",
+      "creates_case": true,
+      "case_subject": "GRAVE",
+      "completion_mode": "EXPLICIT_HANDOFF",
+      "required_facts": [
+        "grave_service_description"
+      ],
+      "optional_facts": [
+        "grave_reference"
       ]
     },
     {

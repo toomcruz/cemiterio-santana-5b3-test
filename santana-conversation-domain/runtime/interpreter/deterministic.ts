@@ -13,6 +13,7 @@ import type {
   InterpreterInput,
 } from "./types.ts";
 import type { EventKind } from "../../engine/catalog.ts";
+import { lexiconV1 } from "../generated_assets.ts";
 
 interface GoalPattern {
   goal_code: string;
@@ -51,6 +52,8 @@ interface Lexicon {
   correction_markers: string[];
   change_of_mind_markers: string[];
   parallel_question_markers: string[];
+  human_handoff_markers: string[];
+  completion_markers: string[];
   complaint_markers: string[];
   new_subject_markers: string[];
   uncertainty_markers: string[];
@@ -61,9 +64,7 @@ interface Lexicon {
   typo_tolerance: { max_edit_distance: number; min_token_length: number };
 }
 
-export const lexicon: Lexicon = JSON.parse(
-  Deno.readTextFileSync(new URL("./lexicon.v1.json", import.meta.url)),
-) as Lexicon;
+export const lexicon: Lexicon = lexiconV1 as Lexicon;
 
 /** minusculas, sem acentos, sem pontuacao, espacos colapsados. */
 export function normalize(text: string): string {
@@ -125,6 +126,17 @@ function lower(a: Confidence, b: Confidence): Confidence {
   return rank[a] <= rank[b] ? a : b;
 }
 
+/**
+ * Preserves only a human-provided locating reference. It deliberately avoids
+ * parsing this into an authoritative registration, ownership or appointment.
+ */
+function graveReference(text: string): string | null {
+  const match = text.match(
+    /\b(?:quadra\s*(?:n[ºo.]?\s*)?[a-z0-9-]{1,24}(?:\s*(?:,|e|-)\s*)?)?(?:jazigo|sepultura|t[uú]mulo)\s*(?:n[ºo.]?\s*)?[a-z0-9-]{1,24}\b/i,
+  ) ?? text.match(/\bquadra\s*(?:n[ºo.]?\s*)?[a-z0-9-]{1,24}\b/i);
+  return match?.[0]?.trim() || null;
+}
+
 const SUBJECT_HINTS = [
   "meu pai",
   "minha mae",
@@ -149,6 +161,12 @@ export function interpret(input: InterpreterInput): Interpretation {
   const correctionMarker = firstMatch(text, lexicon.correction_markers);
   const changeMarker = firstMatch(text, lexicon.change_of_mind_markers);
   const parallelMarker = firstMatch(text, lexicon.parallel_question_markers);
+  const humanHandoffMarker = firstMatch(text, lexicon.human_handoff_markers);
+  // "FINALIZAR" só encerra a triagem quando já existe um atendimento aberto.
+  // Assim uma palavra solta não converte uma conversa nova em encaminhamento.
+  const completionMarker = input.context.has_open_goal
+    ? firstMatch(text, lexicon.completion_markers)
+    : null;
   const complaintMarker = firstMatch(text, lexicon.complaint_markers);
   const newSubjectMarker = firstMatch(text, lexicon.new_subject_markers);
   const uncertaintyMarker = firstMatch(text, lexicon.uncertainty_markers);
@@ -202,6 +220,52 @@ export function interpret(input: InterpreterInput): Interpretation {
       goal = { goal_code: pattern.goal_code, confidence: pattern.confidence, evidence };
       subjectKind = pattern.subject_kind as CaseReference["subject_kind"];
     }
+  }
+
+  // A descrição de uma ocorrência de jazigo é sempre uma declaração do usuário:
+  // ela pode orientar a triagem, mas não confirma titularidade, regularidade ou
+  // qualquer decisão administrativa. Menções vagas ("meu jazigo") continuam
+  // recebendo uma pergunta específica, sem retornar ao menu geral.
+  const graveServiceContext = goal?.goal_code === "GOAL_JAZIGO_SERVICOS" ||
+    input.context.open_goal_code === "GOAL_JAZIGO_SERVICOS";
+  const graveServiceDetail = [
+    "violado", "violaram", "violacao", "arrombado", "quebrado", "quebrada", "quebrou",
+    "quebraram", "danificado", "danificaram", "depredado", "vandalizado", "destruido",
+    "destruiram", "tampa", "lapide", "zeladoria", "limpeza", "manutencao", "agua",
+  ].some((marker) => matches(text, marker));
+  if (graveServiceContext && graveServiceDetail && !seen.has("grave_service_description")) {
+    seen.add("grave_service_description");
+    facts.push({
+      fact_code: "grave_service_description",
+      value: input.text.trim(),
+      source: correctionMarker ? "USER_CORRECTION" : "USER_EXPLICIT",
+      confidence: "HIGH",
+      evidence: input.text,
+      requires_confirmation: false,
+    });
+  }
+  const suppliedGraveReference = graveServiceContext ? graveReference(input.text) : null;
+  if (suppliedGraveReference && !seen.has("grave_reference")) {
+    seen.add("grave_reference");
+    facts.push({
+      fact_code: "grave_reference",
+      value: suppliedGraveReference,
+      source: correctionMarker ? "USER_CORRECTION" : "USER_EXPLICIT",
+      confidence: "HIGH",
+      evidence: input.text,
+      requires_confirmation: false,
+    });
+  }
+  if (complaintMarker && !seen.has("complaint_description")) {
+    seen.add("complaint_description");
+    facts.push({
+      fact_code: "complaint_description",
+      value: input.text.trim(),
+      source: correctionMarker ? "USER_CORRECTION" : "USER_EXPLICIT",
+      confidence: "HIGH",
+      evidence: input.text,
+      requires_confirmation: false,
+    });
   }
 
   // Pergunta paralela informativa.
@@ -260,7 +324,11 @@ export function interpret(input: InterpreterInput): Interpretation {
   let primaryKind: EventKind | null = null;
   let primaryEvidence = "";
   let primaryConfidence: Confidence = "MEDIUM";
-  if (complaintMarker) {
+  if (humanHandoffMarker || completionMarker) {
+    primaryKind = "HUMAN_REQUEST";
+    primaryEvidence = humanHandoffMarker ?? completionMarker ?? "";
+    primaryConfidence = "HIGH";
+  } else if (complaintMarker) {
     primaryKind = "COMPLAINT";
     primaryEvidence = complaintMarker;
     primaryConfidence = "HIGH";
