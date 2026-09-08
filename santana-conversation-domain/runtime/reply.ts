@@ -48,11 +48,5 @@ export function draftReply(input: {
     return "Registrei a referência informada do jazigo no atendimento. Você pode continuar explicando a situação ou enviar uma foto. Quando terminar de enviar as informações, escreva FINALIZAR para encaminhar o atendimento à equipe.";
   }
 
-  const initialSocial = input.interpretation?.primary_event?.event_kind === "SOCIAL" &&
-    input.next_state.goals.length === 0;
-  if (initialSocial) {
-    return "Olá! Como posso ajudar? Você pode explicar em poucas palavras o que precisa: recadastro, exumação, ossuário, concessão ou alguma situação no jazigo.";
-  }
-
   return null;
 }
