@@ -127,6 +127,36 @@ export const lexiconV1 = {
   }],
   "fact_patterns": [
     {
+      "fact_code": "exhumation_purpose",
+      "value": "TRANSPORTE",
+      "any": [
+        "transporte",
+        "transportar",
+        "levar para outro local",
+        "levar para outro cemiterio",
+        "mudar de cemiterio",
+      ],
+      "confidence": "HIGH",
+    },
+    {
+      "fact_code": "exhumation_purpose",
+      "value": "OSSUARIO",
+      "any": ["colocar no ossuario", "guardar no ossuario", "ir para o ossuario", "para o ossuario", "ossuario"],
+      "confidence": "HIGH",
+    },
+    {
+      "fact_code": "exhumation_purpose",
+      "value": "CREMACAO",
+      "any": ["cremacao", "cremar", "levar para cremacao"],
+      "confidence": "HIGH",
+    },
+    {
+      "fact_code": "exhumation_purpose",
+      "value": "OUTRA",
+      "any": ["outra finalidade", "outro motivo", "nenhuma dessas opcoes"],
+      "confidence": "HIGH",
+    },
+    {
       "fact_code": "remains_status",
       "value": "EXUMADO",
       "any": [
@@ -1192,7 +1222,8 @@ export const questionsDoc = {
     {
       "question_code": "Q_EXHUMATION_PURPOSE",
       "fact_code": "exhumation_purpose",
-      "text": "Qual e a finalidade da exumacao?",
+      "text":
+        "A exumação será para transportar os restos para outro local, colocá-los no ossuário, encaminhá-los para cremação ou por outra finalidade?",
     },
     {
       "question_code": "Q_BURIAL_REFERENCE",
