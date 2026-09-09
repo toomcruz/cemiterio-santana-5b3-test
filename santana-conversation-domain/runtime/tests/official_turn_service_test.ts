@@ -54,6 +54,8 @@ const deterministicAdapter = new ControlledLlmAdapter({
   network: () => Promise.resolve({ status: 500, body: "" }),
 });
 
+const automaticReplies = { automatic_replies_allowed: true } as const;
+
 function inbound(body: string): RuntimeInbound {
   return {
     external_message_id: "wapi-test-1",
@@ -66,7 +68,12 @@ function inbound(body: string): RuntimeInbound {
 
 Deno.test("official runtime commits state and outbox only after a fluid jazigo turn is planned", async () => {
   const store = new MemoryStore();
-  const result = await processOfficialTurn(inbound("Meu jazigo está violado"), store, deterministicAdapter);
+  const result = await processOfficialTurn(
+    inbound("Meu jazigo está violado"),
+    store,
+    deterministicAdapter,
+    automaticReplies,
+  );
 
   assertEquals(result.kind, "COMMITTED");
   assert(result.reply_body?.includes("ocorrência relatada"));
@@ -82,7 +89,7 @@ Deno.test("official runtime routes a human-owned conversation without an automat
   const store = new MemoryStore();
   store.automation = "HUMAN_ACTIVE";
   store.state = initState("11111111-2222-4333-8444-555555555555");
-  const result = await processOfficialTurn(inbound("Preciso de ajuda"), store, deterministicAdapter);
+  const result = await processOfficialTurn(inbound("Preciso de ajuda"), store, deterministicAdapter, automaticReplies);
 
   assertEquals(result.kind, "HUMAN_ACTIVE");
   assertEquals(result.reply_body, null);
@@ -94,7 +101,12 @@ Deno.test("official runtime routes a human-owned conversation without an automat
 Deno.test("official runtime never reinterprets an already persisted inbound message", async () => {
   const store = new MemoryStore();
   store.duplicate = true;
-  const result = await processOfficialTurn(inbound("Meu jazigo está violado"), store, deterministicAdapter);
+  const result = await processOfficialTurn(
+    inbound("Meu jazigo está violado"),
+    store,
+    deterministicAdapter,
+    automaticReplies,
+  );
   assertEquals(result.kind, "DUPLICATE");
   assertEquals(store.commits.length, 0);
 });
@@ -103,7 +115,7 @@ Deno.test("official runtime refuses invalid persisted state instead of silently 
   const store = new MemoryStore();
   store.state = { conversation_id: "11111111-2222-4333-8444-555555555555" };
   await assertRejects(
-    () => processOfficialTurn(inbound("Meu jazigo está violado"), store, deterministicAdapter),
+    () => processOfficialTurn(inbound("Meu jazigo está violado"), store, deterministicAdapter, automaticReplies),
     /persisted conversation state is invalid/,
   );
 });
@@ -146,7 +158,12 @@ Deno.test("official runtime reopens only a legacy auto-resolved jazigo triage on
   });
   store.state = legacy;
 
-  const result = await processOfficialTurn(inbound("Quadra 3, jazigo 18"), store, deterministicAdapter);
+  const result = await processOfficialTurn(
+    inbound("Quadra 3, jazigo 18"),
+    store,
+    deterministicAdapter,
+    automaticReplies,
+  );
 
   assertEquals(result.kind, "COMMITTED");
   const base = store.commits[0]?.state.goals.find((goal) => goal.goal_code === "GOAL_JAZIGO_SERVICOS");
@@ -168,7 +185,12 @@ Deno.test("official runtime records a stored attachment without treating it as v
     },
   });
 
-  const result = await processOfficialTurn(inbound("Meu jazigo está violado"), store, deterministicAdapter);
+  const result = await processOfficialTurn(
+    inbound("Meu jazigo está violado"),
+    store,
+    deterministicAdapter,
+    automaticReplies,
+  );
 
   assert(result.reply_body?.startsWith("Arquivo recebido e preservado."));
   const document = store.commits[0]?.state.documentos?.[0];
@@ -192,7 +214,12 @@ Deno.test("a human-owned conversation preserves an attachment but emits no bot r
     },
   });
 
-  const result = await processOfficialTurn(inbound("[Arquivo recebido: foto.jpg]"), store, deterministicAdapter);
+  const result = await processOfficialTurn(
+    inbound("[Arquivo recebido: foto.jpg]"),
+    store,
+    deterministicAdapter,
+    automaticReplies,
+  );
 
   assertEquals(result.kind, "HUMAN_ACTIVE");
   assertEquals(result.reply_body, null);
@@ -207,11 +234,42 @@ Deno.test("an attachment storage failure is transparent, retains the active tria
     attachment_failure: "ATTACHMENT_DOWNLOAD_FAILED",
   });
 
-  const result = await processOfficialTurn(inbound("Meu jazigo está violado"), store, deterministicAdapter);
+  const result = await processOfficialTurn(
+    inbound("Meu jazigo está violado"),
+    store,
+    deterministicAdapter,
+    automaticReplies,
+  );
 
   assert(result.reply_body?.includes("não consegui armazenar o arquivo"));
   assert(result.reply_body?.includes("ocorrência relatada"));
   assert(!result.reply_body?.includes("validaç"));
   assertEquals(store.commits[0]?.state.documentos?.length, 0);
   assertEquals(store.commits[0]?.state.handoff, null);
+});
+
+Deno.test("official runtime persists a non-canary inbound as human-owned without interpreting or enqueueing", async () => {
+  const store = new MemoryStore();
+  let interpretations = 0;
+  const forbiddenInterpreter = {
+    interpret: () => {
+      interpretations += 1;
+      return Promise.reject(new Error("interpreter must not run for a blocked canary"));
+    },
+  };
+
+  const result = await processOfficialTurn(
+    inbound("Preciso de atendimento"),
+    store,
+    forbiddenInterpreter,
+    { automatic_replies_allowed: false },
+  );
+
+  assertEquals(result.kind, "HUMAN_ACTIVE");
+  assertEquals(result.reply_body, null);
+  assertEquals(result.outbox_id, null);
+  assertEquals(interpretations, 0);
+  assertEquals(store.commits.length, 1);
+  assertEquals(store.commits[0]?.outcome, "HUMAN_ACTIVE");
+  assertEquals(store.commits[0]?.projection.automation_mode, "human");
 });
