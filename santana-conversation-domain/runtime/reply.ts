@@ -32,7 +32,52 @@ const EXPLANATION_REQUESTS = [
   "o que quer dizer",
   "quais sao as opcoes",
   "que finalidade",
+  "por que precisa disso",
+  "para que precisa disso",
 ];
+
+const QUESTION_EXPLANATIONS: Record<string, string> = {
+  remains_status:
+    "Quero confirmar a situação atual dos restos mortais, porque o atendimento segue caminhos diferentes conforme eles ainda estejam sepultados ou já tenham sido exumados. Qual é a situação hoje?",
+  transport_destination:
+    "Quero saber para onde os restos mortais deverão ser levados: outro cemitério, jazigo da família, crematório ou ossuário. Qual é o destino pretendido?",
+  destination_grave_reference:
+    "Preciso de uma referência para a equipe localizar o jazigo de destino. Informe o que souber, como quadra, número, rua ou terreno.",
+  transport_date_preference:
+    "Quero apenas registrar se existe uma data de preferência para o transporte. Essa informação não confirma agendamento; a equipe ainda precisará analisar a solicitação.",
+  exhumation_purpose:
+    "Quero saber o que será feito com os restos após a exumação: transportá-los para outro local, colocá-los no ossuário, encaminhá-los para cremação ou realizar outra finalidade. Qual dessas opções corresponde ao que você precisa?",
+  surviving_spouse_status:
+    "Quero confirmar se a pessoa falecida tinha esposo(a) ou companheiro(a) e se essa pessoa está viva hoje. Essa informação é usada pela equipe para verificar as assinaturas necessárias. Você pode responder: está vivo(a); já faleceu; ou não tinha esposo(a)/companheiro(a). Se não souber, diga que não sabe.",
+  burial_reference:
+    "Preciso de informações que ajudem a equipe a identificar o sepultamento. Informe o nome do falecido e, se souber, a localização do jazigo ou sepultura.",
+  recadastro_status:
+    "Quero saber se o recadastro da concessão já foi concluído. Se você não souber, pode responder que não sabe; a confirmação oficial será feita pela equipe.",
+  concession_reference:
+    "Preciso de uma referência que ajude a equipe a localizar a concessão, como quadra, rua, terreno, número do jazigo ou outro identificador que você possua.",
+  recadastro_holder_document:
+    "Quero identificar o documento do titular relacionado ao recadastro. Você pode informar qual é o documento ou enviá-lo para análise; o envio não significa que ele já foi validado.",
+  concession_purpose:
+    "Quero identificar qual processo você precisa: uma concessão nova, transferência para outro responsável ou renovação. Qual dessas situações corresponde ao seu pedido?",
+  commercial_item:
+    "Quero identificar o item ou serviço comercial: lápide, jazigo, ossuário, cinzas ou zeladoria. Qual deles corresponde ao que você precisa?",
+  commercial_stage:
+    "Quero saber em que etapa o atendimento está: se você deseja um orçamento ou se já existe um pedido pago ou ainda não pago.",
+  commercial_delivery_status:
+    "Quero confirmar apenas se o item do pedido já foi instalado ou se a instalação ainda está pendente.",
+  complaint_description:
+    "Conte o que aconteceu, quando percebeu o problema e qual atendimento, pedido ou local está envolvido. A descrição será registrada para análise da equipe.",
+  grave_service_description:
+    "Descreva o que precisa no jazigo, na lápide ou na zeladoria. Se souber, informe também a quadra, rua, terreno ou número; você também pode enviar uma foto.",
+  ossuary_information_request:
+    "Diga qual é a sua dúvida sobre o ossuário, por exemplo sobre o procedimento, documentos, prazo ou valor. Só será apresentada como oficial uma informação já confirmada no sistema.",
+  service_hours_request:
+    "Diga de qual atendimento você quer saber o horário, como administração, visitação ou outro serviço específico.",
+  other_subject_description:
+    "Explique brevemente o que você precisa e, se houver, informe o nome do falecido, o jazigo, o pedido ou outro dado que ajude a equipe a localizar o assunto.",
+  requester_document:
+    "Quero identificar o documento da pessoa que está fazendo a solicitação. Você pode informar qual é o documento ou enviá-lo para análise; ele não será considerado validado automaticamente.",
+};
 
 /**
  * Explains the question already in focus without inventing a new fact or
@@ -49,15 +94,7 @@ export function contextualExplanation(state: ConversationState, userText: string
     )
   ) return null;
 
-  if (state.pending_question.fact_code === "exhumation_purpose") {
-    return "Quero saber o que será feito com os restos após a exumação: transportá-los para outro local, colocá-los no ossuário, encaminhá-los para cremação ou realizar outra finalidade. Qual dessas opções corresponde ao que você precisa?";
-  }
-
-  if (state.pending_question.fact_code === "surviving_spouse_status") {
-    return "Quero confirmar se a pessoa falecida tinha esposo(a) ou companheiro(a) e se essa pessoa está viva hoje. Você pode responder: está vivo(a); já faleceu; ou não tinha esposo(a)/companheiro(a). Se não souber, diga que não sabe.";
-  }
-
-  return null;
+  return QUESTION_EXPLANATIONS[state.pending_question.fact_code] ?? null;
 }
 
 /**
@@ -210,6 +247,9 @@ export function draftReply(input: {
     (eventKind === "CORRECTION" || eventKind === "CHANGE_OF_MIND")
   ) {
     return `Registrei a correção informada. ${questionDraft}`;
+  }
+  if (questionDraft && input.outcome === "PROPOSED" && input.interpretation?.facts.length) {
+    return `Entendi. ${questionDraft}`;
   }
   if (
     questionDraft &&
