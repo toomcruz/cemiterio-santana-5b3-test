@@ -10,6 +10,51 @@ import type { Interpretation } from "./interpreter/types.ts";
 
 export type ReplyOutcome = "PROPOSED" | "CLARIFICATION" | "HUMAN_ACTIVE" | "INTERPRETATION_UNAVAILABLE";
 
+function normalized(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const EXPLANATION_REQUESTS = [
+  "como assim",
+  "nao entendi",
+  "nao compreendi",
+  "pode explicar",
+  "me explica",
+  "explique",
+  "o que quer dizer",
+  "quais sao as opcoes",
+  "que finalidade",
+];
+
+/**
+ * Explains the question already in focus without inventing a new fact or
+ * abandoning the current goal. These texts clarify vocabulary only; they do
+ * not make an administrative decision or promise that a request is eligible.
+ */
+export function contextualExplanation(state: ConversationState, userText: string): string | null {
+  if (!state.pending_question) return null;
+  const text = normalized(userText);
+  if (!EXPLANATION_REQUESTS.some((request) => text === request || text.startsWith(request + " "))) return null;
+
+  if (state.pending_question.fact_code === "exhumation_purpose") {
+    return "Quero saber o que será feito com os restos após a exumação: transportá-los para outro local, colocá-los no ossuário, encaminhá-los para cremação ou realizar outra finalidade. Qual dessas opções corresponde ao que você precisa?";
+  }
+
+  return null;
+}
+
+function isBereavementStatement(interpretation: Interpretation | null): boolean {
+  if (!interpretation || interpretation.primary_event !== null || interpretation.goal !== null) return false;
+  const text = normalized(interpretation.text_normalized);
+  return /\b(faleceu|falecimento|morreu|obito)\b/.test(text);
+}
+
 export function draftReply(input: {
   outcome: ReplyOutcome;
   question_draft: string | null;
@@ -17,6 +62,10 @@ export function draftReply(input: {
   next_state: ConversationState;
 }): string | null {
   if (input.outcome === "HUMAN_ACTIVE" || input.outcome === "INTERPRETATION_UNAVAILABLE") return null;
+
+  if (isBereavementStatement(input.interpretation) && input.next_state.goals.length === 0) {
+    return "Sinto muito pela sua perda. Para eu direcionar o atendimento corretamente, conte o que você precisa fazer agora — por exemplo, exumação, ossuário, concessão, recadastro ou uma situação no jazigo.";
+  }
 
   const initialSocial = input.interpretation?.primary_event?.event_kind === "SOCIAL" &&
     input.next_state.goals.length === 0;

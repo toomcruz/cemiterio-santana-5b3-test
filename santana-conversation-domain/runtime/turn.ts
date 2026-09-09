@@ -5,7 +5,7 @@ import { parseStrictInterpretation } from "./adapter/schema.ts";
 import { clarificationQuestion, contextFromState, toConversationEvents } from "./interpreter/bridge.ts";
 import { guardInterpretation } from "./interpreter/guard.ts";
 import type { Interpretation } from "./interpreter/types.ts";
-import { draftReply } from "./reply.ts";
+import { contextualExplanation, draftReply } from "./reply.ts";
 
 export interface TurnInput {
   message_id: string;
@@ -43,6 +43,14 @@ export async function planTurn(input: TurnInput, interpreter: LanguageInterprete
     reply_draft: null,
   });
   if (input.automation_mode !== "BOT_ACTIVE") return unchanged("HUMAN_ACTIVE");
+  const explanation = contextualExplanation(previous, input.text);
+  if (explanation) {
+    return {
+      ...unchanged("CLARIFICATION"),
+      question_draft: explanation,
+      reply_draft: explanation,
+    };
+  }
   const request = {
     message_id: input.message_id,
     text: input.text,

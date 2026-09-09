@@ -78,7 +78,7 @@
     {
       "question_code": "Q_EXHUMATION_PURPOSE",
       "fact_code": "exhumation_purpose",
-      "text": "Qual e a finalidade da exumacao?"
+      "text": "A exumação será para transportar os restos para outro local, colocá-los no ossuário, encaminhá-los para cremação ou por outra finalidade?"
     },
     {
       "question_code": "Q_BURIAL_REFERENCE",

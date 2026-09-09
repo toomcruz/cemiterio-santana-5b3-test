@@ -174,6 +174,50 @@
   ],
   "fact_patterns": [
     {
+      "fact_code": "exhumation_purpose",
+      "value": "TRANSPORTE",
+      "any": [
+        "transporte",
+        "transportar",
+        "levar para outro local",
+        "levar para outro cemiterio",
+        "mudar de cemiterio"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "fact_code": "exhumation_purpose",
+      "value": "OSSUARIO",
+      "any": [
+        "colocar no ossuario",
+        "guardar no ossuario",
+        "ir para o ossuario",
+        "para o ossuario",
+        "ossuario"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "fact_code": "exhumation_purpose",
+      "value": "CREMACAO",
+      "any": [
+        "cremacao",
+        "cremar",
+        "levar para cremacao"
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "fact_code": "exhumation_purpose",
+      "value": "OUTRA",
+      "any": [
+        "outra finalidade",
+        "outro motivo",
+        "nenhuma dessas opcoes"
+      ],
+      "confidence": "HIGH"
+    },
+    {
       "fact_code": "remains_status",
       "value": "EXUMADO",
       "any": [

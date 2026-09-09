@@ -178,10 +178,21 @@ export function interpret(input: InterpreterInput): Interpretation {
   const complaintMarker = firstMatch(text, lexicon.complaint_markers);
   const newSubjectMarker = firstMatch(text, lexicon.new_subject_markers);
   const uncertaintyMarker = firstMatch(text, lexicon.uncertainty_markers);
+  const mentionsExhumationGoal = lexicon.goal_patterns.some((pattern) =>
+    pattern.goal_code === "GOAL_EXUMACAO" && firstMatch(text, pattern.any) !== null
+  );
 
   // Fatos candidatos.
   const seen = new Set<string>();
   for (const pattern of lexicon.fact_patterns) {
+    // Purpose words such as "ossuario" also exist in other services. They are
+    // an exhumation answer only when that question is pending or the same
+    // message explicitly opens an exhumation goal.
+    if (
+      pattern.fact_code === "exhumation_purpose" &&
+      input.context.pending_question_fact !== "exhumation_purpose" &&
+      !mentionsExhumationGoal
+    ) continue;
     const evidence = firstMatch(text, pattern.any);
     if (!evidence) continue;
     if ((pattern.none ?? []).some((p) => matches(text, p))) continue;
