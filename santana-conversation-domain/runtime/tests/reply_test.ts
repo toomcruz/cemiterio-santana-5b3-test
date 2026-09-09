@@ -248,7 +248,7 @@ Deno.test("greeting during a waiting exhumation reports status without changing 
   assertEquals(result.next_state.facts, before.facts);
   assertEquals(result.next_state.goals, before.goals);
   assertEquals(result.next_state.pending_actions, before.pending_actions);
-  assert(result.reply_draft?.startsWith("Olá! Seu atendimento de exumação já está em andamento"));
+  assert(result.reply_draft?.startsWith("Olá! Seu atendimento de exumação continua ativo"));
   assert(result.reply_draft?.includes("aguarda a verificação da autorização"));
 });
 
