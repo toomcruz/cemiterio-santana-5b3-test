@@ -6,6 +6,7 @@ import { clarificationQuestion, contextFromState, toConversationEvents } from ".
 import { guardInterpretation } from "./interpreter/guard.ts";
 import type { Interpretation } from "./interpreter/types.ts";
 import { contextualExplanation, contextualStatus, draftReply } from "./reply.ts";
+import { isConversationRestart } from "./interpreter/conversation_controls.ts";
 
 export interface TurnInput {
   message_id: string;
@@ -43,6 +44,19 @@ export async function planTurn(input: TurnInput, interpreter: LanguageInterprete
     reply_draft: null,
   });
   if (input.automation_mode !== "BOT_ACTIVE") return unchanged("HUMAN_ACTIVE");
+  if (
+    input.state.goals.some((goal) => ["ACTIVE", "SUSPENDED", "WAITING"].includes(goal.status)) &&
+    isConversationRestart(input.text)
+  ) {
+    const current = contextFromState(previous).open_goal_code?.replace(/^GOAL_/, "").toLowerCase() ?? "atual";
+    const reply =
+      `Tudo bem. O atendimento de ${current} e o protocolo atual serão preservados. Para abrir outro atendimento, escreva o assunto, por exemplo: NOVO ATENDIMENTO DE RECADASTRO. Para permanecer neste, escreva CONTINUAR ATENDIMENTO.`;
+    return {
+      ...unchanged("CLARIFICATION"),
+      question_draft: reply,
+      reply_draft: reply,
+    };
+  }
   const explanation = contextualExplanation(previous, input.text);
   if (explanation) {
     return {

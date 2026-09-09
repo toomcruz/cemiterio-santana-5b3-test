@@ -13,7 +13,12 @@ import type {
   InterpreterInput,
 } from "./types.ts";
 import type { EventKind } from "../../engine/catalog.ts";
-import { isConversationClose, isConversationReturn, isGreeting } from "./conversation_controls.ts";
+import {
+  isConversationClose,
+  isConversationReturn,
+  isGreeting,
+  requestsNewNamedAttendance,
+} from "./conversation_controls.ts";
 import { lexiconV1 } from "../generated_assets.ts";
 
 interface GoalPattern {
@@ -187,7 +192,8 @@ export function interpret(input: InterpreterInput): Interpretation {
   // Assim uma palavra solta não converte uma conversa nova em encaminhamento.
   const completionMarker = input.context.has_open_goal ? firstMatch(text, lexicon.completion_markers) : null;
   const complaintMarker = firstMatch(text, lexicon.complaint_markers);
-  const newSubjectMarker = firstMatch(text, lexicon.new_subject_markers) ??
+  const newSubjectMarker = (requestsNewNamedAttendance(input.text) ? input.text : null) ??
+    firstMatch(text, lexicon.new_subject_markers) ??
     (/\b(?:tambem|outr[oa]|mais um|mais uma)\b/.test(text) &&
         /\b(?:falecid[oa]|pessoa|meu pai|minha mae|meu avo|minha avo|meu tio|minha tia|meu irmao|minha irma)\b/.test(
           text,

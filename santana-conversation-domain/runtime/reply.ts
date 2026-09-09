@@ -124,10 +124,15 @@ export function contextualStatus(
       !(repeatsExhumation && interpretation.goal?.goal_code === goal.goal_code &&
         ["NEW_GOAL", "COMPLEMENT", "ANSWER"].includes(interpretation.primary_event.event_kind)))
   ) return null;
-  const prefix = greeting ? "Olá! " : "";
+  const prefix = greeting ? `${greetingPrefix(userText)} ` : "";
   const question = state.pending_question?.goal_id === goal.goal_id
-    ? ` Enquanto isso, podemos reunir as informações: ${questionForFact(state.pending_question.fact_code).text}`
+    ? ` Enquanto isso: ${questionForFact(state.pending_question.fact_code).text}`
     : "";
+  if (greeting) {
+    return `${prefix}Seu atendimento de ${GOAL_LABELS[goal.goal_code] ?? "solicitação"} continua ativo e aguarda ${
+      waitingRequirement(state, goal)
+    }.${question}`;
+  }
   return prefix + waitingReply(state, goal) + question;
 }
 
@@ -144,16 +149,20 @@ const GOAL_LABELS: Record<string, string> = {
   GOAL_OUTROS_ASSUNTOS: "outro assunto",
 };
 
-function waitingReply(state: ConversationState, goal: GoalRecord): string {
+function waitingRequirement(state: ConversationState, goal: GoalRecord): string {
   const actions = state.pending_actions.filter((item) => item.goal_id === goal.goal_id);
   const unknownSpouse = activeFact(state, "surviving_spouse_status", goal)?.value === "DESCONHECIDO";
-  const requirement = actions.some((item) => item.action_code === "ACTION_COLLECT_EXHUMATION_AUTHORIZATION")
+  return actions.some((item) => item.action_code === "ACTION_COLLECT_EXHUMATION_AUTHORIZATION")
     ? unknownSpouse
       ? "a conferência da informação sobre esposo(a)/companheiro(a) e da autorização necessária pela equipe responsável"
       : "a verificação da autorização necessária pela equipe responsável"
     : actions.some((item) => item.action_code === "ACTION_CHECK_DESTINATION_GRAVE")
     ? "a verificação da situação do jazigo de destino pela equipe responsável"
     : "a análise da equipe responsável";
+}
+
+function waitingReply(state: ConversationState, goal: GoalRecord): string {
+  const requirement = waitingRequirement(state, goal);
   return `Seu atendimento de ${
     GOAL_LABELS[goal.goal_code] ?? "solicitação"
   } já está em andamento e aguarda ${requirement}. Você pode acrescentar informações, enviar documentos ou pedir uma correção por aqui. Se for um pedido para outra pessoa ou outro jazigo, informe isso na mensagem.`;
@@ -173,6 +182,41 @@ function completionReply(goal: GoalRecord): string {
     return "Registrei a descrição do que você precisa. Se terminou de enviar as informações, peça para falar com a equipe. A solução do assunto ainda depende dessa análise.";
   }
   return `As informações desta etapa de ${label} foram registradas. Isso ainda não confirma aprovação, agendamento ou execução do serviço. Se terminou de enviar as informações, peça para falar com a equipe.`;
+}
+
+function greetingPrefix(text: string): string {
+  const value = normalized(text);
+  if (value.startsWith("bom dia")) return "Bom dia!";
+  if (value.startsWith("boa tarde")) return "Boa tarde!";
+  if (value.startsWith("boa noite")) return "Boa noite!";
+  return "Olá!";
+}
+
+function pendingQuestionRepair(
+  state: ConversationState,
+  interpretation: Interpretation | null,
+  userText: string,
+  question: string,
+): string | null {
+  if (!state.pending_question) return null;
+  const current = contextGoal(state);
+  const mentioned = interpretation?.goal?.goal_code;
+  if (mentioned && current && mentioned !== current.goal_code) {
+    const next = GOAL_LABELS[mentioned] ?? "outro assunto";
+    const active = GOAL_LABELS[current.goal_code] ?? "atendimento atual";
+    return `Você quer abrir um novo atendimento de ${next} ou continuar o atendimento de ${active}? Para abrir outro sem apagar o atual, escreva: NOVO ATENDIMENTO DE ${next.toUpperCase()}.`;
+  }
+  if (mentioned && current && mentioned === current.goal_code && interpretation?.facts.length === 0) {
+    return `Certo, continuamos no atendimento de ${GOAL_LABELS[current.goal_code] ?? "solicitação"}. ${question}`;
+  }
+  const text = normalized(userText);
+  if (/^(?:nao sei|nao lembro|nao tenho|desconheco|sei la)(?: .*)?$/.test(text)) {
+    if (state.pending_question.fact_code === "burial_reference") {
+      return "Tudo bem. Informe apenas o que souber: o nome do falecido ou alguma referência do local, como quadra, rua, terreno ou número. Se não souber nenhum desses dados, escreva NÃO TENHO ESSA INFORMAÇÃO.";
+    }
+    return `Tudo bem. Você pode informar apenas o que souber. ${question} Se não tiver essa informação, diga isso claramente e eu apresentarei a próxima opção segura.`;
+  }
+  return `Não consegui relacionar essa mensagem à informação que estávamos reunindo. ${question} Se não souber, responda NÃO SEI; se quiser outro assunto, escreva NOVO ATENDIMENTO DE e o assunto.`;
 }
 
 function isBereavementStatement(interpretation: Interpretation | null): boolean {
@@ -200,6 +244,20 @@ export function draftReply(input: {
     return "Olá! Como posso ajudar? Você pode explicar em poucas palavras o que precisa: recadastro, exumação, ossuário, concessão ou alguma situação no jazigo.";
   }
   const eventKind = input.interpretation?.primary_event?.event_kind;
+  if (eventKind === "SOCIAL" && input.question_draft && contextGoal(input.next_state)) {
+    return `${greetingPrefix(input.interpretation?.text_normalized ?? "")} Continuamos no atendimento de ${
+      GOAL_LABELS[contextGoal(input.next_state)!.goal_code] ?? "solicitação"
+    }. ${input.question_draft}`;
+  }
+  if (input.outcome === "CLARIFICATION" && input.question_draft) {
+    const repair = pendingQuestionRepair(
+      input.next_state,
+      input.interpretation,
+      input.interpretation?.text_normalized ?? "",
+      input.question_draft,
+    );
+    if (repair) return repair;
+  }
   if (eventKind === "HUMAN_REQUEST" && input.outcome === "PROPOSED" && input.next_state.handoff) {
     if (isConversationClose(input.interpretation?.text_normalized ?? "")) {
       return "As respostas automáticas ficam pausadas por aqui. As informações e o protocolo permanecem registrados para a equipe. Isso não cancela a solicitação de serviço.";
