@@ -90,6 +90,15 @@ export interface RuntimeStore {
   }>;
 }
 
+export interface RuntimeAutomationPolicy {
+  /**
+   * Only an explicit true may authorize the runtime to draft or enqueue a reply.
+   * A blocked inbound becomes human-owned so skipped turns can never be
+   * reinterpreted out of sequence if the rollout is expanded later.
+   */
+  automatic_replies_allowed: boolean;
+}
+
 export interface RuntimeTurnResult {
   kind: "DUPLICATE" | "COMMITTED" | "HUMAN_ACTIVE" | "INTERPRETATION_UNAVAILABLE";
   conversation_id: string;
@@ -234,6 +243,7 @@ export async function processOfficialTurn(
   inbound: RuntimeInbound,
   store: RuntimeStore,
   interpreter: LanguageInterpreter,
+  automationPolicy: RuntimeAutomationPolicy,
 ): Promise<RuntimeTurnResult> {
   if (!inbound.external_message_id.trim()) throw new Error("external_message_id is required");
   if (!/^\+?[1-9][0-9]{7,14}$/.test(inbound.phone_e164)) throw new Error("phone_e164 is invalid");
@@ -259,11 +269,14 @@ export async function processOfficialTurn(
     throw new Error("catalog hash mismatch; a controlled conversation migration is required");
   }
   const state = migrateStoredState(asStoredState(lease.state, lease.conversation_id));
+  const effectiveAutomationMode: RuntimeAutomationMode = automationPolicy.automatic_replies_allowed === true
+    ? lease.automation_mode
+    : "HUMAN_ACTIVE";
   const plan = await planTurn({
     message_id: lease.inbound_message_id,
     text: inbound.body,
     state,
-    automation_mode: lease.automation_mode,
+    automation_mode: effectiveAutomationMode,
   }, interpreter);
   const nextState = withReceivedDocument(plan.next_state, lease.received_document);
   const stateErrors = validateState(nextState);
@@ -274,6 +287,8 @@ export async function processOfficialTurn(
     plan.outcome,
   );
   if (stateErrors.length) throw new Error(`engine produced an invalid state: ${stateErrors.slice(0, 3).join("; ")}`);
+  const projection = panelProjection(nextState);
+  if (effectiveAutomationMode === "HUMAN_ACTIVE") projection.automation_mode = "human";
   const commit = await store.commitTurn({
     conversation_id: lease.conversation_id,
     inbound_message_id: lease.inbound_message_id,
@@ -284,7 +299,7 @@ export async function processOfficialTurn(
     outcome: plan.outcome,
     event_kind: plan.interpretation?.primary_event?.event_kind ?? null,
     reply_body: replyBody,
-    projection: panelProjection(nextState),
+    projection,
   });
   const kind = plan.outcome === "HUMAN_ACTIVE"
     ? "HUMAN_ACTIVE"

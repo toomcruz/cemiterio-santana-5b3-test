@@ -8,6 +8,7 @@ import {
 import { GeminiProvider } from "../../santana-conversation-domain/integrations/gemini.ts";
 import { HttpProblem, json } from "../_shared/http.ts";
 import { WapiAttachmentProcessor } from "../_shared/official-attachments.ts";
+import { requireRuntimeCanaryPhone, runtimeCanaryAllowsAutomaticReply } from "../_shared/official-runtime-canary.ts";
 import { OfficialSupabaseRest } from "../_shared/official-rest.ts";
 import { SupabaseRuntimeStore } from "../_shared/official-runtime-store.ts";
 import { requireRuntimeIngressAccess } from "../_shared/official-security.ts";
@@ -97,7 +98,10 @@ function interpreter() {
 async function deliver(
   rest: OfficialSupabaseRest,
   outboxId: string | null,
-): Promise<"queued" | "sent" | "failed"> {
+  configuredCanaryPhone: string | undefined,
+  automaticRepliesAllowed: boolean,
+): Promise<"queued" | "sent" | "failed" | "suppressed"> {
+  if (!automaticRepliesAllowed) return "suppressed";
   if (!outboxId) return "queued";
   const mode = (Deno.env.get("SUPPORT_RUNTIME_DELIVERY_MODE") ?? "QUEUE_ONLY").toUpperCase();
   if (mode !== "DIRECT") return "queued";
@@ -108,7 +112,15 @@ async function deliver(
   if (claimed.claimed !== true) {
     return claimed.status === "SENT" ? "sent" : "queued";
   }
-  const phone = text(claimed.phone_e164).replace(/\D/g, "");
+  const claimedPhone = text(claimed.phone_e164);
+  if (!runtimeCanaryAllowsAutomaticReply(claimedPhone, configuredCanaryPhone)) {
+    await rest.rpc("support_runtime_fail_delivery", {
+      p_outbox_id: outboxId,
+      p_error: "CANARY_PHONE_BLOCKED",
+    }).catch(() => undefined);
+    return "failed";
+  }
+  const phone = claimedPhone.replace(/\D/g, "");
   const body = text(claimed.body);
   if (!phone || !body) {
     await rest.rpc("support_runtime_fail_delivery", {
@@ -153,10 +165,25 @@ Deno.serve(async (request) => {
     const payload = await request.json().catch(() => {
       throw new HttpProblem(400, "INVALID_JSON", "Request body must be valid JSON");
     });
+    const inbound = inboundFromPayload(payload);
+    const configuredCanaryPhone = requireRuntimeCanaryPhone(
+      Deno.env.get("SUPPORT_RUNTIME_CANARY_PHONE_E164"),
+    );
+    const automaticRepliesAllowed = runtimeCanaryAllowsAutomaticReply(
+      inbound.phone_e164,
+      configuredCanaryPhone,
+    );
     const rest = new OfficialSupabaseRest();
     const store = new SupabaseRuntimeStore(rest, new WapiAttachmentProcessor(rest));
-    const result = await processOfficialTurn(inboundFromPayload(payload), store, interpreter());
-    const delivery = await deliver(rest, result.outbox_id);
+    const result = await processOfficialTurn(inbound, store, interpreter(), {
+      automatic_replies_allowed: automaticRepliesAllowed,
+    });
+    const delivery = await deliver(
+      rest,
+      result.outbox_id,
+      configuredCanaryPhone,
+      automaticRepliesAllowed,
+    );
     return json({
       accepted: true,
       kind: result.kind,
