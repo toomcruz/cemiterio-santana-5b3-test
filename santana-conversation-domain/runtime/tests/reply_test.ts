@@ -391,6 +391,83 @@ Deno.test("an explanation prefix does not swallow a separate official informatio
   assert(contextualExplanation(state, "Não entendi essa pergunta")?.includes("após a exumação"));
 });
 
+Deno.test("every citizen-facing catalog question has a contextual explanation", () => {
+  const base = applyEvent(initState("all-question-explanations"), {
+    kind: "NEW_GOAL",
+    goal_code: "GOAL_EXUMACAO",
+  });
+  const factCodes = [
+    "remains_status",
+    "transport_destination",
+    "destination_grave_reference",
+    "transport_date_preference",
+    "exhumation_purpose",
+    "surviving_spouse_status",
+    "burial_reference",
+    "recadastro_status",
+    "concession_reference",
+    "recadastro_holder_document",
+    "concession_purpose",
+    "commercial_item",
+    "commercial_stage",
+    "commercial_delivery_status",
+    "complaint_description",
+    "grave_service_description",
+    "ossuary_information_request",
+    "service_hours_request",
+    "other_subject_description",
+    "requester_document",
+  ];
+
+  for (const factCode of factCodes) {
+    const state = structuredClone(base);
+    state.pending_question = {
+      question_code: `AUDIT_${factCode}`,
+      fact_code: factCode,
+      goal_id: state.goals[0]!.goal_id,
+      priority_class: "NEXT_ACTION_DATA",
+      asked_at_seq: state.seq,
+    };
+    const explanation = contextualExplanation(state, "Não entendi essa pergunta");
+    assert(explanation, `missing contextual explanation for ${factCode}`);
+    assert(explanation.length > 40, `contextual explanation is too short for ${factCode}`);
+  }
+});
+
+Deno.test("why is this needed requests explain the pending question without changing state", async () => {
+  const started = await planTurn({
+    message_id: "why-needed-start",
+    text: "Quero fazer uma transferência de concessão",
+    state: initState("why-needed"),
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+  const before = structuredClone(started.next_state);
+  const explained = await planTurn({
+    message_id: "why-needed-question",
+    text: "Por que precisa disso?",
+    state: started.next_state,
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+
+  assertEquals(explained.outcome, "CLARIFICATION");
+  assertEquals(explained.next_state, before);
+  assert(explained.reply_draft?.includes("concessão"));
+});
+
+Deno.test("answers in non-exhumation journeys are acknowledged before the next question", async () => {
+  const started = await planTurn({
+    message_id: "commercial-ack-start",
+    text: "Quero um orçamento de lápide",
+    state: initState("commercial-ack"),
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+
+  assertEquals(started.outcome, "PROPOSED");
+  assertEquals(started.next_state.pending_question?.fact_code, "requester_document");
+  assert(started.reply_draft?.startsWith("Entendi."));
+  assert(started.reply_draft?.includes("documento"));
+});
+
 Deno.test("a grave service description without complaint receives the completion instruction", async () => {
   const result = await planTurn({
     message_id: "grave-cleaning",
