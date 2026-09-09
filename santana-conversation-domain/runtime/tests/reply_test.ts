@@ -132,7 +132,7 @@ Deno.test("exhumation purpose answer advances to the next question", async () =>
   assert(answered.reply_draft?.includes("esposo ou companheiro"));
 });
 
-Deno.test("ossuary outside an exhumation question is not stored as an exhumation purpose", async () => {
+Deno.test("ossuary outside an exhumation question is not stored as an exhumation purpose", () => {
   const result = interpret({
     message_id: "ossuary-other-context",
     text: "Quero informações sobre o ossuário",

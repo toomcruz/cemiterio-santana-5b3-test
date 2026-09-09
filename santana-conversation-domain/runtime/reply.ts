@@ -72,6 +72,11 @@ export function draftReply(input: {
   if (initialSocial) {
     return "Olá! Como posso ajudar? Você pode explicar em poucas palavras o que precisa: recadastro, exumação, ossuário, concessão ou alguma situação no jazigo.";
   }
+  // Keep the persisted catalog compatible with conversations already in
+  // progress while presenting the clearer wording at the response boundary.
+  if (input.question_draft && input.next_state.pending_question?.fact_code === "exhumation_purpose") {
+    return "A exumação será para transportar os restos para outro local, colocá-los no ossuário, encaminhá-los para cremação ou por outra finalidade?";
+  }
   if (input.question_draft) return input.question_draft;
 
   if (input.interpretation?.primary_event?.event_kind === "HUMAN_REQUEST") {
