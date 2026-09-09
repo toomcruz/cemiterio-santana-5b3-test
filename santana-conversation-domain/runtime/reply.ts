@@ -73,11 +73,28 @@ export function draftReply(input: {
     return "Olá! Como posso ajudar? Você pode explicar em poucas palavras o que precisa: recadastro, exumação, ossuário, concessão ou alguma situação no jazigo.";
   }
   // Keep the persisted catalog compatible with conversations already in
-  // progress while presenting the clearer wording at the response boundary.
-  if (input.question_draft && input.next_state.pending_question?.fact_code === "exhumation_purpose") {
-    return "A exumação será para transportar os restos para outro local, colocá-los no ossuário, encaminhá-los para cremação ou por outra finalidade?";
+  // progress while presenting clearer wording at the response boundary.
+  let questionDraft = input.question_draft;
+  if (questionDraft && input.next_state.pending_question?.fact_code === "exhumation_purpose") {
+    questionDraft =
+      "A exumação será para transportar os restos para outro local, colocá-los no ossuário, encaminhá-los para cremação ou por outra finalidade?";
+  } else if (questionDraft && input.next_state.pending_question?.fact_code === "surviving_spouse_status") {
+    questionDraft =
+      "O falecido deixou esposo(a) ou companheiro(a) vivo? Responda: sim; não, já faleceu; ou não tinha esposo(a)/companheiro(a).";
   }
-  if (input.question_draft) return input.question_draft;
+  const exhumationPurpose = input.interpretation?.facts.find((fact) => fact.fact_code === "exhumation_purpose");
+  if (questionDraft && exhumationPurpose?.value === "OSSUARIO") {
+    return `Entendi, os restos serão colocados no ossuário. ${questionDraft}`;
+  }
+  const spouseStatus = input.interpretation?.facts.find((fact) => fact.fact_code === "surviving_spouse_status");
+  if (questionDraft && spouseStatus) return `Entendi. ${questionDraft}`;
+  if (
+    spouseStatus &&
+    input.next_state.pending_actions.some((action) => action.action_code === "ACTION_COLLECT_EXHUMATION_AUTHORIZATION")
+  ) {
+    return "Entendi. Registrei essa informação. A equipe responsável precisa verificar a autorização necessária antes da continuidade do atendimento.";
+  }
+  if (questionDraft) return questionDraft;
 
   if (input.interpretation?.primary_event?.event_kind === "HUMAN_REQUEST") {
     return "Entendi. Registrei seu pedido de encaminhamento. A equipe responsável dará continuidade, e as informações já enviadas permanecem no atendimento.";

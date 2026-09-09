@@ -184,6 +184,22 @@ export function interpret(input: InterpreterInput): Interpretation {
 
   // Fatos candidatos.
   const seen = new Set<string>();
+  if (input.context.pending_question_fact === "surviving_spouse_status") {
+    const positive = new Set(["sim", "sim esta", "esta sim", "esta vivo", "esta viva"]);
+    const negative = new Set(["nao", "nao esta", "nao esta vivo", "nao esta viva"]);
+    const value = positive.has(text) ? "VIVO" : negative.has(text) ? "FALECIDO" : null;
+    if (value) {
+      seen.add("surviving_spouse_status");
+      facts.push({
+        fact_code: "surviving_spouse_status",
+        value,
+        source: "USER_EXPLICIT",
+        confidence: "HIGH",
+        evidence: input.text,
+        requires_confirmation: false,
+      });
+    }
+  }
   for (const pattern of lexicon.fact_patterns) {
     // Purpose words such as "ossuario" also exist in other services. They are
     // an exhumation answer only when that question is pending or the same
@@ -306,7 +322,9 @@ export function interpret(input: InterpreterInput): Interpretation {
 
   // Pergunta paralela informativa.
   let parallelGoal: CandidateGoal | null = null;
-  if (parallelMarker || !goal) {
+  const answersPendingQuestion = input.context.pending_question_fact !== null &&
+    facts.some((fact) => fact.fact_code === input.context.pending_question_fact);
+  if (parallelMarker || (!goal && !answersPendingQuestion)) {
     for (const topic of lexicon.parallel_topics) {
       const evidence = firstMatch(text, topic.any);
       if (!evidence) continue;
