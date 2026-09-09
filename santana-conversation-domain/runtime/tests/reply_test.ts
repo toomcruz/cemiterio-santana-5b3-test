@@ -129,7 +129,7 @@ Deno.test("exhumation purpose answer advances to the next question", async () =>
 
   assertEquals(answered.outcome, "PROPOSED");
   assertEquals(answered.next_state.pending_question?.fact_code, "surviving_spouse_status");
-  assert(answered.reply_draft?.includes("esposo ou companheiro"));
+  assert(answered.reply_draft?.includes("esposo(a) ou companheiro(a)"));
 });
 
 Deno.test("ossuary outside an exhumation question is not stored as an exhumation purpose", () => {
@@ -146,4 +146,66 @@ Deno.test("ossuary outside an exhumation question is not stored as an exhumation
   });
 
   assert(!result.facts.some((fact) => fact.fact_code === "exhumation_purpose"));
+});
+
+Deno.test("gavetas answers the pending exhumation purpose without opening an ossuary side goal", async () => {
+  const started = await planTurn({
+    message_id: "exhumation-drawer-start",
+    text: "Quero realizar a exumação",
+    state: initState("exhumation-drawer"),
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+  const answered = await planTurn({
+    message_id: "exhumation-drawer-answer",
+    text: "Quero colocar nas gavetas",
+    state: started.next_state,
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+
+  assertEquals(answered.outcome, "PROPOSED");
+  assertEquals(answered.next_state.pending_question?.fact_code, "surviving_spouse_status");
+  assertEquals(answered.next_state.goals.map((goal) => goal.goal_code), ["GOAL_EXUMACAO"]);
+  assert(answered.reply_draft?.startsWith("Entendi, os restos serão colocados no ossuário."));
+});
+
+Deno.test("short no answers the pending spouse question and advances instead of repeating it", async () => {
+  const started = await planTurn({
+    message_id: "spouse-short-start",
+    text: "Quero realizar a exumação para colocar no ossuário",
+    state: initState("spouse-short"),
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+  const answered = await planTurn({
+    message_id: "spouse-short-no",
+    text: "Não",
+    state: started.next_state,
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+
+  assertEquals(answered.outcome, "PROPOSED");
+  assert(
+    answered.next_state.facts.some((fact) => fact.fact_code === "surviving_spouse_status" && fact.value === "FALECIDO"),
+  );
+  assert(answered.next_state.pending_question?.fact_code !== "surviving_spouse_status");
+  assert(answered.reply_draft?.startsWith("Entendi."));
+});
+
+Deno.test("short yes answers the pending spouse question as alive", async () => {
+  const started = await planTurn({
+    message_id: "spouse-short-yes-start",
+    text: "Quero realizar a exumação para colocar no ossuário",
+    state: initState("spouse-short-yes"),
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+  const answered = await planTurn({
+    message_id: "spouse-short-yes",
+    text: "Sim",
+    state: started.next_state,
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+
+  assert(
+    answered.next_state.facts.some((fact) => fact.fact_code === "surviving_spouse_status" && fact.value === "VIVO"),
+  );
+  assert(answered.next_state.pending_question?.fact_code !== "surviving_spouse_status");
 });

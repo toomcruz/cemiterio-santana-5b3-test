@@ -193,7 +193,13 @@
         "guardar no ossuario",
         "ir para o ossuario",
         "para o ossuario",
-        "ossuario"
+        "ossuario",
+        "gaveta",
+        "gavetas",
+        "colocar na gaveta",
+        "colocar nas gavetas",
+        "guardar na gaveta",
+        "guardar nas gavetas"
       ],
       "confidence": "HIGH"
     },

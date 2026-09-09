@@ -141,7 +141,19 @@ export const lexiconV1 = {
     {
       "fact_code": "exhumation_purpose",
       "value": "OSSUARIO",
-      "any": ["colocar no ossuario", "guardar no ossuario", "ir para o ossuario", "para o ossuario", "ossuario"],
+      "any": [
+        "colocar no ossuario",
+        "guardar no ossuario",
+        "ir para o ossuario",
+        "para o ossuario",
+        "ossuario",
+        "gaveta",
+        "gavetas",
+        "colocar na gaveta",
+        "colocar nas gavetas",
+        "guardar na gaveta",
+        "guardar nas gavetas",
+      ],
       "confidence": "HIGH",
     },
     {
