@@ -207,7 +207,7 @@
         "pending_question_fact": "remains_status",
         "known_subject_hints": ["meu pai"]
       },
-      "expect": { "needs_clarification": true }
+      "expect": { "primary_event": "SOCIAL", "needs_clarification": false }
     },
     {
       "id": "M17",
