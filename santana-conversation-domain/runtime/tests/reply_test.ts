@@ -209,3 +209,49 @@ Deno.test("short yes answers the pending spouse question as alive", async () => 
   );
   assert(answered.next_state.pending_question?.fact_code !== "surviving_spouse_status");
 });
+
+async function waitingExhumationState(id: string) {
+  const interpreter = { interpret: (input: Parameters<typeof interpret>[0]) => Promise.resolve(interpret(input)) };
+  const started = await planTurn({
+    message_id: id + "-start",
+    text: "Quero realizar a exumação para colocar no ossuário",
+    state: initState(id),
+    automation_mode: "BOT_ACTIVE",
+  }, interpreter);
+  return (await planTurn({
+    message_id: id + "-spouse",
+    text: "Não",
+    state: started.next_state,
+    automation_mode: "BOT_ACTIVE",
+  }, interpreter)).next_state;
+}
+
+Deno.test("greeting during a waiting exhumation reports its status without changing state", async () => {
+  const before = await waitingExhumationState("waiting-greeting");
+  const result = await planTurn({
+    message_id: "waiting-greeting-return",
+    text: "Olá",
+    state: before,
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: () => Promise.reject(new Error("interpreter must not run")) });
+
+  assertEquals(result.outcome, "CLARIFICATION");
+  assertEquals(result.next_state, before);
+  assert(result.reply_draft?.startsWith("Olá! Seu atendimento de exumação já está em andamento"));
+  assert(result.reply_draft?.includes("aguarda a verificação da autorização"));
+});
+
+Deno.test("repeating exhumation during its human check resumes status instead of generic clarification", async () => {
+  const before = await waitingExhumationState("waiting-repeat");
+  const result = await planTurn({
+    message_id: "waiting-repeat-request",
+    text: "Quero realizar exumação",
+    state: before,
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: () => Promise.reject(new Error("interpreter must not run")) });
+
+  assertEquals(result.outcome, "CLARIFICATION");
+  assertEquals(result.next_state, before);
+  assert(result.reply_draft?.startsWith("Seu atendimento de exumação já está em andamento"));
+  assert(!result.reply_draft?.includes("explique um pouco melhor"));
+});

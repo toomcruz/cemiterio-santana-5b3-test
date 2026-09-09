@@ -49,6 +49,30 @@ export function contextualExplanation(state: ConversationState, userText: string
   return null;
 }
 
+/**
+ * Gives a useful status when the user returns to an attendance that is already
+ * waiting for a human-owned prerequisite. It never resets the case or claims
+ * that the required verification has been completed.
+ */
+export function contextualStatus(state: ConversationState, userText: string): string | null {
+  const text = normalized(userText);
+  const greeting = /^(oi|ola|bom dia|boa tarde|boa noite)( tudo bem)?$/.test(text);
+  const repeatsExhumation = /\b(exumacao|exumar)\b/.test(text);
+  const explicitlyNewSubject = /\b(outro falecido|outra pessoa|minha mae tambem|meu pai tambem)\b/.test(text);
+  const waitingExhumation = state.goals.some((goal) => goal.goal_code === "GOAL_EXUMACAO" && goal.status === "WAITING");
+  const awaitingAuthorization = state.pending_actions.some((action) =>
+    action.action_code === "ACTION_COLLECT_EXHUMATION_AUTHORIZATION"
+  );
+  if (
+    !waitingExhumation || !awaitingAuthorization || explicitlyNewSubject ||
+    (!greeting && !repeatsExhumation)
+  ) return null;
+
+  const prefix = greeting ? "Olá! " : "";
+  return prefix +
+    "Seu atendimento de exumação já está em andamento e aguarda a verificação da autorização necessária pela equipe responsável. Se quiser acrescentar uma informação ou documento a este atendimento, pode enviar por aqui. Se o pedido for para outro falecido, informe isso na mensagem.";
+}
+
 function isBereavementStatement(interpretation: Interpretation | null): boolean {
   if (!interpretation || interpretation.primary_event !== null || interpretation.goal !== null) return false;
   const text = normalized(interpretation.text_normalized);
