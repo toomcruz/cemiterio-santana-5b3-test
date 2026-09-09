@@ -42,6 +42,18 @@ export class OfficialSupabaseRest {
     });
     const text = await response.text();
     if (!response.ok) {
+      // Expose only stable conflict/auth categories, never raw database detail.
+      let code = "";
+      try {
+        code = String(JSON.parse(text).code ?? "");
+      } catch { /* no provider details */ }
+      if (["55000", "40001", "23505"].includes(code)) {
+        throw new HttpProblem(409, "RUNTIME_REVISION_CONFLICT", "Reload the attendance before retrying");
+      }
+      if (code === "42501") throw new HttpProblem(403, "OPERATOR_NOT_AUTHORIZED", "Operator access is required");
+      if (code === "22023") {
+        throw new HttpProblem(400, "RUNTIME_COMMAND_REJECTED", "The operation is not valid for this attendance");
+      }
       throw new HttpProblem(502, "SUPABASE_RUNTIME_RPC_FAILED", "The runtime store did not accept the operation");
     }
     if (!text) return null as T;
@@ -50,6 +62,20 @@ export class OfficialSupabaseRest {
     } catch {
       throw new HttpProblem(502, "SUPABASE_RUNTIME_RPC_INVALID", "The runtime store returned an invalid response");
     }
+  }
+
+  /** Validate the live user session with Auth; never trust a user id in a payload. */
+  async authenticatedUser(accessToken: string): Promise<string> {
+    if (!accessToken || accessToken.length > 16000) {
+      throw new HttpProblem(401, "USER_SESSION_REQUIRED", "A user session is required");
+    }
+    const response = await this.fetcher(this.url + "/auth/v1/user", {
+      headers: this.headers({ authorization: "Bearer " + accessToken }),
+    });
+    if (!response.ok) throw new HttpProblem(401, "USER_SESSION_INVALID", "The user session is invalid");
+    const user = await response.json();
+    if (typeof user?.id !== "string") throw new HttpProblem(401, "USER_SESSION_INVALID", "The user session is invalid");
+    return user.id;
   }
 
   async uploadObject(bucket: string, path: string, bytes: ArrayBuffer, mimeType: string): Promise<void> {

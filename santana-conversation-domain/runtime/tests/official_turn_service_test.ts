@@ -273,3 +273,20 @@ Deno.test("official runtime persists a non-canary inbound as human-owned without
   assertEquals(store.commits[0]?.outcome, "HUMAN_ACTIVE");
   assertEquals(store.commits[0]?.projection.automation_mode, "human");
 });
+
+Deno.test("official runtime returns the committed protocol text rather than the pre-commit draft", async () => {
+  const memory = new MemoryStore();
+  const committedBody = "Recebi seu pedido. Protocolo do atendimento: SAN-TESTE-001.";
+  const store: RuntimeStore = {
+    acquireInbound: (input) => memory.acquireInbound(input),
+    commitTurn: async (input) => ({ ...await memory.commitTurn(input), reply_body: committedBody }),
+  };
+  const result = await processOfficialTurn(
+    inbound("Meu jazigo está violado"),
+    store,
+    deterministicAdapter,
+    automaticReplies,
+  );
+  assertEquals(result.reply_body, committedBody);
+  assert(result.reply_body !== memory.commits[0]?.reply_body);
+});

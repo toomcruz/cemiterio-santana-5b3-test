@@ -71,7 +71,7 @@ Deno.test("D1 situacao do jazigo de destino e verificada obrigatoriamente antes 
   assertEquals(goalByCode(state, "GOAL_TRANSPORTE").status, "WAITING");
   assertEquals(goalByCode(state, "GOAL_TRANSPORTE").status_reason, "AWAITING:ACTION_VERIFY_GRAVE_SITUATION");
   assertEquals(actions(state), ["ACTION_VERIFY_GRAVE_SITUATION"]);
-  assertEquals(pendingCode(state), null, "situacao do jazigo nunca e perguntada ao municipe");
+  assertEquals(pendingCode(state), "Q_TRANSPORT_DATE", "coleta continua sem perguntar situação autoritativa");
 
   // A palavra do municipe nao substitui a verificacao da Administracao.
   rejects(
@@ -134,7 +134,7 @@ Deno.test("D3 recadastro desconhecido abre verificacao pela Administracao, sem p
   const concessao = goalByCode(state, "GOAL_CONCESSAO");
   assertEquals(concessao.status, "WAITING");
   assertEquals(actions(state), ["ACTION_VERIFY_RECADASTRO"]);
-  assertEquals(pendingCode(state), null);
+  assertEquals(pendingCode(state), "Q_CONCESSION_REFERENCE");
   assertEquals(activeFact(state, "recadastro_status", concessao)?.value, "DESCONHECIDO");
   assert(!state.goals.some((g) => g.goal_code === "GOAL_RECADASTRO"), "nao abrir Recadastro por presuncao");
   assertEquals(activeFact(state, "recadastro_verification_required", concessao)?.value, true);

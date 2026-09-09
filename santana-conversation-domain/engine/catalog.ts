@@ -71,6 +71,9 @@ export interface FactDef {
   authoritative_only?: boolean;
   authoritative_values?: FactValue[];
   blocking_values?: FactValue[];
+  /** Confirmed information only satisfies a prerequisite at an explicit acceptable value. */
+  satisfying_values?: FactValue[];
+  satisfaction_rules?: { value: FactValue; when: Condition[] }[];
   resolution_action?: string;
   deterministic_rule?: boolean;
   /** Multiple complementary statements can coexist without becoming a conflict. */
@@ -92,6 +95,8 @@ export interface GoalDef {
    */
   completion_mode?: "AUTO" | "EXPLICIT_HANDOFF";
   required_facts: string[];
+  /** Administrative confirmation is evaluated after the initial collection. */
+  completion_required_facts?: string[];
   /** Useful contextual data that may be recorded but is never demanded. */
   optional_facts?: string[];
 }

@@ -171,16 +171,33 @@ export function interpret(input: InterpreterInput): Interpretation {
   const correctionMarker = firstMatch(text, lexicon.correction_markers);
   const changeMarker = firstMatch(text, lexicon.change_of_mind_markers);
   const parallelMarker = firstMatch(text, lexicon.parallel_question_markers);
-  const humanHandoffMarker = firstMatch(text, lexicon.human_handoff_markers);
+  const cancellation =
+    /\b(?:quero|preciso|gostaria de|vou) (?:cancelar|desistir)(?:\b|$)|^(?:cancele|cancela|cancelar|desisto)\b/.test(
+      text,
+    ) && !/\b(?:nao|nunca|nem) (?:quero|preciso|gostaria de|vou) (?:cancelar|desistir)\b/.test(text);
+  const humanHandoffMarker = firstMatch(text, lexicon.human_handoff_markers) ??
+    (/(?:falar|conversar) com (?:um |uma |o |a )?(?:atendente|pessoa|humano|equipe|administracao)\b/.test(text)
+      ? input.text
+      : cancellation && input.context.has_open_goal
+      ? input.text
+      : null);
   // "FINALIZAR" só encerra a triagem quando já existe um atendimento aberto.
   // Assim uma palavra solta não converte uma conversa nova em encaminhamento.
   const completionMarker = input.context.has_open_goal ? firstMatch(text, lexicon.completion_markers) : null;
   const complaintMarker = firstMatch(text, lexicon.complaint_markers);
-  const newSubjectMarker = firstMatch(text, lexicon.new_subject_markers);
+  const newSubjectMarker = firstMatch(text, lexicon.new_subject_markers) ??
+    (/\b(?:tambem|outr[oa]|mais um|mais uma)\b/.test(text) &&
+        /\b(?:falecid[oa]|pessoa|meu pai|minha mae|meu avo|minha avo|meu tio|minha tia|meu irmao|minha irma)\b/.test(
+          text,
+        )
+      ? input.text
+      : null);
   const uncertaintyMarker = firstMatch(text, lexicon.uncertainty_markers);
   const mentionsExhumationGoal = lexicon.goal_patterns.some((pattern) =>
     pattern.goal_code === "GOAL_EXUMACAO" && firstMatch(text, pattern.any) !== null
   );
+  const exhumationAnswerContext = input.context.pending_question_fact === "exhumation_purpose" ||
+    (input.context.open_goal_code === "GOAL_EXUMACAO" && Boolean(correctionMarker || changeMarker));
 
   // Fatos candidatos.
   const seen = new Set<string>();
@@ -206,7 +223,7 @@ export function interpret(input: InterpreterInput): Interpretation {
     // message explicitly opens an exhumation goal.
     if (
       pattern.fact_code === "exhumation_purpose" &&
-      input.context.pending_question_fact !== "exhumation_purpose" &&
+      !exhumationAnswerContext &&
       !mentionsExhumationGoal
     ) continue;
     const evidence = firstMatch(text, pattern.any);
@@ -308,6 +325,22 @@ export function interpret(input: InterpreterInput): Interpretation {
       requires_confirmation: false,
     });
   }
+  // A user-supplied burial reference can be collected while an authorization
+  // is pending; it remains a declaration, never an official identification.
+  const burialReference = input.context.open_goal_code === "GOAL_EXUMACAO" || goal?.goal_code === "GOAL_EXUMACAO"
+    ? graveReference(input.text)
+    : null;
+  if (burialReference && !seen.has("burial_reference")) {
+    seen.add("burial_reference");
+    facts.push({
+      fact_code: "burial_reference",
+      value: burialReference,
+      source: correctionMarker ? "USER_CORRECTION" : "USER_EXPLICIT",
+      confidence: "HIGH",
+      evidence: burialReference,
+      requires_confirmation: false,
+    });
+  }
   if (complaintMarker && !seen.has("complaint_description")) {
     seen.add("complaint_description");
     facts.push({
@@ -324,7 +357,7 @@ export function interpret(input: InterpreterInput): Interpretation {
   let parallelGoal: CandidateGoal | null = null;
   const answersPendingQuestion = input.context.pending_question_fact !== null &&
     facts.some((fact) => fact.fact_code === input.context.pending_question_fact);
-  if (parallelMarker || (!goal && !answersPendingQuestion)) {
+  if (!correctionMarker && !changeMarker && (parallelMarker || (!goal && !answersPendingQuestion))) {
     for (const topic of lexicon.parallel_topics) {
       const evidence = firstMatch(text, topic.any);
       if (!evidence) continue;
@@ -354,7 +387,7 @@ export function interpret(input: InterpreterInput): Interpretation {
     // "Jazigo" é ambíguo apenas ao iniciar um assunto. Uma conversa que já
     // está no atendimento de jazigo deve aceitar referências e complementos
     // sem voltar a perguntar qual é o destino do atendimento.
-    if (pattern.code === "AMB_DESTINO_JAZIGO_OU_CEMITERIO" && graveServiceContext) continue;
+    if (pattern.code === "AMB_DESTINO_JAZIGO_OU_CEMITERIO" && (graveServiceContext || burialReference)) continue;
     ambiguities.push({
       code: pattern.code,
       description: pattern.description,

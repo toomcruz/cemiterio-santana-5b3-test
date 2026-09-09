@@ -138,7 +138,10 @@
       "ai_extractable": false,
       "human_rule_note": "5B.4-A.1 decisao 1: destino em jazigo da familia no Santana exige verificacao obrigatoria da situacao/dados do jazigo pela Administracao antes da continuidade. Declaracao do municipe nao confirma o fato.",
       "authoritative_only": true,
-      "resolution_action": "ACTION_VERIFY_GRAVE_SITUATION"
+      "resolution_action": "ACTION_VERIFY_GRAVE_SITUATION",
+      "satisfying_values": [
+        "REGULAR"
+      ]
     },
     {
       "fact_code": "destination_grave_authorization",
@@ -170,7 +173,11 @@
       "human_rule_note": "5B.4-A.1 decisao 2: a colocacao dos restos no jazigo exige autorizacao do concessionario ou do Administrador Provisorio. Regra deterministica, nao delegavel ao LLM.",
       "authoritative_only": true,
       "resolution_action": "ACTION_COLLECT_GRAVE_AUTHORIZATION",
-      "deterministic_rule": true
+      "deterministic_rule": true,
+      "satisfying_values": [
+        "OBTIDA_CONCESSIONARIO",
+        "OBTIDA_ADMINISTRADOR_PROVISORIO"
+      ]
     },
     {
       "fact_code": "transport_date_preference",
@@ -222,7 +229,11 @@
         "SYSTEM"
       ],
       "ai_extractable": true,
-      "human_rule_note": "Fato de entrada da regra de assinatura da exumacao; quem assina continua sendo decidido por regra deterministica."
+      "human_rule_note": "Fato de entrada da regra de assinatura da exumacao; quem assina continua sendo decidido por regra deterministica.",
+      "blocking_values": [
+        "DESCONHECIDO"
+      ],
+      "resolution_action": "ACTION_COLLECT_EXHUMATION_AUTHORIZATION"
     },
     {
       "fact_code": "required_authorization_signatory",
@@ -264,7 +275,37 @@
       "human_rule_note": "5B.4-A.1 decisao 6: com esposo/companheiro do falecido vivo, ele deve autorizar e assinar; o concessionario ou Administrador Provisorio assina como responsavel pelo jazigo. O LLM nao determina elegibilidade nem dispensa autorizacao.",
       "authoritative_only": true,
       "resolution_action": "ACTION_COLLECT_EXHUMATION_AUTHORIZATION",
-      "deterministic_rule": true
+      "deterministic_rule": true,
+      "satisfying_values": [
+        "OBTIDA_CONJUGE_E_RESPONSAVEL_JAZIGO",
+        "OBTIDA_RESPONSAVEL_JAZIGO"
+      ],
+      "satisfaction_rules": [
+        {
+          "value": "OBTIDA_CONJUGE_E_RESPONSAVEL_JAZIGO",
+          "when": [
+            {
+              "fact": "required_authorization_signatory",
+              "equals": "CONJUGE_E_RESPONSAVEL_JAZIGO"
+            }
+          ]
+        },
+        {
+          "value": "OBTIDA_RESPONSAVEL_JAZIGO",
+          "when": [
+            {
+              "fact": "required_authorization_signatory",
+              "equals": "RESPONSAVEL_JAZIGO"
+            }
+          ]
+        }
+      ],
+      "depends_on": [
+        "surviving_spouse_status",
+        "required_authorization_signatory",
+        "burial_reference",
+        "exhumation_purpose"
+      ]
     },
     {
       "fact_code": "burial_reference",
@@ -305,6 +346,13 @@
       "human_rule_note": "5B.4-A.1 decisoes 3 e 4: OK so pode ser gravado apos sinal autoritativo de conclusao do Recadastro (SYSTEM/DOCUMENT). Declaracao do usuario, extracao do LLM ou inferencia registram apenas alegacao UNCERTAIN e abrem verificacao pela Administracao.",
       "blocking_values": [
         "DESCONHECIDO"
+      ],
+      "satisfying_values": [
+        "OK"
+      ],
+      "depends_on": [
+        "concession_reference",
+        "recadastro_holder_document"
       ]
     },
     {

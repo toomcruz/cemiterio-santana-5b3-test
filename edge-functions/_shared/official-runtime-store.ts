@@ -103,7 +103,17 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     return lease;
   }
 
-  async commitTurn(input: RuntimeCommit): Promise<{ replayed: boolean; revision: number; outbox_id: string | null }> {
+  async commitTurn(
+    input: RuntimeCommit,
+  ): Promise<
+    {
+      replayed: boolean;
+      revision: number;
+      outbox_id: string | null;
+      reply_suppressed: boolean;
+      reply_body?: string | null;
+    }
+  > {
     const payload = object(
       await this.rest.rpc<unknown>("support_runtime_commit_turn", {
         p_conversation_id: input.conversation_id,
@@ -122,6 +132,8 @@ export class SupabaseRuntimeStore implements RuntimeStore {
       replayed: payload.replayed === true,
       revision: revision(payload.revision),
       outbox_id: nullableText(payload.outbox_id),
+      reply_suppressed: payload.reply_suppressed === true,
+      ...(Object.hasOwn(payload, "reply_body") ? { reply_body: nullableText(payload.reply_body) } : {}),
     };
   }
 }

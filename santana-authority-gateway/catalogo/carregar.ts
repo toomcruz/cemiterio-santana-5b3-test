@@ -79,15 +79,11 @@ function hex(buffer: ArrayBuffer): string {
   return [...new Uint8Array(buffer)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function releaseId(bruto: Uint8Array, dominio: string): Promise<string> {
+async function releaseId(bruto: Uint8Array, dominio: ReadonlyMap<string, Uint8Array>): Promise<string> {
   const partes: Uint8Array[] = [bruto];
   for (const nome of ARQUIVOS_DE_DOMINIO) {
-    try {
-      partes.push(Deno.readFileSync(juntar(dominio, nome)));
-    } catch {
-      // Arquivo ausente nao entra no digest - mesma tolerancia da referencia.
-      continue;
-    }
+    const bytes = dominio.get(nome);
+    if (bytes) partes.push(bytes);
   }
   const total = partes.reduce((n, p) => n + p.length, 0);
   const juncao = new Uint8Array(total);
@@ -137,6 +133,28 @@ export async function carregar(): Promise<CatalogoOficial> {
     );
   }
 
+  const arquivos = new Map<string, Uint8Array>();
+  for (const nome of ARQUIVOS_DE_DOMINIO) {
+    try {
+      arquivos.set(nome, Deno.readFileSync(juntar(dominio, nome)));
+    } catch {
+      // Mesma tolerancia da referencia: arquivo ausente nao entra no digest.
+    }
+  }
+  const catalogo = await carregarDeBytes(bruto, arquivos);
+  cache.set(chave, catalogo);
+  return catalogo;
+}
+
+/**
+ * Mesmo validador e mesma fronteira de hash, sem acesso ao filesystem.
+ * A Edge fornece os bytes canonicos gerados durante o build. Nenhum loader
+ * global mutavel: uma consulta nao pode trocar o catalogo de outra requisicao.
+ */
+export async function carregarDeBytes(
+  bruto: Uint8Array,
+  dominio: ReadonlyMap<string, Uint8Array>,
+): Promise<CatalogoOficial> {
   const dados = JSON.parse(new TextDecoder().decode(bruto)) as Record<string, Json>;
   const versao = dados["schema_version"];
   if (versao !== SCHEMA_SUPORTADO) {
@@ -218,7 +236,6 @@ export async function carregar(): Promise<CatalogoOficial> {
     tipos,
     entradas,
   };
-  cache.set(chave, catalogo);
   return catalogo;
 }
 

@@ -45,16 +45,7 @@
           "return_to_parent": true
         }
       ],
-      "on_child_resolved": [
-        {
-          "op": "record_fact",
-          "fact_code": "recadastro_status",
-          "value": "OK",
-          "source": "SYSTEM",
-          "authoritative": true,
-          "note": "Sinal autoritativo de conclusao do subfluxo de Recadastro."
-        }
-      ]
+      "on_child_resolved": []
     },
     {
       "relation_code": "REL_CONCESSAO_RECADASTRO_UNKNOWN",

@@ -1,6 +1,8 @@
 import { assert, assertEquals } from "../../../tests/fixtures/assert.ts";
-import { initState } from "../../engine/engine.ts";
+import { activeFact, applyEvent, type ConversationState, initState } from "../../engine/engine.ts";
 import { interpret } from "../interpreter/deterministic.ts";
+import { contextFromState, toConversationEvents } from "../interpreter/bridge.ts";
+import { contextualExplanation, contextualStatus, draftReply } from "../reply.ts";
 import { planTurn } from "../turn.ts";
 
 Deno.test("jazigo violation receives a useful follow-up instead of a repeated menu", async () => {
@@ -165,7 +167,7 @@ Deno.test("gavetas answers the pending exhumation purpose without opening an oss
   assertEquals(answered.outcome, "PROPOSED");
   assertEquals(answered.next_state.pending_question?.fact_code, "surviving_spouse_status");
   assertEquals(answered.next_state.goals.map((goal) => goal.goal_code), ["GOAL_EXUMACAO"]);
-  assert(answered.reply_draft?.startsWith("Entendi, os restos serão colocados no ossuário."));
+  assert(answered.reply_draft?.startsWith("Entendi, você quer colocar os restos no ossuário."));
 });
 
 Deno.test("short no answers the pending spouse question and advances instead of repeating it", async () => {
@@ -226,17 +228,26 @@ async function waitingExhumationState(id: string) {
   }, interpreter)).next_state;
 }
 
-Deno.test("greeting during a waiting exhumation reports its status without changing state", async () => {
+Deno.test("greeting during a waiting exhumation reports status without changing the case facts or decisions", async () => {
   const before = await waitingExhumationState("waiting-greeting");
+  let interpreted = false;
   const result = await planTurn({
     message_id: "waiting-greeting-return",
     text: "Olá",
     state: before,
     automation_mode: "BOT_ACTIVE",
-  }, { interpret: () => Promise.reject(new Error("interpreter must not run")) });
+  }, {
+    interpret: (input) => {
+      interpreted = true;
+      return Promise.resolve(interpret(input));
+    },
+  });
 
-  assertEquals(result.outcome, "CLARIFICATION");
-  assertEquals(result.next_state, before);
+  assert(interpreted, "status must not bypass the interpreter");
+  assertEquals(result.outcome, "PROPOSED");
+  assertEquals(result.next_state.facts, before.facts);
+  assertEquals(result.next_state.goals, before.goals);
+  assertEquals(result.next_state.pending_actions, before.pending_actions);
   assert(result.reply_draft?.startsWith("Olá! Seu atendimento de exumação já está em andamento"));
   assert(result.reply_draft?.includes("aguarda a verificação da autorização"));
 });
@@ -248,10 +259,230 @@ Deno.test("repeating exhumation during its human check resumes status instead of
     text: "Quero realizar exumação",
     state: before,
     automation_mode: "BOT_ACTIVE",
-  }, { interpret: () => Promise.reject(new Error("interpreter must not run")) });
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
 
-  assertEquals(result.outcome, "CLARIFICATION");
-  assertEquals(result.next_state, before);
+  assertEquals(result.outcome, "PROPOSED");
+  assertEquals(result.next_state.facts, before.facts);
+  assertEquals(result.next_state.goals, before.goals);
+  assertEquals(result.next_state.pending_actions, before.pending_actions);
   assert(result.reply_draft?.startsWith("Seu atendimento de exumação já está em andamento"));
   assert(!result.reply_draft?.includes("explique um pouco melhor"));
+});
+
+Deno.test("returning to a legacy waiting snapshot recovers the useful question without resetting the case", async () => {
+  const before = await waitingExhumationState("legacy-waiting-return");
+  before.pending_question = null;
+  const result = await planTurn({
+    message_id: "legacy-waiting-return-message",
+    text: "Olá",
+    state: before,
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+  assertEquals(result.next_state.pending_question?.fact_code, "burial_reference");
+  assert(result.reply_draft?.includes(result.question_draft!));
+  assertEquals(result.next_state.facts, before.facts);
+  assertEquals(result.next_state.goals, before.goals);
+  assertEquals(result.next_state.pending_actions, before.pending_actions);
+  assertEquals(result.next_state.seq, before.seq + 1);
+});
+
+const waitingRegressions = [
+  "Quais os valores da exumação?",
+  "Corrigindo: a exumação será para cremação",
+  "Quero cancelar a exumação",
+  "A exumação é de José, quadra 15",
+  "Gostaria de falar com um atendente sobre a exumação",
+  "Exumação da minha tia também",
+];
+
+for (const [index, text] of waitingRegressions.entries()) {
+  Deno.test(`waiting status preserves the interpreted intent: ${text}`, async () => {
+    const before = await waitingExhumationState(`waiting-regression-${index}`);
+    let interpreted = false;
+    const result = await planTurn({
+      message_id: `waiting-regression-${index}-reply`,
+      text,
+      state: before,
+      automation_mode: "BOT_ACTIVE",
+    }, {
+      interpret: (input) => {
+        interpreted = true;
+        assertEquals(input.context.open_goal_code, "GOAL_EXUMACAO");
+        const candidate = interpret(input);
+        assertEquals(contextualStatus(before, text, candidate), null);
+        return Promise.resolve(candidate);
+      },
+    });
+    assert(interpreted);
+    assert(result.outcome !== "INTERPRETATION_UNAVAILABLE");
+    if (index === 0) {
+      assertEquals(result.next_state, before, "a tariff question cannot open another case or authorize a service");
+    } else if (index === 1) {
+      const goal = result.next_state.goals.find((item) => item.goal_code === "GOAL_EXUMACAO")!;
+      assertEquals(activeFact(result.next_state, "exhumation_purpose", goal)?.value, "CREMACAO");
+      assert(result.reply_draft?.includes("correção"));
+    } else if (index === 2) {
+      assert(result.next_state.handoff !== null);
+      assert(result.reply_draft?.includes("pedido de cancelamento"));
+      assert(!result.reply_draft?.includes("foi cancelad"));
+    } else if (index === 3) {
+      const goal = result.next_state.goals.find((item) => item.goal_code === "GOAL_EXUMACAO")!;
+      assertEquals(activeFact(result.next_state, "burial_reference", goal)?.value, "quadra 15");
+    } else if (index === 4) {
+      assertEquals(result.next_state.handoff?.goal_code, "GOAL_EXUMACAO");
+      assert(result.reply_draft?.includes("pedido de encaminhamento"));
+    } else if (index === 5) {
+      assertEquals(result.next_state.cases.length, before.cases.length + 1);
+      const newest = result.next_state.goals.at(-1)!;
+      assertEquals(activeFact(result.next_state, "exhumation_purpose", newest), null);
+      assertEquals(result.next_state.pending_question?.fact_code, "exhumation_purpose");
+    }
+  });
+}
+
+Deno.test("waiting interpreter focus ignores an old resolved information goal and isolates case facts", async () => {
+  let before = await waitingExhumationState("waiting-with-history");
+  before = applyEvent(before, {
+    kind: "PARALLEL_QUESTION",
+    goal_code: "GOAL_INFO_OSSUARIO",
+    facts: [{ code: "ossuary_information_request", value: "Dúvida anterior" }],
+  });
+  const context = contextFromState(before);
+  assertEquals(context.open_goal_code, "GOAL_EXUMACAO");
+  assert(context.known_facts?.some((fact) => fact.fact_code === "exhumation_purpose" && fact.value === "OSSUARIO"));
+  const another = applyEvent(before, { kind: "NEW_GOAL", goal_code: "GOAL_EXUMACAO", case_ref: "other-deceased" });
+  assert(!contextFromState(another).known_facts?.some((fact) => fact.fact_code === "exhumation_purpose"));
+});
+
+Deno.test("a purpose correction in waiting context needs no repeated service keyword", async () => {
+  const before = await waitingExhumationState("waiting-purpose-short-correction");
+  const result = await planTurn({
+    message_id: "waiting-purpose-short-correction-message",
+    text: "Na verdade, quero cremação",
+    state: before,
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+  const goal = result.next_state.goals.find((item) => item.goal_code === "GOAL_EXUMACAO")!;
+  assertEquals(activeFact(result.next_state, "exhumation_purpose", goal)?.value, "CREMACAO");
+  assertEquals(result.next_state.goals.length, before.goals.length);
+});
+
+Deno.test("a greeting with an additional question never becomes pure waiting status", async () => {
+  const before = await waitingExhumationState("waiting-mixed-greeting");
+  const text = "Olá, quais são os valores da exumação?";
+  assertEquals(
+    contextualStatus(
+      before,
+      text,
+      interpret({
+        message_id: "mixed-greeting",
+        text,
+        context: contextFromState(before),
+      }),
+    ),
+    null,
+  );
+});
+
+Deno.test("an explanation prefix does not swallow a separate official information question", () => {
+  const state = applyEvent(initState("explanation-information"), { kind: "NEW_GOAL", goal_code: "GOAL_EXUMACAO" });
+  assertEquals(contextualExplanation(state, "Pode explicar os valores da exumação?"), null);
+  assertEquals(contextualExplanation(state, "Me explica os documentos necessários"), null);
+  assert(contextualExplanation(state, "Não entendi essa pergunta")?.includes("após a exumação"));
+});
+
+Deno.test("a grave service description without complaint receives the completion instruction", async () => {
+  const result = await planTurn({
+    message_id: "grave-cleaning",
+    text: "Quero limpeza do meu jazigo",
+    state: initState("grave-cleaning"),
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+  assertEquals(result.next_state.pending_question, null);
+  assert(result.reply_draft?.includes("FINALIZAR"));
+  assertEquals(result.next_state.handoff, null);
+});
+
+Deno.test("a negated cancellation does not request a cancellation or handoff", async () => {
+  const before = await waitingExhumationState("negated-cancellation");
+  const result = await planTurn({
+    message_id: "negated-cancellation-message",
+    text: "Não quero cancelar a exumação",
+    state: before,
+    automation_mode: "BOT_ACTIVE",
+  }, { interpret: (input) => Promise.resolve(interpret(input)) });
+  assertEquals(result.next_state.handoff, null);
+  assert(!result.reply_draft?.includes("pedido de cancelamento"));
+});
+
+Deno.test("a new goal for the current person reuses the pinned case rather than a bare kinship hint", () => {
+  const before = applyEvent(initState("current-person-new-goal"), {
+    kind: "NEW_GOAL",
+    goal_code: "GOAL_EXUMACAO",
+    case_ref: "meu pai:first-message",
+  });
+  const candidate = interpret({
+    message_id: "current-person-second-goal",
+    text: "Quero transportar meu pai",
+    context: contextFromState(before),
+  });
+  const bridge = toConversationEvents({
+    ...candidate,
+    primary_event: { event_kind: "NEW_GOAL", confidence: "HIGH", evidence: "Quero transportar meu pai" },
+    case_reference: { kind: "CURRENT", subject_kind: "DECEASED", subject_hint: "meu pai", confidence: "HIGH" },
+    needs_clarification: false,
+  }, before);
+  assertEquals(bridge.events[0]?.case_ref, "meu pai:first-message");
+  const after = bridge.events.reduce(applyEvent, before);
+  assertEquals(after.cases.length, 1);
+  assertEquals(after.goals.at(-1)?.case_id, before.goals[0]?.case_id);
+});
+
+for (
+  const goalCode of [
+    "GOAL_RECADASTRO",
+    "GOAL_COMERCIAL",
+    "GOAL_CONCESSAO",
+    "GOAL_TRANSPORTE",
+    "GOAL_RECLAMACAO",
+    "GOAL_INFO_HORARIO",
+    "GOAL_INFO_OSSUARIO",
+    "GOAL_OUTROS_ASSUNTOS",
+  ]
+) {
+  Deno.test(`completed collection has an honest next-step reply: ${goalCode}`, () => {
+    const state: ConversationState = initState(`completion-${goalCode}`);
+    const template = applyEvent(initState("template"), { kind: "NEW_GOAL", goal_code: "GOAL_EXUMACAO" }).goals[0]!;
+    state.goals.push({
+      ...template,
+      goal_code: goalCode,
+      status: "RESOLVED",
+      closed_at_seq: 1,
+      informational: goalCode.startsWith("GOAL_INFO_"),
+    });
+    const reply = draftReply({ outcome: "PROPOSED", question_draft: null, interpretation: null, next_state: state });
+    assert(reply !== null);
+    assert(reply.includes("equipe"));
+    assert(!reply.includes("protocolo"));
+    assert(!reply.includes("serviço foi realizado"));
+    if (goalCode.startsWith("GOAL_INFO_")) assert(reply.includes("Ainda não há uma resposta oficial confirmada"));
+  });
+}
+
+Deno.test("an old completed information goal cannot produce a new completion claim", () => {
+  const state = applyEvent(initState("old-completion"), {
+    kind: "NEW_GOAL",
+    goal_code: "GOAL_INFO_HORARIO",
+    facts: [{ code: "service_hours_request", value: "Horário?" }],
+  });
+  assertEquals(
+    draftReply({
+      outcome: "PROPOSED",
+      question_draft: null,
+      interpretation: null,
+      next_state: state,
+      previous_state: state,
+    }),
+    null,
+  );
 });

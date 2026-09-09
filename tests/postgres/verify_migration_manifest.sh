@@ -10,7 +10,7 @@ manifest="$package_root/docs/runtime-object-manifest.md"
   exit 1
 }
 
-mapfile -t invalid_sql < <(find "$migration_dir" -maxdepth 1 -type f -name '*.sql' ! -regextype posix-extended ! -regex '.*/[0-9]{4}_.+\.sql' -printf '%f\n' | sort)
+mapfile -t invalid_sql < <(find "$migration_dir" -maxdepth 1 -regextype posix-extended -type f -name '*.sql' ! -regex '.*/([0-9]{4}|[0-9]{14})_.+\.sql' -printf '%f\n' | sort)
 (( ${#invalid_sql[@]} == 0 )) || {
   echo "non-migration SQL file present: ${invalid_sql[*]}" >&2
   exit 1
@@ -42,4 +42,19 @@ covered_max="${marker##*-}"
   exit 1
 }
 
-echo "migration manifest PASS: ${numbers[0]}-${numbers[${#numbers[@]}-1]} (${#numbers[@]} migrations)"
+mapfile -t timestamp_files < <(find "$migration_dir" -maxdepth 1 -regextype posix-extended -type f -regex '.*/[0-9]{14}_.+\.sql' -printf '%f\n' | sort)
+timestamp_numbers=()
+for file in "${timestamp_files[@]}"; do timestamp_numbers+=("${file:0:14}"); done
+timestamp_marker="$(rg -N '^TIMESTAMP_MIGRATIONS: [0-9]{14}( [0-9]{14})*$' "$manifest" || true)"
+if (( ${#timestamp_numbers[@]} > 0 )); then
+  [[ -n "$timestamp_marker" ]] || { echo 'timestamp migration manifest missing' >&2; exit 1; }
+  timestamp_duplicates="$(printf '%s\n' "${timestamp_numbers[@]}" | uniq -d)"
+  [[ -z "$timestamp_duplicates" ]] || { echo "duplicate timestamp migration: $timestamp_duplicates" >&2; exit 1; }
+  [[ "${timestamp_marker#*: }" == "${timestamp_numbers[*]}" ]] || {
+    echo 'timestamp migrations do not match explicit manifest' >&2; exit 1;
+  }
+elif [[ -n "$timestamp_marker" ]]; then
+  echo 'manifest lists absent timestamp migrations' >&2; exit 1
+fi
+
+echo "migration manifest PASS: ${numbers[0]}-${numbers[${#numbers[@]}-1]} (${#numbers[@]} historical), ${#timestamp_numbers[@]} timestamp migrations"

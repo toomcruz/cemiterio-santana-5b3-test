@@ -17,7 +17,7 @@
 // impossibilidade estrutural.
 
 import { carregar } from "./catalogo/carregar.ts";
-import { consultar as consultarInterno, type Contexto } from "./consulta.ts";
+import { type CarregadorDeCatalogo, consultar as consultarInterno, type Contexto } from "./consulta.ts";
 import { ordenar } from "./canonico.ts";
 import type { DataCivil, Json } from "./canonico.ts";
 import { aceito, type ArgumentosCanonizados, canonizarArgumentos, type ContratoDeTool } from "./argumentos.ts";
@@ -47,8 +47,9 @@ export async function consultar(
   tipo_informacao: string,
   contexto: Contexto = {},
   referencia: DataCivil,
+  carregarCatalogo: CarregadorDeCatalogo = carregar,
 ): Promise<RespostaAutoritativa> {
-  return await consultarInterno(tipo_informacao, contexto, referencia);
+  return await consultarInterno(tipo_informacao, contexto, referencia, carregarCatalogo);
 }
 
 /**

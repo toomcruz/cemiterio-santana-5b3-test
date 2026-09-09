@@ -5,7 +5,8 @@
  * the outbox after the corresponding state transition has committed.  It does
  * not claim an appointment, validation, human action or delivery.
  */
-import type { ConversationState } from "../engine/engine.ts";
+import { activeFact, contextGoal, type ConversationState, type GoalRecord } from "../engine/engine.ts";
+import { questionForFact } from "../engine/catalog.ts";
 import type { Interpretation } from "./interpreter/types.ts";
 
 export type ReplyOutcome = "PROPOSED" | "CLARIFICATION" | "HUMAN_ACTIVE" | "INTERPRETATION_UNAVAILABLE";
@@ -40,10 +41,19 @@ const EXPLANATION_REQUESTS = [
 export function contextualExplanation(state: ConversationState, userText: string): string | null {
   if (!state.pending_question) return null;
   const text = normalized(userText);
-  if (!EXPLANATION_REQUESTS.some((request) => text === request || text.startsWith(request + " "))) return null;
+  if (
+    !EXPLANATION_REQUESTS.some((request) =>
+      text === request ||
+      ["melhor", "essa pergunta", "a pergunta", "isso"].some((suffix) => text === `${request} ${suffix}`)
+    )
+  ) return null;
 
   if (state.pending_question.fact_code === "exhumation_purpose") {
     return "Quero saber o que será feito com os restos após a exumação: transportá-los para outro local, colocá-los no ossuário, encaminhá-los para cremação ou realizar outra finalidade. Qual dessas opções corresponde ao que você precisa?";
+  }
+
+  if (state.pending_question.fact_code === "surviving_spouse_status") {
+    return "Quero confirmar se a pessoa falecida tinha esposo(a) ou companheiro(a) e se essa pessoa está viva hoje. Você pode responder: está vivo(a); já faleceu; ou não tinha esposo(a)/companheiro(a). Se não souber, diga que não sabe.";
   }
 
   return null;
@@ -54,23 +64,76 @@ export function contextualExplanation(state: ConversationState, userText: string
  * waiting for a human-owned prerequisite. It never resets the case or claims
  * that the required verification has been completed.
  */
-export function contextualStatus(state: ConversationState, userText: string): string | null {
+export function contextualStatus(
+  state: ConversationState,
+  userText: string,
+  interpretation: Interpretation | null = null,
+): string | null {
   const text = normalized(userText);
   const greeting = /^(oi|ola|bom dia|boa tarde|boa noite)( tudo bem)?$/.test(text);
-  const repeatsExhumation = /\b(exumacao|exumar)\b/.test(text);
-  const explicitlyNewSubject = /\b(outro falecido|outra pessoa|minha mae tambem|meu pai tambem)\b/.test(text);
-  const waitingExhumation = state.goals.some((goal) => goal.goal_code === "GOAL_EXUMACAO" && goal.status === "WAITING");
-  const awaitingAuthorization = state.pending_actions.some((action) =>
-    action.action_code === "ACTION_COLLECT_EXHUMATION_AUTHORIZATION"
-  );
+  const repeatsExhumation = /^(?:quero|gostaria de|preciso)(?: realizar| fazer)? (?:a )?exumacao$/.test(text);
+  const asksStatus =
+    /^(?:como esta|qual (?:e )?o (?:status|andamento) d[oa]) (?:meu |minha |o |a )?(?:atendimento|pedido|exumacao)$/
+      .test(text);
+  const goal = contextGoal(state);
   if (
-    !waitingExhumation || !awaitingAuthorization || explicitlyNewSubject ||
-    (!greeting && !repeatsExhumation)
+    !interpretation || !goal || goal.status !== "WAITING" ||
+    (!greeting && !asksStatus && !(repeatsExhumation && goal.goal_code === "GOAL_EXUMACAO")) ||
+    interpretation.case_reference.kind !== "CURRENT" || interpretation.facts.length > 0 ||
+    interpretation.ambiguities.some((item) => item.blocking) ||
+    (interpretation.primary_event !== null && interpretation.primary_event.event_kind !== "SOCIAL" &&
+      !(repeatsExhumation && interpretation.goal?.goal_code === goal.goal_code &&
+        ["NEW_GOAL", "COMPLEMENT", "ANSWER"].includes(interpretation.primary_event.event_kind)))
   ) return null;
-
   const prefix = greeting ? "Olá! " : "";
-  return prefix +
-    "Seu atendimento de exumação já está em andamento e aguarda a verificação da autorização necessária pela equipe responsável. Se quiser acrescentar uma informação ou documento a este atendimento, pode enviar por aqui. Se o pedido for para outro falecido, informe isso na mensagem.";
+  const question = state.pending_question?.goal_id === goal.goal_id
+    ? ` Enquanto isso, podemos reunir as informações: ${questionForFact(state.pending_question.fact_code).text}`
+    : "";
+  return prefix + waitingReply(state, goal) + question;
+}
+
+const GOAL_LABELS: Record<string, string> = {
+  GOAL_TRANSPORTE: "transporte",
+  GOAL_EXUMACAO: "exumação",
+  GOAL_RECADASTRO: "recadastro",
+  GOAL_CONCESSAO: "concessão",
+  GOAL_COMERCIAL: "atendimento comercial",
+  GOAL_JAZIGO_SERVICOS: "serviços no jazigo",
+  GOAL_RECLAMACAO: "reclamação",
+  GOAL_INFO_OSSUARIO: "informações sobre ossuário",
+  GOAL_INFO_HORARIO: "informações sobre horário de atendimento",
+  GOAL_OUTROS_ASSUNTOS: "outro assunto",
+};
+
+function waitingReply(state: ConversationState, goal: GoalRecord): string {
+  const actions = state.pending_actions.filter((item) => item.goal_id === goal.goal_id);
+  const unknownSpouse = activeFact(state, "surviving_spouse_status", goal)?.value === "DESCONHECIDO";
+  const requirement = actions.some((item) => item.action_code === "ACTION_COLLECT_EXHUMATION_AUTHORIZATION")
+    ? unknownSpouse
+      ? "a conferência da informação sobre esposo(a)/companheiro(a) e da autorização necessária pela equipe responsável"
+      : "a verificação da autorização necessária pela equipe responsável"
+    : actions.some((item) => item.action_code === "ACTION_CHECK_DESTINATION_GRAVE")
+    ? "a verificação da situação do jazigo de destino pela equipe responsável"
+    : "a análise da equipe responsável";
+  return `Seu atendimento de ${
+    GOAL_LABELS[goal.goal_code] ?? "solicitação"
+  } já está em andamento e aguarda ${requirement}. Você pode acrescentar informações, enviar documentos ou pedir uma correção por aqui. Se for um pedido para outra pessoa ou outro jazigo, informe isso na mensagem.`;
+}
+
+function completionReply(goal: GoalRecord): string {
+  const label = GOAL_LABELS[goal.goal_code] ?? "atendimento";
+  if (goal.informational || goal.goal_code.startsWith("GOAL_INFO_")) {
+    return `Sua dúvida sobre ${
+      label.replace(/^informações sobre /, "")
+    } foi registrada. Ainda não há uma resposta oficial confirmada para essa consulta neste atendimento. Você pode pedir o encaminhamento à equipe para verificá-la.`;
+  }
+  if (goal.goal_code === "GOAL_RECLAMACAO") {
+    return "Registrei o relato da reclamação. Isso ainda depende de análise da equipe e não confirma que a situação foi resolvida. Se terminou de enviar as informações, peça para falar com a equipe.";
+  }
+  if (goal.goal_code === "GOAL_OUTROS_ASSUNTOS") {
+    return "Registrei a descrição do que você precisa. Se terminou de enviar as informações, peça para falar com a equipe. A solução do assunto ainda depende dessa análise.";
+  }
+  return `As informações desta etapa de ${label} foram registradas. Isso ainda não confirma aprovação, agendamento ou execução do serviço. Se terminou de enviar as informações, peça para falar com a equipe.`;
 }
 
 function isBereavementStatement(interpretation: Interpretation | null): boolean {
@@ -84,17 +147,28 @@ export function draftReply(input: {
   question_draft: string | null;
   interpretation: Interpretation | null;
   next_state: ConversationState;
+  previous_state?: ConversationState;
 }): string | null {
   if (input.outcome === "HUMAN_ACTIVE" || input.outcome === "INTERPRETATION_UNAVAILABLE") return null;
 
-  if (isBereavementStatement(input.interpretation) && input.next_state.goals.length === 0) {
+  if (isBereavementStatement(input.interpretation) && !contextGoal(input.next_state)) {
     return "Sinto muito pela sua perda. Para eu direcionar o atendimento corretamente, conte o que você precisa fazer agora — por exemplo, exumação, ossuário, concessão, recadastro ou uma situação no jazigo.";
   }
 
   const initialSocial = input.interpretation?.primary_event?.event_kind === "SOCIAL" &&
-    input.next_state.goals.length === 0;
+    !contextGoal(input.next_state);
   if (initialSocial) {
     return "Olá! Como posso ajudar? Você pode explicar em poucas palavras o que precisa: recadastro, exumação, ossuário, concessão ou alguma situação no jazigo.";
+  }
+  const eventKind = input.interpretation?.primary_event?.event_kind;
+  if (eventKind === "HUMAN_REQUEST" && input.outcome === "PROPOSED" && input.next_state.handoff) {
+    const cancellation = /\b(cancelar|cancele|cancela|cancelamento|desistir|desisto)\b/.test(
+      normalized(input.interpretation?.text_normalized ?? ""),
+    );
+    if (cancellation) {
+      return "Registrei seu pedido de cancelamento para análise da equipe. O cancelamento do serviço ainda precisa ser confirmado pela Administração; as informações já enviadas permanecem no atendimento.";
+    }
+    return "Entendi. Registrei seu pedido de encaminhamento à equipe. As informações já enviadas permanecem no atendimento.";
   }
   // Keep the persisted catalog compatible with conversations already in
   // progress while presenting clearer wording at the response boundary.
@@ -108,20 +182,35 @@ export function draftReply(input: {
   }
   const exhumationPurpose = input.interpretation?.facts.find((fact) => fact.fact_code === "exhumation_purpose");
   if (questionDraft && exhumationPurpose?.value === "OSSUARIO") {
-    return `Entendi, os restos serão colocados no ossuário. ${questionDraft}`;
+    return `Entendi, você quer colocar os restos no ossuário. ${questionDraft}`;
   }
   const spouseStatus = input.interpretation?.facts.find((fact) => fact.fact_code === "surviving_spouse_status");
-  if (questionDraft && spouseStatus) return `Entendi. ${questionDraft}`;
+  if (questionDraft && spouseStatus) {
+    const authorizationPending = input.next_state.pending_actions.some((action) =>
+      action.action_code === "ACTION_COLLECT_EXHUMATION_AUTHORIZATION"
+    );
+    return authorizationPending
+      ? `Entendi. A autorização ainda depende de análise da equipe. Enquanto isso, podemos reunir os dados: ${questionDraft}`
+      : `Entendi. ${questionDraft}`;
+  }
   if (
     spouseStatus &&
     input.next_state.pending_actions.some((action) => action.action_code === "ACTION_COLLECT_EXHUMATION_AUTHORIZATION")
   ) {
     return "Entendi. Registrei essa informação. A equipe responsável precisa verificar a autorização necessária antes da continuidade do atendimento.";
   }
-  if (questionDraft) return questionDraft;
-
-  if (input.interpretation?.primary_event?.event_kind === "HUMAN_REQUEST") {
-    return "Entendi. Registrei seu pedido de encaminhamento. A equipe responsável dará continuidade, e as informações já enviadas permanecem no atendimento.";
+  const waitingGoal = contextGoal(input.next_state);
+  if (
+    questionDraft && input.outcome === "PROPOSED" && input.interpretation?.facts.length &&
+    (eventKind === "CORRECTION" || eventKind === "CHANGE_OF_MIND")
+  ) {
+    return `Registrei a correção informada. ${questionDraft}`;
+  }
+  if (
+    questionDraft &&
+    !(input.outcome === "CLARIFICATION" && waitingGoal?.status === "WAITING" && !input.next_state.pending_question)
+  ) {
+    return questionDraft;
   }
 
   const isGraveComplaint = input.interpretation?.primary_event?.event_kind === "COMPLAINT" &&
@@ -142,6 +231,32 @@ export function draftReply(input: {
   if (isOpenGraveTriage && suppliedGraveReference) {
     return "Registrei a referência informada do jazigo no atendimento. Você pode continuar explicando a situação ou enviar uma foto. Quando terminar de enviar as informações, escreva FINALIZAR para encaminhar o atendimento à equipe.";
   }
-
+  if (isOpenGraveTriage && input.outcome === "PROPOSED") {
+    return "Registrei as informações sobre o jazigo. Você pode continuar explicando o serviço que precisa ou enviar uma foto e a referência do local. Quando terminar, escreva FINALIZAR para pedir o encaminhamento à equipe.";
+  }
+  const goal = contextGoal(input.next_state);
+  if (goal?.status === "WAITING") {
+    const correction = eventKind === "CORRECTION" || eventKind === "CHANGE_OF_MIND";
+    if (correction && input.outcome === "PROPOSED" && input.interpretation?.facts.length) {
+      return `Registrei a correção informada. ${waitingReply(input.next_state, goal)}`;
+    }
+    if (input.outcome === "PROPOSED" && input.interpretation?.facts.length) {
+      return `Registrei a informação neste atendimento. ${waitingReply(input.next_state, goal)}`;
+    }
+    // Unknown utterances need a useful next step without pretending that their
+    // requested change or question was understood and handled.
+    if (input.outcome === "CLARIFICATION") {
+      return `Este atendimento de ${
+        GOAL_LABELS[goal.goal_code] ?? "solicitação"
+      } aguarda análise da equipe. Você quer acrescentar uma informação, corrigir algum dado, tirar uma dúvida ou falar com a equipe? Diga qual dessas ações deseja e o detalhe do pedido.`;
+    }
+    return waitingReply(input.next_state, goal);
+  }
+  const completed = [...input.next_state.goals].reverse().find((item) =>
+    item.status === "RESOLVED" &&
+    (!input.previous_state ||
+      input.previous_state.goals.find((old) => old.goal_id === item.goal_id)?.status !== "RESOLVED")
+  );
+  if (completed) return completionReply(completed);
   return null;
 }

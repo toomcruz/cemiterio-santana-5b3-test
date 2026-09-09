@@ -3,7 +3,7 @@
 // ao reducer — a conversa pede a informacao em vez de adivinhar.
 
 import type { ConversationEvent, ConversationState } from "../../engine/engine.ts";
-import { activeFactsForGoalCase, focusGoal, missingFacts } from "../../engine/engine.ts";
+import { activeFactsForGoalCase, contextGoal, focusGoal, missingFacts } from "../../engine/engine.ts";
 import { goalDef, questionForFact } from "../../engine/catalog.ts";
 import type { Interpretation, InterpreterInput } from "./types.ts";
 
@@ -13,12 +13,19 @@ export interface BridgeResult {
 }
 
 export function contextFromState(state: ConversationState, knownHints: string[] = []): InterpreterInput["context"] {
-  const goal = focusGoal(state);
+  const goal = contextGoal(state);
+  const subjectRef = state.cases.find((item) => item.case_id === goal?.case_id)?.subject_ref;
+  // Legacy states may carry a message id instead of a subject hint. Do not
+  // feed those ids to the interpreter as if they identified the deceased.
+  const subjectHint = subjectRef?.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").match(
+    /^(?:meu|minha) (?:pai|mae|avo|irmao|irma|marido|esposa|filho|filha|tio|tia)(?::|$)/,
+  )?.[0]
+    .replace(/:$/, "");
   return {
     has_open_goal: state.goals.some((g) => ["ACTIVE", "SUSPENDED", "WAITING"].includes(g.status)),
     open_goal_code: goal ? goal.goal_code : null,
     pending_question_fact: state.pending_question ? state.pending_question.fact_code : null,
-    known_subject_hints: knownHints,
+    known_subject_hints: knownHints.length > 0 ? knownHints : subjectHint ? [subjectHint] : [],
     known_facts: goal
       ? activeFactsForGoalCase(state, goal).map((fact) => ({
         fact_code: fact.fact_code,
@@ -30,7 +37,7 @@ export function contextFromState(state: ConversationState, knownHints: string[] 
   };
 }
 
-export function toConversationEvents(interpretation: Interpretation): BridgeResult {
+export function toConversationEvents(interpretation: Interpretation, state?: ConversationState): BridgeResult {
   if (interpretation.needs_clarification || !interpretation.primary_event) {
     return {
       events: [],
@@ -49,7 +56,13 @@ export function toConversationEvents(interpretation: Interpretation): BridgeResu
   }));
 
   const kind = interpretation.primary_event.event_kind;
-  const caseRef = interpretation.case_reference.subject_hint ?? interpretation.message_id;
+  const currentCaseId = state ? contextGoal(state)?.case_id : null;
+  const currentCaseRef = state?.cases.find((item) => item.case_id === currentCaseId)?.subject_ref;
+  // A linguistic hint ("minha tia") is not a unique person identifier. A
+  // NEW demand must never silently reuse an older case bearing that hint.
+  const caseRef = interpretation.case_reference.kind === "NEW"
+    ? `${interpretation.case_reference.subject_hint ?? "demand"}:${interpretation.message_id}`
+    : currentCaseRef ?? interpretation.case_reference.subject_hint ?? interpretation.message_id;
 
   if (kind === "NEW_GOAL") {
     if (!interpretation.goal) {
@@ -95,6 +108,7 @@ export function clarificationQuestion(state: ConversationState, result: BridgeRe
   if (result.clarification.options.length > 0) {
     return `Preciso confirmar: ${result.clarification.options.join(" ou ")}?`;
   }
+  if (state.pending_question) return questionForFact(state.pending_question.fact_code).text;
   const goal = focusGoal(state);
   if (
     goal && goalDef(goal.goal_code).completion_mode === "EXPLICIT_HANDOFF" && missingFacts(state, goal).length === 0

@@ -73,6 +73,8 @@ export interface SolicitacaoInput {
 
 export interface SolicitacaoRecord {
   solicitacao_id: string;
+  /** Official runtime owner; additive for older domain records. */
+  goal_id?: string;
   case_id: string | null;
   category: SolicitacaoCategory;
   topic_code: string;
