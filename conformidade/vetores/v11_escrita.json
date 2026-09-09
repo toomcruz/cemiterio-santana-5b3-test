@@ -8,7 +8,7 @@
       "vetor": "V11",
       "titulo": "Fato desconhecido no catalogo",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-1841dd869332",
+      "release_id_esperado": "exu-1.0-083c52799dc8",
       "operacao": "registrar_fato",
       "referencia": "2026-03-01",
       "entrada": {
@@ -21,7 +21,7 @@
         "outcome": "REJECTED",
         "reason": "FATO_DESCONHECIDO_NO_CATALOGO",
         "message": "Fato desconhecido no catalogo do assunto Exumacao.",
-        "release_id": "exu-1.0-1841dd869332",
+        "release_id": "exu-1.0-083c52799dc8",
         "gateway": "SantanaAuthorityGateway/v1"
       },
       "escritas_esperadas": []
@@ -31,7 +31,7 @@
       "vetor": "V11",
       "titulo": "Fato autoritativo: so a Administracao confirma",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-1841dd869332",
+      "release_id_esperado": "exu-1.0-083c52799dc8",
       "operacao": "registrar_fato",
       "referencia": "2026-03-01",
       "entrada": {
@@ -44,7 +44,7 @@
         "outcome": "REJECTED",
         "reason": "FATO_AUTORITATIVO_SO_PELA_ADMINISTRACAO",
         "message": "'Autorizacao da familia para exumacao' so e confirmado pela Administracao do Cemiterio (sinal autoritativo ou documento).",
-        "release_id": "exu-1.0-1841dd869332",
+        "release_id": "exu-1.0-083c52799dc8",
         "gateway": "SantanaAuthorityGateway/v1",
         "pending_action": "ACTION_COLLECT_EXHUMATION_AUTHORIZATION"
       },
@@ -55,7 +55,7 @@
       "vetor": "V11",
       "titulo": "Fato derivado por regra deterministica",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-1841dd869332",
+      "release_id_esperado": "exu-1.0-083c52799dc8",
       "operacao": "registrar_fato",
       "referencia": "2026-03-01",
       "entrada": {
@@ -68,7 +68,7 @@
         "outcome": "REJECTED",
         "reason": "FATO_NAO_GRAVAVEL_PELO_ATENDIMENTO",
         "message": "'Assinaturas exigidas para a exumacao (derivado)' e derivado por regra deterministica ou nao pode ser extraido do atendimento.",
-        "release_id": "exu-1.0-1841dd869332",
+        "release_id": "exu-1.0-083c52799dc8",
         "gateway": "SantanaAuthorityGateway/v1"
       },
       "escritas_esperadas": []
@@ -78,7 +78,7 @@
       "vetor": "V11",
       "titulo": "Origem que nao registra fato de municipe",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-1841dd869332",
+      "release_id_esperado": "exu-1.0-083c52799dc8",
       "operacao": "registrar_fato",
       "referencia": "2026-03-01",
       "entrada": {
@@ -91,7 +91,7 @@
         "outcome": "REJECTED",
         "reason": "ORIGEM_NAO_ACEITA",
         "message": "Origem 'SYSTEM' nao registra fato declarado pelo municipe.",
-        "release_id": "exu-1.0-1841dd869332",
+        "release_id": "exu-1.0-083c52799dc8",
         "gateway": "SantanaAuthorityGateway/v1"
       },
       "escritas_esperadas": []
@@ -101,7 +101,7 @@
       "vetor": "V11",
       "titulo": "Valor vazio",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-1841dd869332",
+      "release_id_esperado": "exu-1.0-083c52799dc8",
       "operacao": "registrar_fato",
       "referencia": "2026-03-01",
       "entrada": {
@@ -114,7 +114,7 @@
         "outcome": "REJECTED",
         "reason": "VALOR_VAZIO",
         "message": "Valor vazio nao registra fato.",
-        "release_id": "exu-1.0-1841dd869332",
+        "release_id": "exu-1.0-083c52799dc8",
         "gateway": "SantanaAuthorityGateway/v1"
       },
       "escritas_esperadas": []
@@ -124,7 +124,7 @@
       "vetor": "V11",
       "titulo": "Valor fora do dominio fechado",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-1841dd869332",
+      "release_id_esperado": "exu-1.0-083c52799dc8",
       "operacao": "registrar_fato",
       "referencia": "2026-03-01",
       "entrada": {
@@ -137,7 +137,7 @@
         "outcome": "REJECTED",
         "reason": "VALOR_FORA_DO_DOMINIO",
         "message": "Valor fora do dominio de 'exhumation_purpose'.",
-        "release_id": "exu-1.0-1841dd869332",
+        "release_id": "exu-1.0-083c52799dc8",
         "gateway": "SantanaAuthorityGateway/v1",
         "allowed_values": [
           "TRANSPORTE",
@@ -154,7 +154,7 @@
       "titulo": "Fato nao extraivel SEM ser derivado nem autoritativo",
       "catalogo_ref": "oficial",
       "dominio_ref": "dominio_fato_nao_extraivel.json",
-      "release_id_esperado": "exu-1.0-1b23722021c0",
+      "release_id_esperado": "exu-1.0-b81e89575881",
       "operacao": "registrar_fato",
       "referencia": "2026-03-01",
       "entrada": {
@@ -167,7 +167,7 @@
         "outcome": "REJECTED",
         "reason": "FATO_NAO_GRAVAVEL_PELO_ATENDIMENTO",
         "message": "'Fato de fixture nao extraivel pelo atendimento' e derivado por regra deterministica ou nao pode ser extraido do atendimento.",
-        "release_id": "exu-1.0-1b23722021c0",
+        "release_id": "exu-1.0-b81e89575881",
         "gateway": "SantanaAuthorityGateway/v1"
       },
       "escritas_esperadas": []

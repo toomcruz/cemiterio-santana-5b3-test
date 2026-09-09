@@ -12,6 +12,7 @@ import { requireRuntimeCanaryPhone, runtimeCanaryAllowsAutomaticReply } from "..
 import { OfficialSupabaseRest } from "../_shared/official-rest.ts";
 import { SupabaseRuntimeStore } from "../_shared/official-runtime-store.ts";
 import { requireRuntimeIngressAccess } from "../_shared/official-security.ts";
+import { processOfficialOperator } from "../_shared/official-operator.ts";
 
 const MAX_REQUEST_BYTES = 2 * 1024 * 1024;
 
@@ -165,15 +166,24 @@ Deno.serve(async (request) => {
     const payload = await request.json().catch(() => {
       throw new HttpProblem(400, "INVALID_JSON", "Request body must be valid JSON");
     });
-    const inbound = inboundFromPayload(payload);
     const configuredCanaryPhone = requireRuntimeCanaryPhone(
       Deno.env.get("SUPPORT_RUNTIME_CANARY_PHONE_E164"),
     );
+    const rest = new OfficialSupabaseRest();
+    const input = object(payload);
+    if (input.kind === "OPERATOR_SNAPSHOT" || input.kind === "OPERATOR_COMMAND") {
+      const result = object(await processOfficialOperator(input, request, rest, configuredCanaryPhone));
+      if (input.kind === "OPERATOR_SNAPSHOT") return json(result);
+      const allowed = runtimeCanaryAllowsAutomaticReply(text(result.phone_e164), configuredCanaryPhone);
+      const delivery = await deliver(rest, text(result.outbox_id) || null, configuredCanaryPhone, allowed);
+      const { phone_e164: _privatePhone, ...response } = result;
+      return json({ ...response, delivery });
+    }
+    const inbound = inboundFromPayload(payload);
     const automaticRepliesAllowed = runtimeCanaryAllowsAutomaticReply(
       inbound.phone_e164,
       configuredCanaryPhone,
     );
-    const rest = new OfficialSupabaseRest();
     const store = new SupabaseRuntimeStore(rest, new WapiAttachmentProcessor(rest));
     const result = await processOfficialTurn(inbound, store, interpreter(), {
       automatic_replies_allowed: automaticRepliesAllowed,

@@ -36,6 +36,7 @@ import {
 } from "./resposta.ts";
 
 export type Contexto = Readonly<Record<string, string>>;
+export type CarregadorDeCatalogo = () => Promise<CatalogoOficial>;
 
 /**
  * A entrada esta descartada para este caso?
@@ -58,8 +59,9 @@ export async function consultar(
   tipo_informacao: string,
   contexto: Contexto = {},
   referencia: DataCivil,
+  carregarCatalogo: CarregadorDeCatalogo = carregar,
 ): Promise<RespostaAutoritativa> {
-  const oficial: CatalogoOficial = await carregar();
+  const oficial: CatalogoOficial = await carregarCatalogo();
   const base = { release_id: oficial.release_id, tipo_informacao };
 
   const spec = oficial.tipos.get(tipo_informacao);

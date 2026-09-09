@@ -8,7 +8,7 @@
       "vetor": "V12",
       "titulo": "Forma canonica: arguments = {} lido como {}, nunca como null",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-1841dd869332",
+      "release_id_esperado": "exu-1.0-083c52799dc8",
       "operacao": "canonizar_argumentos",
       "referencia": "2026-03-01",
       "entrada": {
@@ -34,7 +34,7 @@
       "vetor": "V12",
       "titulo": "Chave ausente numa tool de zero argumentos normaliza para {}",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-1841dd869332",
+      "release_id_esperado": "exu-1.0-083c52799dc8",
       "operacao": "canonizar_argumentos",
       "referencia": "2026-03-01",
       "entrada": {
@@ -60,7 +60,7 @@
       "vetor": "V12",
       "titulo": "null numa tool de zero argumentos normaliza para {}, e o bruto e preservado",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-1841dd869332",
+      "release_id_esperado": "exu-1.0-083c52799dc8",
       "operacao": "canonizar_argumentos",
       "referencia": "2026-03-01",
       "entrada": {
@@ -86,7 +86,7 @@
       "vetor": "V12",
       "titulo": "Modalidade injetada numa consulta de preco e recusada",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-1841dd869332",
+      "release_id_esperado": "exu-1.0-083c52799dc8",
       "operacao": "canonizar_argumentos",
       "referencia": "2026-03-01",
       "entrada": {
@@ -119,7 +119,7 @@
       "vetor": "V12",
       "titulo": "Argumento que nao e mapa e recusado",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-1841dd869332",
+      "release_id_esperado": "exu-1.0-083c52799dc8",
       "operacao": "canonizar_argumentos",
       "referencia": "2026-03-01",
       "entrada": {
@@ -148,7 +148,7 @@
       "vetor": "V12",
       "titulo": "__missing__ nunca vira valor",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-1841dd869332",
+      "release_id_esperado": "exu-1.0-083c52799dc8",
       "operacao": "canonizar_argumentos",
       "referencia": "2026-03-01",
       "entrada": {
@@ -185,7 +185,7 @@
       "vetor": "V12",
       "titulo": "Tool com obrigatorio NAO normaliza ausencia para {}",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-1841dd869332",
+      "release_id_esperado": "exu-1.0-083c52799dc8",
       "operacao": "canonizar_argumentos",
       "referencia": "2026-03-01",
       "entrada": {
@@ -216,7 +216,7 @@
       "vetor": "V12",
       "titulo": "Tool com parametros: chave extra continua recusada",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-1841dd869332",
+      "release_id_esperado": "exu-1.0-083c52799dc8",
       "operacao": "canonizar_argumentos",
       "referencia": "2026-03-01",
       "entrada": {
@@ -255,7 +255,7 @@
       "vetor": "V12",
       "titulo": "Tool com parametros opcionais: ausencia e {} sem criar valor",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-1841dd869332",
+      "release_id_esperado": "exu-1.0-083c52799dc8",
       "operacao": "canonizar_argumentos",
       "referencia": "2026-03-01",
       "entrada": {
@@ -281,7 +281,7 @@
       "vetor": "V12",
       "titulo": "Valor null numa chave declarada e recusado, nao virou default",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-1841dd869332",
+      "release_id_esperado": "exu-1.0-083c52799dc8",
       "operacao": "canonizar_argumentos",
       "referencia": "2026-03-01",
       "entrada": {
@@ -318,7 +318,7 @@
       "vetor": "V12",
       "titulo": "Fronteira do Gateway: zero-arg canonico consulta normalmente",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-1841dd869332",
+      "release_id_esperado": "exu-1.0-083c52799dc8",
       "operacao": "consultar_via_tool",
       "referencia": "2026-03-01",
       "entrada": {
@@ -337,7 +337,7 @@
       },
       "saida_esperada": {
         "resposta": {
-          "release_id": "exu-1.0-1841dd869332",
+          "release_id": "exu-1.0-083c52799dc8",
           "tipo_informacao": "PRECO",
           "status": "NEEDS_CONTEXT",
           "aplicabilidade": {
@@ -371,7 +371,7 @@
       "vetor": "V12",
       "titulo": "Fronteira do Gateway: argumento injetado nao produz preco",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-1841dd869332",
+      "release_id_esperado": "exu-1.0-083c52799dc8",
       "operacao": "consultar_via_tool",
       "referencia": "2026-03-01",
       "entrada": {
@@ -392,7 +392,7 @@
       },
       "saida_esperada": {
         "resposta": {
-          "release_id": "exu-1.0-1841dd869332",
+          "release_id": "exu-1.0-083c52799dc8",
           "tipo_informacao": "PRECO",
           "status": "NOT_AVAILABLE",
           "aplicabilidade": {

@@ -6,13 +6,15 @@
  * details. The store implementation must atomically persist the proposed state
  * and enqueue the reply before any delivery attempt.
  */
-import { type ConversationState, focusGoal, initState } from "../engine/engine.ts";
+import { contextGoal, type ConversationState, initState } from "../engine/engine.ts";
 import { goalDef } from "../engine/catalog.ts";
 import { registerReceivedDocumento } from "../engine/documento.ts";
 import { validateState } from "../engine/validate.ts";
 import type { LanguageInterpreter } from "./adapter/adapter.ts";
 import { canonicalJson, currentCatalogHash, sha256 } from "./server_transition.ts";
 import { planTurn, type TurnPlan } from "./turn.ts";
+import { officialInformationReply } from "./official_information.ts";
+import { documentAwaitingReview, withOperationalRequests } from "./official_operations.ts";
 
 export type RuntimeAutomationMode = "BOT_ACTIVE" | "HUMAN_ACTIVE";
 export type RuntimeMessageType = "text" | "image" | "document" | "audio";
@@ -65,6 +67,7 @@ export interface RuntimePanelProjection {
   subject: "nao_classificado" | "exumacao" | "recadastro" | "ossuario" | "concessao" | "comercial";
   stage: "novos" | "pendencias" | "aguardando";
   automation_mode: "bot" | "human";
+  queue_status?: "inbox" | "waiting_citizen";
   flow_state: Record<string, unknown>;
 }
 
@@ -87,6 +90,8 @@ export interface RuntimeStore {
     replayed: boolean;
     revision: number;
     outbox_id: string | null;
+    reply_suppressed?: boolean;
+    reply_body?: string | null;
   }>;
 }
 
@@ -109,7 +114,7 @@ export interface RuntimeTurnResult {
   event_kind: string | null;
 }
 
-function asStoredState(raw: unknown, conversationId: string): ConversationState {
+export function asStoredState(raw: unknown, conversationId: string): ConversationState {
   if (raw === null || raw === undefined) return initState(conversationId);
   const errors = validateState(raw);
   if (errors.length) throw new Error(`persisted conversation state is invalid: ${errors.slice(0, 3).join("; ")}`);
@@ -143,7 +148,7 @@ function migrateStoredState(state: ConversationState): ConversationState {
 }
 
 function projectedGoal(state: ConversationState) {
-  return focusGoal(state) ??
+  return contextGoal(state) ??
     [...state.goals].reverse().find((goal) => goal.overlay_of === null) ??
     state.goals.at(-1) ??
     null;
@@ -177,7 +182,11 @@ function withReceivedDocument(
   if (!received) return state;
   const existing = state.documentos ?? [];
   if (existing.some((document) => document.documento_id === received.documento_id)) return state;
-  const focus = projectedGoal(state);
+  const focus = state.goals.find((goal) => goal.goal_id === state.pending_question?.goal_id) ?? projectedGoal(state);
+  const pendingIdentity =
+    ["requester_document", "recadastro_holder_document"].includes(state.pending_question?.fact_code ?? "")
+      ? state.pending_question!.fact_code
+      : null;
   return {
     ...state,
     documentos: [
@@ -185,7 +194,7 @@ function withReceivedDocument(
       registerReceivedDocumento({
         documento_id: received.documento_id,
         case_id: focus?.case_id ?? null,
-        tipo: received.tipo,
+        tipo: pendingIdentity ?? received.tipo,
         recebido_em: received.recebido_em,
         ...(received.descricao ? { descricao: received.descricao } : {}),
       }),
@@ -217,10 +226,16 @@ function replyWithAttachment(
 export function panelProjection(state: ConversationState): RuntimePanelProjection {
   const focus = projectedGoal(state);
   const waiting = focus?.status === "WAITING" || state.handoff !== null;
+  const documentReview = documentAwaitingReview(state);
   return {
     subject: panelSubject(state),
     stage: waiting ? "aguardando" : focus ? "pendencias" : "novos",
     automation_mode: state.handoff ? "human" : "bot",
+    queue_status: documentReview || state.handoff || (waiting && !state.pending_question)
+      ? "inbox"
+      : state.pending_question
+      ? "waiting_citizen"
+      : "inbox",
     flow_state: {
       runtime: "santana-conversation-domain/v1",
       current_goal: focus?.goal_code ?? null,
@@ -228,6 +243,16 @@ export function panelProjection(state: ConversationState): RuntimePanelProjectio
       pending_question_code: state.pending_question?.question_code ?? null,
       pending_fact_code: state.pending_question?.fact_code ?? null,
       pending_action_codes: state.pending_actions.map((action) => action.action_code),
+      waiting_for: documentReview || state.handoff || (state.pending_actions.length > 0 && !state.pending_question)
+        ? "team"
+        : state.pending_question
+        ? "citizen"
+        : null,
+      runtime_requests: (state.solicitacoes ?? []).map((item) => ({
+        id: item.solicitacao_id,
+        goal_id: item.goal_id,
+        summary: item.summary,
+      })),
       handoff_requested: state.handoff !== null,
       active_goal_status: focus?.status ?? null,
       goal_display_name: focus ? goalDef(focus.goal_code).topic_code : null,
@@ -272,16 +297,55 @@ export async function processOfficialTurn(
   const effectiveAutomationMode: RuntimeAutomationMode = automationPolicy.automatic_replies_allowed === true
     ? lease.automation_mode
     : "HUMAN_ACTIVE";
-  const plan = await planTurn({
-    message_id: lease.inbound_message_id,
-    text: inbound.body,
-    state,
-    automation_mode: effectiveAutomationMode,
-  }, interpreter);
-  const nextState = withReceivedDocument(plan.next_state, lease.received_document);
+  const information = effectiveAutomationMode === "BOT_ACTIVE"
+    ? await officialInformationReply({ text: inbound.body, state })
+    : null;
+  const infoState = information ? structuredClone(state) : null;
+  if (infoState && information) {
+    infoState.seq += 1;
+    infoState.event_log.push({
+      seq: infoState.seq,
+      event_kind: "PARALLEL_QUESTION",
+      note: `official-information:${information.topic}:${information.information_type}:${information.status}`,
+    });
+  }
+  const plan: TurnPlan = infoState && information
+    ? {
+      expected_seq: state.seq,
+      outcome: "PROPOSED",
+      next_state: infoState,
+      interpretation: null,
+      question_draft: null,
+      reply_draft: information.text,
+    }
+    : await planTurn({
+      message_id: lease.inbound_message_id,
+      text: inbound.body,
+      state,
+      automation_mode: effectiveAutomationMode,
+    }, interpreter);
+  const receivedState = withReceivedDocument(plan.next_state, lease.received_document);
+  const nextState = effectiveAutomationMode === "BOT_ACTIVE"
+    ? await withOperationalRequests(receivedState)
+    : receivedState;
   const stateErrors = validateState(nextState);
+  const awaitingFileReview = !information && nextState.handoff === null &&
+    ["PROPOSED", "CLARIFICATION"].includes(plan.outcome) && documentAwaitingReview(nextState);
+  const reviewNotice =
+    "O arquivo recebido está aguardando conferência da equipe. Não precisa reenviar o mesmo arquivo agora; você pode acrescentar outras informações ao atendimento.";
+  let reviewedDraft = plan.reply_draft;
+  if (awaitingFileReview) {
+    const question = plan.question_draft;
+    if (question && reviewedDraft?.includes(question)) reviewedDraft = reviewedDraft.replace(question, reviewNotice);
+    else if (plan.outcome === "PROPOSED" && plan.interpretation?.facts.length) {
+      const corrected = ["CORRECTION", "CHANGE_OF_MIND"].includes(plan.interpretation.primary_event?.event_kind ?? "");
+      reviewedDraft = `${
+        corrected ? "Registrei a correção informada." : "Registrei a informação neste atendimento."
+      } ${reviewNotice}`;
+    } else reviewedDraft = reviewNotice;
+  }
   const replyBody = replyWithAttachment(
-    plan.reply_draft,
+    reviewedDraft,
     lease.received_document,
     lease.attachment_failure,
     plan.outcome,
@@ -297,11 +361,11 @@ export async function processOfficialTurn(
     state_hash: await sha256(canonicalJson(nextState)),
     state: nextState,
     outcome: plan.outcome,
-    event_kind: plan.interpretation?.primary_event?.event_kind ?? null,
+    event_kind: information ? "PARALLEL_QUESTION" : plan.interpretation?.primary_event?.event_kind ?? null,
     reply_body: replyBody,
     projection,
   });
-  const kind = plan.outcome === "HUMAN_ACTIVE"
+  const kind = plan.outcome === "HUMAN_ACTIVE" || commit.reply_suppressed === true
     ? "HUMAN_ACTIVE"
     : plan.outcome === "INTERPRETATION_UNAVAILABLE"
     ? "INTERPRETATION_UNAVAILABLE"
@@ -311,8 +375,12 @@ export async function processOfficialTurn(
     conversation_id: lease.conversation_id,
     inbound_message_id: lease.inbound_message_id,
     revision: commit.revision,
-    reply_body: commit.replayed ? null : replyBody,
+    reply_body: commit.replayed || commit.reply_suppressed
+      ? null
+      : commit.reply_body === undefined
+      ? replyBody
+      : commit.reply_body,
     outbox_id: commit.outbox_id,
-    event_kind: plan.interpretation?.primary_event?.event_kind ?? null,
+    event_kind: information ? "PARALLEL_QUESTION" : plan.interpretation?.primary_event?.event_kind ?? null,
   };
 }

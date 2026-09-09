@@ -26,6 +26,10 @@ jobs:
           deno-version: v2.1.4
       - run: deno fmt --check edge-functions contracts tests santana-conversation-domain santana-authority-gateway
       - run: deno lint edge-functions contracts tests santana-conversation-domain santana-authority-gateway
+      - name: Verify bundled catalogs match their canonical sources
+        run: |
+          node santana-conversation-domain/tools/generate_runtime_assets.mjs --check
+          node santana-conversation-domain/tools/generate_authority_assets.mjs --check
       - run: deno check edge-functions/*/index.ts contracts/*.ts santana-conversation-domain/engine/*.ts santana-conversation-domain/tools/*.ts santana-authority-gateway/gateway.ts santana-authority-gateway/conformidade/executar_vetores.ts
       - run: deno test --allow-env --allow-read tests/unit tests/shadow
       - name: P0 conversacional 5B.4-A (C01-C16, sem rede)
@@ -56,6 +60,10 @@ jobs:
             --despejo referencia=/tmp/dump-referencia.json --despejo ts=/tmp/dump-ts.json
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq ripgrep >/dev/null
       - run: rg --version
+      - name: Test official operations bridge in isolated PostgreSQL
+        run: |
+          npm install --prefix "$RUNNER_TEMP/santana-pg" --no-save @electric-sql/pglite@0.3.14
+          PGLITE_MODULE="$RUNNER_TEMP/santana-pg/node_modules/@electric-sql/pglite/dist/index.js" node tests/postgres/run_operator_bridge.mjs
       - run: bash tests/postgres/verify_migration_manifest.sh
       - run: bash -n tests/postgres/run_all.sh tests/postgres/run_concurrency.sh tests/postgres/verify_static.sh tests/postgres/verify_migration_manifest.sh && bash tests/postgres/verify_static.sh
       - run: '! rg -ni "TODO|IMPLEMENTAR|EXECUTAR MANUALMENTE|SIMULAR|select .+instruction" tests/postgres/p*.sql tests/postgres/run_*.sh'

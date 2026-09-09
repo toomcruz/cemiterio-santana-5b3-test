@@ -43,11 +43,12 @@
     ],
     "conflict_resolution_precedes_new_facts": true,
     "skip_facts_not_relevant_under_current_branch": true,
-    "waiting_goal_does_not_produce_user_question": true,
+    "waiting_goal_does_not_produce_user_question": false,
     "parallel_question_does_not_replace_pending_question": true,
     "tie_break": "ordem de declaracao em goals.v1.json required_facts",
     "authoritative_fact_is_never_asked_to_user": true,
-    "authoritative_gap_sets_goal_waiting": true
+    "authoritative_gap_sets_goal_waiting": true,
+    "waiting_goal_may_collect_non_authoritative_data": true
   },
   "questions": [
     {
@@ -182,6 +183,12 @@
       "action_code": "ACTION_VERIFY_RECADASTRO",
       "executor": "SYSTEM_OR_HUMAN",
       "note": "Encaminhar/abrir solicitacao para a Administracao verificar o recadastro; nao presumir OK nem PENDENTE."
+    },
+    {
+      "fact_code": "surviving_spouse_status",
+      "action_code": "ACTION_COLLECT_EXHUMATION_AUTHORIZATION",
+      "executor": "HUMAN",
+      "note": "Quando DESCONHECIDO, verificar a situação do cônjuge antes de definir assinaturas; a mesma ação permanece pendente até autorização compatível."
     }
   ]
 }

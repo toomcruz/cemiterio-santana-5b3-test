@@ -8,7 +8,7 @@
       "vetor": "V5",
       "titulo": "Modalidade que nao existe na tabela",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-1841dd869332",
+      "release_id_esperado": "exu-1.0-083c52799dc8",
       "operacao": "consultar",
       "referencia": "2026-03-01",
       "entrada": {
@@ -19,7 +19,7 @@
         }
       },
       "saida_esperada": {
-        "release_id": "exu-1.0-1841dd869332",
+        "release_id": "exu-1.0-083c52799dc8",
         "tipo_informacao": "PRECO",
         "status": "NOT_AVAILABLE",
         "aplicabilidade": {

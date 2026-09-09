@@ -8,7 +8,7 @@
       "vetor": "V10",
       "titulo": "Sem contexto algum",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-1841dd869332",
+      "release_id_esperado": "exu-1.0-083c52799dc8",
       "operacao": "consultar",
       "referencia": "2026-03-01",
       "entrada": {
@@ -16,7 +16,7 @@
         "contexto": {}
       },
       "saida_esperada": {
-        "release_id": "exu-1.0-1841dd869332",
+        "release_id": "exu-1.0-083c52799dc8",
         "tipo_informacao": "PRECO",
         "status": "NEEDS_CONTEXT",
         "aplicabilidade": {},
@@ -45,7 +45,7 @@
       "vetor": "V10",
       "titulo": "Servico conhecido, modalidade nao",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-1841dd869332",
+      "release_id_esperado": "exu-1.0-083c52799dc8",
       "operacao": "consultar",
       "referencia": "2026-03-01",
       "entrada": {
@@ -55,7 +55,7 @@
         }
       },
       "saida_esperada": {
-        "release_id": "exu-1.0-1841dd869332",
+        "release_id": "exu-1.0-083c52799dc8",
         "tipo_informacao": "PRECO",
         "status": "NEEDS_CONTEXT",
         "aplicabilidade": {
@@ -82,7 +82,7 @@
       "vetor": "V10",
       "titulo": "HOMONIMO: destino OSSUARIO nao seleciona EXUMACAO_DE_OSSUARIO",
       "catalogo_ref": "oficial",
-      "release_id_esperado": "exu-1.0-1841dd869332",
+      "release_id_esperado": "exu-1.0-083c52799dc8",
       "operacao": "consultar",
       "referencia": "2026-03-01",
       "entrada": {
@@ -93,7 +93,7 @@
         }
       },
       "saida_esperada": {
-        "release_id": "exu-1.0-1841dd869332",
+        "release_id": "exu-1.0-083c52799dc8",
         "tipo_informacao": "PRECO",
         "status": "NEEDS_CONTEXT",
         "aplicabilidade": {

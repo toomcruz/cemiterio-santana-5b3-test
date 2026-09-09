@@ -20,7 +20,7 @@
   "status_semantics": {
     "ACTIVE": "Objetivo em foco; consome a proxima pergunta.",
     "SUSPENDED": "Objetivo pausado por um subfluxo; retorna quando o filho resolve.",
-    "WAITING": "Objetivo bloqueado por verificacao/autorizacao autoritativa externa; nao consome pergunta ao usuario e mantem uma acao pendente.",
+    "WAITING": "Objetivo bloqueado por verificacao/autorizacao autoritativa externa; mantem acao pendente e permite coletar dados nao autoritativos sem liberar a execucao.",
     "RESOLVED": "Objetivo concluido no escopo conversacional.",
     "ABANDONED": "Objetivo descartado pelo usuario; nao retorna automaticamente."
   },
@@ -61,10 +61,14 @@
     {
       "goal_code": "GOAL_RECADASTRO",
       "topic_code": "RECADASTRO",
-      "creates_case": false,
+      "creates_case": true,
       "required_facts": [
         "concession_reference",
         "recadastro_holder_document"
+      ],
+      "case_subject": "CONCESSION",
+      "completion_required_facts": [
+        "recadastro_status"
       ]
     },
     {

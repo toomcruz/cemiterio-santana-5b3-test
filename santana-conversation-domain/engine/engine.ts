@@ -236,7 +236,7 @@ function conditionsHold(
   if (!conditions || conditions.length === 0) return true;
   return conditions.every((c) => {
     const fact = activeFact(state, c.fact, goal);
-    if (!fact) return false;
+    if (!fact || fact.confidence !== "CONFIRMED") return false;
     if (c.equals !== undefined) return fact.value === c.equals;
     if (c.in !== undefined) return c.in.includes(fact.value);
     return true;
@@ -259,6 +259,11 @@ export function focusGoal(state: ConversationState): GoalRecord | null {
   return active.reduce((a, b) => (b.stack_index > a.stack_index ? b : a));
 }
 
+/** An administrative wait preserves the case used to interpret new input. */
+export function contextGoal(state: ConversationState): GoalRecord | null {
+  return focusGoal(state) ?? [...state.goals].reverse().find((goal) => goal.status === "WAITING") ?? null;
+}
+
 function nextId(prefix: string, count: number): string {
   return `${prefix}${String(count + 1).padStart(3, "0")}`;
 }
@@ -268,6 +273,10 @@ function supersede(state: ConversationState, fact: FactRecord, reason: string, r
   fact.supersession_reason = reason;
   fact.superseded_at_seq = state.seq;
   fact.superseded_by = replacementId;
+  invalidateDependents(state, fact);
+}
+
+function invalidateDependents(state: ConversationState, fact: FactRecord): void {
   // Toda conclusao derivada do fato antigo perde validade.
   for (const f of state.facts) {
     if (f.status !== "ACTIVE") continue;
@@ -279,7 +288,13 @@ function supersede(state: ConversationState, fact: FactRecord, reason: string, r
   for (const f of state.facts) {
     if (f.status !== "ACTIVE") continue;
     const def = factDef(f.fact_code);
-    if ((def.depends_on ?? []).includes(fact.fact_code)) {
+    const sourceScope = factDef(fact.fact_code).scope;
+    const targetCase = def.scope === "GOAL" ? goalById(state, f.goal_id)?.case_id : f.case_id;
+    const sourceCase = sourceScope === "GOAL" ? goalById(state, fact.goal_id)?.case_id : fact.case_id;
+    const sameScope = sourceScope === "CONVERSATION" ||
+      (sourceScope === "GOAL" && f.goal_id === fact.goal_id) ||
+      (sourceCase != null && targetCase === sourceCase);
+    if (sameScope && (def.depends_on ?? []).includes(fact.fact_code)) {
       supersede(state, f, "DEPENDENCY_INVALIDATED", null);
     }
   }
@@ -377,6 +392,8 @@ function recordFact(
       incumbent.conflicts_with = fact.fact_id;
       fact.confidence = "CONFLICTING";
       fact.conflicts_with = incumbent.fact_id;
+      // Neither branch of a disputed fact can continue authorizing a decision.
+      invalidateDependents(state, incumbent);
     } else {
       supersede(state, incumbent, "SYSTEM_REPLACEMENT", fact.fact_id);
     }
@@ -418,7 +435,9 @@ function pushGoal(
   // cria um segundo case para o mesmo falecido/jazigo/pedido.
   if (def.creates_case && !opts.reuse_case_id) {
     const subjectRef = opts.case_ref ?? `${goal_code}:${state.seq}`;
-    const existing = state.cases.find((c) => c.subject_ref === subjectRef);
+    const existing = state.cases.find((c) =>
+      c.subject_ref === subjectRef && c.subject_kind === (def.case_subject ?? "GENERIC")
+    );
     if (existing) {
       case_id = existing.case_id;
     } else {
@@ -599,6 +618,37 @@ function evaluateRelations(state: ConversationState): void {
   throw new Error("avaliacao de relacoes nao convergiu");
 }
 
+function settleGoals(state: ConversationState): void {
+  // A correction can invalidate a previously completed subflow in this case.
+  // Reopening it preserves its identity and its administrative audit trail.
+  for (const goal of state.goals) {
+    if (goal.status !== "RESOLVED" || missingFacts(state, goal).length === 0) continue;
+    const invalidated = state.facts.some((fact) =>
+      fact.superseded_at_seq === state.seq && goalDeclaresFact(goal, fact.fact_code) &&
+      factScopeKey(fact) === scopeKey(fact.fact_code, goal)
+    );
+    if (!invalidated) continue;
+    goal.status = "ACTIVE";
+    goal.status_reason = "DEPENDENCY_INVALIDATED";
+    goal.closed_at_seq = null;
+    const parent = goalById(state, goal.parent_goal_id);
+    if (parent && goal.return_to_parent && parent.status !== "ABANDONED") {
+      parent.status = "SUSPENDED";
+      parent.status_reason = `SUBFLOW:${goal.goal_code}`;
+      parent.closed_at_seq = null;
+    }
+  }
+  // Receiving a decision may reactivate a waiting child, complete it and then
+  // unblock its parent. All three transitions belong to the same turn.
+  for (let i = 0; i < 12; i++) {
+    const before = JSON.stringify([state.goals, state.pending_actions, state.facts]);
+    evaluateRelations(state);
+    syncAuthoritativeGaps(state);
+    if (before === JSON.stringify([state.goals, state.pending_actions, state.facts])) return;
+  }
+  throw new Error("estabilizacao de objetivos nao convergiu");
+}
+
 export interface MissingFact {
   code: string;
   priority: PriorityClass;
@@ -609,7 +659,10 @@ export interface MissingFact {
 export function missingFacts(state: ConversationState, goal: GoalRecord): MissingFact[] {
   const def = goalDef(goal.goal_code);
   const out: MissingFact[] = [];
-  for (const code of def.required_facts) {
+  for (const code of [...def.required_facts, ...(def.completion_required_facts ?? [])]) {
+    // A recadastro is first collected, then verified. The verification must
+    // never be replaced by the fact that a document number was typed.
+    if ((def.completion_required_facts ?? []).includes(code) && out.length > 0) continue;
     if (!isRelevant(state, code, goal)) continue;
     const facts = activeFacts(state, code, goal);
     const primary = facts[0];
@@ -619,7 +672,8 @@ export function missingFacts(state: ConversationState, goal: GoalRecord): Missin
         code,
         priority: factSpec.priority_class,
         conflicting: false,
-        authoritative: factSpec.authoritative_only === true,
+        authoritative: factSpec.authoritative_only === true ||
+          (def.completion_required_facts ?? []).includes(code),
       });
       continue;
     }
@@ -634,7 +688,12 @@ export function missingFacts(state: ConversationState, goal: GoalRecord): Missin
     }
     // Valor que, mesmo confirmado pelo usuario, nao permite continuar: exige
     // verificacao pela Administracao (ex.: recadastro DESCONHECIDO).
-    if ((factSpec.blocking_values ?? []).includes(primary.value)) {
+    const acceptsValue = !factSpec.satisfying_values || factSpec.satisfying_values.includes(primary.value);
+    const matchingRule = factSpec.satisfaction_rules?.find((rule) => rule.value === primary.value);
+    const acceptsContext = !factSpec.satisfaction_rules ||
+      (matchingRule !== undefined && conditionsHold(state, matchingRule.when, goal));
+    const hasAuthority = !requiresAuthoritativeSignal(code, primary.value) || primary.authoritative;
+    if ((factSpec.blocking_values ?? []).includes(primary.value) || !acceptsValue || !acceptsContext || !hasAuthority) {
       out.push({ code, priority: "BLOCKING_UNCERTAINTY", conflicting: false, authoritative: true });
     }
   }
@@ -684,9 +743,12 @@ export function bestMissingFact(state: ConversationState, goal: GoalRecord): Mis
 }
 
 export function nextBestQuestion(state: ConversationState): QuestionRef | null {
-  const goal = focusGoal(state);
+  const goal = contextGoal(state);
   if (!goal) return null;
-  const missing = missingFacts(state, goal).filter((m) => !m.authoritative);
+  // The operational decision stays blocked while the citizen can still supply
+  // identification and other useful data. Derived/authoritative facts are
+  // never delegated to a conversational answer.
+  const missing = missingFacts(state, goal).filter((m) => !m.authoritative && !factDef(m.code).derived);
   if (missing.length === 0) return null;
   // Conflito de fato precede a escolha por classe: uma contradicao invalida a
   // decisao que ja estava sendo tomada.
@@ -707,7 +769,8 @@ export function nextBestQuestion(state: ConversationState): QuestionRef | null {
 }
 
 // Lacuna autoritativa: o objetivo fica WAITING com uma acao pendente para a
-// Administracao, e nenhuma pergunta e feita ao usuario sobre esse fato.
+// Administracao. Outras perguntas de coleta podem continuar, sem perguntar ao
+// usuario pelo fato autoritativo nem confundir coleta com autorizacao.
 function syncAuthoritativeGaps(state: ConversationState): void {
   for (const goal of state.goals) {
     if (goal.status !== "ACTIVE" && goal.status !== "WAITING") continue;
@@ -728,7 +791,10 @@ function syncAuthoritativeGaps(state: ConversationState): void {
           requested_at_seq: state.seq,
         });
       }
-      if (state.pending_question && state.pending_question.goal_id === goal.goal_id) {
+      if (
+        state.pending_question && state.pending_question.goal_id === goal.goal_id &&
+        !questionStillValid(state, state.pending_question)
+      ) {
         state.parked_questions.push(state.pending_question);
         state.pending_question = null;
       }
@@ -742,8 +808,8 @@ function syncAuthoritativeGaps(state: ConversationState): void {
 
 function questionStillValid(state: ConversationState, q: QuestionRef): boolean {
   const goal = goalById(state, q.goal_id);
-  if (!goal || goal.status !== "ACTIVE") return false;
-  return missingFacts(state, goal).some((m) => m.code === q.fact_code);
+  if (!goal || (goal.status !== "ACTIVE" && goal.status !== "WAITING")) return false;
+  return missingFacts(state, goal).some((m) => m.code === q.fact_code && !m.authoritative && !factDef(m.code).derived);
 }
 
 function refreshPendingQuestion(state: ConversationState): void {
@@ -775,8 +841,9 @@ function refreshPendingQuestion(state: ConversationState): void {
 }
 
 export function buildHandoff(state: ConversationState): HandoffModel {
-  const goal = focusGoal(state) ?? state.goals.filter((g) => OPEN_STATUSES.includes(g.status)).at(-1) ?? null;
-  const confirmed = (goal ? activeFactsForGoalCase(state, goal) : state.facts.filter((f) => f.status === "ACTIVE"))
+  const goal = contextGoal(state) ?? state.goals.filter((g) => OPEN_STATUSES.includes(g.status)).at(-1) ??
+    [...state.goals].reverse().find((g) => g.status === "RESOLVED" && g.overlay_of === null) ?? null;
+  const confirmed = (goal ? activeFactsForGoalCase(state, goal) : [])
     .map((f) => ({ fact_code: f.fact_code, value: f.value, source: f.source, confidence: f.confidence }));
   return {
     requested_at_seq: state.seq,
@@ -802,10 +869,13 @@ export function applyEvent(previous: ConversationState, event: ConversationEvent
   state.seq += 1;
   state.event_log.push({ seq: state.seq, event_kind: event.kind, note: event.note ?? null });
 
-  const goal = focusGoal(state);
+  const goal = contextGoal(state);
 
   switch (event.kind) {
     case "SOCIAL":
+      // A greeting can recover the next collection question in an older
+      // waiting snapshot, without changing facts, decisions or case status.
+      refreshPendingQuestion(state);
       return state;
 
     case "HUMAN_REQUEST": {
@@ -932,14 +1002,15 @@ export function applyEvent(previous: ConversationState, event: ConversationEvent
     }
   }
 
-  evaluateRelations(state);
-  syncAuthoritativeGaps(state);
+  settleGoals(state);
   refreshPendingQuestion(state);
   return state;
 }
 
 export interface AuthoritativeSignal {
   facts: FactInput[];
+  /** Required when a conversation contains more than one applicable case. */
+  goal_id?: string;
   note?: string;
 }
 
@@ -951,12 +1022,20 @@ export function applyAuthoritativeSignal(
 ): ConversationState {
   const state = clone(previous);
   state.seq += 1;
+  const target = signal.goal_id ? goalById(state, signal.goal_id) : null;
+  if (signal.goal_id && (!target || !OPEN_STATUSES.includes(target.status))) {
+    throw new Error("sinal autoritativo exige goal aberto existente");
+  }
   for (const f of signal.facts) {
-    const owner = ownerGoalForFact(state, f.code, null);
+    const candidates = state.goals.filter((g) => OPEN_STATUSES.includes(g.status) && goalDeclaresFact(g, f.code));
+    if (!target && new Set(candidates.map((g) => scopeKey(f.code, g))).size > 1) {
+      throw new Error("sinal autoritativo ambiguo: informe goal_id do caso");
+    }
+    const owner = ownerGoalForFact(state, f.code, target);
+    if (!owner || !goalDeclaresFact(owner, f.code)) throw new Error(`fato ${f.code} nao pertence ao caso autorizado`);
     recordFact(state, owner, { ...f, source: f.source ?? "SYSTEM", authoritative: true }, "SUPERSEDE");
   }
-  evaluateRelations(state);
-  syncAuthoritativeGaps(state);
+  settleGoals(state);
   refreshPendingQuestion(state);
   return state;
 }
@@ -964,20 +1043,22 @@ export function applyAuthoritativeSignal(
 // Um fato pertence ao goal aberto que o declara como necessario; nunca e movido
 // entre cases, mesmo quando o codigo do fato e o mesmo.
 function ownerGoalForFact(state: ConversationState, code: string, focus: GoalRecord | null): GoalRecord | null {
-  const declares = (goal: GoalRecord) => {
-    const definition = goalDef(goal.goal_code);
-    return definition.required_facts.includes(code) || (definition.optional_facts ?? []).includes(code);
-  };
-  if (focus && declares(focus)) return focus;
+  if (focus && goalDeclaresFact(focus, code)) return focus;
   const open = state.goals.filter((g) => OPEN_STATUSES.includes(g.status)).sort((a, b) =>
     b.stack_index - a.stack_index
   );
   for (const g of open) {
     // An answer about the focused case cannot fill a gap in another case.
     if (focus && g.case_id !== focus.case_id) continue;
-    if (declares(g)) return g;
+    if (goalDeclaresFact(g, code)) return g;
   }
   return focus;
+}
+
+function goalDeclaresFact(goal: GoalRecord, code: string): boolean {
+  const definition = goalDef(goal.goal_code);
+  return definition.required_facts.includes(code) || (definition.optional_facts ?? []).includes(code) ||
+    (definition.completion_required_facts ?? []).includes(code);
 }
 
 export function run(conversation_id: string, events: ConversationEvent[]): ConversationState {

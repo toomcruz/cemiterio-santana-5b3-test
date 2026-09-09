@@ -182,7 +182,7 @@ class OCatalogoOficialViveForaDaReferencia(unittest.TestCase):
         catalog.limpar_caches()
         catalogo_oficial._carregar.cache_clear()
         catalog.definir_escopo_de_fixture(())
-        self.assertEqual(catalogo_oficial.release_id(), "exu-1.0-1841dd869332")
+        self.assertEqual(catalogo_oficial.release_id(), "exu-1.0-083c52799dc8")
 
     def test_uma_unica_copia_operacional_do_catalogo(self) -> None:
         """Uma unica copia OPERACIONAL, identificada por conteudo.

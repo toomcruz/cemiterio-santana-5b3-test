@@ -35,11 +35,12 @@ A referência não é dona da fonte autoritativa. Ela é implementação de
 referência para conformidade, e nada mais: o catálogo oficial fica num caminho
 neutro que o Gateway TS/Deno lerá igual.
 
-O `release_id` do catálogo oficial atual é `exu-1.0-1841dd869332`. Ele é
+O `release_id` do catálogo oficial atual é `exu-1.0-083c52799dc8`. Ele é
 derivado do conteúdo do catálogo oficial mais os cinco catálogos de domínio;
-por isso mudou de forma auditável quando a triagem oficial de jazigo foi
-incluída. A referência e o Gateway TS/Deno devem calcular exatamente o mesmo
-identificador.
+por isso mudou na correção das jornadas e dos requisitos autoritativos. A
+reconformidade comparou os 47 casos Python/TS: as saídas e escritas permanecem
+idênticas; apenas os identificadores derivados dos catálogos mudaram. A
+referência e o Gateway TS/Deno devem calcular exatamente o mesmo identificador.
 
 ## O que foi alterado em relação à baseline
 

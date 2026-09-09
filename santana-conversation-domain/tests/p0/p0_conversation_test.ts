@@ -114,8 +114,8 @@ Deno.test("C04 Mudanca de destino recalcula apenas dependencias afetadas", () =>
     { kind: "ANSWER", facts: [{ code: "transport_destination", value: "JAZIGO_FAMILIA" }] },
     { kind: "ANSWER", facts: [{ code: "destination_grave_reference", value: "J-12" }] },
   ]);
-  // Situacao do jazigo e verificacao obrigatoria da Administracao: sem pergunta ao usuario.
-  assertEquals(pendingCode(state), null);
+  // A verificacao segue com a Administracao; a coleta da preferência pode continuar.
+  assertEquals(pendingCode(state), "Q_TRANSPORT_DATE");
   assertEquals(goalByCode(state, "GOAL_TRANSPORTE").status, "WAITING");
   assertEquals(actions(state), ["ACTION_VERIFY_GRAVE_SITUATION"]);
 
@@ -167,6 +167,14 @@ Deno.test("C06 Concessao sem Recadastro suspende e retorna", () => {
   state = applyEvent(state, { kind: "ANSWER", facts: [{ code: "concession_reference", value: "CONC-77" }] });
   state = applyEvent(state, { kind: "ANSWER", facts: [{ code: "recadastro_holder_document", value: "DOC-9" }] });
 
+  assertEquals(goalByCode(state, "GOAL_RECADASTRO").status, "WAITING");
+  assertEquals(activeFact(state, "recadastro_status", goalByCode(state, "GOAL_RECADASTRO"))?.value, "PENDENTE");
+  assertEquals(actions(state), ["ACTION_VERIFY_RECADASTRO"]);
+  state = applyAuthoritativeSignal(state, {
+    goal_id: goalByCode(state, "GOAL_RECADASTRO").goal_id,
+    facts: [{ code: "recadastro_status", value: "OK", source: "SYSTEM" }],
+  });
+  assertEquals(validateState(state), []);
   assertEquals(goalByCode(state, "GOAL_RECADASTRO").status, "RESOLVED");
   assertEquals(goalByCode(state, "GOAL_CONCESSAO").status, "ACTIVE");
   const okFact = activeFact(state, "recadastro_status", goalByCode(state, "GOAL_CONCESSAO"));
@@ -185,7 +193,7 @@ Deno.test("C07 Recadastro desconhecido bloqueia sem presumir", () => {
   assertEquals(goalByCode(state, "GOAL_CONCESSAO").status, "WAITING");
   assert(!state.goals.some((g) => g.goal_code === "GOAL_RECADASTRO"), "nao abrir Recadastro por presuncao");
   assertEquals(state.pending_actions.map((a) => a.action_code), ["ACTION_VERIFY_RECADASTRO"]);
-  assertEquals(pendingCode(state), null);
+  assertEquals(pendingCode(state), "Q_CONCESSION_REFERENCE");
 });
 
 Deno.test("C08 Exumacao + pergunta paralela sobre ossuario", () => {

@@ -43,14 +43,6 @@ export async function planTurn(input: TurnInput, interpreter: LanguageInterprete
     reply_draft: null,
   });
   if (input.automation_mode !== "BOT_ACTIVE") return unchanged("HUMAN_ACTIVE");
-  const status = contextualStatus(previous, input.text);
-  if (status) {
-    return {
-      ...unchanged("CLARIFICATION"),
-      question_draft: status,
-      reply_draft: status,
-    };
-  }
   const explanation = contextualExplanation(previous, input.text);
   if (explanation) {
     return {
@@ -72,6 +64,30 @@ export async function planTurn(input: TurnInput, interpreter: LanguageInterprete
   } catch {
     return unchanged("INTERPRETATION_UNAVAILABLE");
   }
+  // Status is a response to a narrowly identified return/status utterance,
+  // never a keyword shortcut that swallows corrections, questions or handoff.
+  const status = contextualStatus(previous, input.text, interpretation);
+  if (status) {
+    // The reducer also repairs a missing question in an older waiting state.
+    // Preserve all collected facts and decisions; only this return turn and
+    // its next question are recorded, without creating another demand.
+    try {
+      const next = applyEvent(previous, { kind: "SOCIAL", note: "CONTEXTUAL_STATUS" });
+      return {
+        outcome: "PROPOSED",
+        expected_seq: previous.seq,
+        next_state: next,
+        interpretation: {
+          ...interpretation,
+          primary_event: { event_kind: "SOCIAL", confidence: "HIGH", evidence: input.text },
+        },
+        question_draft: next.pending_question ? questionForFact(next.pending_question.fact_code).text : null,
+        reply_draft: contextualStatus(next, input.text, interpretation) ?? status,
+      };
+    } catch {
+      return unchanged("INTERPRETATION_UNAVAILABLE");
+    }
+  }
   if (
     interpretation.overall_confidence === "LOW" ||
     interpretation.primary_event?.confidence === "LOW" ||
@@ -82,7 +98,7 @@ export async function planTurn(input: TurnInput, interpreter: LanguageInterprete
     interpretation.ambiguities.some((ambiguity) => ambiguity.blocking) ||
     interpretation.facts.some((fact) => fact.requires_confirmation)
   ) interpretation = { ...interpretation, needs_clarification: true };
-  const bridge = toConversationEvents(interpretation);
+  const bridge = toConversationEvents(interpretation, previous);
   if (bridge.clarification) {
     const questionDraft = clarificationQuestion(previous, bridge);
     return {
@@ -94,6 +110,7 @@ export async function planTurn(input: TurnInput, interpreter: LanguageInterprete
         question_draft: questionDraft,
         interpretation,
         next_state: previous,
+        previous_state: previous,
       }),
     };
   }
@@ -111,6 +128,7 @@ export async function planTurn(input: TurnInput, interpreter: LanguageInterprete
         question_draft: questionDraft,
         interpretation,
         next_state: next,
+        previous_state: previous,
       }),
     };
   } catch {
