@@ -1,3 +1,4 @@
+import { isConversationClose, isConversationReturn, isGreeting } from "./interpreter/conversation_controls.ts";
 /**
  * Safe, deterministic response drafting for the official runtime.
  *
@@ -70,7 +71,8 @@ export function contextualStatus(
   interpretation: Interpretation | null = null,
 ): string | null {
   const text = normalized(userText);
-  const greeting = /^(oi|ola|bom dia|boa tarde|boa noite)( tudo bem)?$/.test(text);
+  const greeting = isGreeting(userText);
+  const returning = isConversationReturn(userText);
   const repeatsExhumation = /^(?:quero|gostaria de|preciso)(?: realizar| fazer)? (?:a )?exumacao$/.test(text);
   const asksStatus =
     /^(?:como esta|qual (?:e )?o (?:status|andamento) d[oa]) (?:meu |minha |o |a )?(?:atendimento|pedido|exumacao)$/
@@ -78,7 +80,7 @@ export function contextualStatus(
   const goal = contextGoal(state);
   if (
     !interpretation || !goal || goal.status !== "WAITING" ||
-    (!greeting && !asksStatus && !(repeatsExhumation && goal.goal_code === "GOAL_EXUMACAO")) ||
+    (!greeting && !returning && !asksStatus && !(repeatsExhumation && goal.goal_code === "GOAL_EXUMACAO")) ||
     interpretation.case_reference.kind !== "CURRENT" || interpretation.facts.length > 0 ||
     interpretation.ambiguities.some((item) => item.blocking) ||
     (interpretation.primary_event !== null && interpretation.primary_event.event_kind !== "SOCIAL" &&
@@ -162,6 +164,9 @@ export function draftReply(input: {
   }
   const eventKind = input.interpretation?.primary_event?.event_kind;
   if (eventKind === "HUMAN_REQUEST" && input.outcome === "PROPOSED" && input.next_state.handoff) {
+    if (isConversationClose(input.interpretation?.text_normalized ?? "")) {
+      return "As respostas automáticas ficam pausadas por aqui. As informações e o protocolo permanecem registrados para a equipe. Isso não cancela a solicitação de serviço.";
+    }
     const cancellation = /\b(cancelar|cancele|cancela|cancelamento|desistir|desisto)\b/.test(
       normalized(input.interpretation?.text_normalized ?? ""),
     );

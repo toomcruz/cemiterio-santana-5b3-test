@@ -1,3 +1,4 @@
+import { isConversationReturn, isGreeting } from "../interpreter/conversation_controls.ts";
 import { interpret as deterministicInterpret } from "../interpreter/deterministic.ts";
 import { guardInterpretation } from "../interpreter/guard.ts";
 import type { Interpretation, InterpreterInput } from "../interpreter/types.ts";
@@ -49,6 +50,9 @@ function reconcileOfficialAnchors(input: InterpreterInput, llm: Interpretation):
       fact.fact_code === "grave_reference" || fact.fact_code === "grave_service_description"
     );
   const explicitCompletion = deterministic.primary_event?.event_kind === "HUMAN_REQUEST";
+  const explicitReturn = deterministic.primary_event?.event_kind === "SOCIAL" &&
+    (isConversationReturn(input.text) || isGreeting(input.text));
+  if (explicitReturn) return { ...deterministic, produced_by: llm.produced_by };
   if (!graveContext && !explicitCompletion) return llm;
   if (explicitCompletion) return { ...deterministic, produced_by: llm.produced_by };
 

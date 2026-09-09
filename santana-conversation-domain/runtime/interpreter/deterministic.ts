@@ -13,6 +13,7 @@ import type {
   InterpreterInput,
 } from "./types.ts";
 import type { EventKind } from "../../engine/catalog.ts";
+import { isConversationClose, isConversationReturn, isGreeting } from "./conversation_controls.ts";
 import { lexiconV1 } from "../generated_assets.ts";
 
 interface GoalPattern {
@@ -162,8 +163,8 @@ const SUBJECT_HINTS = [
 
 export function interpret(input: InterpreterInput): Interpretation {
   const text = normalize(input.text);
-  const socialGreeting = !input.context.has_open_goal &&
-    /^(oi|ola|bom dia|boa tarde|boa noite)( tudo bem)?$/.test(text);
+  const socialGreeting = isGreeting(input.text) ||
+    (input.context.has_open_goal && isConversationReturn(input.text));
   const facts: CandidateFact[] = [];
   const secondary: CandidateEvent[] = [];
   const ambiguities: Ambiguity[] = [];
@@ -175,7 +176,8 @@ export function interpret(input: InterpreterInput): Interpretation {
     /\b(?:quero|preciso|gostaria de|vou) (?:cancelar|desistir)(?:\b|$)|^(?:cancele|cancela|cancelar|desisto)\b/.test(
       text,
     ) && !/\b(?:nao|nunca|nem) (?:quero|preciso|gostaria de|vou) (?:cancelar|desistir)\b/.test(text);
-  const humanHandoffMarker = firstMatch(text, lexicon.human_handoff_markers) ??
+  const humanHandoffMarker = (input.context.has_open_goal && isConversationClose(input.text) ? input.text : null) ??
+    firstMatch(text, lexicon.human_handoff_markers) ??
     (/(?:falar|conversar) com (?:um |uma |o |a )?(?:atendente|pessoa|humano|equipe|administracao)\b/.test(text)
       ? input.text
       : cancellation && input.context.has_open_goal

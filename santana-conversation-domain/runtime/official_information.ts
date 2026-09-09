@@ -139,7 +139,14 @@ export async function officialInformationReply(
   const question =
     /\?|\b(qual|quais|quanto|quantos|quando|quem|como|por que|o que|me explique|pode explicar|pode me explicar|quero saber|gostaria de saber|me informe|me informa|informacoes sobre)\b/
       .test(text);
-  if (!question) return null;
+  // Citizens commonly ask by naming the information without a question mark.
+  // Keep the form narrow so a document number or mixed operational statement
+  // cannot be consumed as an information-only turn.
+  const nominalQuestion =
+    /^(?:precos?|valores?|custos?|tarifas?|taxas?|horarios?|prazos?)(?: (?:d[aeo]s?|sobre|para) [a-z0-9 ]+)?[.!?]*$/
+      .test(text) ||
+    /^(?:documentos necessarios|documentacao necessaria)(?: (?:para|da|do) [a-z ]+)?[.!?]*$/.test(text);
+  if (!question && !nominalQuestion) return null;
   const type = informationType(text);
   if (!type) return null;
   const goal = contextGoal(input.state);
