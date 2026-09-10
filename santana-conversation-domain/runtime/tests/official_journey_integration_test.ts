@@ -2,7 +2,7 @@
 import { assert, assertEquals } from "../../../tests/fixtures/assert.ts";
 import { activeFact, activeFactsForGoalCase, type ConversationState, initState } from "../../engine/engine.ts";
 import { interpret } from "../interpreter/deterministic.ts";
-import { applyOperatorCommand, withOperationalRequests } from "../official_operations.ts";
+import { applyOperatorCommand, operatorReply, withOperationalRequests } from "../official_operations.ts";
 import {
   panelProjection,
   processOfficialTurn,
@@ -88,12 +88,18 @@ function turn(store: TransactionalMemoryStore, id: string, body: string) {
 async function collectedPurposeAndSpouse(prefix: string) {
   const store = new TransactionalMemoryStore();
   await turn(store, `${prefix}-start`, "Quero realizar exumação");
+  assertEquals(store.state.goals[0]?.goal_code, "GOAL_EXUMACAO");
+  assertEquals(store.lastCommit.projection.subject, "exumacao");
   assertEquals(store.state.pending_question?.fact_code, "exhumation_purpose");
   assertEquals(store.lastCommit.projection.queue_status, "waiting_citizen");
   assertEquals(store.state.solicitacoes?.length, 0);
   await turn(store, `${prefix}-purpose`, "Quero colocar nas gavetas");
   assertEquals(store.state.pending_question?.fact_code, "surviving_spouse_status");
   await turn(store, `${prefix}-spouse`, "Não");
+  assertEquals(
+    activeFact(store.state, "required_authorization_signatory", store.state.goals[0]!)?.value,
+    "RESPONSAVEL_JAZIGO",
+  );
   assertEquals(store.state.goals[0]?.status, "WAITING");
   assertEquals(store.state.pending_question?.fact_code, "burial_reference");
   assertEquals(store.state.pending_actions[0]?.action_code, "ACTION_COLLECT_EXHUMATION_AUTHORIZATION");
@@ -102,7 +108,7 @@ async function collectedPurposeAndSpouse(prefix: string) {
   return store;
 }
 
-Deno.test("official exhumation journey collects data, retains the document for review and then waits for authorization", async () => {
+Deno.test("official exhumation journey reaches administrative authorization without claiming operational completion", async () => {
   const store = await collectedPurposeAndSpouse("journey");
   const requestId = store.state.solicitacoes![0]!.solicitacao_id;
   await turn(store, "journey-reference", "Quadra 15, jazigo 63");
@@ -155,6 +161,9 @@ Deno.test("official exhumation journey collects data, retains the document for r
   assertEquals(store.state.pending_question, null);
   assertEquals(panelProjection(store.state).queue_status, "inbox");
   assertEquals(panelProjection(store.state).flow_state.waiting_for, "team");
+  assertEquals(panelProjection(store.state).flow_state.conversation_collection_status, "COMPLETED");
+  assertEquals(panelProjection(store.state).flow_state.administrative_authorization_status, "PENDING");
+  assertEquals(panelProjection(store.state).flow_state.operational_process_status, "NOT_COMPLETED");
 
   const returning = await turn(store, "journey-return", "Olá");
   assert(returning.reply_body?.includes("aguarda a verificação da autorização"));
@@ -171,6 +180,37 @@ Deno.test("official exhumation journey collects data, retains the document for r
   }
   assertEquals(activeFact(store.state, "exhumation_authorization", store.state.goals[0]!), null);
   assert(!returning.reply_body?.includes("agendad"));
+
+  const authorizedCommand = {
+    command_id: "93333333-3333-4333-8444-555555555555",
+    conversation_id: CONVERSATION_ID,
+    expected_revision: store.revision,
+    type: "RESOLVE_ACTION" as const,
+    goal_id: store.state.goals[0]!.goal_id,
+    action_code: "ACTION_COLLECT_EXHUMATION_AUTHORIZATION",
+    fact_code: "exhumation_authorization",
+    value: "OBTIDA_RESPONSAVEL_JAZIGO",
+    note: "Autorização administrativa sintética registrada no teste offline",
+  };
+  store.state = await withOperationalRequests(
+    applyOperatorCommand(store.state, authorizedCommand, "2026-09-09T18:02:00.000Z"),
+  );
+  store.revision += 1;
+
+  const finalReply = operatorReply(store.state, authorizedCommand);
+  const projection = panelProjection(store.state);
+  assert(finalReply.includes("autorização administrativa"));
+  assert(finalReply.includes("não significa que a exumação foi executada"));
+  assertEquals(store.state.goals[0]?.status, "RESOLVED");
+  assertEquals(activeFact(store.state, "exhumation_authorization", store.state.goals[0]!)?.authoritative, true);
+  assertEquals(projection.flow_state.conversation_collection_status, "COMPLETED");
+  assertEquals(projection.flow_state.administrative_authorization_status, "AUTHORIZED");
+  assertEquals(projection.flow_state.operational_process_status, "NOT_COMPLETED");
+  assertEquals(projection.stage, "pendencias");
+  assertEquals(projection.queue_status, "inbox");
+  assertEquals(store.state.solicitacoes?.length, 1);
+  assertEquals(store.state.solicitacoes?.[0]?.estado, "ABERTO");
+  assertEquals(store.state.solicitacoes?.[0]?.pending_action_refs, []);
 });
 
 Deno.test("official price information preserves the waiting case, facts, question and single request", async () => {

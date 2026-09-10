@@ -227,6 +227,14 @@ export function panelProjection(state: ConversationState): RuntimePanelProjectio
   const focus = projectedGoal(state);
   const waiting = focus?.status === "WAITING" || state.handoff !== null;
   const documentReview = documentAwaitingReview(state);
+  const authorization = focus?.goal_code === "GOAL_EXUMACAO"
+    ? state.facts.find((fact) =>
+      fact.status === "ACTIVE" && fact.fact_code === "exhumation_authorization" &&
+      fact.case_id === focus.case_id && fact.authoritative && fact.confidence === "CONFIRMED"
+    )
+    : null;
+  const collectionCompleted = !!focus && focus.goal_code === "GOAL_EXUMACAO" &&
+    !state.pending_question && !documentReview;
   return {
     subject: panelSubject(state),
     stage: waiting ? "aguardando" : focus ? "pendencias" : "novos",
@@ -256,6 +264,16 @@ export function panelProjection(state: ConversationState): RuntimePanelProjectio
       handoff_requested: state.handoff !== null,
       active_goal_status: focus?.status ?? null,
       goal_display_name: focus ? goalDef(focus.goal_code).topic_code : null,
+      // These dimensions intentionally do not collapse into goal.status:
+      // conversational collection, administrative authority and physical
+      // operation have independent meanings and lifecycles.
+      conversation_collection_status: focus?.goal_code === "GOAL_EXUMACAO"
+        ? collectionCompleted ? "COMPLETED" : "IN_PROGRESS"
+        : "NOT_APPLICABLE",
+      administrative_authorization_status: focus?.goal_code === "GOAL_EXUMACAO"
+        ? authorization && String(authorization.value).startsWith("OBTIDA_") ? "AUTHORIZED" : "PENDING"
+        : "NOT_APPLICABLE",
+      operational_process_status: focus?.goal_code === "GOAL_EXUMACAO" ? "NOT_COMPLETED" : "NOT_APPLICABLE",
     },
   };
 }

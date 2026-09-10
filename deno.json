@@ -6,7 +6,7 @@
     "test:runtime": "deno test --allow-read santana-conversation-domain/runtime/tests",
     "generate:runtime-assets": "node santana-conversation-domain/tools/generate_runtime_assets.mjs",
     "benchmark:gemini": "deno run --allow-env=GEMINI_API_KEY,BENCHMARK_CASE_LIMIT --allow-net=generativelanguage.googleapis.com --allow-read --allow-write santana-conversation-domain/benchmark/run_gemini_benchmark.ts",
-    "test": "deno test --allow-read tests/unit tests/shadow tests/integration santana-conversation-domain/runtime/tests"
+    "test": "deno test --allow-env=P10_INTEGRATION,SUPPORT_VNEXT_MODE --allow-read tests/unit tests/shadow tests/integration santana-conversation-domain/runtime/tests"
   },
   "compilerOptions": {
     "strict": true,
