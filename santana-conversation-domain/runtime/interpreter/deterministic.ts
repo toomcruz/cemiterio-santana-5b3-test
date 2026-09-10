@@ -349,6 +349,23 @@ export function interpret(input: InterpreterInput): Interpretation {
       requires_confirmation: false,
     });
   }
+  // The concession reference is only a locating hint supplied by the citizen.
+  // It never proves ownership or that the recadastro is complete.
+  const concessionReference =
+    input.context.open_goal_code === "GOAL_RECADASTRO" || goal?.goal_code === "GOAL_RECADASTRO"
+      ? graveReference(input.text)
+      : null;
+  if (concessionReference && !seen.has("concession_reference")) {
+    seen.add("concession_reference");
+    facts.push({
+      fact_code: "concession_reference",
+      value: concessionReference,
+      source: correctionMarker ? "USER_CORRECTION" : "USER_EXPLICIT",
+      confidence: "HIGH",
+      evidence: concessionReference,
+      requires_confirmation: false,
+    });
+  }
   if (complaintMarker && !seen.has("complaint_description")) {
     seen.add("complaint_description");
     facts.push({
@@ -395,7 +412,11 @@ export function interpret(input: InterpreterInput): Interpretation {
     // "Jazigo" é ambíguo apenas ao iniciar um assunto. Uma conversa que já
     // está no atendimento de jazigo deve aceitar referências e complementos
     // sem voltar a perguntar qual é o destino do atendimento.
-    if (pattern.code === "AMB_DESTINO_JAZIGO_OU_CEMITERIO" && (graveServiceContext || burialReference)) continue;
+    if (
+      pattern.code === "AMB_DESTINO_JAZIGO_OU_CEMITERIO" &&
+      (graveServiceContext || burialReference || goal?.goal_code === "GOAL_RECADASTRO" ||
+        input.context.open_goal_code === "GOAL_RECADASTRO")
+    ) continue;
     ambiguities.push({
       code: pattern.code,
       description: pattern.description,
