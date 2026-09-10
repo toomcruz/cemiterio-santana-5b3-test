@@ -272,6 +272,15 @@ export function operatorReply(state: ConversationState, command: OperatorCommand
       : "A equipe analisou o arquivo e solicitou um novo envio. Envie uma cópia legível e completa; se tiver dúvida sobre o documento solicitado, peça orientação por aqui.";
   }
   const goal = contextGoal(state);
+  const completedExhumation = [...state.goals].reverse().find((item) =>
+    item.goal_code === "GOAL_EXUMACAO" && item.status === "RESOLVED" && item.goal_id === command.goal_id
+  );
+  if (command.type === "RESOLVE_ACTION" && completedExhumation) {
+    const authorization = activeFact(state, "exhumation_authorization", completedExhumation);
+    if (authorization?.authoritative && String(authorization.value).startsWith("OBTIDA_")) {
+      return "A autorização administrativa foi registrada e a coleta de informações deste atendimento foi concluída. Isso não significa que a exumação foi executada; o processo operacional permanece separado e ainda não foi concluído.";
+    }
+  }
   if (state.pending_question) {
     const question = questionsDoc.questions.find((item) => item.question_code === state.pending_question?.question_code)
       ?.text;

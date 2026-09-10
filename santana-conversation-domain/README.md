@@ -25,6 +25,19 @@ n8n, sem WhatsApp/W-API, sem LLM real, sem alteracao de PostgREST e sem uso do l
 - **case**: o atendimento sobre um sujeito concreto (falecido, concessao, pedido). Fatos com escopo `CASE` pertencem ao
   case e **nunca** sao copiados para outro case.
 - **goal**: um objetivo com estados `ACTIVE`, `SUSPENDED`, `WAITING`, `RESOLVED`, `ABANDONED`.
+
+### Semântica de conclusão
+
+Os ciclos não devem ser colapsados em um único estado:
+
+- `goal.status=RESOLVED` significa que a coleta/conversa do objetivo foi concluída;
+- uma autorização administrativa só existe quando o fato autoritativo correspondente foi registrado;
+- a conclusão operacional depende do ciclo próprio de ações/processo e não é implicada por `RESOLVED` nem por uma
+  autorização.
+
+A projeção oficial expõe essas dimensões separadamente em `conversation_collection_status`,
+`administrative_authorization_status` e `operational_process_status`.
+
 - **fact**: valor com origem, confianca, historico e supersessao.
 
 ## 5B.4-A.1 — decisoes humanas fechadas
