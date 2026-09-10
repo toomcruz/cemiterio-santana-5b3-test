@@ -108,6 +108,274 @@ async function collectedPurposeAndSpouse(prefix: string) {
   return store;
 }
 
+Deno.test("official recadastro journey preserves documents and reaches administrative verification without claiming operational completion", async () => {
+  const store = new TransactionalMemoryStore();
+  const started = await turn(store, "recadastro-start", "Preciso atualizar o cadastro do jazigo");
+  assertEquals(started.kind, "COMMITTED");
+  assertEquals(started.event_kind, "NEW_GOAL");
+  assertEquals(store.state.goals[0]?.goal_code, "GOAL_RECADASTRO");
+  assertEquals(store.state.pending_question?.fact_code, "concession_reference");
+  assertEquals(store.lastCommit.projection.subject, "recadastro");
+  assertEquals(store.lastCommit.projection.queue_status, "waiting_citizen");
+  assertEquals(store.state.solicitacoes?.length, 0);
+
+  const unknown = await turn(store, "recadastro-unknown-reference", "Não sei");
+  assertEquals(unknown.kind, "COMMITTED");
+  assert(unknown.reply_body?.includes("pode informar apenas o que souber"));
+  assertEquals(store.state.pending_question?.fact_code, "concession_reference");
+  assertEquals(activeFact(store.state, "concession_reference", store.state.goals[0]!), null);
+
+  const corrected = await turn(store, "recadastro-reference", "Corrigindo: quadra 4, jazigo 18");
+  assert(corrected.reply_body?.includes("correção"));
+  assertEquals(activeFact(store.state, "concession_reference", store.state.goals[0]!)?.value, "quadra 4, jazigo 18");
+  assertEquals(store.state.pending_question?.fact_code, "recadastro_holder_document");
+
+  store.nextDocument = {
+    documento_id: "document-recadastro-illegible",
+    tipo: "application/pdf",
+    descricao: "documento-titular-ilegivel.pdf",
+    recebido_em: "2026-09-10T10:00:00.000Z",
+  };
+  const received = await processOfficialTurn(
+    input("recadastro-file-illegible", "[Arquivo recebido: documento-titular-ilegivel.pdf]", "document"),
+    store,
+    interpreter,
+    ALLOWED,
+  );
+  assert(received.reply_body?.startsWith("Arquivo recebido e preservado."));
+  assert(received.reply_body?.includes("aguardando conferência"));
+  assertEquals(store.state.documentos?.[0]?.tipo, "recadastro_holder_document");
+  assertEquals(store.state.documentos?.[0]?.estado, "RECEBIDO");
+  assertEquals(store.lastCommit.projection.queue_status, "inbox");
+  assertEquals(store.lastCommit.projection.flow_state.waiting_for, "team");
+  assertEquals(activeFact(store.state, "recadastro_holder_document", store.state.goals[0]!), null);
+
+  const illegibleCommand = {
+    command_id: "94444444-4444-4444-8444-444444444444",
+    conversation_id: CONVERSATION_ID,
+    expected_revision: store.revision,
+    type: "REVIEW_DOCUMENT" as const,
+    goal_id: store.state.goals[0]!.goal_id,
+    document_id: "document-recadastro-illegible",
+    document_status: "ILEGÍVEL_INADEQUADO" as const,
+    note: "Documento sintético ilegível no teste offline",
+  };
+  store.state = await withOperationalRequests(
+    applyOperatorCommand(store.state, illegibleCommand, "2026-09-10T10:01:00.000Z"),
+  );
+  store.revision += 1;
+  assertEquals(store.state.documentos?.[0]?.estado, "ILEGÍVEL_INADEQUADO");
+  assertEquals(store.state.pending_question?.fact_code, "recadastro_holder_document");
+  assert(operatorReply(store.state, illegibleCommand).includes("novo envio"));
+
+  store.nextDocument = {
+    documento_id: "document-recadastro-readable",
+    tipo: "image/jpeg",
+    descricao: "documento-titular-legivel.jpg",
+    recebido_em: "2026-09-10T10:02:00.000Z",
+  };
+  await processOfficialTurn(
+    input("recadastro-file-readable", "[Imagem recebida: documento-titular-legivel.jpg]", "image"),
+    store,
+    interpreter,
+    ALLOWED,
+  );
+  assertEquals(store.state.documentos?.length, 2);
+  assertEquals(store.state.documentos?.[0]?.estado, "ILEGÍVEL_INADEQUADO");
+  assertEquals(store.state.documentos?.[1]?.estado, "RECEBIDO");
+
+  const acceptedCommand = {
+    command_id: "95555555-5555-4555-8555-555555555555",
+    conversation_id: CONVERSATION_ID,
+    expected_revision: store.revision,
+    type: "REVIEW_DOCUMENT" as const,
+    goal_id: store.state.goals[0]!.goal_id,
+    document_id: "document-recadastro-readable",
+    document_status: "ACEITO" as const,
+    fact_code: "recadastro_holder_document",
+    note: "Documento sintético legível conferido no teste offline",
+  };
+  store.state = await withOperationalRequests(
+    applyOperatorCommand(store.state, acceptedCommand, "2026-09-10T10:03:00.000Z"),
+  );
+  store.revision += 1;
+  const goal = store.state.goals[0]!;
+  const request = store.state.solicitacoes?.[0];
+  assertEquals(activeFact(store.state, "recadastro_holder_document", goal)?.source, "DOCUMENT");
+  assertEquals(activeFact(store.state, "recadastro_holder_document", goal)?.authoritative, true);
+  assertEquals(goal.status, "WAITING");
+  assertEquals(store.state.pending_question, null);
+  assertEquals(store.state.pending_actions[0]?.action_code, "ACTION_VERIFY_RECADASTRO");
+  assertEquals(store.state.pending_actions[0]?.goal_id, goal.goal_id);
+  assertEquals(request?.goal_id, goal.goal_id);
+  assert(/^[0-9a-f-]{36}$/.test(request?.solicitacao_id ?? ""), "the administrative request is the stable protocol");
+  assertEquals(request?.pending_action_refs, ["ACTION_VERIFY_RECADASTRO"]);
+  assert(request?.collected_fact_ids.includes(activeFact(store.state, "concession_reference", goal)!.fact_id));
+  assert(request?.collected_fact_ids.includes(activeFact(store.state, "recadastro_holder_document", goal)!.fact_id));
+  assertEquals(panelProjection(store.state).flow_state.conversation_collection_status, "COMPLETED");
+  assertEquals(panelProjection(store.state).flow_state.administrative_authorization_status, "PENDING");
+  assertEquals(panelProjection(store.state).flow_state.operational_process_status, "NOT_COMPLETED");
+
+  const returning = await turn(store, "recadastro-return", "Qual é o andamento do meu recadastro?");
+  assert(returning.reply_body?.includes("aguarda"));
+  assert(!returning.reply_body?.includes("concluído"));
+  assertEquals(store.state.solicitacoes?.length, 1);
+  assertEquals(store.state.solicitacoes?.[0]?.solicitacao_id, request?.solicitacao_id);
+
+  const duplicateCommitCount = store.commits.length;
+  const duplicateOutboxCount = store.outbox.size;
+  const duplicate = await turn(store, "recadastro-return", "Qual é o andamento do meu recadastro?");
+  assertEquals(duplicate.kind, "DUPLICATE");
+  assertEquals(duplicate.reply_body, null);
+  assertEquals(store.commits.length, duplicateCommitCount);
+  assertEquals(store.outbox.size, duplicateOutboxCount);
+
+  const verificationCommand = {
+    command_id: "96666666-6666-4666-8666-666666666666",
+    conversation_id: CONVERSATION_ID,
+    expected_revision: store.revision,
+    type: "RESOLVE_ACTION" as const,
+    goal_id: goal.goal_id,
+    action_code: "ACTION_VERIFY_RECADASTRO",
+    fact_code: "recadastro_status",
+    value: "OK",
+    note: "Recadastro sintético verificado pela Administração no teste offline",
+  };
+  store.state = await withOperationalRequests(
+    applyOperatorCommand(store.state, verificationCommand, "2026-09-10T10:04:00.000Z"),
+  );
+  store.revision += 1;
+  const finalProjection = panelProjection(store.state);
+  const finalReply = operatorReply(store.state, verificationCommand);
+  assertEquals(store.state.goals[0]?.status, "RESOLVED");
+  assertEquals(activeFact(store.state, "recadastro_status", goal)?.value, "OK");
+  assertEquals(activeFact(store.state, "recadastro_status", goal)?.authoritative, true);
+  assert(finalReply.includes("verificação"));
+  assert(finalReply.includes("não confirma execução nem agendamento"));
+  assertEquals(finalProjection.flow_state.conversation_collection_status, "COMPLETED");
+  assertEquals(finalProjection.flow_state.administrative_authorization_status, "VERIFIED");
+  assertEquals(finalProjection.flow_state.operational_process_status, "NOT_COMPLETED");
+  assertEquals(finalProjection.stage, "pendencias");
+  assertEquals(finalProjection.queue_status, "inbox");
+  assertEquals(store.state.solicitacoes?.length, 1);
+  assertEquals(store.state.solicitacoes?.[0]?.estado, "ABERTO");
+  assertEquals(store.state.solicitacoes?.[0]?.pending_action_refs, []);
+
+  const resumed = await turn(store, "recadastro-after-decision", "Olá, como ficou meu atendimento?");
+  assertEquals(resumed.kind, "COMMITTED");
+  assert(!resumed.reply_body?.includes("recadastro foi concluído"));
+  assert(!resumed.reply_body?.includes("serviço foi executado"));
+  assertEquals(store.state.solicitacoes?.length, 1);
+  assertEquals(store.state.solicitacoes?.[0]?.solicitacao_id, request?.solicitacao_id);
+  assertEquals(store.commits.length, store.committedInbound.size);
+  assertEquals(store.outbox.size, store.commits.filter((commit) => commit.reply_body !== null).length);
+});
+
+Deno.test("simultaneous recadastro cases keep references, documents, requests and operator decisions isolated", async () => {
+  const store = new TransactionalMemoryStore();
+  await turn(store, "recadastro-a-start", "Quero fazer o recadastro");
+  await turn(store, "recadastro-a-reference", "Quadra 1, jazigo 10");
+  const firstGoal = store.state.goals[0]!;
+  store.nextDocument = {
+    documento_id: "document-recadastro-a",
+    tipo: "application/pdf",
+    descricao: "titular-a.pdf",
+    recebido_em: "2026-09-10T11:00:00.000Z",
+  };
+  await processOfficialTurn(
+    input("recadastro-a-file", "[Arquivo recebido: titular-a.pdf]", "document"),
+    store,
+    interpreter,
+    ALLOWED,
+  );
+  store.state = await withOperationalRequests(applyOperatorCommand(store.state, {
+    command_id: "97777777-7777-4777-8777-777777777777",
+    conversation_id: CONVERSATION_ID,
+    expected_revision: store.revision,
+    type: "REVIEW_DOCUMENT",
+    goal_id: firstGoal.goal_id,
+    document_id: "document-recadastro-a",
+    document_status: "ACEITO",
+    fact_code: "recadastro_holder_document",
+    note: "Documento A conferido no teste offline",
+  }, "2026-09-10T11:01:00.000Z"));
+  store.revision += 1;
+  assertEquals(store.state.goals[0]?.status, "WAITING");
+
+  await turn(store, "recadastro-b-start", "NOVO ATENDIMENTO DE RECADASTRO");
+  await turn(store, "recadastro-b-reference", "Quadra 2, jazigo 20");
+  const secondGoal = store.state.goals[1]!;
+  assert(secondGoal.case_id !== firstGoal.case_id);
+  assertEquals(activeFact(store.state, "concession_reference", firstGoal)?.value, "Quadra 1, jazigo 10");
+  assertEquals(activeFact(store.state, "concession_reference", secondGoal)?.value, "Quadra 2, jazigo 20");
+  store.nextDocument = {
+    documento_id: "document-recadastro-b",
+    tipo: "application/pdf",
+    descricao: "titular-b.pdf",
+    recebido_em: "2026-09-10T11:02:00.000Z",
+  };
+  await processOfficialTurn(
+    input("recadastro-b-file", "[Arquivo recebido: titular-b.pdf]", "document"),
+    store,
+    interpreter,
+    ALLOWED,
+  );
+  store.state = await withOperationalRequests(applyOperatorCommand(store.state, {
+    command_id: "98888888-8888-4888-8888-888888888888",
+    conversation_id: CONVERSATION_ID,
+    expected_revision: store.revision,
+    type: "REVIEW_DOCUMENT",
+    goal_id: secondGoal.goal_id,
+    document_id: "document-recadastro-b",
+    document_status: "ACEITO",
+    fact_code: "recadastro_holder_document",
+    note: "Documento B conferido no teste offline",
+  }, "2026-09-10T11:03:00.000Z"));
+  store.revision += 1;
+
+  assertEquals(
+    store.state.pending_actions.filter((action) => action.action_code === "ACTION_VERIFY_RECADASTRO").length,
+    2,
+  );
+  assertEquals(store.state.solicitacoes?.length, 2);
+  assertEquals(
+    store.state.documentos?.find((document) => document.documento_id === "document-recadastro-a")?.case_id,
+    firstGoal.case_id,
+  );
+  assertEquals(
+    store.state.documentos?.find((document) => document.documento_id === "document-recadastro-b")?.case_id,
+    secondGoal.case_id,
+  );
+
+  store.state = await withOperationalRequests(applyOperatorCommand(store.state, {
+    command_id: "99999999-9999-4999-8999-999999999999",
+    conversation_id: CONVERSATION_ID,
+    expected_revision: store.revision,
+    type: "RESOLVE_ACTION",
+    goal_id: secondGoal.goal_id,
+    action_code: "ACTION_VERIFY_RECADASTRO",
+    fact_code: "recadastro_status",
+    value: "OK",
+    note: "Somente o recadastro B foi verificado no teste offline",
+  }, "2026-09-10T11:04:00.000Z"));
+  store.revision += 1;
+
+  assertEquals(store.state.goals.find((goal) => goal.goal_id === firstGoal.goal_id)?.status, "WAITING");
+  assertEquals(store.state.goals.find((goal) => goal.goal_id === secondGoal.goal_id)?.status, "RESOLVED");
+  assertEquals(activeFact(store.state, "recadastro_status", firstGoal), null);
+  assertEquals(activeFact(store.state, "recadastro_status", secondGoal)?.value, "OK");
+  assertEquals(store.state.pending_actions.length, 1);
+  assertEquals(store.state.pending_actions[0]?.goal_id, firstGoal.goal_id);
+  assertEquals(
+    store.state.solicitacoes?.find((request) => request.goal_id === firstGoal.goal_id)?.pending_action_refs,
+    ["ACTION_VERIFY_RECADASTRO"],
+  );
+  assertEquals(
+    store.state.solicitacoes?.find((request) => request.goal_id === secondGoal.goal_id)?.pending_action_refs,
+    [],
+  );
+});
+
 Deno.test("official exhumation journey reaches administrative authorization without claiming operational completion", async () => {
   const store = await collectedPurposeAndSpouse("journey");
   const requestId = store.state.solicitacoes![0]!.solicitacao_id;

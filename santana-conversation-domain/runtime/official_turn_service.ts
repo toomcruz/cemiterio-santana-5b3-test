@@ -233,7 +233,14 @@ export function panelProjection(state: ConversationState): RuntimePanelProjectio
       fact.case_id === focus.case_id && fact.authoritative && fact.confidence === "CONFIRMED"
     )
     : null;
-  const collectionCompleted = !!focus && focus.goal_code === "GOAL_EXUMACAO" &&
+  const recadastroVerification = focus?.goal_code === "GOAL_RECADASTRO"
+    ? state.facts.find((fact) =>
+      fact.status === "ACTIVE" && fact.fact_code === "recadastro_status" &&
+      fact.case_id === focus.case_id && fact.authoritative && fact.confidence === "CONFIRMED" && fact.value === "OK"
+    )
+    : null;
+  const officialJourney = focus?.goal_code === "GOAL_EXUMACAO" || focus?.goal_code === "GOAL_RECADASTRO";
+  const collectionCompleted = !!focus && officialJourney &&
     !state.pending_question && !documentReview;
   return {
     subject: panelSubject(state),
@@ -267,13 +274,15 @@ export function panelProjection(state: ConversationState): RuntimePanelProjectio
       // These dimensions intentionally do not collapse into goal.status:
       // conversational collection, administrative authority and physical
       // operation have independent meanings and lifecycles.
-      conversation_collection_status: focus?.goal_code === "GOAL_EXUMACAO"
+      conversation_collection_status: officialJourney
         ? collectionCompleted ? "COMPLETED" : "IN_PROGRESS"
         : "NOT_APPLICABLE",
       administrative_authorization_status: focus?.goal_code === "GOAL_EXUMACAO"
         ? authorization && String(authorization.value).startsWith("OBTIDA_") ? "AUTHORIZED" : "PENDING"
+        : focus?.goal_code === "GOAL_RECADASTRO"
+        ? recadastroVerification ? "VERIFIED" : "PENDING"
         : "NOT_APPLICABLE",
-      operational_process_status: focus?.goal_code === "GOAL_EXUMACAO" ? "NOT_COMPLETED" : "NOT_APPLICABLE",
+      operational_process_status: officialJourney ? "NOT_COMPLETED" : "NOT_APPLICABLE",
     },
   };
 }

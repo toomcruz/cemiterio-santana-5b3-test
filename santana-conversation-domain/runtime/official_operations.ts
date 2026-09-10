@@ -236,8 +236,14 @@ export function applyOperatorCommand(
     // Reviewing a file never grants an administrative authorization.
     if (command.fact_code || command.goal_id) {
       const goal = state.goals.find((item) => item.goal_id === command.goal_id);
+      if (command.document_status !== "ACEITO") {
+        if (command.fact_code || !goal || (doc.case_id !== null && doc.case_id !== goal.case_id)) {
+          throw new Error("DOCUMENT_CLASSIFICATION_NOT_ALLOWED");
+        }
+        return state;
+      }
       if (
-        command.document_status !== "ACEITO" || !goal ||
+        !goal ||
         !["ACTIVE", "WAITING", "SUSPENDED"].includes(goal.status) ||
         !["requester_document", "recadastro_holder_document"].includes(command.fact_code ?? "") ||
         !goalDef(goal.goal_code).required_facts.includes(command.fact_code!) ||
