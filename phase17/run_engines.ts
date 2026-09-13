@@ -200,7 +200,7 @@ async function runV2(fixture: Fixture, runId: string, replay: number) {
       payload_hash: receipt.payload_hash,
       executor_reference_hash: receipt.executor_reference_hash,
       integrity_hash: receipt.integrity_hash,
-      bound_claim_codes: [],
+      bound_claim_codes: receipt.bound_claim_codes,
     })),
     operational: {
       latency_ms: first.metrics.duration_ms,

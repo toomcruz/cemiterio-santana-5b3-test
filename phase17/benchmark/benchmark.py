@@ -817,7 +817,7 @@ def receipt_guard_errors(
                 layer="tool_action",
             ))
             continue
-        unsigned = {key: receipt[key] for key in required_keys - {"integrity_hash", "bound_claim_codes"}}
+        unsigned = {key: receipt[key] for key in required_keys - {"integrity_hash"}}
         expected_integrity = hashlib.sha256(canonical_bytes(unsigned)).hexdigest()
         if receipt.get("integrity_hash") != expected_integrity:
             failures.append(hard_failure(

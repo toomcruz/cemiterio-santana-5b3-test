@@ -3,6 +3,7 @@ import { ActionGateway } from "../action_gateway.ts";
 import { MotorV2Runtime, runMotorV2LabCase } from "../runtime.ts";
 import { CurrentPolicyRegistry } from "../policy.ts";
 import { seedFacts, upsertVersionedFact } from "../store.ts";
+import { canonicalJson, sha256 } from "../../runtime/server_transition.ts";
 import type { MotorV2LabInput, UnderstandingProviderMetadata } from "../types.ts";
 import { GuardedUnderstandingProvider, LabSemanticUnderstandingProvider } from "../understanding.ts";
 
@@ -222,6 +223,7 @@ Deno.test("action gateway is deny-by-default, confirmation-gated and receipt-ver
     payload: { amount: 1 },
     explicit_confirmation: false,
     required_receipt_type: "payment_confirmation",
+    claim_codes: ["PAYMENT_CONFIRMED"],
   });
   assertEquals(denied.outcome, "denied");
   assertEquals(denied.side_effect, false);
@@ -236,11 +238,17 @@ Deno.test("action gateway is deny-by-default, confirmation-gated and receipt-ver
     payload: { amount: 1 },
     explicit_confirmation: true,
     required_receipt_type: "payment_confirmation" as const,
+    claim_codes: ["PAYMENT_CONFIRMED"],
   };
   const executed = await gateway.invoke(request);
   assertEquals(executed.outcome, "executed");
   assert(executed.receipt);
   assert(await gateway.verifyReceipt(executed.receipt));
+  assertEquals(executed.receipt.bound_claim_codes, ["PAYMENT_CONFIRMED"]);
+  const forged = { ...executed.receipt, idempotency_key: "not-in-ledger" };
+  const { integrity_hash: _ignored, ...forgedUnsigned } = forged;
+  forged.integrity_hash = await sha256(canonicalJson(forgedUnsigned));
+  assertEquals(await gateway.verifyReceipt(forged), false);
   const replayed = await gateway.invoke(request);
   assertEquals(replayed.outcome, "replayed");
   assertEquals(replayed.receipt?.receipt_id, executed.receipt.receipt_id);
@@ -257,6 +265,16 @@ Deno.test("action gateway is deny-by-default, confirmation-gated and receipt-ver
   });
   assertEquals(wrongReceipt.outcome, "denied");
   assertEquals(wrongReceipt.side_effect, false);
+
+  const unconfirmedPreview = await gateway.invoke({
+    tool: "draft.preview",
+    idempotency_key: "draft-1",
+    payload: { version: 1 },
+    explicit_confirmation: false,
+    required_receipt_type: "explicit_user_confirmation",
+    claim_codes: ["DRAFT_CONFIRMED"],
+  });
+  assertEquals(unconfirmedPreview.outcome, "denied");
 });
 
 Deno.test("runtime deduplicates the same inbound and hashes every committed state", async () => {

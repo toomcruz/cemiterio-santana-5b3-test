@@ -156,6 +156,7 @@ export interface GatewayReceipt {
   issued_at: string;
   payload_hash: string;
   executor_reference_hash: string;
+  bound_claim_codes: string[];
   integrity_hash: string;
 }
 

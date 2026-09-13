@@ -7,18 +7,22 @@ export interface ActionRequest {
   payload: Record<string, JsonScalar>;
   explicit_confirmation: boolean;
   required_receipt_type: ReceiptType;
+  claim_codes: string[];
 }
 
 export interface ActionExecutor {
   execute(request: ActionRequest): Promise<{ accepted: boolean; reference: string | null }>;
 }
 
-const TOOL_POLICY: Record<ActionRequest["tool"], { irreversible: boolean; receipt_type: ReceiptType }> = {
-  "handoff.request": { irreversible: false, receipt_type: "handoff_acceptance" },
-  "booking.request": { irreversible: true, receipt_type: "booking_confirmation" },
-  "payment.request": { irreversible: true, receipt_type: "payment_confirmation" },
-  "document.submit": { irreversible: true, receipt_type: "document_confirmation" },
-  "draft.preview": { irreversible: false, receipt_type: "explicit_user_confirmation" },
+const TOOL_POLICY: Record<
+  ActionRequest["tool"],
+  { irreversible: boolean; requires_confirmation: boolean; receipt_type: ReceiptType }
+> = {
+  "handoff.request": { irreversible: false, requires_confirmation: false, receipt_type: "handoff_acceptance" },
+  "booking.request": { irreversible: true, requires_confirmation: true, receipt_type: "booking_confirmation" },
+  "payment.request": { irreversible: true, requires_confirmation: true, receipt_type: "payment_confirmation" },
+  "document.submit": { irreversible: true, requires_confirmation: true, receipt_type: "document_confirmation" },
+  "draft.preview": { irreversible: false, requires_confirmation: true, receipt_type: "explicit_user_confirmation" },
 };
 
 /**
@@ -50,6 +54,9 @@ export class ActionGateway {
     const toolPolicy = TOOL_POLICY[request.tool];
     if (
       !toolPolicy || !request.idempotency_key ||
+      !Array.isArray(request.claim_codes) ||
+      request.claim_codes.some((code) => typeof code !== "string" || !code.trim()) ||
+      new Set(request.claim_codes).size !== request.claim_codes.length ||
       Object.values(request.payload).some((value) =>
         value !== null && !["string", "number", "boolean"].includes(typeof value)
       )
@@ -61,7 +68,7 @@ export class ActionGateway {
       this.#calls.set(request.idempotency_key, { request_hash: requestHash, record: denied });
       return structuredClone(denied);
     }
-    if (toolPolicy.irreversible && !request.explicit_confirmation) {
+    if (toolPolicy.requires_confirmation && !request.explicit_confirmation) {
       const denied = this.record(request, "denied", "explicit confirmation required", null);
       this.#calls.set(request.idempotency_key, { request_hash: requestHash, record: denied });
       return structuredClone(denied);
@@ -86,6 +93,7 @@ export class ActionGateway {
       issued_at: this.clock.instant,
       payload_hash,
       executor_reference_hash: await sha256(result.reference),
+      bound_claim_codes: [...request.claim_codes].sort(),
     };
     const receipt: GatewayReceipt = {
       ...unsigned,
@@ -98,7 +106,9 @@ export class ActionGateway {
 
   async verifyReceipt(receipt: GatewayReceipt): Promise<boolean> {
     const { integrity_hash, ...unsigned } = receipt;
-    return integrity_hash === await sha256(canonicalJson(unsigned));
+    if (integrity_hash !== await sha256(canonicalJson(unsigned))) return false;
+    const stored = this.#calls.get(receipt.idempotency_key)?.record.receipt;
+    return stored !== null && stored !== undefined && canonicalJson(stored) === canonicalJson(receipt);
   }
 
   private record(

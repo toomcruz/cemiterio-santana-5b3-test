@@ -12,6 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from benchmark import (  # noqa: E402
     BenchmarkInputError,
+    canonical_bytes,
     canonical_case_hash,
     evaluate_assertion,
     privacy_hits,
@@ -374,6 +375,55 @@ class BenchmarkTests(unittest.TestCase):
             self.assertTrue({"receipt_used_without_evidence", "claim_receipt_not_bound"}.issubset(
                 {failure["failure_id"] for failure in failures}
             ))
+
+    def test_claim_requires_an_integrity_checked_receipt_binding(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            _, case = build_bundle(Path(directory) / "source")
+            case["receipts"]["required"] = [{"claim_code": "done", "receipt_type": "execution_confirmation"}]
+            valid_trace = copy.deepcopy(trace())
+            valid_trace["receipts_used"] = ["execution_confirmation"]
+            valid_trace["claims"] = [{
+                "claim_code": "done",
+                "text_span": "done",
+                "receipt_refs": ["execution_confirmation"],
+            }]
+            unsigned = {
+                "receipt_id": "receipt-test-1",
+                "receipt_type": "execution_confirmation",
+                "tool": "booking.request",
+                "idempotency_key": "test-idempotency-1",
+                "issued_at": "2026-09-13T12:00:00-03:00",
+                "payload_hash": "a" * 64,
+                "executor_reference_hash": "b" * 64,
+                "bound_claim_codes": ["done"],
+            }
+            receipt = {
+                **unsigned,
+                "integrity_hash": hashlib.sha256(canonical_bytes(unsigned)).hexdigest(),
+            }
+            valid_run = run_row(case, valid_trace, engine="motor_v2")
+            valid_run["receipt_evidence"] = [receipt]
+            report, failures = score_engine_run(
+                [case],
+                [valid_run],
+                {"type": "object", "required": list(trace())},
+                engine="motor_v2",
+                replay=1,
+            )
+            self.assertNotEqual(report["status"], "INVALID_HARD_GUARD")
+            self.assertFalse(failures)
+
+            tampered_run = copy.deepcopy(valid_run)
+            tampered_run["receipt_evidence"][0]["bound_claim_codes"] = ["other"]
+            report, failures = score_engine_run(
+                [case],
+                [tampered_run],
+                {"type": "object", "required": list(trace())},
+                engine="motor_v2",
+                replay=1,
+            )
+            self.assertEqual(report["status"], "INVALID_HARD_GUARD")
+            self.assertIn("receipt_integrity_invalid", {failure["failure_id"] for failure in failures})
 
 
 if __name__ == "__main__":
