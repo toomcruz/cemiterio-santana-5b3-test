@@ -118,7 +118,7 @@ jobs:
           deno test --allow-net=jsr.io phase18b/tests/gemini_understanding_test.ts phase18b/tests/nvidia_understanding_test.ts phase18b/tests/live_shadow_runner_test.ts santana-conversation-domain/motor-v2/tests/motor_v2_test.ts
           python3 -m unittest phase18b/tests/test_live_cohort.py
       - name: Probe NVIDIA compatibility with synthetic input
-        if: github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode != 'catalog_probe'
+        if: github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode != 'catalog_probe' && inputs.phase18b_mode != 'p0_supplement'
         shell: bash
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
@@ -131,7 +131,7 @@ jobs:
             phase18b/provider/probe_nvidia.ts \
             "$RUNNER_TEMP/phase18b-provider-probe.json"
       - name: Upload Phase 18B compatibility probe
-        if: always() && github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode != 'catalog_probe'
+        if: always() && github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode != 'catalog_probe' && inputs.phase18b_mode != 'p0_supplement'
         uses: actions/upload-artifact@v4
         with:
           name: phase18b-provider-probe

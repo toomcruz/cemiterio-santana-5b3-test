@@ -131,6 +131,7 @@ async function main(): Promise<void> {
     const ai = await new MotorV2Runtime(provider).runLabCase(input);
     if (observations.length !== 1) throw new Error(`provider observation count invalid for ${item.case_id}`);
     const observation = observations[0];
+    if (!observation) throw new Error(`provider observation missing for ${item.case_id}`);
     const wouldCall = await proposedCalls(ai);
     results.push({
       sample_type: item.sample_type,
