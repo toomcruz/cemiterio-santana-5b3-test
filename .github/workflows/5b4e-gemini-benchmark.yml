@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.PARLANT }}
-      PHASE18B_COHORT_GZIP_BASE64: ${{ secrets.PHASE18B_COHORT_GZIP_BASE64 }}
+      PHASE18B_COHORT_XZ_BASE64: ${{ secrets.PHASE18B_COHORT_XZ_BASE64 }}
       BENCHMARK_CASE_LIMIT: ${{ inputs.benchmark_size == 'smoke' && '25' || '300' }}
     steps:
       - uses: actions/checkout@v4
@@ -75,10 +75,10 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          [[ -n "${PHASE18B_COHORT_GZIP_BASE64:-}" ]] || { echo "Phase 18B sanitized cohort is unavailable" >&2; exit 1; }
+          [[ -n "${PHASE18B_COHORT_XZ_BASE64:-}" ]] || { echo "Phase 18B sanitized cohort is unavailable" >&2; exit 1; }
           python3 - <<'PY'
-          import base64, gzip, os, pathlib
-          payload = gzip.decompress(base64.b64decode(os.environ["PHASE18B_COHORT_GZIP_BASE64"], validate=True))
+          import base64, lzma, os, pathlib
+          payload = lzma.decompress(base64.b64decode(os.environ["PHASE18B_COHORT_XZ_BASE64"], validate=True))
           destination = pathlib.Path(os.environ["RUNNER_TEMP"]) / "phase18b-cohort.json"
           destination.write_bytes(payload)
           destination.chmod(0o600)

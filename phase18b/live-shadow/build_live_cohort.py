@@ -358,8 +358,6 @@ def main() -> None:
                     "content": text,
                     "captured_at": iso_utc(int(row["ts"])),
                     "source_event_ref": hmac_id(cohort_key, "event", f"{row['msg_id']}:{row['rowid']}"),
-                    "media_omitted": bool(row["media_type"]),
-                    "redaction_classes": redactions,
                 }
             )
         public_episodes.append(

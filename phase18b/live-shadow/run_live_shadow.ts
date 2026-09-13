@@ -24,8 +24,6 @@ import type {
 interface CohortMessage extends MotorV2Message {
   captured_at: string;
   source_event_ref: string;
-  media_omitted: boolean;
-  redaction_classes: string[];
 }
 
 interface CohortEpisode {
