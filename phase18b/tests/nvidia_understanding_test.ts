@@ -87,20 +87,58 @@ Deno.test("controlled NVIDIA provider uses one fixed bounded structured request"
   assertEquals(observations[0]?.fallback_used, false);
   assertEquals(observations[0]?.input_tokens, 21);
   assertEquals(observations[0]?.output_tokens, 11);
+  assertEquals(observations[0]?.rejection_category, null);
   assert((observations[0]?.duration_ms ?? -1) >= 0);
 });
 
+Deno.test("controlled NVIDIA provider normalizes safe provider JSON wrappers and risk shorthand", async () => {
+  const observations: ControlledNvidiaAiObservation[] = [];
+  const provider = new ControlledNvidiaUnderstandingProvider({
+    apiKey: "test-secret",
+    network: () =>
+      Promise.resolve({
+        status: 200,
+        body: response({ ...valid, risk: "none" }),
+      }),
+    observe: (event) => observations.push(event),
+  });
+
+  assertEquals(await provider.understand(messages), valid);
+  assertEquals(observations[0]?.outcome, "llm_valid");
+  assertEquals(observations[0]?.rejection_category, null);
+});
+
+Deno.test("controlled NVIDIA provider extracts a single JSON object from non-canonical wrappers", async () => {
+  const observations: ControlledNvidiaAiObservation[] = [];
+  const provider = new ControlledNvidiaUnderstandingProvider({
+    apiKey: "test-secret",
+    network: () =>
+      Promise.resolve({
+        status: 200,
+        body: JSON.stringify({
+          choices: [{ finish_reason: "stop", message: { content: "```json\n" + JSON.stringify(valid) + "\n```" } }],
+          usage: { prompt_tokens: 21, completion_tokens: 11 },
+        }),
+      }),
+    observe: (event) => observations.push(event),
+  });
+
+  assertEquals(await provider.understand(messages), valid);
+  assertEquals(observations[0]?.outcome, "llm_valid");
+  assertEquals(observations[0]?.fallback_used, false);
+});
+
 Deno.test("controlled NVIDIA provider rejects model-created labels, evidence, and administrative rules", async () => {
-  const rejected = [
-    { ...valid, subintents: ["REGRA_INVENTADA"] },
-    { ...valid, evidence_turns: ["turn_inventado"] },
-    { ...valid, current_value: "regra administrativa inventada" },
-    { ...valid, risk: { ...valid.risk, current_value: "regra aninhada inventada" } },
-    { ...valid, complexity: ["low"] },
-    { ...valid, confidence: ["high"] },
-    { ...valid, risk: { ...valid.risk, level: ["none"] } },
+  const rejected: Array<[unknown, ControlledNvidiaAiObservation["rejection_category"]]> = [
+    [{ ...valid, subintents: ["REGRA_INVENTADA"] }, "canonical_enum_invalid"],
+    [{ ...valid, evidence_turns: ["turn_inventado"] }, "canonical_evidence_invalid"],
+    [{ ...valid, current_value: "regra administrativa inventada" }, "canonical_administrative_field"],
+    [{ ...valid, risk: { ...valid.risk, current_value: "regra aninhada inventada" } }, "canonical_unknown_field"],
+    [{ ...valid, complexity: ["low"] }, "canonical_type_invalid"],
+    [{ ...valid, confidence: ["high"] }, "canonical_type_invalid"],
+    [{ ...valid, risk: { ...valid.risk, level: ["none"] } }, "canonical_type_invalid"],
   ];
-  for (const output of rejected) {
+  for (const [output, category] of rejected) {
     let calls = 0;
     const observations: ControlledNvidiaAiObservation[] = [];
     const provider = new ControlledNvidiaUnderstandingProvider({
@@ -119,6 +157,7 @@ Deno.test("controlled NVIDIA provider rejects model-created labels, evidence, an
     assertEquals(observations[0]?.ai_output_used, false);
     assertEquals(observations[0]?.fallback_used, true);
     assertEquals(observations[0]?.rejection_code, "STRUCTURED_OUTPUT_REJECTED");
+    assertEquals(observations[0]?.rejection_category, category);
   }
 });
 
@@ -137,6 +176,7 @@ Deno.test("controlled NVIDIA provider rejects incomplete output without retry", 
   assert(result.subintents.includes("EXUMACAO"));
   assertEquals(calls, 1);
   assertEquals(observations[0]?.outcome, "fallback_invalid");
+  assertEquals(observations[0]?.rejection_category, "provider_choice_invalid");
   assertEquals(observations[0]?.input_tokens, 21);
   assertEquals(observations[0]?.output_tokens, 11);
 });

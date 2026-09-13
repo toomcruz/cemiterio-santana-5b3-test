@@ -24,6 +24,7 @@ export interface ControlledNvidiaAiObservation {
   input_tokens: number | null;
   output_tokens: number | null;
   rejection_code: string | null;
+  rejection_category: ProviderRejectionCategory | null;
 }
 
 export interface ControlledNvidiaUnderstandingOptions {
@@ -46,6 +47,20 @@ type NvidiaResponse = {
   };
 };
 
+export type ProviderRejectionCategory =
+  | "provider_body_json_invalid"
+  | "provider_body_shape_invalid"
+  | "provider_choice_invalid"
+  | "provider_content_missing"
+  | "provider_content_json_invalid"
+  | "canonical_shape_invalid"
+  | "canonical_unknown_field"
+  | "canonical_enum_invalid"
+  | "canonical_type_invalid"
+  | "canonical_evidence_invalid"
+  | "canonical_administrative_field"
+  | "canonical_other_invalid";
+
 class ProviderHttpError extends Error {
   constructor(readonly status: number) {
     super("provider HTTP failure");
@@ -54,6 +69,7 @@ class ProviderHttpError extends Error {
 
 class ProviderOutputError extends Error {
   constructor(
+    readonly category: ProviderRejectionCategory,
     readonly inputTokens: number | null = null,
     readonly outputTokens: number | null = null,
   ) {
@@ -73,6 +89,11 @@ function prompt(messages: readonly MotorV2Message[]): string {
     "Use exclusivamente os rótulos fechados abaixo.",
     "Não crie regras administrativas, prazos, valores, documentos, autorizações, elegibilidade ou procedimentos.",
     "Não copie texto da conversa. evidence_turns contém somente IDs de turnos fornecidos que sustentam a classificação.",
+    "Não use Markdown. Não escreva explicações.",
+    "O formato deve ser como " +
+    '{"schema_version":"motor-v2-understanding/1.0.0","journeys":[],"subintents":[],' +
+    '"transverse_states":[],"intent_changed":false,"complexity":"low",' +
+    '"risk":{"level":"none","signals":[]},"confidence":"low","evidence_turns":[]}.',
     "Jornadas: " + vocabulary.journeys.join(", "),
     "Subintenções: " + vocabulary.subintents.join(", "),
     "Estados transversais: " + vocabulary.transverse_states.join(", "),
@@ -92,37 +113,102 @@ function extractStructuredBody(
   try {
     decoded = JSON.parse(body) as unknown;
   } catch {
-    throw new ProviderOutputError();
+    throw new ProviderOutputError("provider_body_json_invalid");
   }
-  if (!decoded || typeof decoded !== "object" || Array.isArray(decoded)) throw new ProviderOutputError();
+  if (!decoded || typeof decoded !== "object" || Array.isArray(decoded)) {
+    throw new ProviderOutputError("provider_body_shape_invalid");
+  }
   const parsed = decoded as NvidiaResponse;
   const inputTokens = tokenCount(parsed.usage?.prompt_tokens);
   const outputTokens = tokenCount(parsed.usage?.completion_tokens);
   const choice = parsed.choices?.[0];
   if (choice?.finish_reason !== "stop" || typeof choice.message?.content !== "string") {
-    throw new ProviderOutputError(inputTokens, outputTokens);
+    throw new ProviderOutputError("provider_choice_invalid", inputTokens, outputTokens);
   }
   const content = choice.message.content.trim();
-  if (!content) throw new ProviderOutputError(inputTokens, outputTokens);
+  if (!content) throw new ProviderOutputError("provider_content_missing", inputTokens, outputTokens);
   try {
-    return { result: JSON.parse(content), inputTokens, outputTokens };
+    return { result: JSON.parse(extractJsonObjectText(content)), inputTokens, outputTokens };
   } catch {
-    throw new ProviderOutputError(inputTokens, outputTokens);
+    throw new ProviderOutputError("provider_content_json_invalid", inputTokens, outputTokens);
   }
 }
 
-function requireStrictProviderShape(value: unknown): void {
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new ProviderOutputError();
+function extractJsonObjectText(content: string): string {
+  if (content.startsWith("{") && content.endsWith("}")) return content;
+  const fenced = content.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i)?.[1]?.trim();
+  if (fenced?.startsWith("{") && fenced.endsWith("}")) return fenced;
+  const start = content.indexOf("{");
+  const end = content.lastIndexOf("}");
+  if (start >= 0 && end > start) return content.slice(start, end + 1);
+  return content;
+}
+
+function categorizeGuardError(error: unknown): ProviderRejectionCategory {
+  const message = error instanceof Error ? error.message : "";
+  if (message.includes("evidence")) return "canonical_evidence_invalid";
+  if (message.includes("unknown fields")) return "canonical_unknown_field";
+  if (message.includes("version") || message.includes("unknown") || message.includes("outside safe bounds")) {
+    return "canonical_enum_invalid";
+  }
+  if (message.includes("string arrays") || message.includes("state") || message.includes("risk result")) {
+    return "canonical_type_invalid";
+  }
+  return "canonical_other_invalid";
+}
+
+function normalizedProviderUnderstanding(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new ProviderOutputError("canonical_shape_invalid");
+  }
   const record = value as Record<string, unknown>;
-  const risk = record.risk;
-  if (!risk || typeof risk !== "object" || Array.isArray(risk)) throw new ProviderOutputError();
-  const keys = Object.keys(risk).sort();
-  if (canonicalJson(keys) !== canonicalJson(["level", "signals"])) throw new ProviderOutputError();
-  const riskRecord = risk as Record<string, unknown>;
+  const allowed = new Set([
+    "schema_version",
+    "journeys",
+    "subintents",
+    "transverse_states",
+    "intent_changed",
+    "complexity",
+    "risk",
+    "confidence",
+    "evidence_turns",
+  ]);
+  const extras = Object.keys(record).filter((key) => !allowed.has(key));
   if (
-    typeof record.complexity !== "string" || typeof record.confidence !== "string" ||
-    typeof riskRecord.level !== "string"
-  ) throw new ProviderOutputError();
+    extras.some((key) =>
+      /(?:current_|deadline|value|document|payment|schedule|procedure|authorization|eligibility)/i.test(key)
+    )
+  ) {
+    throw new ProviderOutputError("canonical_administrative_field");
+  }
+  if (extras.length) throw new ProviderOutputError("canonical_unknown_field");
+  if (
+    typeof record.schema_version !== "string" || !Array.isArray(record.journeys) ||
+    !Array.isArray(record.subintents) || !Array.isArray(record.transverse_states) ||
+    typeof record.intent_changed !== "boolean" || typeof record.complexity !== "string" ||
+    typeof record.confidence !== "string" || !Array.isArray(record.evidence_turns)
+  ) {
+    throw new ProviderOutputError("canonical_type_invalid");
+  }
+  const risk = record.risk;
+  const normalizedRisk = typeof risk === "string"
+    ? { level: risk, signals: [] }
+    : risk && typeof risk === "object" && !Array.isArray(risk)
+    ? risk
+    : null;
+  if (!normalizedRisk) throw new ProviderOutputError("canonical_type_invalid");
+  const riskKeys = Object.keys(normalizedRisk).sort();
+  if (canonicalJson(riskKeys) !== canonicalJson(["level", "signals"])) {
+    throw new ProviderOutputError("canonical_unknown_field");
+  }
+  const riskRecord = normalizedRisk as Record<string, unknown>;
+  if (typeof riskRecord.level !== "string" || !Array.isArray(riskRecord.signals)) {
+    throw new ProviderOutputError("canonical_type_invalid");
+  }
+  return {
+    ...record,
+    risk: normalizedRisk,
+  };
 }
 
 /**
@@ -193,16 +279,20 @@ export class ControlledNvidiaUnderstandingProvider implements UnderstandingProvi
       outputTokens = extracted.outputTokens;
       let result: UnderstandingResult;
       try {
-        requireStrictProviderShape(extracted.result);
-        result = guardUnderstanding(extracted.result);
+        result = guardUnderstanding(normalizedProviderUnderstanding(extracted.result));
         validateProviderLabelsAndEvidence(result, messages);
-      } catch {
-        throw new ProviderOutputError(inputTokens, outputTokens);
+      } catch (error) {
+        if (error instanceof ProviderOutputError) {
+          throw new ProviderOutputError(error.category, inputTokens, outputTokens);
+        }
+        throw new ProviderOutputError(categorizeGuardError(error), inputTokens, outputTokens);
       }
-      this.emit("llm_valid", started, true, false, inputTokens, outputTokens, null);
+      this.emit("llm_valid", started, true, false, inputTokens, outputTokens, null, null);
       return result;
     } catch (error) {
+      let rejectionCategory: ProviderRejectionCategory | null = null;
       if (error instanceof ProviderOutputError) {
+        rejectionCategory = error.category;
         inputTokens = error.inputTokens;
         outputTokens = error.outputTokens;
       }
@@ -221,7 +311,7 @@ export class ControlledNvidiaUnderstandingProvider implements UnderstandingProvi
         : error instanceof ProviderOutputError
         ? "STRUCTURED_OUTPUT_REJECTED"
         : "PROVIDER_ERROR";
-      this.emit(outcome, started, false, true, inputTokens, outputTokens, rejectionCode);
+      this.emit(outcome, started, false, true, inputTokens, outputTokens, rejectionCode, rejectionCategory);
       return understandMessages(messages);
     } finally {
       clearTimeout(timer);
@@ -236,6 +326,7 @@ export class ControlledNvidiaUnderstandingProvider implements UnderstandingProvi
     inputTokens: number | null,
     outputTokens: number | null,
     rejectionCode: string | null,
+    rejectionCategory: ProviderRejectionCategory | null,
   ): void {
     this.#observe?.({
       outcome,
@@ -248,6 +339,7 @@ export class ControlledNvidiaUnderstandingProvider implements UnderstandingProvi
       input_tokens: inputTokens,
       output_tokens: outputTokens,
       rejection_code: rejectionCode,
+      rejection_category: rejectionCategory,
     });
   }
 }

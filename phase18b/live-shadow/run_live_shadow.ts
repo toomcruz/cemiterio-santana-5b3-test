@@ -278,10 +278,23 @@ function aggregateObservations(observations: readonly ControlledNvidiaAiObservat
   const inputTokens = observations.flatMap((event) => event.input_tokens === null ? [] : [event.input_tokens]);
   const outputTokens = observations.flatMap((event) => event.output_tokens === null ? [] : [event.output_tokens]);
   const totalLatency = latency.reduce((total, value) => total + value, 0);
+  const rejectionCategories = Object.fromEntries(
+    [...new Set(observations.flatMap((event) => event.rejection_category ? [event.rejection_category] : []))].sort()
+      .map((category) => [category, observations.filter((event) => event.rejection_category === category).length]),
+  );
   return {
     provider_attempted: observations.length,
     llm_valid: observations.filter((event) => event.outcome === "llm_valid").length,
     fallback: observations.filter((event) => event.fallback_used).length,
+    acceptance: {
+      AI_SCHEMA_VALID: observations.filter((event) => event.outcome === "llm_valid").length,
+      AI_SCHEMA_REJECTED: observations.filter((event) => event.outcome === "fallback_invalid").length,
+      PROVIDER_ERROR:
+        observations.filter((event) => ["fallback_timeout", "fallback_http", "fallback_error"].includes(event.outcome))
+          .length,
+      FALLBACK_USED: observations.filter((event) => event.fallback_used).length,
+    },
+    rejection_categories: rejectionCategories,
     latency_ms: {
       minimum: latency.length ? Math.min(...latency) : null,
       maximum: latency.length ? Math.max(...latency) : null,
