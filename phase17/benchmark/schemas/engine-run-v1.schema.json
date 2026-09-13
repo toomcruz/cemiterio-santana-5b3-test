@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:cemiterio-santana:phase17-engine-run:1.0.0",
+  "title": "Isolated Phase 17 engine run row",
+  "type": "object",
+  "required": ["case_id", "case_hash", "status", "trace", "idempotency_probe"],
+  "properties": {
+    "case_id": { "type": "string" },
+    "case_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "status": { "const": "COMPLETED" },
+    "trace": { "type": "object" },
+    "idempotency_probe": { "type": "object" },
+    "environment": {
+      "type": "object",
+      "properties": {
+        "isolated": { "const": true },
+        "network_access": { "const": false },
+        "production_access": { "const": false }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "properties": {
+        "network_allowed": { "const": false },
+        "production_adapters_loaded": { "const": false },
+        "external_side_effects": { "const": false }
+      }
+    },
+    "operational": {
+      "type": "object",
+      "properties": {
+        "latency_ms": { "type": "number", "minimum": 0 },
+        "retries": { "type": "integer", "minimum": 0 },
+        "network_calls": { "type": "integer", "minimum": 0 },
+        "resources": { "type": "object" }
+      }
+    }
+  }
+}
