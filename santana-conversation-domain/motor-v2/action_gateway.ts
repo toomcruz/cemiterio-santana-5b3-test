@@ -18,6 +18,7 @@ export interface ActionRequest {
 }
 
 export interface ActionExecutor {
+  /** Implementations must also enforce this request's idempotency key durably. */
   execute(request: ActionRequest): Promise<{ accepted: boolean; reference: string | null }>;
 }
 
@@ -124,7 +125,7 @@ export class ActionGateway {
     requestHash: string,
     toolPolicy: (typeof TOOL_POLICY)[ActionRequest["tool"]],
   ): Promise<GatewayCallRecord> {
-    let terminal: GatewayCallRecord;
+    let terminal: GatewayCallRecord | null = null;
     if (request.required_receipt_type !== toolPolicy.receipt_type) {
       terminal = this.record(request, "denied", "receipt type does not match the allowlisted tool", null);
     } else if (toolPolicy.requires_confirmation && !request.explicit_confirmation) {
@@ -132,33 +133,57 @@ export class ActionGateway {
     } else if (!this.options.external_effects_allowed || !this.options.executor) {
       terminal = this.record(request, "denied", "external effects disabled", null);
     } else {
-      const execution = await this.options.executor.execute(structuredClone(request));
-      if (!execution.accepted || !execution.reference) {
-        terminal = this.record(request, "proposed", "executor did not confirm the effect", null);
-      } else {
-        const payload_hash = await sha256(canonicalJson(request.payload));
-        const receiptDigest = await sha256(`${request.idempotency_key}:${execution.reference}`);
-        const alphabet = "abcdefghijklmnop";
-        const receiptSuffix = receiptDigest.slice(0, 24).split("").map((character) =>
-          alphabet[Number.parseInt(character, 16)]
-        ).join("");
-        const unsigned = {
-          receipt_id: `receipt_${receiptSuffix}`,
-          receipt_type: request.required_receipt_type,
-          tool: request.tool,
-          idempotency_key: request.idempotency_key,
-          issued_at: this.clock.instant,
-          payload_hash,
-          executor_reference_hash: await sha256(execution.reference),
-          bound_claim_codes: [...request.claim_codes].sort(),
-        };
-        const receipt: GatewayReceipt = {
-          ...unsigned,
-          integrity_hash: await sha256(canonicalJson(unsigned)),
-        };
-        terminal = this.record(request, "executed", "executor returned a verifiable reference", receipt);
+      let execution: unknown;
+      try {
+        execution = await this.options.executor.execute(structuredClone(request));
+      } catch {
+        terminal = this.record(
+          request,
+          "proposed",
+          "executor outcome unknown; reconcile by idempotency key before retry",
+          null,
+        );
+      }
+      if (terminal === null) {
+        if (
+          !execution || typeof execution !== "object" || Array.isArray(execution) ||
+          typeof (execution as { accepted?: unknown }).accepted !== "boolean" ||
+          (execution as { reference?: unknown }).reference !== null &&
+            typeof (execution as { reference?: unknown }).reference !== "string"
+        ) {
+          terminal = this.record(request, "proposed", "executor returned an invalid result", null);
+        } else if (
+          !(execution as { accepted: boolean }).accepted ||
+          !(execution as { reference: string | null }).reference
+        ) {
+          terminal = this.record(request, "proposed", "executor did not confirm the effect", null);
+        } else {
+          const reference = (execution as { reference: string }).reference;
+          const payload_hash = await sha256(canonicalJson(request.payload));
+          const receiptDigest = await sha256(`${request.idempotency_key}:${reference}`);
+          const alphabet = "abcdefghijklmnop";
+          const receiptSuffix = receiptDigest.slice(0, 24).split("").map((character) =>
+            alphabet[Number.parseInt(character, 16)]
+          ).join("");
+          const unsigned = {
+            receipt_id: `receipt_${receiptSuffix}`,
+            receipt_type: request.required_receipt_type,
+            tool: request.tool,
+            idempotency_key: request.idempotency_key,
+            issued_at: this.clock.instant,
+            payload_hash,
+            executor_reference_hash: await sha256(reference),
+            bound_claim_codes: [...request.claim_codes].sort(),
+          };
+          const receipt: GatewayReceipt = {
+            ...unsigned,
+            integrity_hash: await sha256(canonicalJson(unsigned)),
+          };
+          terminal = this.record(request, "executed", "executor returned a verifiable reference", receipt);
+        }
       }
     }
+    if (terminal === null) throw new Error("action gateway reached an invalid terminal state");
     this.#calls.set(request.idempotency_key, { request_hash: requestHash, record: terminal });
     return structuredClone(terminal);
   }

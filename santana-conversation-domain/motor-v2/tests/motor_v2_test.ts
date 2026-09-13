@@ -424,6 +424,36 @@ Deno.test("action gateway snapshots caller-owned requests before asynchronous ha
   assertEquals(calls, 1);
 });
 
+Deno.test("action gateway does not retry an indeterminate executor effect in one instance", async () => {
+  let effects = 0;
+  const gateway = new ActionGateway(CLOCK, {
+    external_effects_allowed: true,
+    executor: {
+      execute: () => {
+        effects += 1;
+        return Promise.reject(new Error("synthetic lost response"));
+      },
+    },
+  });
+  const request = {
+    tool: "payment.request" as const,
+    idempotency_key: "payment-indeterminate",
+    payload: { amount: 1 },
+    explicit_confirmation: true,
+    required_receipt_type: "payment_confirmation" as const,
+    claim_codes: ["PAYMENT_CONFIRMED"],
+  };
+  const first = await gateway.invoke(request);
+  const retry = await gateway.invoke(request);
+  assertEquals(effects, 1);
+  assertEquals(first.outcome, "proposed");
+  assertEquals(retry.outcome, "proposed");
+  assertEquals(first.side_effect, false);
+  assertEquals(retry.side_effect, false);
+  assertEquals(first.receipt, null);
+  assertEquals(retry.receipt, null);
+});
+
 Deno.test("runtime deduplicates the same inbound and hashes every committed state", async () => {
   const runtime = new MotorV2Runtime();
   const input = labInput("Preciso tratar a retirada de restos e uma dúvida sobre concessão.", [
