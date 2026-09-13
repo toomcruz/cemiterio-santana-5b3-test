@@ -92,8 +92,29 @@ jobs:
           deno lint phase18b/live-shadow phase18b/tests santana-conversation-domain/motor-v2/providers
           deno test --allow-net=jsr.io phase18b/tests/gemini_understanding_test.ts phase18b/tests/live_shadow_runner_test.ts santana-conversation-domain/motor-v2/tests/motor_v2_test.ts
           python3 -m unittest phase18b/tests/test_live_cohort.py
-      - name: Run real-AI passive shadow comparison
+      - name: Probe Gemini compatibility with synthetic input
         if: github.ref_name == 'phase18b-gate2-remediation'
+        shell: bash
+        env:
+          GEMINI_MODEL: gemini-2.5-flash
+        run: |
+          set -Eeuo pipefail
+          deno run \
+            --allow-env=GEMINI_API_KEY,GEMINI_MODEL \
+            --allow-net=generativelanguage.googleapis.com \
+            --allow-write="$RUNNER_TEMP/phase18b-provider-probe.json" \
+            phase18b/provider/probe_gemini.ts \
+            "$RUNNER_TEMP/phase18b-provider-probe.json"
+      - name: Upload Phase 18B compatibility probe
+        if: always() && github.ref_name == 'phase18b-gate2-remediation'
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase18b-provider-probe
+          path: ${{ runner.temp }}/phase18b-provider-probe.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Run real-AI passive shadow comparison
+        if: github.ref_name == 'phase18b-gate2-remediation' && success()
         shell: bash
         env:
           GEMINI_MODEL: gemini-2.5-flash
