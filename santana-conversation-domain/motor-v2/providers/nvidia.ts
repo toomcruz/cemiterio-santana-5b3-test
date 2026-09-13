@@ -10,7 +10,7 @@ import {
   validateProviderLabelsAndEvidence,
 } from "../understanding.ts";
 
-export const CONTROLLED_NVIDIA_MODEL = "nvidia/nemotron-3.5-lightning-30b-a3b";
+export const CONTROLLED_NVIDIA_MODEL = "meta/llama-3.1-8b-instruct";
 const NVIDIA_CHAT_COMPLETIONS_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 
 export interface ControlledNvidiaAiObservation {
@@ -145,9 +145,9 @@ export class ControlledNvidiaUnderstandingProvider implements UnderstandingProvi
     if (!this.#apiKey) throw new Error("NVIDIA credential is missing");
     const model = options.model ?? CONTROLLED_NVIDIA_MODEL;
     if (model !== CONTROLLED_NVIDIA_MODEL) throw new Error("invalid NVIDIA model configuration");
-    this.#timeoutMs = options.timeoutMs ?? 90_000;
-    this.#maxOutputTokens = options.maxOutputTokens ?? 4096;
-    if (!Number.isInteger(this.#timeoutMs) || this.#timeoutMs < 250 || this.#timeoutMs > 90_000) {
+    this.#timeoutMs = options.timeoutMs ?? 60_000;
+    this.#maxOutputTokens = options.maxOutputTokens ?? 1024;
+    if (!Number.isInteger(this.#timeoutMs) || this.#timeoutMs < 250 || this.#timeoutMs > 60_000) {
       throw new Error("invalid provider timeout");
     }
     if (!Number.isInteger(this.#maxOutputTokens) || this.#maxOutputTokens < 256 || this.#maxOutputTokens > 8192) {
@@ -184,7 +184,6 @@ export class ControlledNvidiaUnderstandingProvider implements UnderstandingProvi
           max_tokens: this.#maxOutputTokens,
           temperature: 0,
           stream: false,
-          chat_template_kwargs: { enable_thinking: false },
         }),
       }, controller.signal);
       if (response.status < 200 || response.status >= 300) throw new ProviderHttpError(response.status);

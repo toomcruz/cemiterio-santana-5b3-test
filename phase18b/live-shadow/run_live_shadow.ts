@@ -74,9 +74,9 @@ function parseOptions(args: string[]): Options {
   const cohort = values.get("cohort");
   const output = values.get("output");
   const model = values.get("model") ?? CONTROLLED_NVIDIA_MODEL;
-  const timeoutMs = Number(values.get("timeout-ms") ?? "90000");
+  const timeoutMs = Number(values.get("timeout-ms") ?? "60000");
   if (!cohort || !output) throw new Error("--cohort and --output are required");
-  if (!Number.isInteger(timeoutMs) || timeoutMs < 250 || timeoutMs > 90_000) throw new Error("invalid timeout");
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 250 || timeoutMs > 60_000) throw new Error("invalid timeout");
   return { cohort, output, model, timeoutMs };
 }
 

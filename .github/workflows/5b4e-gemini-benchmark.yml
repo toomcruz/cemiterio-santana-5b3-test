@@ -151,8 +151,8 @@ jobs:
             phase18b/live-shadow/run_live_shadow.ts \
             --cohort "$RUNNER_TEMP/phase18b-cohort.json" \
             --output "$RUNNER_TEMP/phase18b-live-ai-result.json" \
-            --model nvidia/nemotron-3.5-lightning-30b-a3b \
-            --timeout-ms 90000
+            --model meta/llama-3.1-8b-instruct \
+            --timeout-ms 60000
       - name: Upload sanitized Phase 18B result
         if: always() && github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode == 'cohort'
         uses: actions/upload-artifact@v4

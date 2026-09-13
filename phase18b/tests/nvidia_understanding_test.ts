@@ -43,10 +43,10 @@ Deno.test("controlled NVIDIA provider uses one fixed bounded structured request"
     const body = JSON.parse(request.body);
     assertEquals(body.model, CONTROLLED_NVIDIA_MODEL);
     assertEquals(body.response_format, { type: "json_object" });
-    assertEquals(body.max_tokens, 4096);
+    assertEquals(body.max_tokens, 1024);
     assertEquals(body.temperature, 0);
     assertEquals(body.stream, false);
-    assertEquals(body.chat_template_kwargs, { enable_thinking: false });
+    assertEquals("chat_template_kwargs" in body, false);
     assertEquals(body.messages.length, 1);
     assert(body.messages[0].content.includes("Não crie regras administrativas"));
     assert(body.messages[0].content.includes('"turn_id":"turn_1"'));
@@ -185,7 +185,7 @@ Deno.test("controlled NVIDIA provider configuration is closed and bounded", () =
     "model",
   );
   assertThrows(
-    () => new ControlledNvidiaUnderstandingProvider({ apiKey: "test", timeoutMs: 90_001 }),
+    () => new ControlledNvidiaUnderstandingProvider({ apiKey: "test", timeoutMs: 60_001 }),
     Error,
     "timeout",
   );
