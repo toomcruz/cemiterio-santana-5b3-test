@@ -133,35 +133,104 @@ const INTENTS: IntentRule[] = [
   { code: "DESVIO_COMERCIAL", patterns: [/oferta nao relacionada/, /apresentar uma oferta/, /oferta comercial/] },
   {
     code: "RECLAMACAO_SEM_RETORNO",
-    patterns: [/reclamacao.*sem (?:retorno|resposta)/, /sem retorno.*reclamacao/, /contato anterior.*sem solucao/],
+    patterns: [
+      /reclamacao.*sem (?:retorno|resposta)/,
+      /sem retorno/,
+      /aguard.*retorno/,
+      /ninguem responde/,
+      /nao respondeu/,
+      /falta de retorno/,
+      /contato anterior.*sem solucao/,
+    ],
   },
-  { code: "RECLAMACAO_OPERACIONAL", patterns: [/reclamacao/, /sem encaminhamento aceito/] },
+  {
+    code: "RECLAMACAO_OPERACIONAL",
+    patterns: [/reclamacao/, /reclamar/, /sem encaminhamento aceito/, /absurdo/, /insatisfeit/, /problema/, /demora/],
+  },
   { code: "REGULARIZACAO_ESTRUTURAL", patterns: [/revisao estrutural/, /regularizacao estrutural/] },
   { code: "ADMINISTRACAO_PROVISORIA", patterns: [/administracao provisoria/] },
-  { code: "SUCESSAO", patterns: [/sucessao/] },
-  { code: "RECADASTRO", patterns: [/recadastro/] },
-  { code: "CONCESSAO", patterns: [/concessao/] },
+  {
+    code: "SUCESSAO",
+    patterns: [/sucessao/, /todos os herdeiros/, /herdeiros?.{0,45}autoriza/, /autoriza.{0,45}herdeiros?/],
+  },
+  { code: "TITULARIDADE", patterns: [/titularidade/, /titular/, /cessionario/] },
+  { code: "RECADASTRO", patterns: [/recadastro/, /recadastramento/, /atualiz.*cadastro/] },
+  { code: "CONCESSAO", patterns: [/concessao/, /perpetuidade/, /carta de concessao/] },
   { code: "TRANSFERENCIA", patterns: [/transferi(?:r| la)|transferencia/] },
-  { code: "CREMACAO", patterns: [/cremacao/] },
-  { code: "EXUMACAO", patterns: [/exumacao/] },
-  { code: "RETIRAR_RESTOS", patterns: [/retir(?:ar|ada).*restos/, /remocao.*restos/] },
-  { code: "DESTINO_OSSUARIO", patterns: [/ossuario/, /destino d(?:os|e) restos/, /destino em gaveta/] },
-  { code: "DESTINO_RESTOS", patterns: [/destino d(?:os|e) restos/] },
-  { code: "SEPULTAMENTO", patterns: [/sepultamento/, /demanda funeraria/] },
+  { code: "CREMACAO_IMEDIATA", patterns: [/cremacao/, /cremar/] },
+  { code: "CREMACAO", patterns: [/cremacao/, /cremar/] },
+  { code: "EXUMACAO", patterns: [/exumacao/, /exumar/] },
+  {
+    code: "RETIRAR_RESTOS",
+    patterns: [/retir\w*(?: (?:os|de|dos))? restos/, /remocao.*restos/, /tirar (?:os )?ossos/],
+  },
+  {
+    code: "DESTINO_OSSUARIO",
+    patterns: [
+      /ossuario/,
+      /ossario/,
+      /guardar (?:os )?ossos/,
+      /caixa de ossos/,
+      /destino d(?:os|e) restos/,
+      /destino em gaveta/,
+    ],
+  },
+  { code: "REINUMACAO", patterns: [/reinumacao/, /reinumar/, /sepultar novamente/] },
+  { code: "CORPO_SEMI_INTACTO", patterns: [/semi intacto/, /corpo intacto/, /nao decomposto/] },
+  { code: "TRASLADO", patterns: [/traslado/, /transladar/, /outro cemiterio/] },
+  {
+    code: "DESTINO_RESTOS",
+    patterns: [
+      /destino.{0,55}(?:restos|ossos)/,
+      /(?:restos|ossos).{0,55}destino/,
+      /(?:localizar|localizacao|onde estao|encontrar).{0,100}(?:restos|ossos)/,
+      /(?:restos|ossos).{0,100}(?:localizar|localizacao|onde estao|encontrar)/,
+    ],
+  },
+  { code: "VELORIO", patterns: [/velorio/, /velar/] },
+  { code: "SEPULTAMENTO", patterns: [/sepultamento/, /sepultar/, /enterro/, /enterrar/, /demanda funeraria/] },
+  { code: "CAPELA_SALA", patterns: [/capela/, /sala de velorio/] },
   { code: "LIMPEZA_ZELADORIA", patterns: [/limpeza/, /zeladoria/] },
-  { code: "OBRA_REFORMA", patterns: [/obra/, /reforma/] },
+  { code: "MANUTENCAO_JAZIGO", patterns: [/manutencao/, /conservacao/, /conserto/] },
+  { code: "OBRA_REFORMA", patterns: [/obra/, /reforma/, /construcao/] },
   { code: "LAPIDE_PLACA", patterns: [/lapide/, /placa/, /letreiro/] },
+  { code: "VISITA_JAZIGO", patterns: [/visita/, /visitar/, /horario de visita/] },
+  { code: "JAZIGO_GERAL", patterns: [/jazigo/, /tumulo/, /sepultura/] },
   {
     code: "IDENTIFICAR_REFERENCIA",
-    patterns: [/referencia (?:segura )?(?:ja )?(?:foi )?informad/, /localizar a referencia/],
+    patterns: [
+      /referencia (?:segura )?(?:ja )?(?:foi )?informad/,
+      /localizar a referencia/,
+      /(?:localizar|localizacao|onde fica|achar).{0,50}(?:jazigo|tumulo|sepultura|quadra|terreno)/,
+      /\b(?:quadra|terreno|gaveta|rua)\b/,
+    ],
   },
   { code: "RELACAO_FAMILIAR_DECLARADA", patterns: [/relacao familiar/, /minha relacao/, /jazigo da familia/] },
+  {
+    code: "PEDIDO_HUMANO",
+    patterns: [/falar com (?:um |uma )?atendente/, /atendimento humano/, /alguem pode responder/],
+  },
+  {
+    code: "EMISSAO_SEGUNDA_VIA_DOCUMENTO",
+    patterns: [
+      /(?:segunda via|copia).{0,40}(?:declaracao|certidao|documento)/,
+      /(?:emitir|emissao|solicitar).{0,40}(?:declaracao|certidao)/,
+    ],
+  },
+  { code: "PLANO_ZELADORIA", patterns: [/plano de zeladoria/, /pacote de zeladoria/] },
 ];
 
 const JOURNEYS: Array<{ code: string; intents: string[] }> = [
   {
     code: "FUNERARIO_IMEDIATO",
-    intents: ["SEPULTAMENTO", "CONTINGENCIA_FUNERARIA_POR_RAMIFICACAO", "ALTERNATIVA_TEMPORARIA_DE_SEPULTAMENTO"],
+    intents: [
+      "VELORIO",
+      "SEPULTAMENTO",
+      "CAPELA_SALA",
+      "CREMACAO_IMEDIATA",
+      "CONTINGENCIA_FUNERARIA_POR_RAMIFICACAO",
+      "ALTERNATIVA_TEMPORARIA_DE_SEPULTAMENTO",
+    ],
   },
   {
     code: "RESTOS_MORTAIS",
@@ -174,11 +243,23 @@ const JOURNEYS: Array<{ code: string; intents: string[] }> = [
       "DIVERGENCIA_FISICO_CADASTRAL",
       "RESTOS_NAO_ESPERADOS",
       "RENOVACAO_OSSUARIO",
+      "REINUMACAO",
+      "CORPO_SEMI_INTACTO",
+      "TRASLADO",
     ],
   },
   {
     code: "JAZIGO_ESPACO_FISICO",
-    intents: ["LAPIDE_PLACA", "LIMPEZA_ZELADORIA", "OBRA_REFORMA", "IDENTIFICAR_REFERENCIA"],
+    intents: [
+      "LAPIDE_PLACA",
+      "LIMPEZA_ZELADORIA",
+      "MANUTENCAO_JAZIGO",
+      "OBRA_REFORMA",
+      "VISITA_JAZIGO",
+      "JAZIGO_GERAL",
+      "IDENTIFICAR_REFERENCIA",
+      "PLANO_ZELADORIA",
+    ],
   },
   {
     code: "DIREITOS_CADASTRO",
@@ -192,12 +273,24 @@ const JOURNEYS: Array<{ code: string; intents: string[] }> = [
       "DESISTENCIA_DIREITO_USO",
       "CONFLITO_CADASTRAL_DOCUMENTO_LEGADO",
       "REGULARIZACAO_ESTRUTURAL",
+      "TITULARIDADE",
+      "EMISSAO_SEGUNDA_VIA_DOCUMENTO",
     ],
   },
-  { code: "SUPORTE_RECLAMACAO", intents: ["RECLAMACAO_SEM_RETORNO", "RECLAMACAO_OPERACIONAL", "SUPORTE_DOCUMENTAL"] },
+  {
+    code: "SUPORTE_RECLAMACAO",
+    intents: ["RECLAMACAO_SEM_RETORNO", "RECLAMACAO_OPERACIONAL", "SUPORTE_DOCUMENTAL", "PEDIDO_HUMANO"],
+  },
   { code: "AGENDAMENTO", intents: ["CORRECAO_DE_AGENDAMENTO"] },
   { code: "PAGAMENTO", intents: ["RECUPERACAO_APOS_FALHA_DE_PAGAMENTO"] },
+  { code: "DESCONHECIDA_AMBIGUA", intents: [] },
 ];
+
+function journeysForIntents(intents: readonly string[]): string[] {
+  return JOURNEYS.filter((journey) => journey.intents.some((intent) => intents.includes(intent))).map((journey) =>
+    journey.code
+  );
+}
 
 const KNOWN_TRANSVERSE_STATES = new Set([
   "MULTI_INTENT",
@@ -254,7 +347,20 @@ function validateProviderLabelsAndEvidence(
 }
 
 function intentsFor(text: string): string[] {
-  return INTENTS.filter((rule) => rule.patterns.some((pattern) => pattern.test(text))).map((rule) => rule.code);
+  let intents = INTENTS.filter((rule) => rule.patterns.some((pattern) => pattern.test(text))).map((rule) => rule.code);
+  if (intents.includes("CREMACAO") && intents.includes("CREMACAO_IMEDIATA")) {
+    const remainsContext = /restos|ossos|ossuario|ossario|exumacao|exumar|reinumacao|reinumar/.test(text);
+    intents = intents.filter((intent) => intent !== (remainsContext ? "CREMACAO_IMEDIATA" : "CREMACAO"));
+  }
+  if (
+    intents.includes("TRANSFERENCIA") &&
+    /(?:restos|ossos|corpo).{0,55}(?:transferencia|transferir)|(?:transferencia|transferir).{0,55}(?:restos|ossos|corpo)/
+      .test(text) &&
+    !/responsabilidade|concessao|titularidade|administracao provisoria|direito de uso/.test(text)
+  ) {
+    intents = intents.filter((intent) => intent !== "TRANSFERENCIA");
+  }
+  return intents;
 }
 
 function riskFor(text: string, intents: string[]): { level: RiskLevel; signals: string[] } {
@@ -307,7 +413,11 @@ export function enforceDeterministicRisk(
   messages: readonly MotorV2Message[],
   understanding: UnderstandingResult,
 ): UnderstandingResult {
-  const text = normalizeText(messages.map((message) => message.content).join("\n"));
+  // Safety evidence must come from the citizen's turns. Replaying prior
+  // assistant guidance as if the citizen asserted it creates false P0 signals.
+  const text = normalizeText(
+    messages.filter((message) => message.role === "user").map((message) => message.content).join("\n"),
+  );
   const deterministicIntents = intentsFor(text);
   let deterministic = riskFor(text, unique([...understanding.subintents, ...deterministicIntents]));
   if (deterministicIntents.length === 0 && /sensivel|falecimento|sepultamento/.test(text)) {
@@ -338,9 +448,9 @@ export function enforceDeterministicRisk(
   };
 }
 
-function transverseStates(text: string, intents: string[], intentChanged: boolean): string[] {
+function transverseStates(text: string, intents: string[], journeys: string[], intentChanged: boolean): string[] {
   const states: string[] = [];
-  if (intents.length > 1) states.push("MULTI_INTENT");
+  if (journeys.length > 1 || intents.length > 2) states.push("MULTI_INTENT");
   if (intentChanged) states.push("INTENT_CHANGED");
   if (/urgente|demanda funeraria/.test(text)) states.push("URGENT_FUNERAL_NEED");
   if (/podem esperar/.test(text)) states.push("DEFERRED_NON_URGENT_TRACKS");
@@ -358,19 +468,52 @@ function transverseStates(text: string, intents: string[], intentChanged: boolea
 }
 
 export function understandMessages(messages: readonly MotorV2Message[]): UnderstandingResult {
-  const allText = normalizeText(messages.map((message) => message.content).join("\n"));
-  const perTurn = messages.map((message) => intentsFor(normalizeText(message.content)));
-  const subintents = unique(perTurn.flat());
-  const first = new Set(perTurn[0] ?? []);
-  const intentChanged = perTurn.slice(1).some((turn) => turn.some((intent) => !first.has(intent)));
-  const journeys = JOURNEYS.filter((journey) => journey.intents.some((intent) => subintents.includes(intent))).map((
-    journey,
-  ) => journey.code);
+  const userMessages = messages.filter((message) => message.role === "user");
+  const allText = normalizeText(userMessages.map((message) => message.content).join("\n"));
+  const perTurn = userMessages.map((message) => intentsFor(normalizeText(message.content)));
+  let subintents = unique(perTurn.flat());
+  const hasRemainsContext = subintents.some((intent) =>
+    [
+      "EXUMACAO",
+      "RETIRAR_RESTOS",
+      "DESTINO_OSSUARIO",
+      "DESTINO_RESTOS",
+      "REINUMACAO",
+      "CORPO_SEMI_INTACTO",
+      "TRASLADO",
+    ].includes(intent)
+  );
+  if (hasRemainsContext && subintents.includes("CREMACAO_IMEDIATA")) {
+    subintents = unique([...subintents.filter((intent) => intent !== "CREMACAO_IMEDIATA"), "CREMACAO"]);
+  }
+  if (
+    hasRemainsContext && subintents.includes("TRANSFERENCIA") &&
+    !/responsabilidade|concessao|titularidade|administracao provisoria|direito de uso/.test(allText)
+  ) {
+    subintents = subintents.filter((intent) => intent !== "TRANSFERENCIA");
+  }
+  if (
+    subintents.includes("CORPO_SEMI_INTACTO") && subintents.includes("JAZIGO_GERAL") &&
+    !subintents.some((intent) =>
+      ["LAPIDE_PLACA", "LIMPEZA_ZELADORIA", "MANUTENCAO_JAZIGO", "OBRA_REFORMA", "VISITA_JAZIGO"].includes(intent)
+    )
+  ) {
+    subintents = subintents.filter((intent) => intent !== "JAZIGO_GERAL");
+  }
+  const initial = new Set(journeysForIntents(unique(perTurn.slice(0, 3).flat())));
+  const final = new Set(journeysForIntents(unique(perTurn.slice(-3).flat())));
+  const intentChanged = initial.size > 0 && final.size > 0 &&
+    (initial.size !== final.size || [...initial].some((journey) => !final.has(journey)));
+  let journeys = journeysForIntents(subintents);
+  if (/\b(?:restos mortais|ossos)\b/.test(allText) && !journeys.includes("RESTOS_MORTAIS")) {
+    journeys = [...journeys, "RESTOS_MORTAIS"];
+  }
+  if (journeys.length === 0) journeys = ["DESCONHECIDA_AMBIGUA"];
   let risk = riskFor(allText, subintents);
   if (subintents.length === 0 && /sensivel|falecimento|sepultamento/.test(allText)) {
     risk = { level: "P0", signals: unique([...risk.signals, "low_confidence_sensitive_context"]) };
   }
-  const transverse_states = transverseStates(allText, subintents, intentChanged);
+  const transverse_states = transverseStates(allText, subintents, journeys, intentChanged);
   const complexity: Complexity = risk.level === "P0" || journeys.length >= 4 || subintents.length >= 6
     ? "critical"
     : journeys.length >= 3 || subintents.length >= 4
@@ -388,7 +531,9 @@ export function understandMessages(messages: readonly MotorV2Message[]): Underst
     complexity,
     risk,
     confidence,
-    evidence_turns: messages.filter((_, index) => (perTurn[index]?.length ?? 0) > 0).map((message) => message.turn_id),
+    evidence_turns: userMessages.filter((_, index) => (perTurn[index]?.length ?? 0) > 0).map((message) =>
+      message.turn_id
+    ),
   };
 }
 

@@ -1,16 +1,6 @@
 /** The adapter's only network boundary. Keep credentials out of callers and logs. */
-export interface NetworkRequest {
-  url: string;
-  headers: Readonly<Record<string, string>>;
-  body: string;
-}
-
-export interface NetworkResponse {
-  status: number;
-  body: string;
-}
-
-export type NetworkBoundary = (request: NetworkRequest, signal: AbortSignal) => Promise<NetworkResponse>;
+import type { NetworkBoundary } from "./network_types.ts";
+export type { NetworkBoundary, NetworkRequest, NetworkResponse } from "./network_types.ts";
 
 export const fetchBoundary: NetworkBoundary = async (request, signal) => {
   const response = await fetch(request.url, {

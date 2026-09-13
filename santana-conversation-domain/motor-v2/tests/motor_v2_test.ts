@@ -6,7 +6,11 @@ import { CurrentPolicyRegistry } from "../policy.ts";
 import { seedFacts, upsertVersionedFact } from "../store.ts";
 import { sha256 } from "../../runtime/server_transition.ts";
 import type { MotorV2LabInput, UnderstandingProviderMetadata } from "../types.ts";
-import { GuardedUnderstandingProvider, LabSemanticUnderstandingProvider } from "../understanding.ts";
+import {
+  GuardedUnderstandingProvider,
+  LabSemanticUnderstandingProvider,
+  understandMessages,
+} from "../understanding.ts";
 
 const CLOCK = { instant: "2026-09-13T12:00:00-03:00", timezone: "America/Sao_Paulo" } as const;
 const GAPS = {
@@ -64,6 +68,54 @@ Deno.test("formal P0 signals fail closed", async () => {
     const result = await provider.understand([{ turn_id: "t01", role: "user", content, synthetic: true }]);
     assertEquals(result.risk.level, "P0", content);
   }
+});
+
+Deno.test("understanding separates cremation and transfer scopes", () => {
+  const understand = (content: string) =>
+    understandMessages([{ turn_id: "t01", role: "user", content, synthetic: true }]);
+  const immediate = understand("Preciso de cremação para o velório.");
+  assert(immediate.subintents.includes("CREMACAO_IMEDIATA"));
+  assert(immediate.journeys.includes("FUNERARIO_IMEDIATO"));
+  assert(!immediate.journeys.includes("RESTOS_MORTAIS"));
+
+  const remains = understand("Quero cremar os restos depois da exumação.");
+  assert(remains.subintents.includes("CREMACAO"));
+  assert(remains.journeys.includes("RESTOS_MORTAIS"));
+  assert(!remains.subintents.includes("CREMACAO_IMEDIATA"));
+
+  const remainsAcrossTurns = understandMessages([
+    { turn_id: "t01", role: "user", content: "Preciso definir o destino dos ossos.", synthetic: true },
+    { turn_id: "t02", role: "user", content: "Estou considerando cremação.", synthetic: true },
+  ]);
+  assert(remainsAcrossTurns.subintents.includes("CREMACAO"));
+  assert(!remainsAcrossTurns.subintents.includes("CREMACAO_IMEDIATA"));
+
+  const remainsTransfer = understand("Quero transferir os restos para outro cemitério.");
+  assert(remainsTransfer.journeys.includes("RESTOS_MORTAIS"));
+  assert(!remainsTransfer.journeys.includes("DIREITOS_CADASTRO"));
+
+  const rightsTransfer = understand("Quero transferir a responsabilidade pelo direito de uso.");
+  assert(rightsTransfer.subintents.includes("TRANSFERENCIA"));
+  assert(rightsTransfer.journeys.includes("DIREITOS_CADASTRO"));
+});
+
+Deno.test("understanding recognizes destination or location of remains", () => {
+  const result = understandMessages([{
+    turn_id: "t01",
+    role: "user",
+    content: "Preciso saber o destino dos ossos e onde estão os restos.",
+    synthetic: true,
+  }]);
+  assert(result.subintents.includes("DESTINO_RESTOS"));
+  assert(result.journeys.includes("RESTOS_MORTAIS"));
+
+  const generic = understandMessages([{
+    turn_id: "t02",
+    role: "user",
+    content: "Preciso de orientação sobre os ossos encontrados.",
+    synthetic: true,
+  }]);
+  assert(generic.journeys.includes("RESTOS_MORTAIS"));
 });
 
 Deno.test("current policy registry requires confirmed versioned source and respects validity", () => {
@@ -493,6 +545,14 @@ Deno.test("runtime deduplicates the same inbound and hashes every committed stat
   assert(first.audit.some((event) => event.kind === "turn_committed"));
 });
 
+Deno.test("understanding recognizes retirada de restos in synthetic benchmark wording", async () => {
+  const runtime = new MotorV2Runtime();
+  const result = await runtime.runLabCase(
+    labInput("Preciso tratar a retirada de restos e uma dúvida sobre concessão.", ["remains", "concession"]),
+  );
+  assert(result.state.understanding.subintents.includes("RETIRAR_RESTOS"));
+});
+
 Deno.test("runtime rejects reuse of an inbound id with changed content", async () => {
   const runtime = new MotorV2Runtime();
   const input = labInput("Preciso tratar uma concessão.", ["concession"]);
@@ -617,6 +677,43 @@ Deno.test("controlled provider cannot suppress or replace deterministic P0 signa
   assertEquals(additive.state.understanding.risk.level, "P0");
   assert(additive.state.understanding.risk.signals.includes("family_conflict"));
   assert(additive.state.understanding.risk.signals.includes("missing_or_conflicting_current_rule"));
+});
+
+Deno.test("prior assistant language cannot become deterministic citizen risk evidence", async () => {
+  const provider = {
+    metadata: {
+      id: "controlled-ai-role-boundary-test",
+      kind: "controlled_ai",
+      uses_ai: true,
+      model: "synthetic",
+      schema_guarded: false,
+    } as const,
+    understand: () =>
+      Promise.resolve({
+        schema_version: "motor-v2-understanding/1.0.0" as const,
+        journeys: [],
+        subintents: [],
+        transverse_states: [],
+        intent_changed: false,
+        complexity: "low" as const,
+        risk: { level: "none" as const, signals: [] },
+        confidence: "low" as const,
+        evidence_turns: [],
+      }),
+  };
+  const input = labInput("Obrigado.");
+  input.messages = [
+    {
+      turn_id: "t00",
+      role: "assistant",
+      content: "Orientação histórica mencionava corpo semi-intacto e análise documental.",
+      synthetic: true,
+    },
+    { turn_id: "t01", role: "user", content: "Obrigado.", synthetic: true },
+  ];
+  const result = await new MotorV2Runtime(provider).runLabCase(input);
+  assertEquals(result.state.understanding.risk.level, "none");
+  assertEquals(result.state.understanding.risk.signals, []);
 });
 
 Deno.test("guarded provider rejects unknown labels and evidence turns", async () => {

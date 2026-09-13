@@ -2,7 +2,7 @@ import { isConversationReturn, isGreeting } from "../interpreter/conversation_co
 import { interpret as deterministicInterpret } from "../interpreter/deterministic.ts";
 import { guardInterpretation } from "../interpreter/guard.ts";
 import type { Interpretation, InterpreterInput } from "../interpreter/types.ts";
-import type { NetworkBoundary } from "./network.ts";
+import type { NetworkBoundary } from "./network_types.ts";
 import { buildPrompt, PROMPT_VERSION } from "./prompt.ts";
 import { assertStrictInterpretation, InvalidInterpretationError, parseStrictInterpretation } from "./schema.ts";
 

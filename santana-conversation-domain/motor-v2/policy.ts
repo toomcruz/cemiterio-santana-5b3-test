@@ -143,10 +143,15 @@ export function evaluatePolicy(input: {
     /contingencia verificada/.test(text) && /aceito explicitamente/.test(text);
   const versionedDraft = understanding.subintents.includes("CORRECAO_DE_DADO_EM_LAPIDE_PLACA");
   const noHandoff = understanding.risk.level !== "P0" && (acceptedVerifiedContingency || versionedDraft);
+  const currentPolicyNeeded = Object.values(gaps).some((status) => status !== "unknown");
+  const lastUserText = normalizeText(input.messages.filter((message) => message.role === "user").at(-1)?.content ?? "");
+  const requestedHumanNow = /falar com (?:um |uma )?atendente|atendimento humano|alguem pode responder/.test(
+    lastUserText,
+  );
   const offered = !noHandoff && (
     understanding.risk.level !== "none" ||
-    understanding.subintents.length > 1 ||
-    Object.values(gaps).some((status) => status !== "unknown")
+    requestedHumanNow ||
+    currentPolicyNeeded
   );
 
   const actions: PolicyAction[] = [];
