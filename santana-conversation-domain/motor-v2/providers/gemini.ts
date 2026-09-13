@@ -51,10 +51,10 @@ class ProviderHttpError extends Error {
 
 function responseSchema(turnIds: readonly string[]): Record<string, unknown> {
   const vocabulary = understandingVocabulary();
-  const stringArray = (values: readonly string[], maxItems = values.length) => ({
+  const stringArray = (maxItems: number) => ({
     type: "array",
     maxItems,
-    items: { type: "string", enum: values },
+    items: { type: "string" },
   });
   return {
     type: "object",
@@ -72,9 +72,11 @@ function responseSchema(turnIds: readonly string[]): Record<string, unknown> {
     ],
     properties: {
       schema_version: { type: "string", enum: ["motor-v2-understanding/1.0.0"] },
-      journeys: stringArray(vocabulary.journeys),
-      subintents: stringArray(vocabulary.subintents),
-      transverse_states: stringArray(vocabulary.transverse_states),
+      // Gemini enforces the shape. The local trust boundary below enforces the
+      // closed vocabulary so a model-created label can never reach policy.
+      journeys: stringArray(vocabulary.journeys.length),
+      subintents: stringArray(vocabulary.subintents.length),
+      transverse_states: stringArray(vocabulary.transverse_states.length),
       intent_changed: { type: "boolean" },
       complexity: { type: "string", enum: ["low", "medium", "high", "critical"] },
       risk: {
@@ -83,11 +85,11 @@ function responseSchema(turnIds: readonly string[]): Record<string, unknown> {
         required: ["level", "signals"],
         properties: {
           level: { type: "string", enum: ["none", "P3", "P2", "P1", "P0"] },
-          signals: stringArray(vocabulary.risk_signals),
+          signals: stringArray(vocabulary.risk_signals.length),
         },
       },
       confidence: { type: "string", enum: ["high", "medium", "low"] },
-      evidence_turns: stringArray(turnIds, turnIds.length),
+      evidence_turns: stringArray(turnIds.length),
     },
   };
 }
