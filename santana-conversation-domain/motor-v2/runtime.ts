@@ -4,6 +4,7 @@ import { unique } from "./normalization.ts";
 import { evaluatePolicy } from "./policy.ts";
 import { MemoryMotorV2Store, upsertVersionedFact } from "./store.ts";
 import {
+  enforceDeterministicRisk,
   enrichUnderstandingWithContext,
   GuardedUnderstandingProvider,
   LabSemanticUnderstandingProvider,
@@ -23,6 +24,10 @@ const INPUT_KEYS = new Set([
   "fixed_clock",
 ]);
 
+function hasOnlyKeys(value: object, allowed: ReadonlySet<string>): boolean {
+  return Object.keys(value).every((key) => allowed.has(key));
+}
+
 function validateInput(value: MotorV2LabInput): void {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("motor-v2 input must be an object");
   const unknown = Object.keys(value).filter((key) => !INPUT_KEYS.has(key));
@@ -30,18 +35,26 @@ function validateInput(value: MotorV2LabInput): void {
   if (!Array.isArray(value.messages) || value.messages.length === 0) {
     throw new Error("at least one message is required");
   }
-  if (value.messages.length > 200 || value.messages.some((message) => message.content.length > 20_000)) {
+  const messageKeys = new Set(["turn_id", "role", "content", "synthetic"]);
+  if (
+    value.messages.some((message) =>
+      !message || typeof message !== "object" || Array.isArray(message) || !hasOnlyKeys(message, messageKeys) ||
+      typeof message.turn_id !== "string" || !message.turn_id ||
+      !["user", "assistant"].includes(message.role) ||
+      typeof message.content !== "string" || !message.content.trim() || message.content.length > 20_000 ||
+      message.synthetic !== undefined && typeof message.synthetic !== "boolean"
+    )
+  ) {
+    throw new Error("invalid message");
+  }
+  if (new Set(value.messages.map((message) => message.turn_id)).size !== value.messages.length) {
+    throw new Error("message turn ids must be unique");
+  }
+  if (value.messages.length > 200) {
     throw new Error("message input exceeds lab safety bounds");
   }
   if (!value.messages.some((message) => message.role === "user")) {
     throw new Error("at least one user message is required");
-  }
-  if (
-    value.messages.some((message) =>
-      !message.turn_id || !["user", "assistant"].includes(message.role) || !message.content.trim()
-    )
-  ) {
-    throw new Error("invalid message");
   }
   if (
     !Array.isArray(value.known_facts) || !Array.isArray(value.do_not_ask_again) || !Array.isArray(value.track_states)
@@ -49,11 +62,16 @@ function validateInput(value: MotorV2LabInput): void {
     throw new Error("invalid seeded context");
   }
   const safeKey = /^[a-z0-9_]+$/;
+  const factKeys = new Set(["key", "value", "source_turn", "status"]);
+  const factStatuses = new Set(["user_provided", "system_observed", "synthetic_fixture"]);
   if (
     value.known_facts.some((fact) =>
-      !safeKey.test(fact.key) || !fact.source_turn ||
+      !fact || typeof fact !== "object" || Array.isArray(fact) || !hasOnlyKeys(fact, factKeys) ||
+      typeof fact.key !== "string" || !safeKey.test(fact.key) ||
+      typeof fact.source_turn !== "string" || !fact.source_turn ||
+      !factStatuses.has(fact.status) ||
       (fact.value !== null && !["string", "number", "boolean"].includes(typeof fact.value))
-    ) || value.do_not_ask_again.some((key) => !safeKey.test(key))
+    ) || value.do_not_ask_again.some((key) => typeof key !== "string" || !safeKey.test(key))
   ) {
     throw new Error("invalid seeded fact context");
   }
@@ -63,11 +81,43 @@ function validateInput(value: MotorV2LabInput): void {
   ) {
     throw new Error("tracks must be non-empty and unique");
   }
-  if (value.track_states.some((track) => !safeKey.test(track.track_id) || !track.label.trim())) {
+  const trackKeys = new Set(["track_id", "label", "status"]);
+  const trackStatuses = new Set([
+    "new",
+    "active",
+    "blocked",
+    "pending_handoff",
+    "handoff_accepted",
+    "handled",
+    "closed",
+    "inactive",
+  ]);
+  if (
+    value.track_states.some((track) =>
+      !track || typeof track !== "object" || Array.isArray(track) || !hasOnlyKeys(track, trackKeys) ||
+      typeof track.track_id !== "string" || !safeKey.test(track.track_id) ||
+      typeof track.label !== "string" || !track.label.trim() ||
+      !trackStatuses.has(track.status)
+    )
+  ) {
     throw new Error("invalid track context");
   }
-  if (value.case_id && !safeKey.test(value.case_id)) throw new Error("invalid case_id");
-  if (Number.isNaN(Date.parse(value.fixed_clock?.instant ?? "")) || !value.fixed_clock?.timezone) {
+  if (value.case_id !== undefined && (typeof value.case_id !== "string" || !safeKey.test(value.case_id))) {
+    throw new Error("invalid case_id");
+  }
+  if (
+    value.conversation_id !== undefined &&
+    (typeof value.conversation_id !== "string" || !safeKey.test(value.conversation_id))
+  ) throw new Error("invalid conversation_id");
+  if (value.inbound_id !== undefined && (typeof value.inbound_id !== "string" || !safeKey.test(value.inbound_id))) {
+    throw new Error("invalid inbound_id");
+  }
+  if (
+    !value.fixed_clock || typeof value.fixed_clock !== "object" || Array.isArray(value.fixed_clock) ||
+    !hasOnlyKeys(value.fixed_clock, new Set(["instant", "timezone"])) ||
+    typeof value.fixed_clock.instant !== "string" || Number.isNaN(Date.parse(value.fixed_clock.instant)) ||
+    typeof value.fixed_clock.timezone !== "string" || !value.fixed_clock.timezone
+  ) {
     throw new Error("fixed_clock must contain a valid instant and timezone");
   }
   const gaps = value.administrative_gaps as unknown as Record<string, unknown>;
@@ -83,6 +133,7 @@ function validateInput(value: MotorV2LabInput): void {
   const statuses = new Set(["unknown", "requires_current_policy", "human_validation_required"]);
   if (
     !gaps || Object.keys(gaps).length !== expectedGaps.length ||
+    !hasOnlyKeys(gaps, new Set(expectedGaps)) ||
     expectedGaps.some((key) => !statuses.has(String(gaps[key])))
   ) {
     throw new Error("administrative gaps must be explicit and closed");
@@ -156,6 +207,9 @@ export class MotorV2Runtime {
       throw new Error("motor-v2 store belongs to another conversation");
     }
     if (prior?.processed_inbound_ids.includes(inboundId)) {
+      if (prior.processed_inbound_hashes[inboundId] !== inputHash) {
+        throw new Error("motor-v2 inbound id was reused with different content");
+      }
       const trace = projectBenchmarkTrace({
         caseId,
         reply: renderReply(prior),
@@ -185,10 +239,13 @@ export class MotorV2Runtime {
     }
 
     const proposedUnderstanding = await this.#provider.understand(input.messages) as MotorV2State["understanding"];
-    const understanding = enrichUnderstandingWithContext(proposedUnderstanding, [
-      ...input.track_states.flatMap((track) => [track.track_id, track.label]),
-      ...input.known_facts.map((fact) => fact.key),
-    ]);
+    const understanding = enforceDeterministicRisk(
+      input.messages,
+      enrichUnderstandingWithContext(proposedUnderstanding, [
+        ...input.track_states.flatMap((track) => [track.track_id, track.label]),
+        ...input.known_facts.map((fact) => fact.key),
+      ]),
+    );
     const tracks = tracksFor(input, input.fixed_clock.instant, understanding.subintents);
     const policy = evaluatePolicy({
       understanding,
@@ -231,6 +288,7 @@ export class MotorV2Runtime {
       policy,
       receipts: prior?.receipts ?? [],
       processed_inbound_ids: prior?.processed_inbound_ids ?? [],
+      processed_inbound_hashes: prior?.processed_inbound_hashes ?? {},
       audit: [
         ...(prior?.audit ?? []),
         ...audit.map((event, index) => ({ ...event, sequence: (prior?.audit.length ?? 0) + index + 1 })),
@@ -239,7 +297,7 @@ export class MotorV2Runtime {
     };
 
     // The isolated runtime proposes actions but never invokes the Action Gateway.
-    const committed = await this.#store.commit(state, inboundId, input.fixed_clock, "isolated lab turn");
+    const committed = await this.#store.commit(state, inboundId, inputHash, input.fixed_clock, "isolated lab turn");
     const reply = renderReply(committed.state);
     const reusedFactKeys = unique([...input.known_facts.map((fact) => fact.key), ...input.do_not_ask_again]);
     const trace = projectBenchmarkTrace({

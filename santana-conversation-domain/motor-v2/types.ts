@@ -187,6 +187,7 @@ export interface MotorV2State {
   policy: PolicyDecision;
   receipts: GatewayReceipt[];
   processed_inbound_ids: string[];
+  processed_inbound_hashes: Record<string, string>;
   audit: MotorV2AuditEvent[];
   state_hash: string;
 }

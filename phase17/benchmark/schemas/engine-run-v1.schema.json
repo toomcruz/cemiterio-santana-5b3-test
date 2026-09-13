@@ -80,8 +80,28 @@
         ],
         "properties": {
           "receipt_id": { "type": "string", "minLength": 1 },
-          "receipt_type": { "type": "string", "minLength": 1 },
-          "tool": { "type": "string", "minLength": 1 },
+          "receipt_type": {
+            "enum": [
+              "handoff_acceptance",
+              "booking_confirmation",
+              "payment_confirmation",
+              "document_confirmation",
+              "explicit_user_confirmation",
+              "execution_confirmation",
+              "resolution_confirmation"
+            ]
+          },
+          "tool": {
+            "enum": [
+              "handoff.request",
+              "booking.request",
+              "payment.request",
+              "document.submit",
+              "confirmation.record",
+              "execution.confirm",
+              "resolution.confirm"
+            ]
+          },
           "idempotency_key": { "type": "string", "minLength": 1 },
           "issued_at": { "type": "string", "minLength": 1 },
           "payload_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },

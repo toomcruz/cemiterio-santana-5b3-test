@@ -63,10 +63,14 @@ export class MemoryMotorV2Store {
   async commit(
     state: MotorV2State,
     inboundId: string,
+    inboundHash: string,
     clock: FixedClock,
     detail: string,
   ): Promise<{ duplicate: boolean; state: MotorV2State }> {
     if (this.#state?.processed_inbound_ids.includes(inboundId)) {
+      if (this.#state.processed_inbound_hashes[inboundId] !== inboundHash) {
+        throw new Error("motor-v2 inbound id was reused with different content");
+      }
       return { duplicate: true, state: structuredClone(this.#state) };
     }
     const expectedRevision = this.#state?.revision ?? 0;
@@ -74,6 +78,7 @@ export class MemoryMotorV2Store {
     const next = structuredClone(state);
     next.revision += 1;
     next.processed_inbound_ids = [...new Set([...next.processed_inbound_ids, inboundId])];
+    next.processed_inbound_hashes = { ...next.processed_inbound_hashes, [inboundId]: inboundHash };
     const beforeAuditHash = await stateHash(next);
     const audit: MotorV2AuditEvent = {
       sequence: next.audit.length + 1,

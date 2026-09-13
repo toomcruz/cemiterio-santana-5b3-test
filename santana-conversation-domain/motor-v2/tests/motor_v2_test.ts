@@ -266,15 +266,45 @@ Deno.test("action gateway is deny-by-default, confirmation-gated and receipt-ver
   assertEquals(wrongReceipt.outcome, "denied");
   assertEquals(wrongReceipt.side_effect, false);
 
-  const unconfirmedPreview = await gateway.invoke({
-    tool: "draft.preview",
-    idempotency_key: "draft-1",
+  const unconfirmedConfirmation = await gateway.invoke({
+    tool: "confirmation.record",
+    idempotency_key: "confirmation-1",
     payload: { version: 1 },
     explicit_confirmation: false,
     required_receipt_type: "explicit_user_confirmation",
     claim_codes: ["DRAFT_CONFIRMED"],
   });
-  assertEquals(unconfirmedPreview.outcome, "denied");
+  assertEquals(unconfirmedConfirmation.outcome, "denied");
+
+  await assertRejects(
+    () =>
+      gateway.invoke(
+        {
+          ...request,
+          idempotency_key: "payment-invalid-confirmation",
+          explicit_confirmation: "yes",
+        } as unknown as Parameters<ActionGateway["invoke"]>[0],
+      ),
+    /invalid action request/,
+  );
+
+  for (
+    const [tool, receiptType] of [
+      ["execution.confirm", "execution_confirmation"],
+      ["resolution.confirm", "resolution_confirmation"],
+    ] as const
+  ) {
+    const confirmed = await gateway.invoke({
+      tool,
+      idempotency_key: `${tool}-1`,
+      payload: { state: "confirmed" },
+      explicit_confirmation: true,
+      required_receipt_type: receiptType,
+      claim_codes: [`${tool}_claim`],
+    });
+    assertEquals(confirmed.outcome, "executed");
+    assertEquals(confirmed.receipt?.receipt_type, receiptType);
+  }
 });
 
 Deno.test("runtime deduplicates the same inbound and hashes every committed state", async () => {
@@ -291,6 +321,20 @@ Deno.test("runtime deduplicates the same inbound and hashes every committed stat
   assertEquals(replay.state.state_hash, first.state.state_hash);
   assert(first.state.state_hash.length === 64);
   assert(first.audit.some((event) => event.kind === "turn_committed"));
+});
+
+Deno.test("runtime rejects reuse of an inbound id with changed content", async () => {
+  const runtime = new MotorV2Runtime();
+  const input = labInput("Preciso tratar uma concessão.", ["concession"]);
+  await runtime.runLabCase(input);
+  await assertRejects(
+    () =>
+      runtime.runLabCase({
+        ...input,
+        messages: [{ turn_id: "t01", role: "user", content: "Agora preciso tratar uma exumação.", synthetic: true }],
+      }),
+    /inbound id was reused with different content/,
+  );
 });
 
 Deno.test("runtime store cannot bleed state across conversations", async () => {
@@ -341,4 +385,82 @@ Deno.test("lab boundary rejects fixtures that leak answer labels", async () => {
     subintents: ["SEPULTAMENTO"],
   } as unknown as MotorV2LabInput;
   await assertRejects(() => runMotorV2LabCase(unsafe), /forbidden fields/);
+});
+
+Deno.test("lab boundary rejects nested answer labels", async () => {
+  const unsafe = labInput("Preciso de sepultamento.") as unknown as Record<string, unknown>;
+  unsafe.messages = [{
+    turn_id: "t01",
+    role: "user",
+    content: "Preciso de sepultamento.",
+    synthetic: true,
+    expected_intents: ["SEPULTAMENTO"],
+  }];
+  await assertRejects(() => runMotorV2LabCase(unsafe as unknown as MotorV2LabInput), /invalid message/);
+});
+
+Deno.test("controlled provider cannot suppress a deterministic P0 signal", async () => {
+  const provider = {
+    metadata: {
+      id: "controlled-ai-risk-downgrade-test",
+      kind: "controlled_ai",
+      uses_ai: true,
+      model: "synthetic",
+      schema_guarded: false,
+    } as const,
+    understand: () =>
+      Promise.resolve({
+        schema_version: "motor-v2-understanding/1.0.0",
+        journeys: [],
+        subintents: [],
+        transverse_states: [],
+        intent_changed: false,
+        complexity: "low",
+        risk: { level: "none", signals: [] },
+        confidence: "low",
+        evidence_turns: [],
+      }),
+  };
+  const result = await new MotorV2Runtime(provider).runLabCase(labInput("A morte foi não natural."));
+  assertEquals(result.state.understanding.risk.level, "P0");
+  assert(result.state.understanding.risk.signals.includes("non_natural_death"));
+  assertEquals(result.trace.handoff.priority, "P0");
+});
+
+Deno.test("guarded provider rejects unknown labels and evidence turns", async () => {
+  const metadata = {
+    id: "controlled-ai-invalid-label-test",
+    kind: "controlled_ai",
+    uses_ai: true,
+    model: "synthetic",
+    schema_guarded: false,
+  } as const;
+  const result = {
+    schema_version: "motor-v2-understanding/1.0.0",
+    journeys: [],
+    subintents: [],
+    transverse_states: [],
+    intent_changed: false,
+    complexity: "low",
+    risk: { level: "none", signals: [] },
+    confidence: "low",
+    evidence_turns: [],
+  } as const;
+
+  await assertRejects(
+    () =>
+      new MotorV2Runtime({
+        metadata,
+        understand: () => Promise.resolve({ ...result, subintents: ["UNREVIEWED_LABEL"] }),
+      }).runLabCase(labInput("Preciso de orientação.")),
+    /unknown subintent label/,
+  );
+  await assertRejects(
+    () =>
+      new MotorV2Runtime({
+        metadata,
+        understand: () => Promise.resolve({ ...result, evidence_turns: ["answer_key_turn"] }),
+      }).runLabCase(labInput("Preciso de orientação.")),
+    /unknown turn/,
+  );
 });

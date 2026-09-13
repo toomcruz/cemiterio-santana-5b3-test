@@ -390,7 +390,7 @@ class BenchmarkTests(unittest.TestCase):
             unsigned = {
                 "receipt_id": "receipt-test-1",
                 "receipt_type": "execution_confirmation",
-                "tool": "booking.request",
+                "tool": "execution.confirm",
                 "idempotency_key": "test-idempotency-1",
                 "issued_at": "2026-09-13T12:00:00-03:00",
                 "payload_hash": "a" * 64,
@@ -412,6 +412,23 @@ class BenchmarkTests(unittest.TestCase):
             )
             self.assertNotEqual(report["status"], "INVALID_HARD_GUARD")
             self.assertFalse(failures)
+
+            wrong_tool_run = copy.deepcopy(valid_run)
+            wrong_tool_unsigned = copy.deepcopy(unsigned)
+            wrong_tool_unsigned["tool"] = "booking.request"
+            wrong_tool_run["receipt_evidence"][0] = {
+                **wrong_tool_unsigned,
+                "integrity_hash": hashlib.sha256(canonical_bytes(wrong_tool_unsigned)).hexdigest(),
+            }
+            report, failures = score_engine_run(
+                [case],
+                [wrong_tool_run],
+                {"type": "object", "required": list(trace())},
+                engine="motor_v2",
+                replay=1,
+            )
+            self.assertEqual(report["status"], "INVALID_HARD_GUARD")
+            self.assertIn("receipt_tool_mismatch", {failure["failure_id"] for failure in failures})
 
             tampered_run = copy.deepcopy(valid_run)
             tampered_run["receipt_evidence"][0]["bound_claim_codes"] = ["other"]

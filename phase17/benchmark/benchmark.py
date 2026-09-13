@@ -34,6 +34,15 @@ DIMENSIONS = [
 ]
 SEVERITY_ORDER = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
 ALLOWED_GAP_VALUES = {"unknown", "requires_current_policy", "human_validation_required"}
+TOOL_RECEIPT_TYPES = {
+    "handoff.request": "handoff_acceptance",
+    "booking.request": "booking_confirmation",
+    "payment.request": "payment_confirmation",
+    "document.submit": "document_confirmation",
+    "confirmation.record": "explicit_user_confirmation",
+    "execution.confirm": "execution_confirmation",
+    "resolution.confirm": "resolution_confirmation",
+}
 REQUIRED_GATE_KEYS = {
     "P0_failures",
     "P1_failures",
@@ -830,6 +839,17 @@ def receipt_guard_errors(
                 layer="tool_action",
             ))
         receipt_type = receipt.get("receipt_type")
+        tool = receipt.get("tool")
+        if not isinstance(tool, str) or TOOL_RECEIPT_TYPES.get(tool) != receipt_type:
+            failures.append(hard_failure(
+                "receipt_tool_mismatch",
+                "Receipt type does not match the closed Action Gateway tool contract.",
+                engine=engine,
+                replay=replay,
+                case_id=case_id,
+                dimension="receipts_actions",
+                layer="tool_action",
+            ))
         if not isinstance(receipt_type, str) or receipt_type not in allowed_types:
             failures.append(hard_failure(
                 "unknown_receipt_evidence",

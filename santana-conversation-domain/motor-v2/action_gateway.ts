@@ -2,7 +2,14 @@ import { canonicalJson, sha256 } from "../runtime/server_transition.ts";
 import type { FixedClock, GatewayCallRecord, GatewayReceipt, JsonScalar, ReceiptType } from "./types.ts";
 
 export interface ActionRequest {
-  tool: "handoff.request" | "booking.request" | "payment.request" | "document.submit" | "draft.preview";
+  tool:
+    | "handoff.request"
+    | "booking.request"
+    | "payment.request"
+    | "document.submit"
+    | "confirmation.record"
+    | "execution.confirm"
+    | "resolution.confirm";
   idempotency_key: string;
   payload: Record<string, JsonScalar>;
   explicit_confirmation: boolean;
@@ -22,7 +29,13 @@ const TOOL_POLICY: Record<
   "booking.request": { irreversible: true, requires_confirmation: true, receipt_type: "booking_confirmation" },
   "payment.request": { irreversible: true, requires_confirmation: true, receipt_type: "payment_confirmation" },
   "document.submit": { irreversible: true, requires_confirmation: true, receipt_type: "document_confirmation" },
-  "draft.preview": { irreversible: false, requires_confirmation: true, receipt_type: "explicit_user_confirmation" },
+  "confirmation.record": {
+    irreversible: false,
+    requires_confirmation: true,
+    receipt_type: "explicit_user_confirmation",
+  },
+  "execution.confirm": { irreversible: true, requires_confirmation: true, receipt_type: "execution_confirmation" },
+  "resolution.confirm": { irreversible: true, requires_confirmation: true, receipt_type: "resolution_confirmation" },
 };
 
 /**
@@ -40,6 +53,29 @@ export class ActionGateway {
   ) {}
 
   async invoke(request: ActionRequest): Promise<GatewayCallRecord> {
+    if (!request || typeof request !== "object" || Array.isArray(request)) {
+      throw new Error("invalid action request");
+    }
+    const requestKeys = new Set([
+      "tool",
+      "idempotency_key",
+      "payload",
+      "explicit_confirmation",
+      "required_receipt_type",
+      "claim_codes",
+    ]);
+    const payloadIsObject = request.payload !== null && typeof request.payload === "object" &&
+      !Array.isArray(request.payload);
+    if (
+      Object.keys(request).some((key) => !requestKeys.has(key)) ||
+      typeof request.tool !== "string" ||
+      typeof request.idempotency_key !== "string" ||
+      typeof request.explicit_confirmation !== "boolean" ||
+      typeof request.required_receipt_type !== "string" ||
+      !payloadIsObject
+    ) {
+      throw new Error("invalid action request");
+    }
     const requestHash = await sha256(canonicalJson(request));
     const prior = this.#calls.get(request.idempotency_key);
     if (prior) {
@@ -55,6 +91,7 @@ export class ActionGateway {
     if (
       !toolPolicy || !request.idempotency_key ||
       !Array.isArray(request.claim_codes) ||
+      request.claim_codes.length === 0 ||
       request.claim_codes.some((code) => typeof code !== "string" || !code.trim()) ||
       new Set(request.claim_codes).size !== request.claim_codes.length ||
       Object.values(request.payload).some((value) =>

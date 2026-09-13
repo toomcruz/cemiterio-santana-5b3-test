@@ -72,7 +72,9 @@ export class GuardedUnderstandingProvider implements UnderstandingProvider {
   }
 
   async understand(messages: readonly MotorV2Message[]): Promise<UnderstandingResult> {
-    return guardUnderstanding(await this.delegate.understand(messages));
+    const result = guardUnderstanding(await this.delegate.understand(messages));
+    validateProviderLabelsAndEvidence(result, messages);
+    return result;
   }
 }
 
@@ -197,6 +199,60 @@ const JOURNEYS: Array<{ code: string; intents: string[] }> = [
   { code: "PAGAMENTO", intents: ["RECUPERACAO_APOS_FALHA_DE_PAGAMENTO"] },
 ];
 
+const KNOWN_TRANSVERSE_STATES = new Set([
+  "MULTI_INTENT",
+  "INTENT_CHANGED",
+  "URGENT_FUNERAL_NEED",
+  "DEFERRED_NON_URGENT_TRACKS",
+  "LONGITUDINAL_CONTINUITY",
+  "WAITING_ADMIN",
+  "NOT_ABANDONED",
+  "OPEN_COMPLAINT",
+  "NO_RETRIAGE",
+  "PARTIAL_MULTI_TRACK_CLOSURE",
+  "CONFLICTING_EVIDENCE",
+  "BRANCH_AWARE_CONTINGENCY",
+  "ACCEPTED_PLAN_NOT_COMPLETED",
+  "PAYMENT_FAILURE_RECOVERY",
+  "RECEIPT_AWARE_CLOSURE",
+]);
+
+const KNOWN_RISK_SIGNALS = new Set([
+  "unverified_rights_claim_across_channels",
+  "non_natural_death",
+  "semi_intact_body",
+  "family_conflict",
+  "administrative_decision_required",
+  "document_analysis_required",
+  "missing_or_conflicting_current_rule",
+  "urgent_funeral_need",
+  "sensitive_death_context",
+  "physical_register_divergence",
+  "conflicting_evidence",
+  "payment_failure",
+  "open_complaint",
+  "document_support",
+  "low_confidence_sensitive_context",
+]);
+
+function validateProviderLabelsAndEvidence(
+  result: UnderstandingResult,
+  messages: readonly MotorV2Message[],
+): void {
+  const knownIntents = new Set(INTENTS.map((rule) => rule.code));
+  const knownJourneys = new Set(JOURNEYS.map((journey) => journey.code));
+  const evidenceTurns = new Set(messages.map((message) => message.turn_id));
+  if (result.subintents.some((label) => !knownIntents.has(label))) throw new Error("unknown subintent label");
+  if (result.journeys.some((label) => !knownJourneys.has(label))) throw new Error("unknown journey label");
+  if (result.transverse_states.some((label) => !KNOWN_TRANSVERSE_STATES.has(label))) {
+    throw new Error("unknown transverse-state label");
+  }
+  if (result.risk.signals.some((label) => !KNOWN_RISK_SIGNALS.has(label))) throw new Error("unknown risk signal");
+  if (result.evidence_turns.some((turnId) => !evidenceTurns.has(turnId))) {
+    throw new Error("understanding evidence references an unknown turn");
+  }
+}
+
 function intentsFor(text: string): string[] {
   return INTENTS.filter((rule) => rule.patterns.some((pattern) => pattern.test(text))).map((rule) => rule.code);
 }
@@ -244,6 +300,31 @@ function riskFor(text: string, intents: string[]): { level: RiskLevel; signals: 
     "none",
   );
   return { level, signals: unique(matched.map((candidate) => candidate.signal)) };
+}
+
+/** A controlled provider may add semantics, but cannot lower formal deterministic safety signals. */
+export function enforceDeterministicRisk(
+  messages: readonly MotorV2Message[],
+  understanding: UnderstandingResult,
+): UnderstandingResult {
+  const text = normalizeText(messages.map((message) => message.content).join("\n"));
+  const deterministicIntents = intentsFor(text);
+  let deterministic = riskFor(text, unique([...understanding.subintents, ...deterministicIntents]));
+  if (deterministicIntents.length === 0 && /sensivel|falecimento|sepultamento/.test(text)) {
+    deterministic = {
+      level: "P0",
+      signals: unique([...deterministic.signals, "low_confidence_sensitive_context"]),
+    };
+  }
+  if (riskRank(deterministic.level) <= riskRank(understanding.risk.level)) return understanding;
+  return {
+    ...understanding,
+    complexity: deterministic.level === "P0" ? "critical" : understanding.complexity,
+    risk: {
+      level: deterministic.level,
+      signals: unique([...understanding.risk.signals, ...deterministic.signals]),
+    },
+  };
 }
 
 function transverseStates(text: string, intents: string[], intentChanged: boolean): string[] {
