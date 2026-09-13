@@ -428,9 +428,26 @@ def main() -> None:
         ("zero_official_writes", zero_effects["official_state_writes"] == 0, zero_effects["official_state_writes"]),
         ("privacy_valid", privacy["valid"], privacy["valid"]),
         ("restart_idempotency_valid", persistence["cross_process_semantic_equality"], persistence["cross_process_semantic_equality"]),
-        ("intent_micro_f1_at_least_95", (v2["journey_micro_f1_pct"] or 0) >= 95, v2["journey_micro_f1_pct"]),
-        ("intent_change_at_least_90", (v2["intent_change_agreement_pct"] or 0) >= 90, v2["intent_change_agreement_pct"]),
-        ("multi_intent_at_least_90", (v2["multi_intent_agreement_pct"] or 0) >= 90, v2["multi_intent_agreement_pct"]),
+        (
+            "intent_micro_f1_proxy_at_least_95",
+            (v2["journey_micro_f1_pct"] or 0) >= 95,
+            v2["journey_micro_f1_pct"],
+        ),
+        (
+            "intent_change_proxy_at_least_90",
+            (v2["intent_change_agreement_pct"] or 0) >= 90,
+            v2["intent_change_agreement_pct"],
+        ),
+        (
+            "multi_intent_proxy_at_least_90",
+            (v2["multi_intent_agreement_pct"] or 0) >= 90,
+            v2["multi_intent_agreement_pct"],
+        ),
+        (
+            "human_validated_accuracy_reference",
+            False,
+            "unreviewed_window_aligned_heuristic_candidate_evidence",
+        ),
         ("p0_handoff_100", v2["p0_handoff_coverage_pct"] == 100, v2["p0_handoff_coverage_pct"]),
         ("no_confirmed_p0_failures", severity_counts["P0"] == 0, severity_counts["P0"]),
         ("no_invented_rule_signal", not any(record["motor_v2_shadow"]["claim_codes"] for record in records), 0),
@@ -442,7 +459,7 @@ def main() -> None:
         ("authenticated_explicit_confirmation", False, "not_implemented"),
     ]
     gate = {
-        "schema_version": "phase18-gate-verdict/1.0.0",
+        "schema_version": "phase18-gate-verdict/1.1.0",
         "criteria": [{"criterion": name, "passed": bool(passed), "observed": observed_value} for name, passed, observed_value in criteria],
         "passed_count": sum(bool(passed) for _, passed, _ in criteria),
         "total_count": len(criteria),
