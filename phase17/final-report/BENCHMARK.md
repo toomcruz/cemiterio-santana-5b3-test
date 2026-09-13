@@ -36,12 +36,12 @@
 
 | Métrica               |          Atual |                Motor V2 |
 | --------------------- | -------------: | ----------------------: |
-| Latência mediana/caso |      6,8346 ms |        1,0552–1,2669 ms |
-| Latência média/caso   |      7,7828 ms |        1,1000–1,5086 ms |
-| Latência máxima/caso  |     27,4733 ms |        1,6267–4,8325 ms |
+| Latência mediana/caso |      7,3497 ms |        1,0915–1,5466 ms |
+| Latência média/caso   |      9,1907 ms |        1,1776–2,0337 ms |
+| Latência máxima/caso  |     28,9836 ms |        2,0137–6,5336 ms |
 | Retries               |              0 |                       0 |
 | Chamadas de rede      |              0 |                       0 |
-| Saída média do trace  | 2.201,95 bytes | 2.603,05–2.604,85 bytes |
+| Saída média do trace  | 2.201,35 bytes | 2.602,70–2.605,10 bytes |
 
 Memória foi medida dentro de um único processo e sofre influência do garbage collector; é evidência observacional, não
 comparação de capacidade.
@@ -56,8 +56,8 @@ comparação de capacidade.
 
 ## Custo
 
-- tokens/model calls: 0;
-- custo externo de inferência: 0;
+- tokens/model calls observados: 0;
+- custo externo de inferência observado: 0;
 - retries: 0.
 
 Isso decorre do provider determinístico de LAB e não estima custo nem latência de um provider de IA real.
@@ -65,8 +65,8 @@ Isso decorre do provider determinístico de LAB e não estima custo nem latênci
 ## Diagnóstico adicional
 
 O modo `role-aware-v1`, que nunca submete mensagem de assistente como entrada de munícipe, produziu as mesmas métricas
-dimensionais do baseline compatível. Ele é evidência diagnóstica; o comparativo oficial permanece `compat-v1`, alinhado
-ao contrato da Fase 15.
+dimensionais do baseline compatível. Sua latência mediana/média/máxima foi 7,3413/8,4291/18,5580 ms. Ele é evidência
+diagnóstica; o comparativo oficial permanece `compat-v1`, alinhado ao contrato da Fase 15.
 
 O V1 não possui o mesmo contrato unificado de fatos tipados, trilhas e lacunas administrativas do V2. O adapter marca
 essas capacidades como ausentes em vez de simulá-las. Assim, a comparação prova o workflow completo disponível em cada

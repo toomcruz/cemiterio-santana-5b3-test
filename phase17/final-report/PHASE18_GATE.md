@@ -22,7 +22,9 @@ Executar shadow estritamente sem efeitos para validar o provider de IA controlad
 9. exercitar Action Gateway apenas em modo dry-run/proposed;
 10. validar adapter de persistência durável e idempotência após reinício, ainda sem tráfego real;
 11. exercitar caminhos positivos de receipt em um executor fake persistente e falhas/retries de tool;
-12. apresentar novo gate humano antes de canário ou produção.
+12. substituir o booleano confiado de confirmação explícita por uma atestação autenticada e vinculada ao request;
+13. provar idempotência e reconciliação do executor após reinício/perda de resposta;
+14. apresentar novo gate humano antes de canário ou produção.
 
 ## Critérios mínimos preservados
 

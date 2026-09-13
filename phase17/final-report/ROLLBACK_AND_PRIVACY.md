@@ -16,6 +16,9 @@ O diff contra a base contém apenas:
 - `santana-conversation-domain/motor-v2/`;
 - `phase17/`.
 
+O helper compartilhado `runtime/server_transition.ts` foi comparado com a base e não possui diff. A validação adicional
+de serialização pertence exclusivamente ao boundary do Motor V2.
+
 ## Rollback
 
 Rollback é remover o worktree isolado e excluir o branch de desenvolvimento. Não há estado de produção a reverter,
@@ -33,7 +36,8 @@ executados.
 - logs/auditoria: conteúdo de entrada representado por hash no adapter atual;
 - falha de privacidade é hard guard e invalida a execução.
 
-O scanner usa canários positivos e negativos, inclusive IDs/prefixos enganosos, e o passe final apresentou zero hits.
+O scanner usa canários positivos e negativos, inclusive IDs/prefixos enganosos, e o passe 8 apresentou zero hit não
+isento.
 
 ## Integridade
 

@@ -21,7 +21,9 @@
 8. **Action Gateway fechado por padrão** — somente tools allowlisted; cada tool possui um tipo exato de receipt;
    idempotency key é vinculada ao request completo; ações irreversíveis exigem confirmação explícita; executor externo
    precisa ser injetado e habilitado. Receipts vinculam payload, referência do executor e claims, recebem hash canônico
-   e só são válidos quando coincidem com o ledger do próprio gateway.
+   e só são válidos quando coincidem com o ledger do próprio gateway. Requests são copiados antes do primeiro `await`,
+   payloads aceitam somente objetos JSON simples e números finitos, chamadas concorrentes pela mesma chave são
+   serializadas e resultados indeterminados permanecem bloqueados para reconciliação.
 9. **Persistência e auditoria** — store isolado aplica revisão otimista, deduplicação de inbound vinculada ao hash do
    payload, isolamento por conversa, hash canônico de estado e eventos auditáveis.
 10. **Resposta e trace** — renderer conservador não declara conclusão; benchmark trace separa intents, fatos
@@ -53,4 +55,8 @@ confiança em contexto sensível. Risco P0 exige handoff P0.
   integrado a serviços reais;
 - o provider benchmarkado é determinístico e não usa IA;
 - o store e o ledger de receipts são em memória e servem ao LAB; idempotência após reinício e persistência durável
-  continuam fora desta implementação.
+  continuam fora desta implementação;
+- `explicit_confirmation` ainda é um booleano confiado ao caller do LAB; uma integração futura precisa substituí-lo por
+  evidência autenticada de confirmação;
+- o contrato do executor exige idempotência durável, mas essa garantia só foi exercitada com executor sintético em
+  memória.

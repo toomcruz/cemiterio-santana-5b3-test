@@ -2,7 +2,7 @@
 
 ## Reaproveitados do sistema atual
 
-- normalização e hashing canônico do runtime;
+- normalização e SHA-256 já testados no runtime;
 - contrato e semântica de `processOfficialTurn` para o baseline atual;
 - interpretador determinístico v1;
 - reducer, validação de estado, revisão otimista e dedupe de inbound;
@@ -47,6 +47,9 @@ Nenhum componente de produção foi substituído. As refatorações ficaram nos 
 - scanner de privacidade endurecido e IDs de execução alfabéticos, sem falso positivo aleatório de CPF;
 - status do scorer distinguindo execução válida com e sem falhas.
 
+O serializador canônico com rejeição de números não finitos vive somente em `motor-v2/`. O helper compartilhado do
+runtime v1 permaneceu byte-idêntico à base.
+
 O runtime atual e os contratos de produção ficaram inalterados.
 
 ## Commits isolados
@@ -57,6 +60,12 @@ O runtime atual e os contratos de produção ficaram inalterados.
 - `35e8cd723c3dbe861a8ba2ba0f9adaa6d435ae09` — hardening dos gates;
 - `8f8536d1a003fbebeea2eabece48046fd0a536c7` — binding de receipts ao ledger e claims;
 - `40a9327000bc4da821110c5033ecc5b28c10b866` — boundaries de provider, input, dedupe e actions;
-- `679598404eb5aa24b9bba5af6fba6f72437fca1f` — status final e IDs privados reprodutíveis.
+- `679598404eb5aa24b9bba5af6fba6f72437fca1f` — status e IDs privados reprodutíveis;
+- `25854b8aae3a252d02d1e36679c8ab71732a9025` — documentação intermediária;
+- `4bf77bbbc9b6672d43fb3fc2b79786fa246ce553` — hardening de P0, receipts, idempotência e scorer;
+- `f47dbdc7f3f989c3603807a7cb74b981e7f1e30a` — snapshot do request antes de awaits;
+- `41be05d3748c44eb8efe7edc87c108ca9f889d3d` — bloqueio de resultado indeterminado;
+- `d0ac72a0851a737f812d49f83503f0ebbe643b6f` — rejeição de payload não JSON;
+- `4b81de5e7ea87a5981bad8a495171762ca90cb36` — serialização canônica isolada no Motor V2.
 
 Base preservada: `060c795308e18db265d04416de6ae6d25f692f24`.

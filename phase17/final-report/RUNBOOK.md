@@ -4,7 +4,7 @@ Pré-requisitos:
 
 - Deno 2.1.4;
 - Python 3.13+;
-- checkout no commit isolado final;
+- checkout no commit-fonte registrado em `RUN_PROVENANCE.json`;
 - caminho local privado contendo o release imutável da Fase 15.
 
 ## Testes
@@ -34,6 +34,9 @@ deno run --allow-read --allow-write phase17/run_engines.ts \
 
 Use `phase17/benchmark/benchmark.py` com fixtures, schemas, manifesto e gate do mesmo `$PHASE15_ROOT`, o trace
 `current-workflow-compat-v1.jsonl` e os três traces `motor-v2-replay-*.jsonl`.
+
+O passe decisório deste pacote é o passe 8, gerado no commit `4b81de5e7ea87a5981bad8a495171762ca90cb36`. A documentação
+pode estar em commit posterior; isso não altera a proveniência dos traces.
 
 Nenhum comando deste runbook autoriza rede, produção ou efeito externo.
 

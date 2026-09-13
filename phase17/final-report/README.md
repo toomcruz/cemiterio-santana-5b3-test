@@ -20,14 +20,14 @@ shadow sem efeitos.
 ## Evidência principal
 
 - fonte: 20 fixtures `gold-fixture-v2.1.0`, hash agregado congelado;
-- código final auditado: commit `679598404eb5aa24b9bba5af6fba6f72437fca1f`;
-- evidência final: passe 6, com manifesto próprio e proveniência do HEAD;
+- código usado para gerar o benchmark final: commit `4b81de5e7ea87a5981bad8a495171762ca90cb36`;
+- evidência final: passe 8, com manifesto próprio e proveniência do commit-fonte;
 - runtime atual: workflow oficial v1, estado/persistência/outbox em memória;
 - Motor V2: três replays completos e idênticos;
 - V2: 100% nas oito dimensões, 0 P0, 0 P1 e 0 hard guards;
 - workflow atual: 4 P0 e 107 P1, sem hard guard do ambiente;
 - regressão pareada: nenhuma regressão por caso ou dimensão;
-- testes: 317/317 Deno no escopo domínio/benchmark, 25/25 no Authority Gateway e 9/9 Python/scorer.
+- testes: 322/322 Deno no escopo domínio/benchmark, 25/25 no Authority Gateway e 13/13 Python/scorer.
 
 O agregado é apenas secundário. O gate foi decidido pelas dimensões e guardas individuais.
 
@@ -38,7 +38,7 @@ O agregado é apenas secundário. O gate foi decidido pelas dimensões e guardas
 - `source/`: snapshot do código novo e patch Git contra a base isolada;
 - `benchmark/primary/`: comparação oficial compatível com a Fase 15;
 - `benchmark/role-aware-diagnostic/`: diagnóstico adicional do adapter atual;
-- `benchmark/final-pass-6/`: engine runs e comparação oficial do passe final;
+- `benchmark/final-pass-8/`: engine runs e comparação oficial do passe final;
 - `audit-history/`: evidência selecionada dos passes superseded e correções, sem participar do veredito;
 - `immutable-input/`: fixtures, schemas, gate e manifestos congelados da Fase 15;
 - `VERDICT.txt`: veredito resumido;

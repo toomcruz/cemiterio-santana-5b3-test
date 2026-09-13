@@ -39,7 +39,9 @@ Não houve falha contra as fixtures, mas permanecem riscos fora do escopo medido
 3. receipts positivos foram exercitados por teste unitário com executor sintético, mas as 20 fixtures oficiais não
    executam efeitos e portanto validam somente os gates negativos de claims/receipts;
 4. persistência durável, concorrência e idempotência após reinício do V2 ainda não foram conectadas;
-5. custo, latência, variação e falhas de um modelo real são desconhecidos;
-6. generalização além das 20 fixtures precisa de shadow e casos adversariais adicionais, sem alterar o Gold oficial.
+5. a confirmação explícita ainda é representada por um booleano confiado ao caller, não por uma atestação autenticada;
+6. resultado indeterminado de executor é bloqueado na instância atual, mas requer reconciliação durável após reinício;
+7. custo, latência, variação e falhas de um modelo real são desconhecidos;
+8. generalização além das 20 fixtures precisa de shadow e casos adversariais adicionais, sem alterar o Gold oficial.
 
 Esses itens não mudam retroativamente o gate mecânico da Fase 15; delimitam o escopo do próximo gate.

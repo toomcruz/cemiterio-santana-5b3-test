@@ -5,9 +5,9 @@
 - Deno format: PASS;
 - Deno lint: PASS;
 - Deno type-check: PASS;
-- domínio + benchmark: **317/317 testes Deno PASS**;
+- domínio + benchmark: **322/322 testes Deno PASS**;
 - Authority Gateway: **25/25 testes Deno PASS**;
-- Python/scorer: **9/9 PASS**;
+- Python/scorer: **13/13 PASS**;
 - fixture/schema/manifest validation: PASS;
 - três replays do V2: traces e scores idênticos;
 - idempotência: 20/20 casos em cada execução;
@@ -59,7 +59,23 @@ conter dígitos sem reduzir entropia. Um teste regressivo valida formato, distin
 Também foi corrigido o status do scorer: V2 sem falhas agora é `VALID_NO_SYSTEM_FAILURES`, não
 `VALID_WITH_SYSTEM_FAILURES`.
 
-### Passe 6 — final
+### Passes 6–7 — gates verdes, evidência superseded
+
+Os passes 6 e 7 ficaram verdes, mas auditorias posteriores encontraram superfícies que exigiam fechamento antes da
+assinatura final:
+
+- P0 determinístico também quando um provider já emitia outro sinal P0;
+- validação fail-closed de JSON não finito e payloads que não fossem objetos JSON simples;
+- snapshot de request antes do primeiro `await` para eliminar TOCTOU;
+- serialização de chamadas concorrentes pela mesma idempotency key;
+- bloqueio e reconciliação de resultado indeterminado do executor;
+- validação de tool/receipt/claim e detecção de claims no texto pelo scorer;
+- preservação do runtime v1 sem mudança em helper compartilhado.
+
+Cada correção recebeu teste adversarial. O passe 7 foi superseded depois que a rejeição de não-finitos foi movida do
+helper compartilhado para um boundary exclusivo do Motor V2.
+
+### Passe 8 — final
 
 - hard guards: 0;
 - P0/P1 no V2: 0/0;
@@ -78,5 +94,10 @@ Também foi corrigido o status do scorer: V2 sem falhas agora é `VALID_NO_SYSTE
 - replays e evidência sem independência/proveniência suficiente: resolvidos;
 - falso positivo aleatório de CPF em UUID do runner: resolvido;
 - status enganoso do relatório sem falhas: resolvido;
+- mutação de request durante operação assíncrona: resolvida por snapshot anterior ao primeiro `await`;
+- colisão concorrente de idempotency key: resolvida por serialização por chave;
+- resposta perdida/resultado indeterminado do executor: bloqueado para reconciliação, sem reexecução na instância;
+- payload não JSON e números não finitos: rejeitados no boundary exclusivo do Motor V2;
+- alteração involuntária de helper compartilhado v1: revertida; diff final do runtime atual é zero;
 - nenhuma regressão funcional no runtime v1;
 - nenhuma regressão observada no Motor V2 nas 20 fixtures.
