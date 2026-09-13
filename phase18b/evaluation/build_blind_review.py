@@ -136,24 +136,18 @@ def representation(kind: str, case: dict) -> dict:
         features = heuristic_current_features(response)
         return {
             "response": response,
-            "handoff": "detected_in_observed_response" if features["handoff_signal"] else "not_detected",
+            "handoff": features["handoff_signal"],
             "question_count": features["question_count"],
             "proposed_actions": [],
             "receipts_required": [],
-            "interpretation_disclosed": False,
         }
     ai = case["ai"]
     return {
         "response": ai["response_proposed"],
-        "journeys": ai["journeys"],
-        "subintents": ai["subintents"],
-        "transverse_states": ai["transverse_states"],
-        "risk": ai["risk"],
-        "confidence": ai["confidence"],
-        "handoff": ai["handoff"],
+        "handoff": ai["handoff"]["offered"],
+        "question_count": ai["response_proposed"].count("?"),
         "proposed_actions": [call["tool"] for call in ai["would_call"]],
         "receipts_required": ai["receipts_required"],
-        "interpretation_disclosed": True,
     }
 
 
@@ -367,4 +361,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

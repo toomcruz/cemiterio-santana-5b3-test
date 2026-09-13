@@ -21,6 +21,21 @@ class BlindReviewTest(unittest.TestCase):
         self.assertEqual(MODULE.privacy_hits({"cohort_hash": "a" * 64}), [])
         self.assertTrue(MODULE.privacy_hits({"content": "contato +55 (11) 98765-4321"}))
 
+    def test_blinded_sides_have_the_same_shape(self):
+        case = {
+            "current_workflow_observed": {"response_sanitized": "Posso ajudar?"},
+            "ai": {
+                "response_proposed": "Qual informação falta?",
+                "handoff": {"offered": False},
+                "would_call": [],
+                "receipts_required": [],
+            },
+        }
+        self.assertEqual(
+            set(MODULE.representation("CURRENT", case)),
+            set(MODULE.representation("V2_AI", case)),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
