@@ -328,7 +328,7 @@ const KNOWN_RISK_SIGNALS = new Set([
   "low_confidence_sensitive_context",
 ]);
 
-function validateProviderLabelsAndEvidence(
+export function validateProviderLabelsAndEvidence(
   result: UnderstandingResult,
   messages: readonly MotorV2Message[],
 ): void {
@@ -344,6 +344,21 @@ function validateProviderLabelsAndEvidence(
   if (result.evidence_turns.some((turnId) => !evidenceTurns.has(turnId))) {
     throw new Error("understanding evidence references an unknown turn");
   }
+}
+
+/** Closed vocabulary shared by controlled structured-output providers. */
+export function understandingVocabulary(): {
+  journeys: string[];
+  subintents: string[];
+  transverse_states: string[];
+  risk_signals: string[];
+} {
+  return {
+    journeys: JOURNEYS.map((journey) => journey.code),
+    subintents: INTENTS.map((intent) => intent.code),
+    transverse_states: [...KNOWN_TRANSVERSE_STATES],
+    risk_signals: [...KNOWN_RISK_SIGNALS],
+  };
 }
 
 function intentsFor(text: string): string[] {

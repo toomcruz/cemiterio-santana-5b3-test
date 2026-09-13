@@ -1,0 +1,14 @@
+{
+  "schema_version": "phase18b-source-freeze/1.0.0",
+  "created_at": "2026-09-13T16:43:07Z",
+  "base_git_commit": "79cbd6055817f0d6cddd873efa9529f6762984a1",
+  "branch": "phase18b-gate2-remediation",
+  "phase15_fixture_set_sha256": "aab857a982b8e5db841e8a0681504cc2d00266daff992889f131a7fca905fa37",
+  "phase18_reconciled_package_sha256": "603371c9729b4b51b812af599a4ca40344b5eb3d61302240301dbfe123b01b4e",
+  "constraints": {
+    "phase19_authorized": false,
+    "production_workflow_remains_sole_responder": true,
+    "shadow_external_effects_allowed": false,
+    "gold_dataset_mutation_allowed": false
+  }
+}

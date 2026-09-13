@@ -24,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.PARLANT }}
+      PHASE18B_COHORT_GZIP_BASE64: ${{ secrets.PHASE18B_COHORT_GZIP_BASE64 }}
       BENCHMARK_CASE_LIMIT: ${{ inputs.benchmark_size == 'smoke' && '25' || '300' }}
     steps:
       - uses: actions/checkout@v4
@@ -40,6 +41,7 @@ jobs:
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq ripgrep >/dev/null
       - run: rg --version
       - name: Preserve baseline gates
+        if: github.ref_name != 'phase18b-gate2-remediation'
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -50,10 +52,11 @@ jobs:
           bash tests/postgres/verify_migration_manifest.sh
           bash tests/postgres/verify_static.sh
       - name: Run controlled Gemini benchmark
+        if: github.ref_name != 'phase18b-gate2-remediation'
         shell: bash
         run: deno task benchmark:gemini
       - name: Publish aggregate metrics only
-        if: always()
+        if: always() && github.ref_name != 'phase18b-gate2-remediation'
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -61,9 +64,56 @@ jobs:
           cp benchmark-report.json "$RUNNER_TEMP/benchmark-report.json"
           cat "$RUNNER_TEMP/benchmark-report.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload aggregate benchmark report
-        if: always()
+        if: always() && github.ref_name != 'phase18b-gate2-remediation'
         uses: actions/upload-artifact@v4
         with:
           name: 5b4e-gemini-benchmark-report
           path: benchmark-report.json
           if-no-files-found: ignore
+      - name: Decode private sanitized Phase 18B cohort
+        if: github.ref_name == 'phase18b-gate2-remediation'
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ -n "${PHASE18B_COHORT_GZIP_BASE64:-}" ]] || { echo "Phase 18B sanitized cohort is unavailable" >&2; exit 1; }
+          python3 - <<'PY'
+          import base64, gzip, os, pathlib
+          payload = gzip.decompress(base64.b64decode(os.environ["PHASE18B_COHORT_GZIP_BASE64"], validate=True))
+          destination = pathlib.Path(os.environ["RUNNER_TEMP"]) / "phase18b-cohort.json"
+          destination.write_bytes(payload)
+          destination.chmod(0o600)
+          PY
+      - name: Validate Phase 18B provider and no-effects boundaries
+        if: github.ref_name == 'phase18b-gate2-remediation'
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          deno fmt --check phase18b santana-conversation-domain/motor-v2
+          deno lint phase18b/live-shadow phase18b/tests santana-conversation-domain/motor-v2/providers
+          deno test --allow-net=jsr.io phase18b/tests/gemini_understanding_test.ts phase18b/tests/live_shadow_runner_test.ts santana-conversation-domain/motor-v2/tests/motor_v2_test.ts
+          python3 -m unittest phase18b/tests/test_live_cohort.py
+      - name: Run real-AI passive shadow comparison
+        if: github.ref_name == 'phase18b-gate2-remediation'
+        shell: bash
+        env:
+          GEMINI_MODEL: gemini-3.1-flash-lite
+        run: |
+          set -Eeuo pipefail
+          deno run \
+            --allow-env=GEMINI_API_KEY,GEMINI_MODEL \
+            --allow-net=generativelanguage.googleapis.com \
+            --allow-read="$RUNNER_TEMP/phase18b-cohort.json" \
+            --allow-write="$RUNNER_TEMP/phase18b-live-ai-result.json" \
+            phase18b/live-shadow/run_live_shadow.ts \
+            --cohort "$RUNNER_TEMP/phase18b-cohort.json" \
+            --output "$RUNNER_TEMP/phase18b-live-ai-result.json" \
+            --model "$GEMINI_MODEL" \
+            --timeout-ms 12000
+      - name: Upload sanitized Phase 18B result
+        if: always() && github.ref_name == 'phase18b-gate2-remediation'
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase18b-live-ai-result
+          path: ${{ runner.temp }}/phase18b-live-ai-result.json
+          if-no-files-found: error
+          retention-days: 7
