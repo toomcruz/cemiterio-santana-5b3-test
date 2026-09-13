@@ -1,14 +1,15 @@
 /**
  * Compare deterministic and real-AI Motor V2 understanding over a sanitized
- * live cohort. The only network boundary is the controlled Gemini provider;
+ * live cohort. The only network boundary is the controlled NVIDIA provider;
  * no production adapter, sender, operational store or action executor is used.
  */
 import { proposedCalls } from "../../phase18/shadow/would_call.ts";
 import { canonicalJson } from "../../santana-conversation-domain/motor-v2/canonical_json.ts";
 import {
-  type ControlledAiObservation,
-  ControlledGeminiUnderstandingProvider,
-} from "../../santana-conversation-domain/motor-v2/providers/gemini.ts";
+  CONTROLLED_NVIDIA_MODEL,
+  type ControlledNvidiaAiObservation,
+  ControlledNvidiaUnderstandingProvider,
+} from "../../santana-conversation-domain/motor-v2/providers/nvidia.ts";
 import { MotorV2Runtime } from "../../santana-conversation-domain/motor-v2/runtime.ts";
 import { sha256 } from "../../santana-conversation-domain/runtime/server_transition.ts";
 import { understandMessages } from "../../santana-conversation-domain/motor-v2/understanding.ts";
@@ -36,20 +37,22 @@ interface CohortEpisode {
   messages: CohortMessage[];
 }
 
+export interface LiveCohortSafety {
+  respond_allowed: false;
+  action_allowed: false;
+  official_write_allowed: false;
+  tools_mode: "would_call_only";
+  raw_content_persisted: false;
+  raw_identifiers_persisted: false;
+}
+
 interface LiveCohort {
   schema_version: "phase18b-live-shadow-cohort/1.0.0";
   mode: "LIVE_PASSIVE";
   cohort_id: string;
   cohort_hash: string;
   source: Record<string, unknown>;
-  safety: {
-    respond_allowed: false;
-    action_allowed: false;
-    official_write_allowed: false;
-    tools_mode: "would_call_only";
-    raw_content_persisted: false;
-    raw_identifiers_persisted: false;
-  };
+  safety: LiveCohortSafety;
   episodes: CohortEpisode[];
 }
 
@@ -70,10 +73,10 @@ function parseOptions(args: string[]): Options {
   }
   const cohort = values.get("cohort");
   const output = values.get("output");
-  const model = values.get("model") ?? Deno.env.get("GEMINI_MODEL") ?? "gemini-3.1-flash-lite";
-  const timeoutMs = Number(values.get("timeout-ms") ?? "12000");
+  const model = values.get("model") ?? CONTROLLED_NVIDIA_MODEL;
+  const timeoutMs = Number(values.get("timeout-ms") ?? "90000");
   if (!cohort || !output) throw new Error("--cohort and --output are required");
-  if (!Number.isInteger(timeoutMs) || timeoutMs < 250 || timeoutMs > 30_000) throw new Error("invalid timeout");
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 250 || timeoutMs > 90_000) throw new Error("invalid timeout");
   return { cohort, output, model, timeoutMs };
 }
 
@@ -81,6 +84,28 @@ function exactKeys(value: object, allowed: readonly string[], label: string): vo
   const keys = Object.keys(value).sort();
   const expected = [...allowed].sort();
   if (canonicalJson(keys) !== canonicalJson(expected)) throw new Error(`${label} contains missing or extra fields`);
+}
+
+export function assertClosedLiveCohortSafety(value: unknown): asserts value is LiveCohortSafety {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("cohort safety must be an object");
+  exactKeys(
+    value,
+    [
+      "respond_allowed",
+      "action_allowed",
+      "official_write_allowed",
+      "tools_mode",
+      "raw_content_persisted",
+      "raw_identifiers_persisted",
+    ],
+    "cohort safety",
+  );
+  const safety = value as Record<string, unknown>;
+  if (
+    safety.respond_allowed !== false || safety.action_allowed !== false ||
+    safety.official_write_allowed !== false || safety.tools_mode !== "would_call_only" ||
+    safety.raw_content_persisted !== false || safety.raw_identifiers_persisted !== false
+  ) throw new Error("cohort safety contract is not closed");
 }
 
 async function readCohort(path: string): Promise<LiveCohort> {
@@ -95,10 +120,7 @@ async function readCohort(path: string): Promise<LiveCohort> {
   delete withoutHash.cohort_hash;
   if (await sha256(canonicalJson(withoutHash)) !== cohort.cohort_hash) throw new Error("cohort hash mismatch");
   if (cohort.episodes.length < 20 || cohort.episodes.length > 100) throw new Error("cohort size outside bounds");
-  if (
-    cohort.safety.respond_allowed !== false || cohort.safety.action_allowed !== false ||
-    cohort.safety.official_write_allowed !== false || cohort.safety.tools_mode !== "would_call_only"
-  ) throw new Error("cohort safety contract is not closed");
+  assertClosedLiveCohortSafety(cohort.safety);
   const seen = new Set<string>();
   for (const episode of cohort.episodes) {
     exactKeys(
@@ -222,7 +244,7 @@ async function projection(result: MotorV2LabResult) {
     case_closed: result.trace.case_closed,
     closure_basis: result.trace.closure_basis,
     claims: result.trace.claims,
-    actions_executed_real: [],
+    actions_executed_real: result.trace.tool_calls.filter((call) => call.authorized || call.side_effect),
   };
 }
 
@@ -251,18 +273,42 @@ async function privateWrite(path: string, value: unknown): Promise<void> {
   await Deno.chmod(path, 0o600);
 }
 
+function aggregateObservations(observations: readonly ControlledNvidiaAiObservation[]) {
+  const latency = observations.map((event) => event.duration_ms);
+  const inputTokens = observations.flatMap((event) => event.input_tokens === null ? [] : [event.input_tokens]);
+  const outputTokens = observations.flatMap((event) => event.output_tokens === null ? [] : [event.output_tokens]);
+  const totalLatency = latency.reduce((total, value) => total + value, 0);
+  return {
+    provider_attempted: observations.length,
+    llm_valid: observations.filter((event) => event.outcome === "llm_valid").length,
+    fallback: observations.filter((event) => event.fallback_used).length,
+    latency_ms: {
+      minimum: latency.length ? Math.min(...latency) : null,
+      maximum: latency.length ? Math.max(...latency) : null,
+      mean: latency.length ? totalLatency / latency.length : null,
+      total: totalLatency,
+    },
+    tokens: {
+      input_total: inputTokens.reduce((total, value) => total + value, 0),
+      output_total: outputTokens.reduce((total, value) => total + value, 0),
+      usage_reported:
+        observations.filter((event) => event.input_tokens !== null || event.output_tokens !== null).length,
+    },
+  };
+}
+
 async function main(): Promise<void> {
   const options = parseOptions(Deno.args);
-  const apiKey = Deno.env.get("GEMINI_API_KEY") ?? "";
-  if (!apiKey) throw new Error("GEMINI_API_KEY is required");
+  const apiKey = Deno.env.get("NVIDIA_API_KEY") ?? "";
+  if (!apiKey) throw new Error("NVIDIA_API_KEY is required");
   const cohort = await readCohort(options.cohort);
   const cases = [];
-  const observations: ControlledAiObservation[] = [];
+  const observations: ControlledNvidiaAiObservation[] = [];
   for (const episode of cohort.episodes) {
     const input = inputFor(episode);
     const deterministic = await new MotorV2Runtime().runLabCase(input);
-    const localObservations: ControlledAiObservation[] = [];
-    const provider = new ControlledGeminiUnderstandingProvider({
+    const localObservations: ControlledNvidiaAiObservation[] = [];
+    const provider = new ControlledNvidiaUnderstandingProvider({
       apiKey,
       model: options.model,
       timeoutMs: options.timeoutMs,
@@ -307,6 +353,13 @@ async function main(): Promise<void> {
       observations.filter((event) => event.outcome === outcome).length,
     ]),
   );
+  const realActionsExecuted = cases.reduce(
+    (total, item) => total + item.deterministic.actions_executed_real.length + item.ai.actions_executed_real.length,
+    0,
+  );
+  const unsafeWouldCall = cases.some((item) =>
+    [...item.deterministic.would_call, ...item.ai.would_call].some((call) => call.effect_permitted)
+  );
   const result = {
     schema_version: "phase18b-live-ai-shadow-run/1.0.0",
     status: observations.some((event) => event.outcome === "llm_valid") ? "PASS" : "FAIL_NO_VALID_AI_OUTPUT",
@@ -314,7 +367,7 @@ async function main(): Promise<void> {
     cohort_id: cohort.cohort_id,
     cohort_hash: cohort.cohort_hash,
     provider: {
-      id: "controlled-gemini-understanding-v1",
+      id: "controlled-nvidia-understanding-v1",
       model: options.model,
       uses_ai: true,
       schema_guarded: true,
@@ -322,6 +375,7 @@ async function main(): Promise<void> {
       llm_valid_count: observations.filter((event) => event.outcome === "llm_valid").length,
       fallback_count: observations.filter((event) => event.fallback_used).length,
       outcomes: byOutcome,
+      observations: aggregateObservations(observations),
     },
     comparison: {
       deterministic_vs_ai_cases: cases.length,
@@ -331,16 +385,19 @@ async function main(): Promise<void> {
     cases,
     zero_effects: {
       shadow_messages_sent: 0,
-      real_actions_executed: 0,
+      real_actions_executed: realActionsExecuted,
       official_state_writes: 0,
       production_deploys: 0,
       action_executor_loaded: false,
       production_adapter_loaded: false,
-      network_allowlist: ["generativelanguage.googleapis.com"],
-      would_call_only: true,
+      network_allowlist: ["integrate.api.nvidia.com"],
+      would_call_only: !unsafeWouldCall,
     },
   };
-  if (cases.some((item) => item.ai.actions_executed_real.length || item.ai.claims.length)) {
+  if (
+    realActionsExecuted !== 0 || unsafeWouldCall ||
+    cases.some((item) => item.deterministic.claims.length || item.ai.claims.length)
+  ) {
     throw new Error("shadow result contains an executed action or unverified claim");
   }
   await privateWrite(options.output, result);

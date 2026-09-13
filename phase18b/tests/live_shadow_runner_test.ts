@@ -1,4 +1,5 @@
 import { assertEquals, assertThrows } from "jsr:@std/assert";
+import { assertClosedLiveCohortSafety } from "../live-shadow/run_live_shadow.ts";
 import { ControlledGeminiUnderstandingProvider } from "../../santana-conversation-domain/motor-v2/providers/gemini.ts";
 import { MotorV2Runtime } from "../../santana-conversation-domain/motor-v2/runtime.ts";
 
@@ -60,5 +61,32 @@ Deno.test("provider credential is mandatory", () => {
     () => new ControlledGeminiUnderstandingProvider({ apiKey: "", model: "gemini-test" }),
     Error,
     "credential",
+  );
+});
+
+Deno.test("live provider rejects cohorts that do not attest both privacy closures", () => {
+  const safety = {
+    respond_allowed: false,
+    action_allowed: false,
+    official_write_allowed: false,
+    tools_mode: "would_call_only",
+    raw_content_persisted: false,
+    raw_identifiers_persisted: false,
+  } as const;
+  assertClosedLiveCohortSafety(safety);
+  assertThrows(
+    () => assertClosedLiveCohortSafety({ ...safety, raw_content_persisted: true }),
+    Error,
+    "not closed",
+  );
+  assertThrows(
+    () => assertClosedLiveCohortSafety({ ...safety, raw_identifiers_persisted: true }),
+    Error,
+    "not closed",
+  );
+  assertThrows(
+    () => assertClosedLiveCohortSafety({ ...safety, unexpected: false }),
+    Error,
+    "missing or extra fields",
   );
 });
