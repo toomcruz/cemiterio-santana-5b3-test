@@ -14,6 +14,7 @@ from benchmark import (  # noqa: E402
     BenchmarkInputError,
     canonical_case_hash,
     evaluate_assertion,
+    privacy_hits,
     read_json,
     run_benchmark,
     score_engine_run,
@@ -116,15 +117,52 @@ def fixture(source_sha: str) -> dict:
     return value
 
 
-def run_row(case: dict, value: dict | None = None) -> dict:
+def run_row(
+    case: dict,
+    value: dict | None = None,
+    *,
+    engine: str = "current_workflow",
+    replay: int = 1,
+    run_id: str | None = None,
+) -> dict:
+    current = engine == "current_workflow"
     return {
+        "schema_version": "phase17-engine-run-v1.0.0",
+        "engine": {
+            "id": "current-workflow/test" if current else "motor-v2/test",
+            "runtime": "test",
+        },
+        "execution": {
+            "run_id": run_id or f"test-execution-{engine}-{replay}",
+            "replay": replay,
+            "engine_instance_scope": "fresh_per_case",
+        },
         "case_id": case["case_id"],
         "case_hash": case["case_hash"],
         "status": "COMPLETED",
         "environment": {"isolated": True, "network_access": False, "production_access": False},
+        "runtime": {
+            "network_allowed": False,
+            "production_adapters_loaded": False,
+            "external_side_effects": False,
+        },
         "trace": value or trace(),
-        "idempotency_probe": {"same_commit": True, "same_outbox": True},
+        "idempotency_probe": {
+            "duplicate_kind": "DUPLICATE",
+            "duplicate_reply_is_null": True,
+            "revision_unchanged": True,
+            "commits_unchanged": True,
+            "outbox_unchanged": True,
+        } if current else {
+            "duplicate_detected": True,
+            "revision_unchanged": True,
+            "state_hash_unchanged": True,
+            "audit_unchanged": True,
+            "trace_unchanged": True,
+        },
+        "receipt_evidence": [],
         "operational": {"latency_ms": 2, "retries": 0, "network_calls": 0, "resources": {"cpu_ms": 1}},
+        "audit_summary": {},
     }
 
 
@@ -192,7 +230,30 @@ def build_bundle(root: Path) -> tuple[dict[str, Path], dict]:
     }, case
 
 
+def write_v2_replays(root: Path, case: dict) -> list[Path]:
+    paths: list[Path] = []
+    for replay in range(1, 4):
+        path = root / f"runs/v2-replay-{replay}.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        row = run_row(
+            case,
+            engine="motor_v2",
+            replay=replay,
+            run_id=f"test-v2-independent-run-{replay}",
+        )
+        path.write_text(json.dumps(row, sort_keys=True) + "\n", encoding="utf-8")
+        paths.append(path)
+    return paths
+
+
 class BenchmarkTests(unittest.TestCase):
+    def test_privacy_safe_paths_require_an_exact_terminal_field_name(self) -> None:
+        phone_hits = privacy_hits({"not_case_id_secret": "+55 11 98888-7777"})
+        cpf_hits = privacy_hits({"source_episode_id_note": "CPF 123.456.789-00"})
+        self.assertTrue(phone_hits)
+        self.assertTrue(cpf_hits)
+        self.assertEqual(privacy_hits({"case_id": "episode_8f9ba7944b6d2705d62ff6ca"}), [])
+
     def test_phase15_assertion_semantics(self) -> None:
         value = trace()
         checks = [
@@ -209,9 +270,11 @@ class BenchmarkTests(unittest.TestCase):
     def test_end_to_end_outputs_are_deterministic(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             paths, _ = build_bundle(Path(directory) / "source")
+            case = json.loads(paths["fixtures_path"].read_text(encoding="utf-8"))
+            v2_paths = write_v2_replays(Path(directory) / "source", case)
             first = Path(directory) / "first"
             second = Path(directory) / "second"
-            kwargs = {**paths, "v2_run_paths": [paths["current_run_path"]] * 3}
+            kwargs = {**paths, "v2_run_paths": v2_paths}
             one = run_benchmark(**kwargs, output_dir=first)
             two = run_benchmark(**kwargs, output_dir=second)
             self.assertEqual(one["verdict"], "GATE_HUMANO_1_APTO_PARA_SHADOW_MODE")
@@ -226,11 +289,14 @@ class BenchmarkTests(unittest.TestCase):
     def test_fixture_manifest_drift_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             paths, _ = build_bundle(Path(directory) / "source")
+            v2_paths = write_v2_replays(Path(directory) / "source", json.loads(
+                paths["fixtures_path"].read_text(encoding="utf-8")
+            ))
             paths["fixtures_path"].write_text(paths["fixtures_path"].read_text() + " ", encoding="utf-8")
             with self.assertRaises(BenchmarkInputError):
                 run_benchmark(
                     **paths,
-                    v2_run_paths=[paths["current_run_path"]] * 3,
+                    v2_run_paths=v2_paths,
                     output_dir=Path(directory) / "out",
                 )
 
@@ -239,7 +305,7 @@ class BenchmarkTests(unittest.TestCase):
             paths, case = build_bundle(Path(directory) / "source")
             bad_trace = copy.deepcopy(trace())
             bad_trace["receipts_used"] = ["unknown_receipt"]
-            run = run_row(case, bad_trace)
+            run = run_row(case, bad_trace, engine="motor_v2")
             run["environment"]["network_access"] = True
             report, failures = score_engine_run(
                 [case],
@@ -250,6 +316,62 @@ class BenchmarkTests(unittest.TestCase):
             )
             self.assertEqual(report["status"], "INVALID_HARD_GUARD")
             self.assertTrue({"unknown_receipt", "isolation_or_network_guard"}.issubset(
+                {failure["failure_id"] for failure in failures}
+            ))
+
+    def test_duplicate_replay_source_blocks_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            paths, case = build_bundle(Path(directory) / "source")
+            replay = Path(directory) / "source/runs/v2.jsonl"
+            replay.write_text(json.dumps(run_row(case, engine="motor_v2"), sort_keys=True) + "\n", encoding="utf-8")
+            result = run_benchmark(
+                **paths,
+                v2_run_paths=[replay, replay, replay],
+                output_dir=Path(directory) / "out",
+            )
+            self.assertEqual(result["verdict"], "GATE_HUMANO_1_NAO_APTO")
+            failures = [json.loads(line) for line in (Path(directory) / "out/failure_matrix.jsonl").read_text().splitlines()]
+            self.assertIn("replay_sources_not_independent", {item["failure_id"] for item in failures})
+
+    def test_contradictory_isolation_and_weak_idempotency_are_hard_failures(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            _, case = build_bundle(Path(directory) / "source")
+            run = run_row(case, engine="motor_v2")
+            run["runtime"]["network_allowed"] = True
+            run["idempotency_probe"] = {"anything": True}
+            report, failures = score_engine_run(
+                [case],
+                [run],
+                {"type": "object", "required": list(trace())},
+                engine="motor_v2",
+                replay=1,
+            )
+            self.assertEqual(report["status"], "INVALID_HARD_GUARD")
+            self.assertTrue({"isolation_or_network_guard", "runtime_idempotency"}.issubset(
+                {failure["failure_id"] for failure in failures}
+            ))
+
+    def test_receipt_type_without_integrity_evidence_is_a_hard_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            _, case = build_bundle(Path(directory) / "source")
+            case["receipts"]["required"] = [{"claim_code": "done", "receipt_type": "execution_confirmation"}]
+            bad_trace = copy.deepcopy(trace())
+            bad_trace["receipts_used"] = ["execution_confirmation"]
+            bad_trace["claims"] = [{
+                "claim_code": "done",
+                "text_span": "done",
+                "receipt_refs": ["execution_confirmation"],
+            }]
+            run = run_row(case, bad_trace, engine="motor_v2")
+            report, failures = score_engine_run(
+                [case],
+                [run],
+                {"type": "object", "required": list(trace())},
+                engine="motor_v2",
+                replay=1,
+            )
+            self.assertEqual(report["status"], "INVALID_HARD_GUARD")
+            self.assertTrue({"receipt_used_without_evidence", "claim_receipt_not_bound"}.issubset(
                 {failure["failure_id"] for failure in failures}
             ))
 

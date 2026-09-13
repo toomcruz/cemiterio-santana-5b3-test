@@ -99,7 +99,11 @@ function resourceDelta(before: Deno.MemoryUsage, after: Deno.MemoryUsage, output
   };
 }
 
-async function runCurrent(fixture: Fixture, mode: "compat-v1" | "role-aware-v1") {
+async function runCurrent(
+  fixture: Fixture,
+  mode: "compat-v1" | "role-aware-v1",
+  runId: string,
+) {
   const before = Deno.memoryUsage();
   const result = await runCurrentWorkflowLabCase({
     caseId: fixture.case_id,
@@ -117,6 +121,7 @@ async function runCurrent(fixture: Fixture, mode: "compat-v1" | "role-aware-v1")
   const row = {
     schema_version: "phase17-engine-run-v1.0.0",
     engine: { id: `current-workflow/${mode}`, runtime: "santana-conversation-domain/v1" },
+    execution: { run_id: runId, replay: 1, engine_instance_scope: "fresh_per_case" },
     case_id: fixture.case_id,
     case_hash: fixture.case_hash,
     status: result.status,
@@ -124,6 +129,7 @@ async function runCurrent(fixture: Fixture, mode: "compat-v1" | "role-aware-v1")
     idempotency_probe: result.idempotency_probe,
     environment: { isolated: true, network_access: false, production_access: false },
     runtime: { network_allowed: false, production_adapters_loaded: false, external_side_effects: false },
+    receipt_evidence: [],
     operational: {
       latency_ms: result.metrics.total_duration_ms,
       retries: result.metrics.retries,
@@ -143,7 +149,7 @@ async function runCurrent(fixture: Fixture, mode: "compat-v1" | "role-aware-v1")
   return row;
 }
 
-async function runV2(fixture: Fixture) {
+async function runV2(fixture: Fixture, runId: string, replay: number) {
   const runtime = new MotorV2Runtime();
   const input = {
     case_id: fixture.case_id,
@@ -171,6 +177,7 @@ async function runV2(fixture: Fixture) {
       runtime: first.state.schema_version,
       understanding_provider: first.provider,
     },
+    execution: { run_id: runId, replay, engine_instance_scope: "fresh_per_case" },
     case_id: fixture.case_id,
     case_hash: fixture.case_hash,
     status: "COMPLETED" as const,
@@ -184,6 +191,17 @@ async function runV2(fixture: Fixture) {
     },
     environment: { isolated: true, network_access: false, production_access: false },
     runtime: { network_allowed: false, production_adapters_loaded: false, external_side_effects: false },
+    receipt_evidence: first.state.receipts.map((receipt) => ({
+      receipt_id: receipt.receipt_id,
+      receipt_type: receipt.receipt_type,
+      tool: receipt.tool,
+      idempotency_key: receipt.idempotency_key,
+      issued_at: receipt.issued_at,
+      payload_hash: receipt.payload_hash,
+      executor_reference_hash: receipt.executor_reference_hash,
+      integrity_hash: receipt.integrity_hash,
+      bound_claim_codes: [],
+    })),
     operational: {
       latency_ms: first.metrics.duration_ms,
       retries: first.metrics.retry_count,
@@ -220,25 +238,28 @@ async function main(): Promise<void> {
   if (await sha256(fixtureText) !== EXPECTED_FIXTURE_SHA256) throw new Error("immutable fixture file SHA-256 mismatch");
   const fixtures = parseFixtures(fixtureText);
   await Deno.mkdir(options.outputDir, { recursive: true, mode: 0o700 });
+  const executionId = crypto.randomUUID();
 
   const current = [];
   const currentRoleAware = [];
   for (const fixture of fixtures) {
-    current.push(await runCurrent(fixture, "compat-v1"));
-    currentRoleAware.push(await runCurrent(fixture, "role-aware-v1"));
+    current.push(await runCurrent(fixture, "compat-v1", `${executionId}:current-compat-v1`));
+    currentRoleAware.push(await runCurrent(fixture, "role-aware-v1", `${executionId}:current-role-aware-v1`));
   }
   await writeJsonl(`${options.outputDir}/current-workflow-compat-v1.jsonl`, current);
   await writeJsonl(`${options.outputDir}/current-workflow-role-aware-v1.jsonl`, currentRoleAware);
 
   for (let replay = 1; replay <= options.v2Replays; replay += 1) {
     const rows = [];
-    for (const fixture of fixtures) rows.push(await runV2(fixture));
+    const runId = `${executionId}:motor-v2-replay-${replay}`;
+    for (const fixture of fixtures) rows.push(await runV2(fixture, runId, replay));
     await writeJsonl(`${options.outputDir}/motor-v2-replay-${replay}.jsonl`, rows);
   }
   const summary = {
     schema_version: "phase17-engine-execution-summary-v1.0.0",
     fixture_sha256: EXPECTED_FIXTURE_SHA256,
     fixture_count: fixtures.length,
+    execution_id: executionId,
     current_modes: ["compat-v1", "role-aware-v1"],
     v2_replays: options.v2Replays,
     environment: { isolated: true, network_access: false, production_access: false },

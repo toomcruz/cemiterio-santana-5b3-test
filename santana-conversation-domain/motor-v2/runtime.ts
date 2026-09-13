@@ -101,6 +101,9 @@ function tracksFor(input: MotorV2LabInput, now: string, subintents: readonly str
 
 function renderReply(state: MotorV2State): string {
   const actions = new Set(state.policy.actions);
+  if (state.policy.handoff.offered && state.policy.handoff.priority === "P0") {
+    return "Identifiquei um risco P0. Vou preservar os fatos e as trilhas separadamente; a próxima orientação exige validação humana prioritária e nenhuma conclusão foi declarada.";
+  }
   if (actions.has("REQUEST_EXPLICIT_CONFIRMATION")) {
     return "Preservei a versão atual e preparei somente a alteração solicitada. Confirma explicitamente a prévia antes de qualquer envio?";
   }
@@ -149,6 +152,9 @@ export class MotorV2Runtime {
     const conversationId = input.conversation_id ?? `conversation_${inputHash.slice(0, 20)}`;
     const inboundId = input.inbound_id ?? `inbound_${inputHash.slice(20, 40)}`;
     const prior = this.#store.load();
+    if (prior && prior.conversation_id !== conversationId) {
+      throw new Error("motor-v2 store belongs to another conversation");
+    }
     if (prior?.processed_inbound_ids.includes(inboundId)) {
       const trace = projectBenchmarkTrace({
         caseId,
@@ -219,7 +225,7 @@ export class MotorV2Runtime {
       schema_version: "motor-v2-state/1.0.0",
       conversation_id: conversationId,
       revision: prior?.revision ?? 0,
-      facts: prior?.facts ?? facts,
+      facts,
       tracks,
       understanding,
       policy,

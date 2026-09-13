@@ -13,12 +13,12 @@ export interface ActionExecutor {
   execute(request: ActionRequest): Promise<{ accepted: boolean; reference: string | null }>;
 }
 
-const TOOL_POLICY: Record<ActionRequest["tool"], { irreversible: boolean }> = {
-  "handoff.request": { irreversible: false },
-  "booking.request": { irreversible: true },
-  "payment.request": { irreversible: true },
-  "document.submit": { irreversible: true },
-  "draft.preview": { irreversible: false },
+const TOOL_POLICY: Record<ActionRequest["tool"], { irreversible: boolean; receipt_type: ReceiptType }> = {
+  "handoff.request": { irreversible: false, receipt_type: "handoff_acceptance" },
+  "booking.request": { irreversible: true, receipt_type: "booking_confirmation" },
+  "payment.request": { irreversible: true, receipt_type: "payment_confirmation" },
+  "document.submit": { irreversible: true, receipt_type: "document_confirmation" },
+  "draft.preview": { irreversible: false, receipt_type: "explicit_user_confirmation" },
 };
 
 /**
@@ -26,7 +26,7 @@ const TOOL_POLICY: Record<ActionRequest["tool"], { irreversible: boolean }> = {
  * explicit opt-in; the lab runtime never supplies either.
  */
 export class ActionGateway {
-  readonly #calls = new Map<string, GatewayCallRecord>();
+  readonly #calls = new Map<string, { request_hash: string; record: GatewayCallRecord }>();
 
   constructor(
     private readonly clock: FixedClock,
@@ -36,8 +36,17 @@ export class ActionGateway {
   ) {}
 
   async invoke(request: ActionRequest): Promise<GatewayCallRecord> {
+    const requestHash = await sha256(canonicalJson(request));
     const prior = this.#calls.get(request.idempotency_key);
-    if (prior) return { ...structuredClone(prior), outcome: prior.receipt ? "replayed" : prior.outcome };
+    if (prior) {
+      if (prior.request_hash !== requestHash) {
+        return this.record(request, "denied", "idempotency key reused with a different request", null);
+      }
+      return {
+        ...structuredClone(prior.record),
+        outcome: prior.record.receipt ? "replayed" : prior.record.outcome,
+      };
+    }
     const toolPolicy = TOOL_POLICY[request.tool];
     if (
       !toolPolicy || !request.idempotency_key ||
@@ -47,20 +56,25 @@ export class ActionGateway {
     ) {
       return this.record(request, "denied", "invalid or non-allowlisted action request", null);
     }
+    if (request.required_receipt_type !== toolPolicy.receipt_type) {
+      const denied = this.record(request, "denied", "receipt type does not match the allowlisted tool", null);
+      this.#calls.set(request.idempotency_key, { request_hash: requestHash, record: denied });
+      return structuredClone(denied);
+    }
     if (toolPolicy.irreversible && !request.explicit_confirmation) {
       const denied = this.record(request, "denied", "explicit confirmation required", null);
-      this.#calls.set(request.idempotency_key, denied);
+      this.#calls.set(request.idempotency_key, { request_hash: requestHash, record: denied });
       return structuredClone(denied);
     }
     if (!this.options.external_effects_allowed || !this.options.executor) {
       const denied = this.record(request, "denied", "external effects disabled", null);
-      this.#calls.set(request.idempotency_key, denied);
+      this.#calls.set(request.idempotency_key, { request_hash: requestHash, record: denied });
       return structuredClone(denied);
     }
     const result = await this.options.executor.execute(structuredClone(request));
     if (!result.accepted || !result.reference) {
       const proposed = this.record(request, "proposed", "executor did not confirm the effect", null);
-      this.#calls.set(request.idempotency_key, proposed);
+      this.#calls.set(request.idempotency_key, { request_hash: requestHash, record: proposed });
       return structuredClone(proposed);
     }
     const payload_hash = await sha256(canonicalJson(request.payload));
@@ -78,7 +92,7 @@ export class ActionGateway {
       integrity_hash: await sha256(canonicalJson(unsigned)),
     };
     const executed = this.record(request, "executed", "executor returned a verifiable reference", receipt);
-    this.#calls.set(request.idempotency_key, executed);
+    this.#calls.set(request.idempotency_key, { request_hash: requestHash, record: executed });
     return structuredClone(executed);
   }
 

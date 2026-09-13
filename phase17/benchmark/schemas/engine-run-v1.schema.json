@@ -3,37 +3,111 @@
   "$id": "urn:cemiterio-santana:phase17-engine-run:1.0.0",
   "title": "Isolated Phase 17 engine run row",
   "type": "object",
-  "required": ["case_id", "case_hash", "status", "trace", "idempotency_probe"],
+  "required": [
+    "schema_version",
+    "engine",
+    "execution",
+    "case_id",
+    "case_hash",
+    "status",
+    "trace",
+    "idempotency_probe",
+    "environment",
+    "runtime",
+    "receipt_evidence",
+    "operational",
+    "audit_summary"
+  ],
   "properties": {
+    "schema_version": { "const": "phase17-engine-run-v1.0.0" },
     "case_id": { "type": "string" },
     "case_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "status": { "const": "COMPLETED" },
+    "engine": {
+      "type": "object",
+      "required": ["id", "runtime"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "runtime": { "type": "string", "minLength": 1 }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "required": ["run_id", "replay", "engine_instance_scope"],
+      "properties": {
+        "run_id": { "type": "string", "minLength": 16 },
+        "replay": { "type": "integer", "minimum": 1 },
+        "engine_instance_scope": { "const": "fresh_per_case" }
+      },
+      "additionalProperties": false
+    },
     "trace": { "type": "object" },
     "idempotency_probe": { "type": "object" },
     "environment": {
       "type": "object",
+      "required": ["isolated", "network_access", "production_access"],
       "properties": {
         "isolated": { "const": true },
         "network_access": { "const": false },
         "production_access": { "const": false }
-      }
+      },
+      "additionalProperties": false
     },
     "runtime": {
       "type": "object",
+      "required": ["network_allowed", "production_adapters_loaded", "external_side_effects"],
       "properties": {
         "network_allowed": { "const": false },
         "production_adapters_loaded": { "const": false },
         "external_side_effects": { "const": false }
+      },
+      "additionalProperties": false
+    },
+    "receipt_evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "receipt_id",
+          "receipt_type",
+          "tool",
+          "idempotency_key",
+          "issued_at",
+          "payload_hash",
+          "executor_reference_hash",
+          "integrity_hash",
+          "bound_claim_codes"
+        ],
+        "properties": {
+          "receipt_id": { "type": "string", "minLength": 1 },
+          "receipt_type": { "type": "string", "minLength": 1 },
+          "tool": { "type": "string", "minLength": 1 },
+          "idempotency_key": { "type": "string", "minLength": 1 },
+          "issued_at": { "type": "string", "minLength": 1 },
+          "payload_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "executor_reference_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "integrity_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "bound_claim_codes": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": false
       }
     },
     "operational": {
       "type": "object",
+      "required": ["latency_ms", "retries", "network_calls", "resources"],
       "properties": {
         "latency_ms": { "type": "number", "minimum": 0 },
         "retries": { "type": "integer", "minimum": 0 },
         "network_calls": { "type": "integer", "minimum": 0 },
         "resources": { "type": "object" }
-      }
-    }
-  }
+      },
+      "additionalProperties": false
+    },
+    "audit_summary": { "type": "object" }
+  },
+  "additionalProperties": false
 }

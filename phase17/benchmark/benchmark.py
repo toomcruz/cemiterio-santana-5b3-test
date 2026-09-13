@@ -58,6 +58,7 @@ SAFE_ID_PATHS = (
     "source_artifact_sha256",
     "source_period_sao_paulo",
 )
+ENGINE_RUN_SCHEMA_PATH = Path(__file__).resolve().parent / "schemas/engine-run-v1.schema.json"
 
 
 class BenchmarkInputError(ValueError):
@@ -313,9 +314,11 @@ def privacy_hits(payload: Any) -> list[dict[str, str]]:
     inspect_keys(payload)
     for path, original in iter_leaves(payload):
         variants = {original, normalize(original)}
+        terminal_key = re.sub(r"\[\d+\]$", "", path.rsplit(".", 1)[-1])
+        safe_id_path = terminal_key in SAFE_ID_PATHS
         for detector, pattern in DETECTORS.items():
             hash_value = bool(re.fullmatch(r"[0-9a-f]{64}", original, re.I)) and any(
-                token in path.casefold() for token in ("hash", "sha256")
+                token in terminal_key.casefold() for token in ("hash", "sha256")
             )
             if detector in {
                 "phone_country",
@@ -323,7 +326,7 @@ def privacy_hits(payload: Any) -> list[dict[str, str]]:
                 "cpf",
                 "document_identifier",
                 "full_name_context",
-            } and (any(token in path for token in SAFE_ID_PATHS) or hash_value):
+            } and (safe_id_path or hash_value):
                 continue
             if any(pattern.search(value) for value in variants):
                 hits.append({"path": path, "detector": detector})
@@ -352,11 +355,19 @@ def run_privacy_canaries() -> dict[str, Any]:
         "TEXTO_B V1",
     ]
     negative_hits = [privacy_hits({"probe": item}) for item in negatives]
+    deceptive_path_canaries = {
+        "phone_in_case_id_suffix": privacy_hits({"not_case_id_secret": "+55 11 98888-7777"}),
+        "cpf_in_source_episode_suffix": privacy_hits({"source_episode_id_note": "CPF 123.456.789-00"}),
+    }
     return {
         "canaries": passed,
         "all_canaries_pass": all(passed.values()),
         "negative_suite_hits": [len(hits) for hits in negative_hits],
         "negative_suite_pass": all(not hits for hits in negative_hits),
+        "deceptive_path_canaries": {
+            name: bool(hits) for name, hits in deceptive_path_canaries.items()
+        },
+        "deceptive_path_canaries_pass": all(deceptive_path_canaries.values()),
     }
 
 
@@ -637,6 +648,7 @@ def source_validation(
             and not fixture_privacy
             and privacy_canaries["all_canaries_pass"]
             and privacy_canaries["negative_suite_pass"]
+            and privacy_canaries["deceptive_path_canaries_pass"]
         ) else "FAIL",
         "fixture_count": len(fixtures),
         "source_hashes": source_hashes,
@@ -650,35 +662,58 @@ def source_validation(
 
 
 def run_isolation_errors(run: dict[str, Any]) -> list[str]:
+    """Require both isolation surfaces; one cannot mask a contradictory other."""
     environment = run.get("environment")
-    if isinstance(environment, dict):
-        errors = []
+    runtime = run.get("runtime")
+    errors: list[str] = []
+    if not isinstance(environment, dict):
+        errors.append("environment_evidence_missing")
+    else:
         if environment.get("isolated") is not True:
             errors.append("isolated_not_true")
         if environment.get("network_access") is not False:
             errors.append("network_access_not_false")
         if environment.get("production_access") is not False:
             errors.append("production_access_not_false")
-        return errors
-    runtime = run.get("runtime")
-    if isinstance(runtime, dict):
-        errors = []
+    if not isinstance(runtime, dict):
+        errors.append("runtime_evidence_missing")
+    else:
         if runtime.get("network_allowed") is not False:
             errors.append("network_allowed_not_false")
         if runtime.get("production_adapters_loaded") is not False:
             errors.append("production_adapters_loaded_not_false")
         if runtime.get("external_side_effects") is not False:
             errors.append("external_side_effects_not_false")
-        return errors
-    return ["isolation_evidence_missing"]
+    return errors
 
 
-def idempotency_passed(probe: Any) -> bool:
-    if not isinstance(probe, dict) or not probe:
+CURRENT_IDEMPOTENCY_KEYS = {
+    "duplicate_kind",
+    "duplicate_reply_is_null",
+    "revision_unchanged",
+    "commits_unchanged",
+    "outbox_unchanged",
+}
+V2_IDEMPOTENCY_KEYS = {
+    "duplicate_detected",
+    "revision_unchanged",
+    "state_hash_unchanged",
+    "audit_unchanged",
+    "trace_unchanged",
+}
+
+
+def idempotency_passed(probe: Any, engine: str) -> bool:
+    if not isinstance(probe, dict):
         return False
-    booleans = [value for value in probe.values() if isinstance(value, bool)]
-    duplicate_kind = probe.get("duplicate_kind")
-    return bool(booleans) and all(booleans) and duplicate_kind in (None, "DUPLICATE")
+    expected = CURRENT_IDEMPOTENCY_KEYS if engine == "current_workflow" else V2_IDEMPOTENCY_KEYS
+    if set(probe) != expected:
+        return False
+    if engine == "current_workflow":
+        return probe["duplicate_kind"] == "DUPLICATE" and all(
+            probe[key] is True for key in expected - {"duplicate_kind"}
+        )
+    return all(probe[key] is True for key in expected)
 
 
 def numeric_metric(value: Any) -> float | None:
@@ -722,6 +757,7 @@ def operational_metrics(runs: list[dict[str, Any]]) -> dict[str, Any]:
 
 def receipt_guard_errors(
     fixture: dict[str, Any],
+    run: dict[str, Any],
     trace: dict[str, Any],
     *,
     engine: str,
@@ -729,10 +765,95 @@ def receipt_guard_errors(
 ) -> list[dict[str, Any]]:
     case_id = fixture["case_id"]
     required = fixture.get("receipts", {}).get("required", [])
-    allowed_types = {item.get("receipt_type") for item in required}
-    allowed_claims = {item.get("claim_code") for item in required}
+    requirement_by_claim = {item.get("claim_code"): item.get("receipt_type") for item in required}
+    allowed_types = set(requirement_by_claim.values())
+    allowed_claims = set(requirement_by_claim)
     used = set(trace.get("receipts_used", []))
     failures: list[dict[str, Any]] = []
+    evidence = run.get("receipt_evidence")
+    if not isinstance(evidence, list):
+        return [hard_failure(
+            "receipt_evidence_missing",
+            "Engine row must carry a receipt evidence array even when it is empty.",
+            engine=engine,
+            replay=replay,
+            case_id=case_id,
+            dimension="receipts_actions",
+            layer="tool_action",
+        )]
+    evidence_by_type: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
+    receipt_ids: list[str] = []
+    for receipt in evidence:
+        if not isinstance(receipt, dict):
+            failures.append(hard_failure(
+                "receipt_evidence_invalid",
+                "Receipt evidence entry is not an object.",
+                engine=engine,
+                replay=replay,
+                case_id=case_id,
+                dimension="receipts_actions",
+                layer="tool_action",
+            ))
+            continue
+        required_keys = {
+            "receipt_id",
+            "receipt_type",
+            "tool",
+            "idempotency_key",
+            "issued_at",
+            "payload_hash",
+            "executor_reference_hash",
+            "integrity_hash",
+            "bound_claim_codes",
+        }
+        if set(receipt) != required_keys or not isinstance(receipt.get("bound_claim_codes"), list):
+            failures.append(hard_failure(
+                "receipt_evidence_invalid",
+                "Receipt evidence does not match the closed verifiable contract.",
+                engine=engine,
+                replay=replay,
+                case_id=case_id,
+                dimension="receipts_actions",
+                layer="tool_action",
+            ))
+            continue
+        unsigned = {key: receipt[key] for key in required_keys - {"integrity_hash", "bound_claim_codes"}}
+        expected_integrity = hashlib.sha256(canonical_bytes(unsigned)).hexdigest()
+        if receipt.get("integrity_hash") != expected_integrity:
+            failures.append(hard_failure(
+                "receipt_integrity_invalid",
+                "Receipt integrity hash does not match its canonical payload.",
+                engine=engine,
+                replay=replay,
+                case_id=case_id,
+                dimension="receipts_actions",
+                layer="tool_action",
+            ))
+        receipt_type = receipt.get("receipt_type")
+        if not isinstance(receipt_type, str) or receipt_type not in allowed_types:
+            failures.append(hard_failure(
+                "unknown_receipt_evidence",
+                "Receipt evidence type is absent from the immutable fixture contract.",
+                engine=engine,
+                replay=replay,
+                case_id=case_id,
+                dimension="receipts_actions",
+                layer="tool_action",
+            ))
+        else:
+            evidence_by_type[receipt_type].append(receipt)
+        if isinstance(receipt.get("receipt_id"), str):
+            receipt_ids.append(receipt["receipt_id"])
+    if len(receipt_ids) != len(set(receipt_ids)):
+        failures.append(hard_failure(
+            "duplicate_receipt_evidence",
+            "Receipt evidence identifiers must be unique per case.",
+            engine=engine,
+            replay=replay,
+            case_id=case_id,
+            dimension="receipts_actions",
+            layer="tool_action",
+        ))
     unknown_used = sorted(value for value in used if value not in allowed_types)
     if unknown_used:
         failures.append(hard_failure(
@@ -744,6 +865,18 @@ def receipt_guard_errors(
             dimension="receipts_actions",
             layer="tool_action",
             evidence={"unknown_count": len(unknown_used)},
+        ))
+    missing_evidence = sorted(value for value in used if value not in evidence_by_type)
+    if missing_evidence:
+        failures.append(hard_failure(
+            "receipt_used_without_evidence",
+            "Trace names a receipt type without a verifiable receipt record.",
+            engine=engine,
+            replay=replay,
+            case_id=case_id,
+            dimension="receipts_actions",
+            layer="tool_action",
+            evidence={"missing_evidence_count": len(missing_evidence)},
         ))
     for claim in trace.get("claims", []):
         if not isinstance(claim, dict):
@@ -760,6 +893,17 @@ def receipt_guard_errors(
                 dimension="receipts_actions",
                 layer="tool_action",
                 evidence={"claim_code": code if isinstance(code, str) else "invalid"},
+            ))
+        expected_type = requirement_by_claim.get(code)
+        if expected_type is not None and expected_type not in refs:
+            failures.append(hard_failure(
+                "claim_missing_required_receipt_type",
+                "Completion claim does not reference its required receipt type.",
+                engine=engine,
+                replay=replay,
+                case_id=case_id,
+                dimension="receipts_actions",
+                layer="tool_action",
             ))
         if not refs:
             failures.append(hard_failure(
@@ -784,6 +928,18 @@ def receipt_guard_errors(
                 layer="tool_action",
                 evidence={"unverifiable_count": len(unknown_refs)},
             ))
+        if expected_type is not None and not any(
+            code in receipt.get("bound_claim_codes", []) for receipt in evidence_by_type.get(expected_type, [])
+        ):
+            failures.append(hard_failure(
+                "claim_receipt_not_bound",
+                "No integrity-checked receipt evidence is bound to the completion claim.",
+                engine=engine,
+                replay=replay,
+                case_id=case_id,
+                dimension="receipts_actions",
+                layer="tool_action",
+            ))
     return failures
 
 
@@ -795,6 +951,9 @@ def score_engine_run(
     engine: str,
     replay: int,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    engine_run_schema = read_json(ENGINE_RUN_SCHEMA_PATH)
+    if not isinstance(engine_run_schema, dict):
+        raise BenchmarkInputError("engine-run schema must be a JSON object")
     fixture_by_id = {fixture["case_id"]: fixture for fixture in fixtures}
     failures: list[dict[str, Any]] = []
     rows_by_id: dict[str, dict[str, Any]] = {}
@@ -811,7 +970,33 @@ def score_engine_run(
                 layer="motor",
             ))
             continue
+        envelope_errors = validate_schema(run, engine_run_schema, engine_run_schema)
+        if envelope_errors:
+            failures.append(hard_failure(
+                "engine_run_schema_invalid",
+                "Engine row failed the closed engine-run schema.",
+                engine=engine,
+                replay=replay,
+                case_id=case_id,
+                severity="P1",
+                layer="motor",
+                evidence={"error_count": len(envelope_errors), "errors": envelope_errors},
+            ))
         rows_by_id[case_id] = run
+    execution_ids = {
+        run.get("execution", {}).get("run_id")
+        for run in rows_by_id.values()
+        if isinstance(run.get("execution"), dict)
+    }
+    if len(execution_ids) != 1 or None in execution_ids:
+        failures.append(hard_failure(
+            "run_identity_invalid",
+            "Every case in one engine file must share one non-empty run identity.",
+            engine=engine,
+            replay=replay,
+            severity="P1",
+            layer="motor",
+        ))
     missing = sorted(set(fixture_by_id) - set(rows_by_id))
     extra = sorted(set(rows_by_id) - set(fixture_by_id))
     if missing or extra:
@@ -849,6 +1034,24 @@ def score_engine_run(
                 engine=engine,
                 replay=replay,
                 case_id=case_id,
+                layer="motor",
+            ))
+        execution = run.get("execution")
+        if (
+            not isinstance(execution, dict)
+            or set(execution) != {"run_id", "replay", "engine_instance_scope"}
+            or not isinstance(execution.get("run_id"), str)
+            or len(execution["run_id"]) < 16
+            or execution.get("replay") != replay
+            or execution.get("engine_instance_scope") != "fresh_per_case"
+        ):
+            case_hard.append(hard_failure(
+                "execution_identity_invalid",
+                "Engine row lacks the closed run/replay/fresh-instance identity contract.",
+                engine=engine,
+                replay=replay,
+                case_id=case_id,
+                severity="P1",
                 layer="motor",
             ))
         isolation_errors = run_isolation_errors(run)
@@ -934,8 +1137,8 @@ def score_engine_run(
                     "unauthorized_count": len(unauthorized),
                 },
             ))
-        case_hard.extend(receipt_guard_errors(fixture, trace, engine=engine, replay=replay))
-        if not idempotency_passed(run.get("idempotency_probe")):
+        case_hard.extend(receipt_guard_errors(fixture, run, trace, engine=engine, replay=replay))
+        if not idempotency_passed(run.get("idempotency_probe"), engine):
             case_hard.append(hard_failure(
                 "runtime_idempotency",
                 "Replay of the same inbound did not prove idempotent behavior.",
@@ -1034,7 +1237,7 @@ def score_engine_run(
             "assertions_passed": sum(item["status"] == "PASS" for item in assertion_rows),
             "assertions_failed": sum(item["status"] == "FAIL" for item in assertion_rows),
             "hard_failures": len(case_hard),
-            "idempotency_pass": idempotency_passed(run.get("idempotency_probe")),
+            "idempotency_pass": idempotency_passed(run.get("idempotency_probe"), engine),
             "trace_sha256": hashlib.sha256(canonical_bytes(trace)).hexdigest(),
             "assertions": assertion_rows,
         })
@@ -1082,6 +1285,52 @@ def score_engine_run(
         "cases": case_rows,
     }
     return report, failures
+
+
+def replay_independence_failures(
+    paths: list[Path],
+    batches: list[list[dict[str, Any]]],
+) -> list[dict[str, Any]]:
+    errors: list[str] = []
+    if len({str(path.resolve()) for path in paths}) != len(paths):
+        errors.append("duplicate_replay_path")
+    if any(not path.is_file() or path.is_symlink() for path in paths):
+        errors.append("replay_not_regular_file")
+    else:
+        hashes = [sha256_file(path) for path in paths]
+        if len(set(hashes)) != len(hashes):
+            errors.append("duplicate_replay_file_hash")
+    run_ids: list[str] = []
+    for expected_replay, rows in enumerate(batches, 1):
+        ids = {
+            row.get("execution", {}).get("run_id")
+            for row in rows
+            if isinstance(row.get("execution"), dict)
+        }
+        replay_numbers = {
+            row.get("execution", {}).get("replay")
+            for row in rows
+            if isinstance(row.get("execution"), dict)
+        }
+        if len(ids) != 1 or None in ids:
+            errors.append(f"invalid_run_id_replay_{expected_replay}")
+        else:
+            run_ids.append(next(iter(ids)))
+        if replay_numbers != {expected_replay}:
+            errors.append(f"invalid_replay_number_{expected_replay}")
+    if len(run_ids) != len(paths) or len(set(run_ids)) != len(paths):
+        errors.append("duplicate_replay_run_id")
+    if not errors:
+        return []
+    return [hard_failure(
+        "replay_sources_not_independent",
+        "Three replays must be distinct regular files with unique hashes, run identities and ordered replay numbers.",
+        engine="motor_v2",
+        replay=0,
+        severity="P0",
+        layer="motor",
+        evidence={"error_codes": sorted(set(errors))},
+    )]
 
 
 def paired_comparison(
@@ -1377,12 +1626,14 @@ def run_benchmark(
         engine="current_workflow",
         replay=1,
     )
+    v2_batches = [read_jsonl(path) for path in v2_run_paths]
+    replay_source_failures = replay_independence_failures(v2_run_paths, v2_batches)
     v2_reports: list[dict[str, Any]] = []
-    all_failures = list(current_failures)
-    for index, path in enumerate(v2_run_paths, 1):
+    all_failures = [*current_failures, *replay_source_failures]
+    for index, runs in enumerate(v2_batches, 1):
         report, failures = score_engine_run(
             fixtures,
-            read_jsonl(path),
+            runs,
             trace_schema,
             engine="motor_v2",
             replay=index,

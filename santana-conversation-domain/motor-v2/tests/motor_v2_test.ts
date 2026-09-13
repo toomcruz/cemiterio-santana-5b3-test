@@ -79,6 +79,29 @@ Deno.test("current policy registry requires confirmed versioned source and respe
   assertEquals(registry.activeAt("2027-01-01T00:00:00Z"), []);
 });
 
+Deno.test("current policy registry rejects historical or unconfirmed runtime values", () => {
+  const base = {
+    policy_id: "policy_candidate_1",
+    domain: "synthetic",
+    statement: "Texto histórico que não pode virar regra vigente.",
+    source_ref: "historical-source-v1",
+    valid_from: "2026-01-01T00:00:00Z",
+    valid_until: null,
+    temporal_status: "historical",
+    review_status: "rejected",
+  };
+  const registry = new CurrentPolicyRegistry(
+    [
+      null,
+      base,
+      { ...base, policy_id: 123, temporal_status: "current", review_status: "administratively_confirmed" },
+      { ...base, policy_id: "policy_candidate_2", temporal_status: "current" },
+      { ...base, policy_id: "policy_candidate_3", review_status: "administratively_confirmed" },
+    ] as unknown as ConstructorParameters<typeof CurrentPolicyRegistry>[0],
+  );
+  assertEquals(registry.activeAt("2026-09-13T15:00:00Z"), []);
+});
+
 Deno.test("guarded provider rejects unknown AI output fields", async () => {
   const metadata: UnderstandingProviderMetadata = {
     id: "unsafe-ai-test",
@@ -141,6 +164,35 @@ Deno.test("safe local decisions avoid unnecessary handoff and ask at most one qu
   assert(draft.trace.actions.includes("REQUEST_EXPLICIT_CONFIRMATION"));
 });
 
+Deno.test("P0 overrides verified-contingency no-handoff exception", async () => {
+  const result = await runMotorV2LabCase(labInput(
+    "A morte foi não natural. Existe contingência verificada e aceito explicitamente seguir com a contingência.",
+    ["preferred_option", "verified_contingency"],
+  ));
+  assertEquals(result.trace.handoff.offered, true);
+  assertEquals(result.trace.handoff.priority, "P0");
+  assert(result.trace.handoff.payload_fields.includes("risk_level"));
+  assert(result.trace.handoff.payload_fields.includes("risk_signals"));
+  assert(result.trace.actions.includes("HANDOFF"));
+  assertEquals(result.trace.case_closed, false);
+  assert(result.trace.reply.includes("risco P0"));
+  assert(result.trace.reply.includes("validação humana prioritária"));
+});
+
+Deno.test("P0 overrides versioned-draft no-handoff exception", async () => {
+  const result = await runMotorV2LabCase(labInput(
+    "Existe um rascunho com TÍTULO, LINHA e NOTA. Altere somente LINHA. Também existe conflito familiar.",
+    ["draft_edit", "final_send"],
+  ));
+  assertEquals(result.trace.handoff.offered, true);
+  assertEquals(result.trace.handoff.priority, "P0");
+  assert(result.trace.handoff.payload_fields.includes("explicit_unknowns"));
+  assertEquals(result.trace.asked_fact_keys, []);
+  assert(!result.trace.actions.includes("REQUEST_EXPLICIT_CONFIRMATION"));
+  assert(result.trace.actions.includes("HANDOFF"));
+  assert(result.trace.reply.includes("risco P0"));
+});
+
 Deno.test("versioned facts supersede rather than overwrite", async () => {
   const seeded = await seedFacts(
     [{ key: "preferred_option", value: "A", source_turn: "t01", status: "user_provided" }],
@@ -192,6 +244,19 @@ Deno.test("action gateway is deny-by-default, confirmation-gated and receipt-ver
   const replayed = await gateway.invoke(request);
   assertEquals(replayed.outcome, "replayed");
   assertEquals(replayed.receipt?.receipt_id, executed.receipt.receipt_id);
+
+  const conflicting = await gateway.invoke({ ...request, payload: { amount: 2 } });
+  assertEquals(conflicting.outcome, "denied");
+  assertEquals(conflicting.side_effect, false);
+  assertEquals(conflicting.receipt, null);
+
+  const wrongReceipt = await gateway.invoke({
+    ...request,
+    idempotency_key: "payment-3",
+    required_receipt_type: "document_confirmation",
+  });
+  assertEquals(wrongReceipt.outcome, "denied");
+  assertEquals(wrongReceipt.side_effect, false);
 });
 
 Deno.test("runtime deduplicates the same inbound and hashes every committed state", async () => {
@@ -208,6 +273,48 @@ Deno.test("runtime deduplicates the same inbound and hashes every committed stat
   assertEquals(replay.state.state_hash, first.state.state_hash);
   assert(first.state.state_hash.length === 64);
   assert(first.audit.some((event) => event.kind === "turn_committed"));
+});
+
+Deno.test("runtime store cannot bleed state across conversations", async () => {
+  const runtime = new MotorV2Runtime();
+  const first = labInput("Preciso tratar uma concessão.", ["concession"]);
+  await runtime.runLabCase({ ...first, conversation_id: "conversation_a", inbound_id: "inbound_a" });
+  await assertRejects(
+    () => runtime.runLabCase({ ...first, conversation_id: "conversation_b", inbound_id: "inbound_b" }),
+    /another conversation/,
+  );
+});
+
+Deno.test("runtime persists newly supplied facts on later inbounds", async () => {
+  const runtime = new MotorV2Runtime();
+  const first = {
+    ...labInput("A alternativa preferida é A.", ["preferred_option"]),
+    conversation_id: "conversation_a",
+    inbound_id: "inbound_a",
+    known_facts: [{
+      key: "preferred_option",
+      value: "A",
+      source_turn: "t01",
+      status: "user_provided" as const,
+    }],
+  };
+  await runtime.runLabCase(first);
+  const second = await runtime.runLabCase({
+    ...first,
+    inbound_id: "inbound_b",
+    messages: [{ turn_id: "t02", role: "user", content: "Corrigindo: prefiro B.", synthetic: true }],
+    known_facts: [{
+      key: "preferred_option",
+      value: "B",
+      source_turn: "t02",
+      status: "user_provided" as const,
+    }],
+  });
+  const versions = second.state.facts.filter((fact) => fact.key === "preferred_option");
+  assertEquals(versions.length, 2);
+  assertEquals(versions[0]?.status, "superseded");
+  assertEquals(versions[1]?.value, "B");
+  assertEquals(versions[1]?.status, "active");
 });
 
 Deno.test("lab boundary rejects fixtures that leak answer labels", async () => {

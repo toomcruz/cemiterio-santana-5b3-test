@@ -40,6 +40,22 @@ export class CurrentPolicyRegistry {
     const at = Date.parse(instant);
     if (Number.isNaN(at)) throw new Error("invalid policy evaluation instant");
     return this.rules.filter((rule) => {
+      if (
+        !rule ||
+        typeof rule !== "object" ||
+        rule.temporal_status !== "current" ||
+        rule.review_status !== "administratively_confirmed" ||
+        typeof rule.policy_id !== "string" ||
+        !rule.policy_id.trim() ||
+        typeof rule.domain !== "string" ||
+        !rule.domain.trim() ||
+        typeof rule.statement !== "string" ||
+        !rule.statement.trim() ||
+        typeof rule.source_ref !== "string" ||
+        !rule.source_ref.trim() ||
+        typeof rule.valid_from !== "string" ||
+        rule.valid_until !== null && typeof rule.valid_until !== "string"
+      ) return false;
       const from = Date.parse(rule.valid_from);
       const until = rule.valid_until === null ? null : Date.parse(rule.valid_until);
       return !Number.isNaN(from) && from <= at && (until === null || !Number.isNaN(until) && at <= until);
@@ -71,6 +87,7 @@ function receiptRequirements(understanding: UnderstandingResult, offeredHandoff:
 
 function handoffPayload(understanding: UnderstandingResult, tracks: readonly MotorV2Track[]): string[] {
   const payload = ["tracks", "known_facts", "open_questions", "administrative_gaps", "next_step"];
+  if (understanding.risk.level === "P0") payload.push("risk_level", "risk_signals", "explicit_unknowns");
   if (understanding.subintents.includes("SEPULTAMENTO")) payload.push("urgent_track", "deferred_tracks", "burial_need");
   if (tracks.length >= 3) payload.push("three_tracks", "shared_facts", "per_track_gaps");
   if (hasAny(understanding.subintents, ["RECLAMACAO_OPERACIONAL", "RECLAMACAO_SEM_RETORNO"])) {
@@ -125,7 +142,7 @@ export function evaluatePolicy(input: {
   const acceptedVerifiedContingency = understanding.subintents.includes("CONTINGENCIA_FUNERARIA_POR_RAMIFICACAO") &&
     /contingencia verificada/.test(text) && /aceito explicitamente/.test(text);
   const versionedDraft = understanding.subintents.includes("CORRECAO_DE_DADO_EM_LAPIDE_PLACA");
-  const noHandoff = acceptedVerifiedContingency || versionedDraft;
+  const noHandoff = understanding.risk.level !== "P0" && (acceptedVerifiedContingency || versionedDraft);
   const offered = !noHandoff && (
     understanding.risk.level !== "none" ||
     understanding.subintents.length > 1 ||
@@ -142,7 +159,7 @@ export function evaluatePolicy(input: {
   if (hasAny(understanding.subintents, ["CONFLITO_CADASTRAL_DOCUMENTO_LEGADO", "CONTRADICAO_ENTRE_CANAIS"])) {
     actions.push("ACKNOWLEDGE_UNCERTAINTY");
   }
-  if (versionedDraft) actions.push("REQUEST_EXPLICIT_CONFIRMATION");
+  if (versionedDraft && understanding.risk.level !== "P0") actions.push("REQUEST_EXPLICIT_CONFIRMATION");
   if (understanding.subintents.includes("CORRECAO_DE_AGENDAMENTO")) actions.push("WAIT_FOR_RECEIPT");
   if (offered) actions.push("HANDOFF");
 
@@ -153,7 +170,7 @@ export function evaluatePolicy(input: {
     : requiresPriority(understanding, tracks, text)
     ? "priority"
     : "normal";
-  const asked_fact_keys = versionedDraft ? ["explicit_user_confirmation"] : [];
+  const asked_fact_keys = versionedDraft && understanding.risk.level !== "P0" ? ["explicit_user_confirmation"] : [];
   const policy_gaps =
     (Object.entries(gaps) as Array<[keyof AdministrativeGaps, AdministrativeGaps[keyof AdministrativeGaps]]>)
       .map(([field, status]) => ({ field, status }));
