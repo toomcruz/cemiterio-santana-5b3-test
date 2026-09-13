@@ -20,6 +20,7 @@ on:
           - catalog_probe
           - provider_probe
           - cohort
+          - p0_supplement
 
 permissions:
   contents: read
@@ -113,7 +114,7 @@ jobs:
           set -Eeuo pipefail
           deno fmt --check phase18b santana-conversation-domain/motor-v2
           deno lint phase18b/live-shadow phase18b/provider phase18b/tests santana-conversation-domain/motor-v2/providers
-          deno check phase18b/provider/catalog_nvidia.ts phase18b/provider/probe_nvidia.ts phase18b/live-shadow/run_live_shadow.ts phase18b/tests/nvidia_understanding_test.ts santana-conversation-domain/motor-v2/providers/nvidia.ts
+          deno check phase18b/provider/catalog_nvidia.ts phase18b/provider/probe_nvidia.ts phase18b/live-shadow/run_live_shadow.ts phase18b/p0-supplement/run_p0_supplement.ts phase18b/tests/nvidia_understanding_test.ts santana-conversation-domain/motor-v2/providers/nvidia.ts
           deno test --allow-net=jsr.io phase18b/tests/gemini_understanding_test.ts phase18b/tests/nvidia_understanding_test.ts phase18b/tests/live_shadow_runner_test.ts santana-conversation-domain/motor-v2/tests/motor_v2_test.ts
           python3 -m unittest phase18b/tests/test_live_cohort.py
       - name: Probe NVIDIA compatibility with synthetic input
@@ -175,6 +176,31 @@ jobs:
             --output "$RUNNER_TEMP/phase18b-live-ai-result.json" \
             --model openai/gpt-oss-20b \
             --timeout-ms 60000
+      - name: Run controlled P0 supplement
+        if: github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode == 'p0_supplement' && success()
+        shell: bash
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+        run: |
+          set -Eeuo pipefail
+          deno run \
+            --allow-env=NVIDIA_API_KEY \
+            --allow-net=integrate.api.nvidia.com \
+            --allow-read=phase18b/p0-supplement/fixtures/p0_controlled_cases.jsonl \
+            --allow-write="$RUNNER_TEMP" \
+            phase18b/p0-supplement/run_p0_supplement.ts \
+            --fixtures phase18b/p0-supplement/fixtures/p0_controlled_cases.jsonl \
+            --output "$RUNNER_TEMP/phase18b-p0-supplement-result.json" \
+            --model openai/gpt-oss-20b \
+            --timeout-ms 60000
+      - name: Upload controlled P0 supplement
+        if: always() && github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode == 'p0_supplement'
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase18b-p0-supplement-result
+          path: ${{ runner.temp }}/phase18b-p0-supplement-result.json
+          if-no-files-found: error
+          retention-days: 7
       - name: Upload sanitized Phase 18B result
         if: always() && github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode == 'cohort'
         uses: actions/upload-artifact@v4
