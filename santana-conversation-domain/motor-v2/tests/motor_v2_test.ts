@@ -1,9 +1,10 @@
 import { assert, assertEquals, assertRejects } from "../../../tests/fixtures/assert.ts";
 import { ActionGateway } from "../action_gateway.ts";
+import { canonicalJson } from "../canonical_json.ts";
 import { MotorV2Runtime, runMotorV2LabCase } from "../runtime.ts";
 import { CurrentPolicyRegistry } from "../policy.ts";
 import { seedFacts, upsertVersionedFact } from "../store.ts";
-import { canonicalJson, sha256 } from "../../runtime/server_transition.ts";
+import { sha256 } from "../../runtime/server_transition.ts";
 import type { MotorV2LabInput, UnderstandingProviderMetadata } from "../types.ts";
 import { GuardedUnderstandingProvider, LabSemanticUnderstandingProvider } from "../understanding.ts";
 

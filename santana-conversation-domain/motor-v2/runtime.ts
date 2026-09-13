@@ -1,5 +1,6 @@
-import { canonicalJson, sha256 } from "../runtime/server_transition.ts";
+import { sha256 } from "../runtime/server_transition.ts";
 import { projectBenchmarkTrace } from "./benchmark_trace.ts";
+import { canonicalJson } from "./canonical_json.ts";
 import { unique } from "./normalization.ts";
 import { evaluatePolicy } from "./policy.ts";
 import { MemoryMotorV2Store, upsertVersionedFact } from "./store.ts";

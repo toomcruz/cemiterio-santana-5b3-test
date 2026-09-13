@@ -1,4 +1,5 @@
-import { canonicalJson, sha256 } from "../runtime/server_transition.ts";
+import { sha256 } from "../runtime/server_transition.ts";
+import { canonicalJson } from "./canonical_json.ts";
 import type { FixedClock, GatewayCallRecord, GatewayReceipt, JsonScalar, ReceiptType } from "./types.ts";
 
 export interface ActionRequest {
