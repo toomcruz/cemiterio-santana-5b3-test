@@ -102,7 +102,7 @@ jobs:
           deno run \
             --allow-env=GEMINI_API_KEY,GEMINI_MODEL \
             --allow-net=generativelanguage.googleapis.com \
-            --allow-read="$RUNNER_TEMP/phase18b-cohort.json" \
+            --allow-read="$RUNNER_TEMP" \
             --allow-write="$RUNNER_TEMP" \
             phase18b/live-shadow/run_live_shadow.ts \
             --cohort "$RUNNER_TEMP/phase18b-cohort.json" \
