@@ -77,42 +77,45 @@ export class ActionGateway {
     ) {
       throw new Error("invalid action request");
     }
-    const toolPolicy = TOOL_POLICY[request.tool];
-    const validPayload = Object.values(request.payload).every((value) =>
+    // The caller retains its object. Snapshot it before the first await so
+    // validation, hashing, execution and receipts bind to exactly one request.
+    const snapshot = structuredClone(request);
+    const toolPolicy = TOOL_POLICY[snapshot.tool];
+    const validPayload = Object.values(snapshot.payload).every((value) =>
       value === null || typeof value === "string" || typeof value === "boolean" ||
       typeof value === "number" && Number.isFinite(value)
     );
     if (
-      !toolPolicy || !request.idempotency_key.trim() ||
-      !Array.isArray(request.claim_codes) ||
-      request.claim_codes.length === 0 ||
-      request.claim_codes.some((code) => typeof code !== "string" || !code.trim()) ||
-      new Set(request.claim_codes).size !== request.claim_codes.length ||
+      !toolPolicy || !snapshot.idempotency_key.trim() ||
+      !Array.isArray(snapshot.claim_codes) ||
+      snapshot.claim_codes.length === 0 ||
+      snapshot.claim_codes.some((code) => typeof code !== "string" || !code.trim()) ||
+      new Set(snapshot.claim_codes).size !== snapshot.claim_codes.length ||
       !validPayload
     ) {
-      return this.record(request, "denied", "invalid or non-allowlisted action request", null);
+      return this.record(snapshot, "denied", "invalid or non-allowlisted action request", null);
     }
-    const requestHash = await sha256(canonicalJson(request));
-    const prior = this.#calls.get(request.idempotency_key);
+    const requestHash = await sha256(canonicalJson(snapshot));
+    const prior = this.#calls.get(snapshot.idempotency_key);
     if (prior) {
       if (prior.request_hash !== requestHash) {
-        return this.record(request, "denied", "idempotency key reused with a different request", null);
+        return this.record(snapshot, "denied", "idempotency key reused with a different request", null);
       }
       return this.replay(prior.record);
     }
-    const inflight = this.#inflight.get(request.idempotency_key);
+    const inflight = this.#inflight.get(snapshot.idempotency_key);
     if (inflight) {
       if (inflight.request_hash !== requestHash) {
-        return this.record(request, "denied", "idempotency key reused with a different request", null);
+        return this.record(snapshot, "denied", "idempotency key reused with a different request", null);
       }
       return this.replay(await inflight.result);
     }
-    const result = this.executeOnce(request, requestHash, toolPolicy);
-    this.#inflight.set(request.idempotency_key, { request_hash: requestHash, result });
+    const result = this.executeOnce(snapshot, requestHash, toolPolicy);
+    this.#inflight.set(snapshot.idempotency_key, { request_hash: requestHash, result });
     try {
       return structuredClone(await result);
     } finally {
-      this.#inflight.delete(request.idempotency_key);
+      this.#inflight.delete(snapshot.idempotency_key);
     }
   }
 

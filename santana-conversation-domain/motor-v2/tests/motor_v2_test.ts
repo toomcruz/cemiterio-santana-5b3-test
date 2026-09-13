@@ -376,6 +376,54 @@ Deno.test("action gateway rejects non-finite numbers before idempotency hashing"
   }
 });
 
+Deno.test("action gateway snapshots caller-owned requests before asynchronous hashing", async () => {
+  let calls = 0;
+  const observedPayloads: Array<Record<string, string | number | boolean | null>> = [];
+  const gateway = new ActionGateway(CLOCK, {
+    external_effects_allowed: true,
+    executor: {
+      execute: (request) => {
+        calls += 1;
+        observedPayloads.push(structuredClone(request.payload));
+        return Promise.resolve({ accepted: true, reference: "synthetic-reference" });
+      },
+    },
+  });
+  const deniedRequest = {
+    tool: "payment.request" as const,
+    idempotency_key: "payment-snapshot-denied",
+    payload: { amount: 1 },
+    explicit_confirmation: false,
+    required_receipt_type: "payment_confirmation" as const,
+    claim_codes: ["PAYMENT_CONFIRMED"],
+  };
+  const deniedPromise = gateway.invoke(deniedRequest);
+  deniedRequest.explicit_confirmation = true;
+  deniedRequest.payload.amount = 2;
+  const denied = await deniedPromise;
+  assertEquals(denied.outcome, "denied");
+  assertEquals(calls, 0);
+
+  const executedRequest = {
+    ...deniedRequest,
+    idempotency_key: "payment-snapshot-executed",
+    payload: { amount: 1 },
+    claim_codes: ["PAYMENT_CONFIRMED"],
+  };
+  const executedPromise = gateway.invoke(executedRequest);
+  executedRequest.tool = "document.submit" as unknown as "payment.request";
+  executedRequest.payload.amount = 2;
+  executedRequest.required_receipt_type = "document_confirmation" as unknown as "payment_confirmation";
+  executedRequest.claim_codes[0] = "DOCUMENT_CONFIRMED";
+  const executed = await executedPromise;
+  assertEquals(executed.outcome, "executed");
+  assertEquals(executed.receipt?.tool, "payment.request");
+  assertEquals(executed.receipt?.receipt_type, "payment_confirmation");
+  assertEquals(executed.receipt?.bound_claim_codes, ["PAYMENT_CONFIRMED"]);
+  assertEquals(observedPayloads, [{ amount: 1 }]);
+  assertEquals(calls, 1);
+});
+
 Deno.test("runtime deduplicates the same inbound and hashes every committed state", async () => {
   const runtime = new MotorV2Runtime();
   const input = labInput("Preciso tratar a retirada de restos e uma dúvida sobre concessão.", [
