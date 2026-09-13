@@ -55,6 +55,7 @@ async function main(): Promise<void> {
         model: CONTROLLED_NVIDIA_MODEL,
         messages: [{ role: "user", content: 'Return only this JSON object: {"label":"TEST"}' }],
         response_format: { type: "json_object" },
+        reasoning_effort: "low",
         max_tokens: 256,
         temperature: 0,
         stream: false,

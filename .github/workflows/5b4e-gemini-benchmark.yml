@@ -173,7 +173,7 @@ jobs:
             phase18b/live-shadow/run_live_shadow.ts \
             --cohort "$RUNNER_TEMP/phase18b-cohort.json" \
             --output "$RUNNER_TEMP/phase18b-live-ai-result.json" \
-            --model meta/llama-3.1-8b-instruct \
+            --model openai/gpt-oss-20b \
             --timeout-ms 60000
       - name: Upload sanitized Phase 18B result
         if: always() && github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode == 'cohort'

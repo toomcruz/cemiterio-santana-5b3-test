@@ -10,7 +10,7 @@ import {
   validateProviderLabelsAndEvidence,
 } from "../understanding.ts";
 
-export const CONTROLLED_NVIDIA_MODEL = "meta/llama-3.1-8b-instruct";
+export const CONTROLLED_NVIDIA_MODEL = "openai/gpt-oss-20b";
 const NVIDIA_CHAT_COMPLETIONS_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 
 export interface ControlledNvidiaAiObservation {
@@ -181,6 +181,7 @@ export class ControlledNvidiaUnderstandingProvider implements UnderstandingProvi
           model: CONTROLLED_NVIDIA_MODEL,
           messages: [{ role: "user", content: prompt(messages) }],
           response_format: { type: "json_object" },
+          reasoning_effort: "low",
           max_tokens: this.#maxOutputTokens,
           temperature: 0,
           stream: false,

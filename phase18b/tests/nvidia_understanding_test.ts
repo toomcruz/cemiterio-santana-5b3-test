@@ -53,6 +53,7 @@ Deno.test("controlled NVIDIA provider uses one fixed bounded structured request"
     const body = JSON.parse(request.body);
     assertEquals(body.model, CONTROLLED_NVIDIA_MODEL);
     assertEquals(body.response_format, { type: "json_object" });
+    assertEquals(body.reasoning_effort, "low");
     assertEquals(body.max_tokens, 1024);
     assertEquals(body.temperature, 0);
     assertEquals(body.stream, false);
