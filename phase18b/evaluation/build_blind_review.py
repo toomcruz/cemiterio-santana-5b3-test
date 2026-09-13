@@ -66,6 +66,22 @@ def heuristic_current_features(text: str) -> dict:
     }
 
 
+PRIVACY_PATTERNS = {
+    "url": re.compile(r"https?://", re.I),
+    "jid": re.compile(r"@(?:s\.whatsapp\.net|lid|g\.us)", re.I),
+    "email": re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.I),
+    "cpf": re.compile(r"\b\d{3}[.]?\d{3}[.]?\d{3}-?\d{2}\b"),
+    "phone": re.compile(r"(?:\+?55[ .()-]*)?(?:\(?\d{2}\)?[ .-]*)?9?\d{4}[ .-]?\d{4}"),
+}
+
+
+def redact_review_text(text: str) -> str:
+    redacted = text
+    for label, pattern in PRIVACY_PATTERNS.items():
+        redacted = pattern.sub(f"[REDACTED_{label.upper()}]", redacted)
+    return redacted
+
+
 def categories(case: dict) -> set[str]:
     ai = case["ai"]
     deterministic = case["deterministic"]
@@ -132,7 +148,7 @@ def blind_side(key: bytes, episode_id: str) -> bool:
 
 def representation(kind: str, case: dict) -> dict:
     if kind == "CURRENT":
-        response = case["current_workflow_observed"]["response_sanitized"]
+        response = redact_review_text(case["current_workflow_observed"]["response_sanitized"])
         features = heuristic_current_features(response)
         return {
             "response": response,
@@ -152,19 +168,12 @@ def representation(kind: str, case: dict) -> dict:
 
 
 def privacy_hits(value: object, path: str = "root") -> list[str]:
-    patterns = {
-        "url": re.compile(r"https?://", re.I),
-        "jid": re.compile(r"@(?:s\.whatsapp\.net|lid|g\.us)", re.I),
-        "email": re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.I),
-        "cpf": re.compile(r"\b\d{3}[.]?\d{3}[.]?\d{3}-?\d{2}\b"),
-        "phone": re.compile(r"(?:\+?55[ .()-]*)?(?:\(?\d{2}\)?[ .-]*)?9?\d{4}[ .-]?\d{4}"),
-    }
     hits: list[str] = []
     if isinstance(value, str):
         leaf = path.rsplit(".", 1)[-1]
         if re.search(r"(?:^|_)(?:sha256|hash|id|ref)$", leaf):
             return hits
-        for label, pattern in patterns.items():
+        for label, pattern in PRIVACY_PATTERNS.items():
             if pattern.search(value):
                 hits.append(f"{path}:{label}")
     elif isinstance(value, list):
@@ -211,7 +220,10 @@ def main() -> None:
                 "period": {"started_at": episode["started_at"], "decision_at": case["decision_at"]},
                 "selection_reasons": sorted(categories(case)),
                 "context": [
-                    {"role": "CITIZEN" if message["role"] == "user" else "CURRENT_SERVICE", "content": message["content"]}
+                    {
+                        "role": "CITIZEN" if message["role"] == "user" else "CURRENT_SERVICE",
+                        "content": redact_review_text(message["content"]),
+                    }
                     for message in context_messages
                 ],
                 "A": representation(system_a, case),

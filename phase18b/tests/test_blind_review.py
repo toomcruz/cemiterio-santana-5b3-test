@@ -21,6 +21,11 @@ class BlindReviewTest(unittest.TestCase):
         self.assertEqual(MODULE.privacy_hits({"cohort_hash": "a" * 64}), [])
         self.assertTrue(MODULE.privacy_hits({"content": "contato +55 (11) 98765-4321"}))
 
+    def test_review_text_redaction_removes_detectable_phone(self):
+        redacted = MODULE.redact_review_text("contato +55 (11) 98765-4321")
+        self.assertIn("[REDACTED_PHONE]", redacted)
+        self.assertEqual(MODULE.privacy_hits({"content": redacted}), [])
+
     def test_blinded_sides_have_the_same_shape(self):
         case = {
             "current_workflow_observed": {"response_sanitized": "Posso ajudar?"},
