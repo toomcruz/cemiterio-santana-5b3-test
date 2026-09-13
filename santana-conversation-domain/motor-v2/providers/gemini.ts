@@ -53,7 +53,6 @@ function responseSchema(turnIds: readonly string[]): Record<string, unknown> {
   const vocabulary = understandingVocabulary();
   const stringArray = (values: readonly string[], maxItems = values.length) => ({
     type: "array",
-    uniqueItems: true,
     maxItems,
     items: { type: "string", enum: values },
   });

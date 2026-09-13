@@ -36,6 +36,7 @@ Deno.test("controlled Gemini provider uses valid structured AI output and fixed 
     const body = JSON.parse(request.body);
     assertEquals(body.generationConfig.temperature, 0);
     assertEquals(body.generationConfig.responseMimeType, "application/json");
+    assert(!request.body.includes("uniqueItems"));
     return Promise.resolve({ status: 200, body: response(valid) });
   };
   const provider = new ControlledGeminiUnderstandingProvider({
