@@ -309,6 +309,7 @@ async function main(): Promise<void> {
   );
   const result = {
     schema_version: "phase18b-live-ai-shadow-run/1.0.0",
+    status: observations.some((event) => event.outcome === "llm_valid") ? "PASS" : "FAIL_NO_VALID_AI_OUTPUT",
     mode: "LIVE_PASSIVE_NO_EFFECTS",
     cohort_id: cohort.cohort_id,
     cohort_hash: cohort.cohort_hash,
@@ -339,7 +340,6 @@ async function main(): Promise<void> {
       would_call_only: true,
     },
   };
-  if (result.provider.llm_valid_count < 1) throw new Error("real AI provider produced no valid structured result");
   if (cases.some((item) => item.ai.actions_executed_real.length || item.ai.claims.length)) {
     throw new Error("shadow result contains an executed action or unverified claim");
   }
@@ -350,6 +350,7 @@ async function main(): Promise<void> {
     comparison: result.comparison,
     zero_effects: result.zero_effects,
   }));
+  if (result.provider.llm_valid_count < 1) throw new Error("real AI provider produced no valid structured result");
 }
 
 if (import.meta.main) await main();

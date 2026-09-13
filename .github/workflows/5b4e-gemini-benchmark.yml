@@ -96,7 +96,7 @@ jobs:
         if: github.ref_name == 'phase18b-gate2-remediation'
         shell: bash
         env:
-          GEMINI_MODEL: gemini-3.1-flash-lite
+          GEMINI_MODEL: gemini-2.5-flash
         run: |
           set -Eeuo pipefail
           deno run \
