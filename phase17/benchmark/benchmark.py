@@ -1282,7 +1282,13 @@ def score_engine_run(
         "schema_version": "phase17-engine-score-v1.0.0",
         "engine": engine,
         "replay": replay,
-        "status": "VALID_WITH_SYSTEM_FAILURES" if not hard_count else "INVALID_HARD_GUARD",
+        "status": (
+            "INVALID_HARD_GUARD"
+            if hard_count
+            else "VALID_WITH_SYSTEM_FAILURES"
+            if failures
+            else "VALID_NO_SYSTEM_FAILURES"
+        ),
         "fixture_count": len(fixtures),
         "completed_cases": len(case_rows),
         "dimension_scores": suite_dimensions,

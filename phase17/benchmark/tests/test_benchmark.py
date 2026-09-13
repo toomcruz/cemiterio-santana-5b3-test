@@ -410,7 +410,7 @@ class BenchmarkTests(unittest.TestCase):
                 engine="motor_v2",
                 replay=1,
             )
-            self.assertNotEqual(report["status"], "INVALID_HARD_GUARD")
+            self.assertEqual(report["status"], "VALID_NO_SYSTEM_FAILURES")
             self.assertFalse(failures)
 
             wrong_tool_run = copy.deepcopy(valid_run)

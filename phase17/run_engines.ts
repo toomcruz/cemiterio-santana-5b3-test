@@ -230,6 +230,18 @@ async function writeJsonl(path: string, rows: unknown[]): Promise<void> {
   await Deno.chmod(path, 0o600);
 }
 
+/** Preserve UUID entropy while preventing generated identifiers from resembling CPF/phone data. */
+export function privacySafeExecutionId(uuid: string = crypto.randomUUID()): string {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
+    throw new Error("execution id source must be a UUID");
+  }
+  const alphabet = "abcdefghijklmnop";
+  const token = [...uuid.replaceAll("-", "")]
+    .map((character) => alphabet[Number.parseInt(character, 16)])
+    .join("");
+  return `run_${token}`;
+}
+
 async function main(): Promise<void> {
   const options = parseArgs(Deno.args);
   const stat = await Deno.lstat(options.fixtures);
@@ -238,7 +250,7 @@ async function main(): Promise<void> {
   if (await sha256(fixtureText) !== EXPECTED_FIXTURE_SHA256) throw new Error("immutable fixture file SHA-256 mismatch");
   const fixtures = parseFixtures(fixtureText);
   await Deno.mkdir(options.outputDir, { recursive: true, mode: 0o700 });
-  const executionId = crypto.randomUUID();
+  const executionId = privacySafeExecutionId();
 
   const current = [];
   const currentRoleAware = [];
