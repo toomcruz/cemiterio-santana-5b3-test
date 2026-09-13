@@ -276,7 +276,7 @@ function riskFor(text: string, intents: string[]): { level: RiskLevel; signals: 
     {
       level: "P0",
       signal: "missing_or_conflicting_current_rule",
-      matches: /regra (?:atual )?(?:ausente|conflitante)|fontes? atuais? conflitantes?/.test(text),
+      matches: /regra (?:atual )?(?:(?:esta|e) )?(?:ausente|conflitante)|fontes? atuais? conflitantes?/.test(text),
     },
     {
       level: "P1",
@@ -316,13 +316,24 @@ export function enforceDeterministicRisk(
       signals: unique([...deterministic.signals, "low_confidence_sensitive_context"]),
     };
   }
-  if (riskRank(deterministic.level) <= riskRank(understanding.risk.level)) return understanding;
+  const level = riskRank(deterministic.level) > riskRank(understanding.risk.level)
+    ? deterministic.level
+    : understanding.risk.level;
+  const signals = unique([...understanding.risk.signals, ...deterministic.signals]);
+  if (
+    level === understanding.risk.level &&
+    signals.length === understanding.risk.signals.length &&
+    signals.every((signal, index) => signal === understanding.risk.signals[index]) &&
+    (level !== "P0" || understanding.complexity === "critical")
+  ) {
+    return understanding;
+  }
   return {
     ...understanding,
-    complexity: deterministic.level === "P0" ? "critical" : understanding.complexity,
+    complexity: level === "P0" ? "critical" : understanding.complexity,
     risk: {
-      level: deterministic.level,
-      signals: unique([...understanding.risk.signals, ...deterministic.signals]),
+      level,
+      signals,
     },
   };
 }

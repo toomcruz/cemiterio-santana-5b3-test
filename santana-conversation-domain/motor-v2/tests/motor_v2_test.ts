@@ -251,7 +251,10 @@ Deno.test("action gateway is deny-by-default, confirmation-gated and receipt-ver
   assertEquals(await gateway.verifyReceipt(forged), false);
   const replayed = await gateway.invoke(request);
   assertEquals(replayed.outcome, "replayed");
+  assertEquals(replayed.side_effect, false);
+  assertEquals(replayed.authorized, true);
   assertEquals(replayed.receipt?.receipt_id, executed.receipt.receipt_id);
+  assert(/^[a-p]{24}$/.test(executed.receipt.receipt_id.replace("receipt_", "")));
 
   const conflicting = await gateway.invoke({ ...request, payload: { amount: 2 } });
   assertEquals(conflicting.outcome, "denied");
@@ -304,6 +307,72 @@ Deno.test("action gateway is deny-by-default, confirmation-gated and receipt-ver
     });
     assertEquals(confirmed.outcome, "executed");
     assertEquals(confirmed.receipt?.receipt_type, receiptType);
+  }
+});
+
+Deno.test("action gateway serializes concurrent idempotent calls", async () => {
+  let calls = 0;
+  const gateway = new ActionGateway(CLOCK, {
+    external_effects_allowed: true,
+    executor: {
+      execute: async () => {
+        const call = ++calls;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return { accepted: true, reference: `synthetic-reference-${call}` };
+      },
+    },
+  });
+  const request = {
+    tool: "payment.request" as const,
+    idempotency_key: "payment-concurrent",
+    payload: { amount: 1 },
+    explicit_confirmation: true,
+    required_receipt_type: "payment_confirmation" as const,
+    claim_codes: ["PAYMENT_CONFIRMED"],
+  };
+  const [first, second] = await Promise.all([gateway.invoke(request), gateway.invoke(request)]);
+  assertEquals(calls, 1);
+  assertEquals([first.outcome, second.outcome].sort(), ["executed", "replayed"]);
+  assertEquals([first.side_effect, second.side_effect].sort(), [false, true]);
+  assertEquals(first.receipt?.receipt_id, second.receipt?.receipt_id);
+  assert(first.receipt && await gateway.verifyReceipt(first.receipt));
+  assert(second.receipt && await gateway.verifyReceipt(second.receipt));
+});
+
+Deno.test("action gateway rejects non-finite numbers before idempotency hashing", async () => {
+  let calls = 0;
+  const gateway = new ActionGateway(CLOCK, {
+    external_effects_allowed: true,
+    executor: {
+      execute: () => {
+        calls += 1;
+        return Promise.resolve({ accepted: true, reference: "synthetic-reference" });
+      },
+    },
+  });
+  const base = {
+    tool: "payment.request" as const,
+    idempotency_key: "payment-non-finite",
+    explicit_confirmation: true,
+    required_receipt_type: "payment_confirmation" as const,
+    claim_codes: ["PAYMENT_CONFIRMED"],
+  };
+  for (const amount of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+    const denied = await gateway.invoke({ ...base, payload: { amount } });
+    assertEquals(denied.outcome, "denied");
+    assertEquals(denied.side_effect, false);
+  }
+  const accepted = await gateway.invoke({ ...base, payload: { amount: null } });
+  assertEquals(accepted.outcome, "executed");
+  assertEquals(calls, 1);
+  for (const value of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+    let rejected = false;
+    try {
+      canonicalJson(value);
+    } catch {
+      rejected = true;
+    }
+    assert(rejected);
   }
 });
 
@@ -399,7 +468,18 @@ Deno.test("lab boundary rejects nested answer labels", async () => {
   await assertRejects(() => runMotorV2LabCase(unsafe as unknown as MotorV2LabInput), /invalid message/);
 });
 
-Deno.test("controlled provider cannot suppress a deterministic P0 signal", async () => {
+Deno.test("controlled provider cannot suppress or replace deterministic P0 signals", async () => {
+  const providerResult = {
+    schema_version: "motor-v2-understanding/1.0.0" as const,
+    journeys: [],
+    subintents: [],
+    transverse_states: [],
+    intent_changed: false,
+    complexity: "low" as const,
+    risk: { level: "none" as const, signals: [] },
+    confidence: "low" as const,
+    evidence_turns: [],
+  };
   const provider = {
     metadata: {
       id: "controlled-ai-risk-downgrade-test",
@@ -408,23 +488,34 @@ Deno.test("controlled provider cannot suppress a deterministic P0 signal", async
       model: "synthetic",
       schema_guarded: false,
     } as const,
+    understand: () => Promise.resolve(providerResult),
+  };
+  for (
+    const [content, signal] of [
+      ["A morte foi não natural.", "non_natural_death"],
+      ["A regra atual está ausente.", "missing_or_conflicting_current_rule"],
+      ["A regra atual é conflitante.", "missing_or_conflicting_current_rule"],
+    ] as const
+  ) {
+    const result = await new MotorV2Runtime(provider).runLabCase(labInput(content));
+    assertEquals(result.state.understanding.risk.level, "P0");
+    assert(result.state.understanding.risk.signals.includes(signal));
+    assertEquals(result.trace.handoff.priority, "P0");
+  }
+
+  const additiveProvider = {
+    ...provider,
     understand: () =>
       Promise.resolve({
-        schema_version: "motor-v2-understanding/1.0.0",
-        journeys: [],
-        subintents: [],
-        transverse_states: [],
-        intent_changed: false,
-        complexity: "low",
-        risk: { level: "none", signals: [] },
-        confidence: "low",
-        evidence_turns: [],
+        ...providerResult,
+        complexity: "critical" as const,
+        risk: { level: "P0" as const, signals: ["family_conflict"] },
       }),
   };
-  const result = await new MotorV2Runtime(provider).runLabCase(labInput("A morte foi não natural."));
-  assertEquals(result.state.understanding.risk.level, "P0");
-  assert(result.state.understanding.risk.signals.includes("non_natural_death"));
-  assertEquals(result.trace.handoff.priority, "P0");
+  const additive = await new MotorV2Runtime(additiveProvider).runLabCase(labInput("A regra atual está ausente."));
+  assertEquals(additive.state.understanding.risk.level, "P0");
+  assert(additive.state.understanding.risk.signals.includes("family_conflict"));
+  assert(additive.state.understanding.risk.signals.includes("missing_or_conflicting_current_rule"));
 });
 
 Deno.test("guarded provider rejects unknown labels and evidence turns", async () => {

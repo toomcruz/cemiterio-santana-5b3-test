@@ -96,6 +96,9 @@ export function canonicalJson(value: unknown): string {
       ).join(",")
     }}`;
   }
+  if (typeof value === "number" && !Number.isFinite(value)) {
+    throw new Error("canonical JSON cannot encode a non-finite number");
+  }
   // JSON.stringify(undefined) returns undefined even though this helper's
   // contract is a string.  Treat it like JSON null so the hash stays total and
   // deterministic for optional metadata.

@@ -44,6 +44,7 @@ const TOOL_POLICY: Record<
  */
 export class ActionGateway {
   readonly #calls = new Map<string, { request_hash: string; record: GatewayCallRecord }>();
+  readonly #inflight = new Map<string, { request_hash: string; result: Promise<GatewayCallRecord> }>();
 
   constructor(
     private readonly clock: FixedClock,
@@ -76,69 +77,87 @@ export class ActionGateway {
     ) {
       throw new Error("invalid action request");
     }
+    const toolPolicy = TOOL_POLICY[request.tool];
+    const validPayload = Object.values(request.payload).every((value) =>
+      value === null || typeof value === "string" || typeof value === "boolean" ||
+      typeof value === "number" && Number.isFinite(value)
+    );
+    if (
+      !toolPolicy || !request.idempotency_key.trim() ||
+      !Array.isArray(request.claim_codes) ||
+      request.claim_codes.length === 0 ||
+      request.claim_codes.some((code) => typeof code !== "string" || !code.trim()) ||
+      new Set(request.claim_codes).size !== request.claim_codes.length ||
+      !validPayload
+    ) {
+      return this.record(request, "denied", "invalid or non-allowlisted action request", null);
+    }
     const requestHash = await sha256(canonicalJson(request));
     const prior = this.#calls.get(request.idempotency_key);
     if (prior) {
       if (prior.request_hash !== requestHash) {
         return this.record(request, "denied", "idempotency key reused with a different request", null);
       }
-      return {
-        ...structuredClone(prior.record),
-        outcome: prior.record.receipt ? "replayed" : prior.record.outcome,
-      };
+      return this.replay(prior.record);
     }
-    const toolPolicy = TOOL_POLICY[request.tool];
-    if (
-      !toolPolicy || !request.idempotency_key ||
-      !Array.isArray(request.claim_codes) ||
-      request.claim_codes.length === 0 ||
-      request.claim_codes.some((code) => typeof code !== "string" || !code.trim()) ||
-      new Set(request.claim_codes).size !== request.claim_codes.length ||
-      Object.values(request.payload).some((value) =>
-        value !== null && !["string", "number", "boolean"].includes(typeof value)
-      )
-    ) {
-      return this.record(request, "denied", "invalid or non-allowlisted action request", null);
+    const inflight = this.#inflight.get(request.idempotency_key);
+    if (inflight) {
+      if (inflight.request_hash !== requestHash) {
+        return this.record(request, "denied", "idempotency key reused with a different request", null);
+      }
+      return this.replay(await inflight.result);
     }
+    const result = this.executeOnce(request, requestHash, toolPolicy);
+    this.#inflight.set(request.idempotency_key, { request_hash: requestHash, result });
+    try {
+      return structuredClone(await result);
+    } finally {
+      this.#inflight.delete(request.idempotency_key);
+    }
+  }
+
+  private async executeOnce(
+    request: ActionRequest,
+    requestHash: string,
+    toolPolicy: (typeof TOOL_POLICY)[ActionRequest["tool"]],
+  ): Promise<GatewayCallRecord> {
+    let terminal: GatewayCallRecord;
     if (request.required_receipt_type !== toolPolicy.receipt_type) {
-      const denied = this.record(request, "denied", "receipt type does not match the allowlisted tool", null);
-      this.#calls.set(request.idempotency_key, { request_hash: requestHash, record: denied });
-      return structuredClone(denied);
+      terminal = this.record(request, "denied", "receipt type does not match the allowlisted tool", null);
+    } else if (toolPolicy.requires_confirmation && !request.explicit_confirmation) {
+      terminal = this.record(request, "denied", "explicit confirmation required", null);
+    } else if (!this.options.external_effects_allowed || !this.options.executor) {
+      terminal = this.record(request, "denied", "external effects disabled", null);
+    } else {
+      const execution = await this.options.executor.execute(structuredClone(request));
+      if (!execution.accepted || !execution.reference) {
+        terminal = this.record(request, "proposed", "executor did not confirm the effect", null);
+      } else {
+        const payload_hash = await sha256(canonicalJson(request.payload));
+        const receiptDigest = await sha256(`${request.idempotency_key}:${execution.reference}`);
+        const alphabet = "abcdefghijklmnop";
+        const receiptSuffix = receiptDigest.slice(0, 24).split("").map((character) =>
+          alphabet[Number.parseInt(character, 16)]
+        ).join("");
+        const unsigned = {
+          receipt_id: `receipt_${receiptSuffix}`,
+          receipt_type: request.required_receipt_type,
+          tool: request.tool,
+          idempotency_key: request.idempotency_key,
+          issued_at: this.clock.instant,
+          payload_hash,
+          executor_reference_hash: await sha256(execution.reference),
+          bound_claim_codes: [...request.claim_codes].sort(),
+        };
+        const receipt: GatewayReceipt = {
+          ...unsigned,
+          integrity_hash: await sha256(canonicalJson(unsigned)),
+        };
+        terminal = this.record(request, "executed", "executor returned a verifiable reference", receipt);
+      }
     }
-    if (toolPolicy.requires_confirmation && !request.explicit_confirmation) {
-      const denied = this.record(request, "denied", "explicit confirmation required", null);
-      this.#calls.set(request.idempotency_key, { request_hash: requestHash, record: denied });
-      return structuredClone(denied);
-    }
-    if (!this.options.external_effects_allowed || !this.options.executor) {
-      const denied = this.record(request, "denied", "external effects disabled", null);
-      this.#calls.set(request.idempotency_key, { request_hash: requestHash, record: denied });
-      return structuredClone(denied);
-    }
-    const result = await this.options.executor.execute(structuredClone(request));
-    if (!result.accepted || !result.reference) {
-      const proposed = this.record(request, "proposed", "executor did not confirm the effect", null);
-      this.#calls.set(request.idempotency_key, { request_hash: requestHash, record: proposed });
-      return structuredClone(proposed);
-    }
-    const payload_hash = await sha256(canonicalJson(request.payload));
-    const unsigned = {
-      receipt_id: `receipt_${(await sha256(`${request.idempotency_key}:${result.reference}`)).slice(0, 24)}`,
-      receipt_type: request.required_receipt_type,
-      tool: request.tool,
-      idempotency_key: request.idempotency_key,
-      issued_at: this.clock.instant,
-      payload_hash,
-      executor_reference_hash: await sha256(result.reference),
-      bound_claim_codes: [...request.claim_codes].sort(),
-    };
-    const receipt: GatewayReceipt = {
-      ...unsigned,
-      integrity_hash: await sha256(canonicalJson(unsigned)),
-    };
-    const executed = this.record(request, "executed", "executor returned a verifiable reference", receipt);
-    this.#calls.set(request.idempotency_key, { request_hash: requestHash, record: executed });
-    return structuredClone(executed);
+    this.#calls.set(request.idempotency_key, { request_hash: requestHash, record: terminal });
+    return structuredClone(terminal);
   }
 
   async verifyReceipt(receipt: GatewayReceipt): Promise<boolean> {
@@ -161,6 +180,15 @@ export class ActionGateway {
       outcome,
       reason,
       receipt,
+    };
+  }
+
+  private replay(record: GatewayCallRecord): GatewayCallRecord {
+    return {
+      ...structuredClone(record),
+      authorized: record.receipt !== null,
+      side_effect: false,
+      outcome: record.receipt ? "replayed" : record.outcome,
     };
   }
 }
