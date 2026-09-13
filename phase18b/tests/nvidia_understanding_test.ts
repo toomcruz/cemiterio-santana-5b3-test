@@ -7,6 +7,7 @@ import {
 import { MotorV2Runtime } from "../../santana-conversation-domain/motor-v2/runtime.ts";
 import type { UnderstandingResult } from "../../santana-conversation-domain/motor-v2/types.ts";
 import type { NetworkBoundary } from "../../santana-conversation-domain/runtime/adapter/network_types.ts";
+import { extractModelIds } from "../provider/catalog_nvidia.ts";
 
 const messages = [{ turn_id: "turn_1", role: "user" as const, content: "Preciso de exumação." }];
 
@@ -21,6 +22,15 @@ const valid: UnderstandingResult = {
   confidence: "high",
   evidence_turns: ["turn_1"],
 };
+
+Deno.test("NVIDIA catalog accepts only a closed set of safe public model IDs", () => {
+  assertEquals(
+    extractModelIds(JSON.stringify({ data: [{ id: "vendor/model-b" }, { id: "vendor/model-a" }] })),
+    ["vendor/model-a", "vendor/model-b"],
+  );
+  assertThrows(() => extractModelIds(JSON.stringify({ data: [{ id: "unsafe model" }] })), Error, "identifiers");
+  assertThrows(() => extractModelIds(JSON.stringify({ data: [] })), Error, "identifiers");
+});
 
 function response(result: unknown, finishReason = "stop"): string {
   return JSON.stringify({
