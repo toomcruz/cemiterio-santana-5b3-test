@@ -1,0 +1,52 @@
+{
+  "schema_version": "phase16-17-final-summary-v1.0.0",
+  "verdict": "GATE_HUMANO_1_APTO_PARA_SHADOW_MODE",
+  "base_commit": "060c795308e18db265d04416de6ae6d25f692f24",
+  "isolated_commits": [
+    "28ce676dfc89d4cfbb6f9ff718eadf4500b7e00c",
+    "e0b535e3c1a75da01a4d449e9cff33242de44217"
+  ],
+  "fixture_count": 20,
+  "fixture_aggregate_sha256": "aab857a982b8e5db841e8a0681504cc2d00266daff992889f131a7fca905fa37",
+  "v2_replays": 3,
+  "v2_provider": {
+    "id": "lab-semantic-v1",
+    "uses_ai": false,
+    "schema_guarded": true
+  },
+  "current": {
+    "dimensions": {
+      "comprehension": 43.33,
+      "context": 38.68,
+      "multi_intent": 0.0,
+      "handoff": 10.0,
+      "safety": 96.67,
+      "efficiency": 100.0,
+      "receipts_actions": 96.67,
+      "correct_closure": 100.0
+    },
+    "failures": { "P0": 4, "P1": 107, "P2": 0, "P3": 0 }
+  },
+  "motor_v2": {
+    "dimensions": {
+      "comprehension": 100.0,
+      "context": 100.0,
+      "multi_intent": 100.0,
+      "handoff": 100.0,
+      "safety": 100.0,
+      "efficiency": 100.0,
+      "receipts_actions": 100.0,
+      "correct_closure": 100.0
+    },
+    "failures": { "P0": 0, "P1": 0, "P2": 0, "P3": 0 },
+    "hard_guards": 0,
+    "reproducibility": {
+      "exact_scores_identical": true,
+      "exact_traces_identical": true,
+      "critical_vector_identical": true,
+      "max_dimension_variation": 0.0
+    }
+  },
+  "production_changed": false,
+  "phase18_started": false
+}
