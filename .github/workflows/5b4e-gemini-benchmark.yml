@@ -11,6 +11,14 @@ on:
         options:
           - smoke
           - full
+      phase18b_mode:
+        description: "Phase 18B provider probe or bounded cohort"
+        required: true
+        default: "cohort"
+        type: choice
+        options:
+          - provider_probe
+          - cohort
 
 permissions:
   contents: read
@@ -24,6 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.PARLANT }}
+      NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
       PHASE18B_COHORT_XZ_BASE64: ${{ secrets.PHASE18B_COHORT_XZ_BASE64 }}
       BENCHMARK_CASE_LIMIT: ${{ inputs.benchmark_size == 'smoke' && '25' || '300' }}
     steps:
@@ -37,7 +46,11 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          [[ -n "${GEMINI_API_KEY:-}" ]] || { echo "5B.4-E BLOCKED — repository secret GEMINI_API_KEY is unavailable" >&2; exit 1; }
+          if [[ "$GITHUB_REF_NAME" == "phase18b-gate2-remediation" ]]; then
+            [[ -n "${NVIDIA_API_KEY:-}" ]] || { echo "Phase 18B BLOCKED — repository secret NVIDIA_API_KEY is unavailable" >&2; exit 1; }
+          else
+            [[ -n "${GEMINI_API_KEY:-}" ]] || { echo "5B.4-E BLOCKED — repository secret GEMINI_API_KEY is unavailable" >&2; exit 1; }
+          fi
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq ripgrep >/dev/null
       - run: rg --version
       - name: Preserve baseline gates
@@ -92,18 +105,16 @@ jobs:
           deno lint phase18b/live-shadow phase18b/tests santana-conversation-domain/motor-v2/providers
           deno test --allow-net=jsr.io phase18b/tests/gemini_understanding_test.ts phase18b/tests/live_shadow_runner_test.ts santana-conversation-domain/motor-v2/tests/motor_v2_test.ts
           python3 -m unittest phase18b/tests/test_live_cohort.py
-      - name: Probe Gemini compatibility with synthetic input
+      - name: Probe NVIDIA compatibility with synthetic input
         if: github.ref_name == 'phase18b-gate2-remediation'
         shell: bash
-        env:
-          GEMINI_MODEL: gemini-2.5-flash
         run: |
           set -Eeuo pipefail
           deno run \
-            --allow-env=GEMINI_API_KEY,GEMINI_MODEL \
-            --allow-net=generativelanguage.googleapis.com \
+            --allow-env=NVIDIA_API_KEY \
+            --allow-net=integrate.api.nvidia.com \
             --allow-write="$RUNNER_TEMP/phase18b-provider-probe.json" \
-            phase18b/provider/probe_gemini.ts \
+            phase18b/provider/probe_nvidia.ts \
             "$RUNNER_TEMP/phase18b-provider-probe.json"
       - name: Upload Phase 18B compatibility probe
         if: always() && github.ref_name == 'phase18b-gate2-remediation'
@@ -114,7 +125,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Run real-AI passive shadow comparison
-        if: github.ref_name == 'phase18b-gate2-remediation' && success()
+        if: github.ref_name == 'phase18b-gate2-remediation' && inputs.phase18b_mode == 'cohort' && success()
         shell: bash
         env:
           GEMINI_MODEL: gemini-2.5-flash
