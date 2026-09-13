@@ -186,7 +186,7 @@ jobs:
           deno run \
             --allow-env=NVIDIA_API_KEY \
             --allow-net=integrate.api.nvidia.com \
-            --allow-read=phase18b/p0-supplement/fixtures/p0_controlled_cases.jsonl \
+            --allow-read=phase18b/p0-supplement/fixtures/p0_controlled_cases.jsonl,"$RUNNER_TEMP" \
             --allow-write="$RUNNER_TEMP" \
             phase18b/p0-supplement/run_p0_supplement.ts \
             --fixtures phase18b/p0-supplement/fixtures/p0_controlled_cases.jsonl \
