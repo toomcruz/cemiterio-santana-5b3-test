@@ -376,6 +376,28 @@ Deno.test("action gateway rejects non-finite numbers before idempotency hashing"
   }
 });
 
+Deno.test("action gateway rejects non-plain payload objects before hashing", async () => {
+  const gateway = new ActionGateway(CLOCK, {
+    external_effects_allowed: true,
+    executor: { execute: () => Promise.resolve({ accepted: true, reference: "must-not-run" }) },
+  });
+  const base = {
+    tool: "payment.request" as const,
+    idempotency_key: "payment-non-plain",
+    explicit_confirmation: true,
+    required_receipt_type: "payment_confirmation" as const,
+    claim_codes: ["PAYMENT_CONFIRMED"],
+  };
+  for (const payload of [new Date(0), new Map(), new Set()]) {
+    await assertRejects(
+      () => gateway.invoke({ ...base, payload } as unknown as Parameters<ActionGateway["invoke"]>[0]),
+      /invalid action request/,
+    );
+  }
+  const accepted = await gateway.invoke({ ...base, payload: {} });
+  assertEquals(accepted.outcome, "executed");
+});
+
 Deno.test("action gateway snapshots caller-owned requests before asynchronous hashing", async () => {
   let calls = 0;
   const observedPayloads: Array<Record<string, string | number | boolean | null>> = [];

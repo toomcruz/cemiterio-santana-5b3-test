@@ -39,6 +39,12 @@ const TOOL_POLICY: Record<
   "resolution.confirm": { irreversible: true, requires_confirmation: true, receipt_type: "resolution_confirmation" },
 };
 
+function isPlainRecord(value: unknown): value is Record<string, JsonScalar> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
 /**
  * Closed-by-default gateway. External effects require an injected executor and
  * explicit opt-in; the lab runtime never supplies either.
@@ -66,8 +72,7 @@ export class ActionGateway {
       "required_receipt_type",
       "claim_codes",
     ]);
-    const payloadIsObject = request.payload !== null && typeof request.payload === "object" &&
-      !Array.isArray(request.payload);
+    const payloadIsObject = isPlainRecord(request.payload);
     if (
       Object.keys(request).some((key) => !requestKeys.has(key)) ||
       typeof request.tool !== "string" ||
@@ -81,6 +86,7 @@ export class ActionGateway {
     // The caller retains its object. Snapshot it before the first await so
     // validation, hashing, execution and receipts bind to exactly one request.
     const snapshot = structuredClone(request);
+    if (!isPlainRecord(snapshot.payload)) throw new Error("invalid action request");
     const toolPolicy = TOOL_POLICY[snapshot.tool];
     const validPayload = Object.values(snapshot.payload).every((value) =>
       value === null || typeof value === "string" || typeof value === "boolean" ||
