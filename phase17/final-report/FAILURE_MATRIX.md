@@ -36,8 +36,9 @@ Não houve falha contra as fixtures, mas permanecem riscos fora do escopo medido
 
 1. provider de IA real ainda não foi executado;
 2. Action Gateway não foi integrado a tools externas reais;
-3. receipt real e falhas reais de tool não foram exercitados;
-4. persistência durável/concorrência do V2 ainda não foi conectada;
+3. receipts positivos foram exercitados por teste unitário com executor sintético, mas as 20 fixtures oficiais não
+   executam efeitos e portanto validam somente os gates negativos de claims/receipts;
+4. persistência durável, concorrência e idempotência após reinício do V2 ainda não foram conectadas;
 5. custo, latência, variação e falhas de um modelo real são desconhecidos;
 6. generalização além das 20 fixtures precisa de shadow e casos adversariais adicionais, sem alterar o Gold oficial.
 

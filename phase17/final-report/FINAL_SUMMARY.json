@@ -4,8 +4,15 @@
   "base_commit": "060c795308e18db265d04416de6ae6d25f692f24",
   "isolated_commits": [
     "28ce676dfc89d4cfbb6f9ff718eadf4500b7e00c",
-    "e0b535e3c1a75da01a4d449e9cff33242de44217"
+    "e0b535e3c1a75da01a4d449e9cff33242de44217",
+    "47a3d79fa98704e1a3080d767c68a0264fb08204",
+    "35e8cd723c3dbe861a8ba2ba0f9adaa6d435ae09",
+    "8f8536d1a003fbebeea2eabece48046fd0a536c7",
+    "40a9327000bc4da821110c5033ecc5b28c10b866",
+    "679598404eb5aa24b9bba5af6fba6f72437fca1f"
   ],
+  "final_commit": "679598404eb5aa24b9bba5af6fba6f72437fca1f",
+  "final_benchmark_pass": 6,
   "fixture_count": 20,
   "fixture_aggregate_sha256": "aab857a982b8e5db841e8a0681504cc2d00266daff992889f131a7fca905fa37",
   "v2_replays": 3,
@@ -46,6 +53,23 @@
       "critical_vector_identical": true,
       "max_dimension_variation": 0.0
     }
+  },
+  "tests": {
+    "deno_domain_and_benchmark": { "passed": 317, "failed": 0 },
+    "deno_authority_gateway": { "passed": 25, "failed": 0 },
+    "python_scorer": { "passed": 9, "failed": 0 },
+    "full_repo": {
+      "status": "BLOCKED_BY_PREEXISTING_TYPE_ERROR",
+      "path": "edge-functions/_shared/tests/official-runtime-store_test.ts:121",
+      "reproduced_at_base": true
+    }
+  },
+  "scope_limits": {
+    "provider_uses_ai": false,
+    "real_tools_exercised": false,
+    "durable_v2_persistence": false,
+    "positive_receipts_unit_tested": true,
+    "positive_receipts_exercised_by_official_fixtures": false
   },
   "production_changed": false,
   "phase18_started": false

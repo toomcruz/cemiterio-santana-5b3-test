@@ -14,6 +14,7 @@ deno fmt --check santana-conversation-domain/motor-v2 phase17
 deno lint santana-conversation-domain/motor-v2 phase17
 deno check --no-lock phase17/run_engines.ts
 deno test --allow-read santana-conversation-domain phase17
+deno test --allow-env --allow-read --allow-write --allow-sys santana-authority-gateway/tests
 python3 -m unittest discover -s phase17/benchmark/tests -p 'test_*.py'
 ```
 
@@ -35,6 +36,10 @@ Use `phase17/benchmark/benchmark.py` com fixtures, schemas, manifesto e gate do 
 `current-workflow-compat-v1.jsonl` e os três traces `motor-v2-replay-*.jsonl`.
 
 Nenhum comando deste runbook autoriza rede, produção ou efeito externo.
+
+O comando amplo `deno test --no-lock --allow-read .` falha, tanto na base quanto no branch isolado, por um mismatch de
+tipo preexistente em `edge-functions/_shared/tests/official-runtime-store_test.ts:121`. O runbook usa suites explícitas
+para não mascarar esse bloqueio nem atribuí-lo ao Motor V2.
 
 ## Rollback do desenvolvimento
 

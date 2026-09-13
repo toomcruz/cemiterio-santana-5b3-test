@@ -28,9 +28,14 @@ executados.
 - hashes e manifestos de fonte conferidos;
 - PII, telefones/JIDs, CPF, e-mail, nomes completos, documentos integrais e links sensíveis: ausentes;
 - engine outputs: somente conteúdo sintético, identificadores de fixture, hashes, métricas e traces;
+- IDs de execução: tokens alfabéticos derivados bijetivamente de UUID, preservando entropia sem se parecer com CPF ou
+  telefone; há teste regressivo específico;
 - logs/auditoria: conteúdo de entrada representado por hash no adapter atual;
 - falha de privacidade é hard guard e invalida a execução.
 
+O scanner usa canários positivos e negativos, inclusive IDs/prefixos enganosos, e o passe final apresentou zero hits.
+
 ## Integridade
 
-O pacote final contém um `MANIFEST.sha256`; o ZIP entregue possui hash próprio e permanece privado (`0600`).
+O raw run, cada relatório e o pacote final contêm manifestos SHA-256. O ZIP entregue possui hash próprio e permanece
+privado (`0600`).

@@ -20,7 +20,9 @@ Executar shadow estritamente sem efeitos para validar o provider de IA controlad
 7. medir custo, tokens, latência, retries, timeout e variação em três replays;
 8. comparar decisão do provider real com o provider determinístico do LAB;
 9. exercitar Action Gateway apenas em modo dry-run/proposed;
-10. apresentar novo gate humano antes de canário ou produção.
+10. validar adapter de persistência durável e idempotência após reinício, ainda sem tráfego real;
+11. exercitar caminhos positivos de receipt em um executor fake persistente e falhas/retries de tool;
+12. apresentar novo gate humano antes de canário ou produção.
 
 ## Critérios mínimos preservados
 

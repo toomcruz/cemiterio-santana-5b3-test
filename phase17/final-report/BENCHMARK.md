@@ -4,7 +4,8 @@
 
 - 20 fixtures imutáveis da Fase 15;
 - mesma versão de schema e mesmos hashes;
-- workflow atual executado pelo caminho oficial v1 completo e seguro em memória;
+- workflow atual executado pelo caminho automático oficial v1 completo disponível no LAB: entrada, interpretação,
+  contexto, reducer, persistência/outbox em memória, policy, handoff, auditoria e resposta;
 - Motor V2 executado três vezes em runtimes independentes;
 - sem rede, banco externo, transporte, credenciais ou produção;
 - scorer comum, sem alterar o Gold;
@@ -33,14 +34,14 @@
 
 ## Operação observada no LAB
 
-| Métrica               |       Atual |    Motor V2 |
-| --------------------- | ----------: | ----------: |
-| Latência mediana/caso |   6,7578 ms |   1,0016 ms |
-| Latência média/caso   |   8,7646 ms |   1,2299 ms |
-| Latência máxima/caso  |  26,5263 ms |   3,7857 ms |
-| Retries               |           0 |           0 |
-| Chamadas de rede      |           0 |           0 |
-| Saída média do trace  | 2.048 bytes | 2.451 bytes |
+| Métrica               |          Atual |                Motor V2 |
+| --------------------- | -------------: | ----------------------: |
+| Latência mediana/caso |      6,8346 ms |        1,0552–1,2669 ms |
+| Latência média/caso   |      7,7828 ms |        1,1000–1,5086 ms |
+| Latência máxima/caso  |     27,4733 ms |        1,6267–4,8325 ms |
+| Retries               |              0 |                       0 |
+| Chamadas de rede      |              0 |                       0 |
+| Saída média do trace  | 2.201,95 bytes | 2.603,05–2.604,85 bytes |
 
 Memória foi medida dentro de um único processo e sofre influência do garbage collector; é evidência observacional, não
 comparação de capacidade.
@@ -66,3 +67,7 @@ Isso decorre do provider determinístico de LAB e não estima custo nem latênci
 O modo `role-aware-v1`, que nunca submete mensagem de assistente como entrada de munícipe, produziu as mesmas métricas
 dimensionais do baseline compatível. Ele é evidência diagnóstica; o comparativo oficial permanece `compat-v1`, alinhado
 ao contrato da Fase 15.
+
+O V1 não possui o mesmo contrato unificado de fatos tipados, trilhas e lacunas administrativas do V2. O adapter marca
+essas capacidades como ausentes em vez de simulá-las. Assim, a comparação prova o workflow completo disponível em cada
+lado nas 20 fixtures, mas não prova equivalência de capacidade de entrada nem generalização além do corpus congelado.

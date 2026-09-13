@@ -27,20 +27,36 @@ como ausentes, nunca fabricadas.
 - registro de policy vigente por fonte e intervalo de validade;
 - Action Gateway allowlisted, confirmation-gated e idempotente;
 - receipts verificáveis por hash;
-- store isolado com revisão, dedupe e auditoria hashada;
+- receipts vinculados a claims e ao ledger do gateway, com relação tool↔receipt fechada;
+- store isolado com revisão, dedupe vinculada ao payload e auditoria hashada;
 - projeção comum de benchmark;
 - adapter completo do workflow atual para comparação;
 - scorer reprodutível, matriz P0–P3 e gate congelado.
 
 ## Substituídos ou refatorados
 
-Nenhum componente de produção foi substituído. A única correção após o primeiro benchmark foi no adapter de teste:
-`reused_fact_keys` passou a ser deduplicado antes da emissão do trace. O runtime atual e os contratos de produção
-ficaram inalterados.
+Nenhum componente de produção foi substituído. As refatorações ficaram nos novos módulos de LAB e benchmark:
+
+- deduplicação de `reused_fact_keys` no adapter de teste;
+- precedência P0 e handoff fail-closed;
+- validação fechada de input e output do provider;
+- fatos versionados persistidos entre turnos;
+- idempotência vinculada ao payload e isolamento por conversa;
+- receipts vinculados a tool, claim, payload, referência e ledger;
+- replays realmente independentes e evidence manifests por passe;
+- scanner de privacidade endurecido e IDs de execução alfabéticos, sem falso positivo aleatório de CPF;
+- status do scorer distinguindo execução válida com e sem falhas.
+
+O runtime atual e os contratos de produção ficaram inalterados.
 
 ## Commits isolados
 
 - `28ce676dfc89d4cfbb6f9ff718eadf4500b7e00c` — Motor V2 de LAB;
-- `e0b535e3c1a75da01a4d449e9cff33242de44217` — adapters e framework de benchmark.
+- `e0b535e3c1a75da01a4d449e9cff33242de44217` — adapters e framework de benchmark;
+- `47a3d79fa98704e1a3080d767c68a0264fb08204` — primeira documentação;
+- `35e8cd723c3dbe861a8ba2ba0f9adaa6d435ae09` — hardening dos gates;
+- `8f8536d1a003fbebeea2eabece48046fd0a536c7` — binding de receipts ao ledger e claims;
+- `40a9327000bc4da821110c5033ecc5b28c10b866` — boundaries de provider, input, dedupe e actions;
+- `679598404eb5aa24b9bba5af6fba6f72437fca1f` — status final e IDs privados reprodutíveis.
 
 Base preservada: `060c795308e18db265d04416de6ae6d25f692f24`.
