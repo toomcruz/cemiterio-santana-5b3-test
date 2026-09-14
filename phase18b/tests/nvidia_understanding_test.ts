@@ -1,4 +1,4 @@
-import { assert, assertEquals, assertThrows } from "jsr:@std/assert@1";
+import { assert, assertEquals, assertRejects, assertThrows } from "jsr:@std/assert@1";
 import {
   CONTROLLED_NVIDIA_MODEL,
   type ControlledNvidiaAiObservation,
