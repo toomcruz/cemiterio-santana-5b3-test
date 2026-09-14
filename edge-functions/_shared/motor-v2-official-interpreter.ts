@@ -154,6 +154,12 @@ function applyUnderstandingToOfficialInterpretation(
   let result = base;
   const blockingAmbiguity = result.ambiguities.some((ambiguity) => ambiguity.blocking);
   const clarificationOnlyMissingEvent = result.needs_clarification && !result.primary_event && !blockingAmbiguity;
+  const safeDeterministicRoute = Boolean(result.primary_event) &&
+    ["NEW_GOAL", "CORRECTION", "CHANGE_OF_MIND", "COMPLEMENT", "ANSWER", "PARALLEL_QUESTION", "SOCIAL"].includes(
+      baseKind ?? "",
+    ) &&
+    !hasMultipleSemanticGoals && !mediaNeedsReview && !unmappedSemantic && !blockingAmbiguity &&
+    understanding.risk.level === "none";
   const semanticClaimNeedsEvidence = (
     mappedGoals.size > 0 || understanding.intent_changed || understanding.risk.level !== "none"
   ) && !currentTurnIsEvidence;
@@ -240,8 +246,9 @@ function applyUnderstandingToOfficialInterpretation(
   }
 
   if (
-    (!canMaterializeParallel && hasMultipleSemanticGoals) || mediaNeedsReview || lowConfidence || unmappedSemantic ||
-    semanticClaimNeedsEvidence
+    (!canMaterializeParallel && hasMultipleSemanticGoals) || mediaNeedsReview ||
+    (lowConfidence && !safeDeterministicRoute) ||
+    unmappedSemantic || (semanticClaimNeedsEvidence && !safeDeterministicRoute)
   ) {
     result = {
       ...result,
