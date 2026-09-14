@@ -82,14 +82,23 @@ Deno.test("official pipeline does not deliver when commit fails", async () => {
     outbox: new Map(),
     commits: 0,
   };
-  let deliveries = 0;
+  const delivery = { calls: 0 };
+  const processAndDeliver = async () => {
+    const result = await processOfficialTurn(
+      input("commit-fails"),
+      new DurableTestStore(durable, true),
+      interpreter,
+      ALLOWED,
+    );
+    if (result.outbox_id) delivery.calls += 1;
+  };
   await assertRejects(
-    () => processOfficialTurn(input("commit-fails"), new DurableTestStore(durable, true), interpreter, ALLOWED),
+    processAndDeliver,
     /synthetic commit failure/,
   );
   assertEquals(durable.commits, 0);
   assertEquals(durable.outbox.size, 0);
-  assertEquals(deliveries, 0);
+  assertEquals(delivery.calls, 0);
 });
 
 Deno.test("official pipeline commits before suppressed delivery and replay is idempotent after restart", async () => {
