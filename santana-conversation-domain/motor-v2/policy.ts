@@ -146,6 +146,8 @@ function needsAdministrativeReview(understanding: UnderstandingResult, lastUserT
       "CONTRADICAO_ENTRE_CANAIS",
     ])
   ) return true;
+  if (understanding.subintents.length >= 3) return true;
+  if (understanding.complexity === "high" && understanding.subintents.length > 1) return true;
   return /(?:regra|documento|autorizacao|agendamento|agenda|pagamento|valor|prazo|procedimento|confirmad|pode|como fazer)/
     .test(
       lastUserText,

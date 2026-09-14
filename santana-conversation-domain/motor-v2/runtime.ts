@@ -162,11 +162,11 @@ function renderReply(state: MotorV2State): string {
   if (state.understanding.subintents.includes("CONTINGENCIA_FUNERARIA_POR_RAMIFICACAO")) {
     return "A contingência verificada foi aceita como plano. Pagamento, agendamento e execução continuam sem confirmação e exigem receipts próprios.";
   }
-  if (state.understanding.transverse_states.includes("CONVERSATION_CLOSING")) {
-    return "Certo. Obrigado pelo retorno; não há nenhuma ação externa executada por esta conversa.";
-  }
   if (state.understanding.transverse_states.includes("MEDIA_NOT_ANALYZED")) {
     return "A mídia não foi analisada. Não vou inferir seu conteúdo; é necessária revisão antes de qualquer conclusão.";
+  }
+  if (state.understanding.transverse_states.includes("CONVERSATION_CLOSING")) {
+    return "Certo. Obrigado pelo retorno; não há nenhuma ação externa executada por esta conversa.";
   }
   const prefix = actions.has("PRIORITIZE_URGENT")
     ? "Vou priorizar a necessidade funerária urgente e preservar os demais assuntos separadamente. "
