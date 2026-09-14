@@ -5,6 +5,7 @@ import {
   type ControlledNvidiaAiObservation,
 } from "../../santana-conversation-domain/motor-v2/providers/nvidia.ts";
 import { createMotorV2OfficialInterpreter } from "../../edge-functions/_shared/motor-v2-official-interpreter.ts";
+import type { MotorV2UnderstandingObservation } from "../../edge-functions/_shared/motor-v2-official-interpreter.ts";
 import { applyEvent, type ConversationState, initState } from "../../santana-conversation-domain/engine/engine.ts";
 import { interpret as deterministicInterpret } from "../../santana-conversation-domain/runtime/interpreter/deterministic.ts";
 import { planTurn } from "../../santana-conversation-domain/runtime/turn.ts";
@@ -209,6 +210,22 @@ function safeObservation(observation: ControlledNvidiaAiObservation | undefined)
   };
 }
 
+function safeUnderstanding(observation: MotorV2UnderstandingObservation | undefined) {
+  if (!observation) return null;
+  const project = (understanding: MotorV2UnderstandingObservation["provider"]) => ({
+    schema_version: understanding.schema_version,
+    journeys: understanding.journeys,
+    subintents: understanding.subintents,
+    transverse_states: understanding.transverse_states,
+    intent_changed: understanding.intent_changed,
+    complexity: understanding.complexity,
+    risk: understanding.risk,
+    confidence: understanding.confidence,
+    evidence_turns: understanding.evidence_turns,
+  });
+  return { provider: project(observation.provider), merged: project(observation.merged) };
+}
+
 function safePlan(plan: Awaited<ReturnType<typeof planTurn>>) {
   return {
     outcome: plan.outcome,
@@ -253,7 +270,12 @@ async function main(): Promise<void> {
   const reviewOutput = Deno.args[1];
   if (!key || !output || !reviewOutput) throw new Error("provider key and output paths are required");
   const observations: ControlledNvidiaAiObservation[] = [];
-  const v2 = createMotorV2OfficialInterpreter(key, (event) => observations.push(event));
+  const understandings: MotorV2UnderstandingObservation[] = [];
+  const v2 = createMotorV2OfficialInterpreter(
+    key,
+    (event) => observations.push(event),
+    (event) => understandings.push(event),
+  );
   const baseline: LanguageInterpreter = { interpret: (input) => Promise.resolve(deterministicInterpret(input)) };
   const rows: Array<Record<string, unknown>> = [];
   const reviewRows: Array<Record<string, unknown>> = [];
@@ -262,6 +284,7 @@ async function main(): Promise<void> {
 
   for (const [index, item] of cases().entries()) {
     const before = observations.length;
+    const beforeUnderstanding = understandings.length;
     const input = {
       message_id: `${item.case_id}-turn`,
       text: item.text,
@@ -270,6 +293,7 @@ async function main(): Promise<void> {
     };
     const v2Plan = await planTurn(input, v2);
     const v2Observation = observations.slice(before).at(-1);
+    const v2Understanding = understandings.slice(beforeUnderstanding).at(-1);
     const baselinePlan = await planTurn(input, baseline);
     const integrated = safePlan(v2Plan);
     const directedFailures = Object.entries(item.expected).filter(([key, expected]) =>
@@ -285,6 +309,7 @@ async function main(): Promise<void> {
       fallback_used: v2Observation?.fallback_used === true,
       provider_attempted: v2Observation?.provider_attempted === true,
       observation: safeObservation(v2Observation),
+      understanding: safeUnderstanding(v2Understanding),
       integrated_v2: integrated,
       deterministic_baseline: safePlan(baselinePlan),
       expected: item.expected,

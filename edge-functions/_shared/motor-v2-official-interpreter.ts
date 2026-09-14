@@ -17,6 +17,11 @@ import type { Interpretation, InterpreterInput } from "../../santana-conversatio
 
 export type MotorV2Observation = ControlledNvidiaAiObservation;
 
+export interface MotorV2UnderstandingObservation {
+  provider: UnderstandingResult;
+  merged: UnderstandingResult;
+}
+
 const SUBINTENT_GOALS: Readonly<Record<string, string>> = {
   EXUMACAO: "GOAL_EXUMACAO",
   RETIRAR_RESTOS: "GOAL_EXUMACAO",
@@ -323,12 +328,14 @@ function mappingFor(understanding: UnderstandingResult, interpretation: Interpre
 export class MotorV2OfficialInterpreter implements LanguageInterpreter {
   constructor(
     private readonly provider: UnderstandingProvider,
+    private readonly observeUnderstanding?: (event: MotorV2UnderstandingObservation) => void,
   ) {}
 
   async interpret(input: InterpreterInput): Promise<Interpretation> {
     const messages = [contextMessage(input), { turn_id: input.message_id, role: "user" as const, content: input.text }];
     const providerUnderstanding = await this.provider.understand(messages) as UnderstandingResult;
     const understanding = mergeCurrentTurnSafetySignals(providerUnderstanding, input);
+    this.observeUnderstanding?.({ provider: providerUnderstanding, merged: understanding });
     const base = guardInterpretation(deterministicInterpret(input));
     const integrated = applyUnderstandingToOfficialInterpretation(base, understanding, input);
     const p0 = understanding.risk.level === "P0";
@@ -361,6 +368,7 @@ export class MotorV2OfficialInterpreter implements LanguageInterpreter {
 export function createMotorV2OfficialInterpreter(
   apiKey: string,
   observe?: (event: MotorV2Observation) => void,
+  observeUnderstanding?: (event: MotorV2UnderstandingObservation) => void,
 ): MotorV2OfficialInterpreter {
   const provider = new ControlledNvidiaUnderstandingProvider({
     apiKey,
@@ -370,5 +378,5 @@ export function createMotorV2OfficialInterpreter(
     failOnFallback: true,
     observe,
   });
-  return new MotorV2OfficialInterpreter(provider);
+  return new MotorV2OfficialInterpreter(provider, observeUnderstanding);
 }
