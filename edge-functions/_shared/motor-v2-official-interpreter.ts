@@ -6,8 +6,8 @@ import {
 import type { UnderstandingResult } from "../../santana-conversation-domain/motor-v2/types.ts";
 import {
   enforceDeterministicRisk,
-  understandMessages,
   type UnderstandingProvider,
+  understandMessages,
 } from "../../santana-conversation-domain/motor-v2/understanding.ts";
 import { interpret as deterministicInterpret } from "../../santana-conversation-domain/runtime/interpreter/deterministic.ts";
 import { guardInterpretation } from "../../santana-conversation-domain/runtime/interpreter/guard.ts";
@@ -98,13 +98,15 @@ function mergeCurrentTurnSafetySignals(
     content: input.text,
   }]);
   const mergedSubintents = [...new Set([...understanding.subintents, ...deterministic.subintents])];
-  const mergedJourneys = [...new Set([
-    ...understanding.journeys,
-    ...deterministic.journeys.filter((journey) => journey !== "DESCONHECIDA_AMBIGUA"),
-  ])];
+  const mergedJourneys = [
+    ...new Set([
+      ...understanding.journeys,
+      ...deterministic.journeys.filter((journey) => journey !== "DESCONHECIDA_AMBIGUA"),
+    ]),
+  ];
   const mergedStates = [...new Set([...understanding.transverse_states, ...deterministic.transverse_states])];
   const deterministicEvidence = deterministic.subintents.length > 0 || deterministic.transverse_states.length > 0 ||
-    deterministic.risk.level !== "none"
+      deterministic.risk.level !== "none"
     ? [input.message_id]
     : [];
   const merged: UnderstandingResult = {

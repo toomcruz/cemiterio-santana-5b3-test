@@ -127,7 +127,7 @@ Deno.test("official bridge sends structured context and keeps the deterministic 
     { turn_id: "msg-current", role: "user", content: "Obrigado, era só isso." },
   ]]);
   assertEquals(result.produced_by, "motor-v2-official-interpreter");
-  assertEquals(result.primary_event, null);
+  assertEquals(result.primary_event?.event_kind, "SOCIAL");
 });
 
 Deno.test("V2 closed subintent mapping changes the official route without creating a fact", async () => {
