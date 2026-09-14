@@ -109,7 +109,7 @@ function applyUnderstandingToOfficialInterpretation(
     mappedGoals.size > 0 || understanding.intent_changed || understanding.risk.level !== "none"
   ) && !currentTurnIsEvidence;
   const closing = understanding.transverse_states.includes("CONVERSATION_CLOSING") &&
-    understanding.risk.level === "none" && input.context.pending_question_fact === null;
+    understanding.risk.level === "none";
 
   // V2 can fill a missing semantic route only with a closed goal mapping. It
   // cannot create facts, rules, permissions or an administrative decision.
