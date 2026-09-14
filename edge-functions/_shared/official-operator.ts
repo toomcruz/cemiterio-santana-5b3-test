@@ -31,7 +31,7 @@ export async function processOfficialOperator(
   payload: Record<string, unknown>,
   request: Request,
   rest: OfficialSupabaseRest,
-  canaryPhone: string,
+  canaryHash: string | undefined,
 ) {
   const access = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1] ?? "";
   const actor = await rest.authenticatedUser(access);
@@ -53,7 +53,7 @@ export async function processOfficialOperator(
     throw new HttpProblem(404, "RUNTIME_NOT_FOUND", "Official attendance not found");
   }
   const state = asStoredState(snapshot.state, conversationId);
-  const allowed = runtimeCanaryAllowsAutomaticReply(snapshot.phone_e164, canaryPhone);
+  const allowed = await runtimeCanaryAllowsAutomaticReply(snapshot.phone_e164, canaryHash);
   if (!command) {
     return {
       revision: snapshot.revision,

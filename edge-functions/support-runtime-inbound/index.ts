@@ -8,11 +8,12 @@ import {
 import { GeminiProvider } from "../../santana-conversation-domain/integrations/gemini.ts";
 import { HttpProblem, json } from "../_shared/http.ts";
 import { WapiAttachmentProcessor } from "../_shared/official-attachments.ts";
-import { requireRuntimeCanaryPhone, runtimeCanaryAllowsAutomaticReply } from "../_shared/official-runtime-canary.ts";
+import { runtimeCanaryAllowsAutomaticReply, selectCanaryRoute } from "../_shared/official-runtime-canary.ts";
 import { OfficialSupabaseRest } from "../_shared/official-rest.ts";
 import { SupabaseRuntimeStore } from "../_shared/official-runtime-store.ts";
 import { requireRuntimeIngressAccess } from "../_shared/official-security.ts";
 import { processOfficialOperator } from "../_shared/official-operator.ts";
+import { runDormantMotorV2Proposal } from "../_shared/dormant-motor-v2.ts";
 
 const MAX_REQUEST_BYTES = 2 * 1024 * 1024;
 
@@ -99,7 +100,7 @@ function interpreter() {
 async function deliver(
   rest: OfficialSupabaseRest,
   outboxId: string | null,
-  configuredCanaryPhone: string | undefined,
+  configuredCanaryHash: string | undefined,
   automaticRepliesAllowed: boolean,
 ): Promise<"queued" | "sent" | "failed" | "suppressed"> {
   if (!automaticRepliesAllowed) return "suppressed";
@@ -114,7 +115,7 @@ async function deliver(
     return claimed.status === "SENT" ? "sent" : "queued";
   }
   const claimedPhone = text(claimed.phone_e164);
-  if (!runtimeCanaryAllowsAutomaticReply(claimedPhone, configuredCanaryPhone)) {
+  if (!await runtimeCanaryAllowsAutomaticReply(claimedPhone, configuredCanaryHash)) {
     await rest.rpc("support_runtime_fail_delivery", {
       p_outbox_id: outboxId,
       p_error: "CANARY_PHONE_BLOCKED",
@@ -166,23 +167,38 @@ Deno.serve(async (request) => {
     const payload = await request.json().catch(() => {
       throw new HttpProblem(400, "INVALID_JSON", "Request body must be valid JSON");
     });
-    const configuredCanaryPhone = requireRuntimeCanaryPhone(
-      Deno.env.get("SUPPORT_RUNTIME_CANARY_PHONE_E164"),
-    );
+    const configuredCanaryHash = Deno.env.get("SUPPORT_RUNTIME_CANARY_HASH");
     const rest = new OfficialSupabaseRest();
     const input = object(payload);
     if (input.kind === "OPERATOR_SNAPSHOT" || input.kind === "OPERATOR_COMMAND") {
-      const result = object(await processOfficialOperator(input, request, rest, configuredCanaryPhone));
+      const result = object(await processOfficialOperator(input, request, rest, configuredCanaryHash));
       if (input.kind === "OPERATOR_SNAPSHOT") return json(result);
-      const allowed = runtimeCanaryAllowsAutomaticReply(text(result.phone_e164), configuredCanaryPhone);
-      const delivery = await deliver(rest, text(result.outbox_id) || null, configuredCanaryPhone, allowed);
+      const allowed = await runtimeCanaryAllowsAutomaticReply(text(result.phone_e164), configuredCanaryHash);
+      const delivery = await deliver(rest, text(result.outbox_id) || null, configuredCanaryHash, allowed);
       const { phone_e164: _privatePhone, ...response } = result;
       return json({ ...response, delivery });
     }
     const inbound = inboundFromPayload(payload);
-    const automaticRepliesAllowed = runtimeCanaryAllowsAutomaticReply(
+    const route = await selectCanaryRoute(
       inbound.phone_e164,
-      configuredCanaryPhone,
+      Deno.env.get("CANARY_ENABLED"),
+      configuredCanaryHash,
+    );
+    // Fase 19B is dormant: with CANARY_ENABLED=false, the current workflow
+    // remains the only reachable processing path. Activation is a later gate.
+    if (route === "MOTOR_V2") {
+      const proposal = await runDormantMotorV2Proposal(inbound);
+      return json({
+        accepted: true,
+        kind: "MOTOR_V2_PROPOSAL_ONLY",
+        replied: false,
+        delivery: "suppressed",
+        proposal,
+      });
+    }
+    const automaticRepliesAllowed = await runtimeCanaryAllowsAutomaticReply(
+      inbound.phone_e164,
+      configuredCanaryHash,
     );
     const store = new SupabaseRuntimeStore(rest, new WapiAttachmentProcessor(rest));
     const result = await processOfficialTurn(inbound, store, interpreter(), {
@@ -191,7 +207,7 @@ Deno.serve(async (request) => {
     const delivery = await deliver(
       rest,
       result.outbox_id,
-      configuredCanaryPhone,
+      configuredCanaryHash,
       automaticRepliesAllowed,
     );
     return json({

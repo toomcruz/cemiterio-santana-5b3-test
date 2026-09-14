@@ -18,7 +18,8 @@ const CONVERSATION = "33333333-3333-4333-a333-333333333333";
 const COMMAND = "44444444-4444-4444-a444-444444444444";
 const ACTOR = "55555555-5555-4555-a555-555555555555";
 const NOW = "2026-09-09T20:00:00.000Z";
-const CANARY = "+5511999991234";
+const CANARY_PHONE = "+5511999991234";
+const CANARY = "3af253865aa6f5a855cdbb3b13363f7d5925694724d1d8b4c5a8e81e7b58d998";
 
 function command(overrides: Partial<OperatorCommand> = {}): OperatorCommand {
   return {
@@ -375,7 +376,7 @@ async function operatorHarness(
         revision: options.revision ?? 7,
         catalog_hash: hash,
         automation_mode: options.automationMode ?? "bot",
-        phone_e164: options.phone ?? CANARY,
+        phone_e164: options.phone ?? CANARY_PHONE,
         requests: [],
       }));
     }
