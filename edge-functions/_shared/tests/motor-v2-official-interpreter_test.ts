@@ -70,3 +70,29 @@ Deno.test("official V2 interpreter remains compatible with processOfficialTurn i
   assertEquals(result.schema_version, "santana-interpretation/v1");
   assertEquals(result.message_id, "msg-1");
 });
+
+Deno.test("official bridge sends only the current turn and keeps the deterministic reducer authoritative", async () => {
+  const calls: Array<Array<{ turn_id: string; role: string; content: string }>> = [];
+  const capturingProvider: UnderstandingProvider = {
+    metadata: provider(baseUnderstanding).metadata,
+    understand: (turns) => {
+      calls.push(turns);
+      return Promise.resolve(baseUnderstanding);
+    },
+  };
+  const result = await new MotorV2OfficialInterpreter(capturingProvider).interpret({
+    message_id: "msg-current",
+    text: "Obrigado, era só isso.",
+    context: {
+      has_open_goal: true,
+      open_goal_code: "GOAL_EXUMACAO",
+      pending_question_fact: "burial_reference",
+      known_subject_hints: ["exumação"],
+      known_facts: [{ fact_code: "burial_reference", value: "quadra 3" }],
+    },
+  });
+
+  assertEquals(calls, [[{ turn_id: "msg-current", role: "user", content: "Obrigado, era só isso." }]]);
+  assertEquals(result.produced_by, "motor-v2-official-interpreter");
+  assertEquals(result.primary_event?.event_kind, "HUMAN_REQUEST");
+});
