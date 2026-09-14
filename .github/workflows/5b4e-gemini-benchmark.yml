@@ -49,7 +49,7 @@ jobs:
         with:
           deno-version: v2.1.4
       - name: Require Gemini benchmark secret
-        if: github.ref != 'refs/heads/phase18b-gate2-remediation'
+        if: github.ref != 'refs/heads/phase18b-gate2-remediation' && github.ref != 'refs/heads/phase19b-hashed-allowlist'
         shell: bash
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.PARLANT }}
@@ -57,7 +57,7 @@ jobs:
           set -Eeuo pipefail
           [[ -n "${GEMINI_API_KEY:-}" ]] || { echo "5B.4-E BLOCKED — repository secret GEMINI_API_KEY is unavailable" >&2; exit 1; }
       - name: Require Phase 18B NVIDIA secret
-        if: github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode != 'phase18c_regression'
+        if: (github.ref == 'refs/heads/phase18b-gate2-remediation' || github.ref == 'refs/heads/phase19b-hashed-allowlist') && inputs.phase18b_mode != 'phase18c_regression'
         shell: bash
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
@@ -67,7 +67,7 @@ jobs:
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq ripgrep >/dev/null
       - run: rg --version
       - name: Preserve baseline gates
-        if: github.ref != 'refs/heads/phase18b-gate2-remediation'
+        if: github.ref != 'refs/heads/phase18b-gate2-remediation' && github.ref != 'refs/heads/phase19b-hashed-allowlist'
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -78,13 +78,13 @@ jobs:
           bash tests/postgres/verify_migration_manifest.sh
           bash tests/postgres/verify_static.sh
       - name: Run controlled Gemini benchmark
-        if: github.ref != 'refs/heads/phase18b-gate2-remediation'
+        if: github.ref != 'refs/heads/phase18b-gate2-remediation' && github.ref != 'refs/heads/phase19b-hashed-allowlist'
         shell: bash
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.PARLANT }}
         run: deno task benchmark:gemini
       - name: Publish aggregate metrics only
-        if: always() && github.ref != 'refs/heads/phase18b-gate2-remediation'
+        if: always() && github.ref != 'refs/heads/phase18b-gate2-remediation' && github.ref != 'refs/heads/phase19b-hashed-allowlist'
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -92,7 +92,7 @@ jobs:
           cp benchmark-report.json "$RUNNER_TEMP/benchmark-report.json"
           cat "$RUNNER_TEMP/benchmark-report.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload aggregate benchmark report
-        if: always() && github.ref != 'refs/heads/phase18b-gate2-remediation'
+        if: always() && github.ref != 'refs/heads/phase18b-gate2-remediation' && github.ref != 'refs/heads/phase19b-hashed-allowlist'
         uses: actions/upload-artifact@v4
         with:
           name: 5b4e-gemini-benchmark-report
@@ -155,7 +155,7 @@ jobs:
         shell: bash
         run: echo 'PRECHECK_ONLY= true; provider and replay stages are disabled.'
       - name: Validate Phase 18B provider and no-effects boundaries
-        if: github.ref == 'refs/heads/phase18b-gate2-remediation'
+        if: (github.ref == 'refs/heads/phase18b-gate2-remediation' || github.ref == 'refs/heads/phase19b-hashed-allowlist')
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -165,7 +165,7 @@ jobs:
           deno test --allow-net=jsr.io phase18b/tests/gemini_understanding_test.ts phase18b/tests/nvidia_understanding_test.ts phase18b/tests/live_shadow_runner_test.ts santana-conversation-domain/motor-v2/tests/motor_v2_test.ts
           python3 -m unittest phase18b/tests/test_live_cohort.py
       - name: Run Phase 18C offline regression only
-        if: github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode == 'phase18c_regression' && success()
+        if: (github.ref == 'refs/heads/phase18b-gate2-remediation' || github.ref == 'refs/heads/phase19b-hashed-allowlist') && inputs.phase18b_mode == 'phase18c_regression' && success()
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -175,7 +175,7 @@ jobs:
           deno test --allow-read santana-conversation-domain/benchmark
           bash tests/postgres/verify_static.sh
       - name: Probe NVIDIA compatibility with synthetic input
-        if: github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.precheck_only != true && inputs.phase18b_mode != 'catalog_probe' && inputs.phase18b_mode != 'p0_supplement' && inputs.phase18b_mode != 'phase18c_regression'
+        if: (github.ref == 'refs/heads/phase18b-gate2-remediation' || github.ref == 'refs/heads/phase19b-hashed-allowlist') && inputs.precheck_only != true && inputs.phase18b_mode != 'catalog_probe' && inputs.phase18b_mode != 'p0_supplement' && inputs.phase18b_mode != 'phase18c_regression'
         shell: bash
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
@@ -188,7 +188,7 @@ jobs:
             phase18b/provider/probe_nvidia.ts \
             "$RUNNER_TEMP/phase18b-provider-probe.json"
       - name: Upload Phase 18B compatibility probe
-        if: always() && github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.precheck_only != true && inputs.phase18b_mode != 'catalog_probe' && inputs.phase18b_mode != 'p0_supplement' && inputs.phase18b_mode != 'phase18c_regression'
+        if: always() && (github.ref == 'refs/heads/phase18b-gate2-remediation' || github.ref == 'refs/heads/phase19b-hashed-allowlist') && inputs.precheck_only != true && inputs.phase18b_mode != 'catalog_probe' && inputs.phase18b_mode != 'p0_supplement' && inputs.phase18b_mode != 'phase18c_regression'
         uses: actions/upload-artifact@v4
         with:
           name: phase18b-provider-probe
