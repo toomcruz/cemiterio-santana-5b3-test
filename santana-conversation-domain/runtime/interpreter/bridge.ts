@@ -105,6 +105,14 @@ export function toConversationEvents(interpretation: Interpretation, state?: Con
     return { events, clarification: null };
   }
 
+  if (kind === "RECLASSIFICATION") {
+    if (!interpretation.goal) {
+      return { events: [], clarification: { reason: "reclassificacao sem topico", options: [] } };
+    }
+    events.push({ kind: "RECLASSIFICATION", goal_code: interpretation.goal.goal_code, facts });
+    return { events, clarification: null };
+  }
+
   events.push({ kind, facts });
   return { events, clarification: null };
 }
