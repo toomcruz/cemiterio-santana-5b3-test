@@ -154,7 +154,7 @@ function applyUnderstandingToOfficialInterpretation(
     };
   }
 
-  if (closing && !hasMultipleSemanticGoals && !baseIsCorrection) {
+  if (closing && !hasMultipleSemanticGoals && !baseIsCorrection && !baseIsHandoff) {
     result = {
       ...result,
       primary_event: { event_kind: "SOCIAL", confidence: "HIGH", evidence: input.text },

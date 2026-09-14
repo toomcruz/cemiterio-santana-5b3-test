@@ -65,6 +65,8 @@ export function toConversationEvents(interpretation: Interpretation, state?: Con
 
   const kind = interpretation.primary_event.event_kind;
   const p0Handoff = kind === "HUMAN_REQUEST" && interpretation.official_mapping?.risk_level === "P0";
+  const closeConversation = kind === "SOCIAL" &&
+    interpretation.official_mapping?.transverse_states.includes("CONVERSATION_CLOSING") === true;
   const currentCaseId = state ? contextGoal(state)?.case_id : null;
   const currentCaseRef = state?.cases.find((item) => item.case_id === currentCaseId)?.subject_ref;
   // A linguistic hint ("minha tia") is not a unique person identifier. A
@@ -118,7 +120,12 @@ export function toConversationEvents(interpretation: Interpretation, state?: Con
     return { events, clarification: null };
   }
 
-  events.push({ kind, facts, ...(p0Handoff ? { handoff_priority: "P0" as const } : {}) });
+  events.push({
+    kind,
+    facts,
+    ...(p0Handoff ? { handoff_priority: "P0" as const } : {}),
+    ...(closeConversation ? { close_conversation: true } : {}),
+  });
   return { events, clarification: null };
 }
 

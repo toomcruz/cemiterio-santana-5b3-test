@@ -157,6 +157,7 @@ export interface ConversationEvent {
   base_goal_code?: string;
   note?: string;
   handoff_priority?: "normal" | "P0";
+  close_conversation?: boolean;
 }
 
 const OPEN_STATUSES: GoalStatus[] = ["ACTIVE", "SUSPENDED", "WAITING"];
@@ -879,10 +880,15 @@ export function applyEvent(previous: ConversationState, event: ConversationEvent
     case "SOCIAL":
       // A greeting can recover the next collection question in an older
       // waiting snapshot, without changing facts, decisions or case status.
-      refreshPendingQuestion(state);
+      if (event.close_conversation) {
+        state.pending_question = null;
+      } else {
+        refreshPendingQuestion(state);
+      }
       return state;
 
     case "HUMAN_REQUEST": {
+      state.pending_question = null;
       state.handoff = buildHandoff(state, event.handoff_priority ?? "normal");
       return state;
     }
