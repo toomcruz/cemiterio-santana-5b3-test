@@ -71,6 +71,17 @@ export type ProviderRejectionCategory =
   | "canonical_administrative_field"
   | "canonical_other_invalid";
 
+/** Safe error boundary used by the official runtime failover. */
+export class ControlledNvidiaFailure extends Error {
+  constructor(
+    readonly rejectionCode: string,
+    readonly rejectionCategory: ProviderRejectionCategory | null,
+  ) {
+    super(rejectionCode);
+    this.name = "ControlledNvidiaFailure";
+  }
+}
+
 class ProviderHttpError extends Error {
   constructor(readonly status: number) {
     super("provider HTTP failure");
@@ -435,7 +446,7 @@ export class ControlledNvidiaUnderstandingProvider implements UnderstandingProvi
         error instanceof ProviderOutputError ? error.receivedValue : null,
         error instanceof ProviderOutputError ? error.expectedVocabulary : null,
       );
-      if (this.#failOnFallback) throw new Error(rejectionCode);
+      if (this.#failOnFallback) throw new ControlledNvidiaFailure(rejectionCode, rejectionCategory);
       return understandMessages(messages);
     } finally {
       clearTimeout(timer);

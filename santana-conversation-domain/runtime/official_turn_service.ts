@@ -12,7 +12,7 @@ import { registerReceivedDocumento } from "../engine/documento.ts";
 import { validateState } from "../engine/validate.ts";
 import type { LanguageInterpreter } from "./adapter/adapter.ts";
 import { canonicalJson, currentCatalogHash, sha256 } from "./server_transition.ts";
-import { planTurn, type TurnPlan } from "./turn.ts";
+import { planTurn, type TurnExecutionOptions, type TurnPlan } from "./turn.ts";
 import { officialInformationReply } from "./official_information.ts";
 import { documentAwaitingReview, withOperationalRequests } from "./official_operations.ts";
 
@@ -296,6 +296,7 @@ export async function processOfficialTurn(
   store: RuntimeStore,
   interpreter: LanguageInterpreter,
   automationPolicy: RuntimeAutomationPolicy,
+  executionOptions: TurnExecutionOptions = {},
 ): Promise<RuntimeTurnResult> {
   if (!inbound.external_message_id.trim()) throw new Error("external_message_id is required");
   if (!/^\+?[1-9][0-9]{7,14}$/.test(inbound.phone_e164)) throw new Error("phone_e164 is invalid");
@@ -344,13 +345,20 @@ export async function processOfficialTurn(
       interpretation: null,
       question_draft: null,
       reply_draft: information.text,
+      route: {
+        route_attempted: "CURRENT_DETERMINISTIC",
+        provider_result: "NOT_ATTEMPTED",
+        failover_route: null,
+        reason: null,
+        ai_output_used: false,
+      },
     }
     : await planTurn({
       message_id: lease.inbound_message_id,
       text: inbound.body,
       state,
       automation_mode: effectiveAutomationMode,
-    }, interpreter);
+    }, interpreter, executionOptions);
   const receivedState = withReceivedDocument(plan.next_state, lease.received_document);
   const nextState = effectiveAutomationMode === "BOT_ACTIVE"
     ? await withOperationalRequests(receivedState)

@@ -14,6 +14,7 @@ import { SupabaseRuntimeStore } from "../_shared/official-runtime-store.ts";
 import { requireRuntimeIngressAccess } from "../_shared/official-security.ts";
 import { processOfficialOperator } from "../_shared/official-operator.ts";
 import { createMotorV2OfficialInterpreter } from "../_shared/dormant-motor-v2.ts";
+import { interpret as deterministicInterpret } from "../../santana-conversation-domain/runtime/interpreter/deterministic.ts";
 
 const MAX_REQUEST_BYTES = 2 * 1024 * 1024;
 
@@ -190,6 +191,9 @@ Deno.serve(async (request) => {
       const apiKey = Deno.env.get("NVIDIA_API_KEY")?.trim() ?? "";
       if (!apiKey) throw new HttpProblem(503, "MOTOR_V2_UNCONFIGURED", "Motor V2 provider is not configured");
       const store = new SupabaseRuntimeStore(rest, new WapiAttachmentProcessor(rest));
+      const deterministicFallback = {
+        interpret: (input: Parameters<typeof deterministicInterpret>[0]) => Promise.resolve(deterministicInterpret(input)),
+      };
       const result = await processOfficialTurn(
         inbound,
         store,
@@ -197,6 +201,13 @@ Deno.serve(async (request) => {
           console.log("motor_v2_provider", event.outcome, event.provider, event.model, event.fallback_used);
         }),
         { automatic_replies_allowed: true },
+        {
+          route_attempted: "MOTOR_V2",
+          fallbackInterpreter: deterministicFallback,
+          onFailover: (route) => {
+            console.log("motor_v2_failover", route.route_attempted, route.provider_result, route.failover_route, route.reason);
+          },
+        },
       );
       const delivery = await deliver(rest, result.outbox_id, configuredCanaryHash, result.reply_body !== null);
       return json({

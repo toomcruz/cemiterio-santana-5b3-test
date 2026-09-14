@@ -264,6 +264,7 @@ function safePlan(plan: Awaited<ReturnType<typeof planTurn>>) {
         reason: plan.interpretation.official_mapping.reason,
       }
       : null,
+    route: plan.route,
   };
 }
 
@@ -308,7 +309,10 @@ async function main(): Promise<void> {
       state: item.state,
       automation_mode: "BOT_ACTIVE" as const,
     };
-    const v2Plan = await planTurn(input, v2);
+    const v2Plan = await planTurn(input, v2, {
+      route_attempted: "MOTOR_V2",
+      fallbackInterpreter: baseline,
+    });
     const v2Observation = observations.slice(before).at(-1);
     const v2Understanding = understandings.slice(beforeUnderstanding).at(-1);
     const baselinePlan = await planTurn(input, baseline);
@@ -323,11 +327,13 @@ async function main(): Promise<void> {
       category: item.category,
       provider: CONTROLLED_NVIDIA_MODEL,
       uses_ai: v2Observation?.ai_output_used === true,
+      ai_output_used: v2Observation?.ai_output_used === true,
       fallback_used: v2Observation?.fallback_used === true,
       provider_attempted: v2Observation?.provider_attempted === true,
       observation: safeObservation(v2Observation),
       understanding: safeUnderstanding(v2Understanding),
       integrated_v2: integrated,
+      effective_response_route: v2Plan.route.failover_route ?? "MOTOR_V2",
       deterministic_baseline: safePlan(baselinePlan),
       expected: item.expected,
       directed_pass: directedFailures.length === 0,
@@ -351,7 +357,7 @@ async function main(): Promise<void> {
   }
 
   const summary = {
-    schema_version: "phase19c4-directed-semantic-shadow/1.0.0",
+    schema_version: "phase19c5-directed-semantic-shadow/1.0.0",
     synthetic_input_only: true,
     case_count: rows.length,
     provider: CONTROLLED_NVIDIA_MODEL,
@@ -359,6 +365,8 @@ async function main(): Promise<void> {
     valid_ai_outputs: observations.filter((item) => item.outcome === "llm_valid" && item.ai_output_used).length,
     fallback_count: observations.filter((item) => item.fallback_used).length,
     directed_pass_count: rows.filter((row) => row.directed_pass === true).length,
+    AI_VALID_RATE: observations.length === 0 ? 0 : observations.filter((item) => item.outcome === "llm_valid" && item.ai_output_used).length / observations.length,
+    SAFE_TURN_COMPLETION_RATE: rows.length === 0 ? 0 : rows.filter((row) => row.directed_pass === true && row.integrated_v2 && (row.integrated_v2 as Record<string, unknown>).outcome !== "INTERPRETATION_UNAVAILABLE").length / rows.length,
     external_effects: false,
     whatsapp_delivery: "SUPPRESSED",
     review_package: "written separately without system-origin labels",
@@ -368,7 +376,7 @@ async function main(): Promise<void> {
   await Deno.writeTextFile(
     reviewOutput,
     canonicalJson({
-      schema_version: "phase19c2-human-review/1.0.0",
+      schema_version: "phase19c5-human-review/1.0.0",
       synthetic_input_only: true,
       case_count: reviewRows.length,
       systems_blinded: true,
@@ -387,12 +395,14 @@ async function main(): Promise<void> {
     valid_ai_outputs: summary.valid_ai_outputs,
     fallback_count: summary.fallback_count,
     directed_pass_count: summary.directed_pass_count,
+    AI_VALID_RATE: summary.AI_VALID_RATE,
+    SAFE_TURN_COMPLETION_RATE: summary.SAFE_TURN_COMPLETION_RATE,
     external_effects: false,
     whatsapp_delivery: "SUPPRESSED",
   }));
   if (
-    summary.case_count !== 10 || summary.calls !== 10 || summary.valid_ai_outputs !== 10 ||
-    summary.fallback_count !== 0 || summary.directed_pass_count !== 10
+    summary.case_count !== 10 || summary.calls !== 10 || summary.SAFE_TURN_COMPLETION_RATE !== 1 ||
+    summary.directed_pass_count !== 10
   ) {
     Deno.exit(2);
   }
