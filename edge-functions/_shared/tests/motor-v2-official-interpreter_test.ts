@@ -146,16 +146,19 @@ Deno.test("V2 closed subintent mapping changes the official route without creati
 });
 
 Deno.test("official planTurn consumes the V2 route before reducer state is proposed", async () => {
-  const plan = await planTurn({
-    message_id: "plan-route-1",
-    text: "Preciso resolver isso.",
-    state: initState("plan-route"),
-    automation_mode: "BOT_ACTIVE",
-  }, new MotorV2OfficialInterpreter(provider({
-    ...baseUnderstanding,
-    evidence_turns: ["plan-route-1"],
-    subintents: ["EXUMACAO"],
-  })));
+  const plan = await planTurn(
+    {
+      message_id: "plan-route-1",
+      text: "Preciso resolver isso.",
+      state: initState("plan-route"),
+      automation_mode: "BOT_ACTIVE",
+    },
+    new MotorV2OfficialInterpreter(provider({
+      ...baseUnderstanding,
+      evidence_turns: ["plan-route-1"],
+      subintents: ["EXUMACAO"],
+    })),
+  );
 
   assertEquals(plan.outcome, "PROPOSED");
   assertEquals(plan.interpretation?.produced_by, "motor-v2-official-interpreter");
