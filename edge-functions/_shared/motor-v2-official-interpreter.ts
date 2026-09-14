@@ -39,7 +39,9 @@ const SUBINTENT_GOALS: Readonly<Record<string, string>> = {
 
 const INFORMATIONAL_GOALS = new Set(["GOAL_INFO_OSSUARIO", "GOAL_INFO_HORARIO"]);
 
-function contextMessage(input: InterpreterInput): { turn_id: string; role: "assistant"; content: string; synthetic: true } {
+function contextMessage(
+  input: InterpreterInput,
+): { turn_id: string; role: "assistant"; content: string; synthetic: true } {
   return {
     turn_id: `${input.message_id}:official-context`,
     role: "assistant",
@@ -62,7 +64,9 @@ function contextMessage(input: InterpreterInput): { turn_id: string; role: "assi
 
 function semanticGoals(understanding: UnderstandingResult): Set<string> {
   return new Set(
-    understanding.subintents.map((subintent) => SUBINTENT_GOALS[subintent]).filter((goal): goal is string => Boolean(goal)),
+    understanding.subintents.map((subintent) => SUBINTENT_GOALS[subintent]).filter((goal): goal is string =>
+      Boolean(goal)
+    ),
   );
 }
 
