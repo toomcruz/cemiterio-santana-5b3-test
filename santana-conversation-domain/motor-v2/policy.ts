@@ -146,9 +146,10 @@ function needsAdministrativeReview(understanding: UnderstandingResult, lastUserT
       "CONTRADICAO_ENTRE_CANAIS",
     ])
   ) return true;
-  return /(?:regra|documento|autorizacao|agendamento|agenda|pagamento|valor|prazo|procedimento|confirmad|pode|como fazer)/.test(
-    lastUserText,
-  );
+  return /(?:regra|documento|autorizacao|agendamento|agenda|pagamento|valor|prazo|procedimento|confirmad|pode|como fazer)/
+    .test(
+      lastUserText,
+    );
 }
 
 /** Deterministic safety layer. It never turns corpus language into a current rule. */
