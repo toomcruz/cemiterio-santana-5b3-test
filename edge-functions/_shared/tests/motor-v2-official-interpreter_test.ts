@@ -4,6 +4,7 @@ import type { UnderstandingProvider } from "../../../santana-conversation-domain
 import type { UnderstandingResult } from "../../../santana-conversation-domain/motor-v2/types.ts";
 import { applyEvent, initState } from "../../../santana-conversation-domain/engine/engine.ts";
 import { toConversationEvents } from "../../../santana-conversation-domain/runtime/interpreter/bridge.ts";
+import { planTurn } from "../../../santana-conversation-domain/runtime/turn.ts";
 
 const baseUnderstanding: UnderstandingResult = {
   schema_version: "motor-v2-understanding/1.0.0",
@@ -142,6 +143,24 @@ Deno.test("V2 closed subintent mapping changes the official route without creati
   const events = toConversationEvents(result, initState("route-test"));
   assertEquals(events.events[0]?.kind, "NEW_GOAL");
   assertEquals(events.events[0]?.goal_code, "GOAL_EXUMACAO");
+});
+
+Deno.test("official planTurn consumes the V2 route before reducer state is proposed", async () => {
+  const plan = await planTurn({
+    message_id: "plan-route-1",
+    text: "Preciso resolver isso.",
+    state: initState("plan-route"),
+    automation_mode: "BOT_ACTIVE",
+  }, new MotorV2OfficialInterpreter(provider({
+    ...baseUnderstanding,
+    evidence_turns: ["plan-route-1"],
+    subintents: ["EXUMACAO"],
+  })));
+
+  assertEquals(plan.outcome, "PROPOSED");
+  assertEquals(plan.interpretation?.produced_by, "motor-v2-official-interpreter");
+  assertEquals(plan.next_state.goals[0]?.goal_code, "GOAL_EXUMACAO");
+  assertEquals(plan.next_state.cases.length, 1);
 });
 
 Deno.test("V2 intent change becomes same-case reclassification, not a new case", async () => {
