@@ -110,6 +110,7 @@ function applyUnderstandingToOfficialInterpretation(
       primary_event: input.context.has_open_goal
         ? result.primary_event
         : { event_kind: "NEW_GOAL", confidence: "MEDIUM", evidence: input.text },
+      overall_confidence: "MEDIUM",
       needs_clarification: false,
       clarification_reason: null,
     };
@@ -130,6 +131,7 @@ function applyUnderstandingToOfficialInterpretation(
       goal: { goal_code: mappedGoal, confidence: "MEDIUM", evidence: input.text },
       primary_event: { event_kind: "RECLASSIFICATION", confidence: "MEDIUM", evidence: input.text },
       case_reference: { ...result.case_reference, kind: "CURRENT" },
+      overall_confidence: "MEDIUM",
       needs_clarification: false,
       clarification_reason: null,
     };
