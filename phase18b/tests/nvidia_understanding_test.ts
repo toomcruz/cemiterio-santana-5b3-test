@@ -5,6 +5,7 @@ import {
   ControlledNvidiaUnderstandingProvider,
 } from "../../santana-conversation-domain/motor-v2/providers/nvidia.ts";
 import { MotorV2Runtime } from "../../santana-conversation-domain/motor-v2/runtime.ts";
+import { understandingVocabulary } from "../../santana-conversation-domain/motor-v2/understanding.ts";
 import type { UnderstandingResult } from "../../santana-conversation-domain/motor-v2/types.ts";
 import type { NetworkBoundary } from "../../santana-conversation-domain/runtime/adapter/network_types.ts";
 import { extractModelIds } from "../provider/catalog_nvidia.ts";
@@ -215,6 +216,87 @@ Deno.test("controlled NVIDIA provider rejects model-created labels, evidence, an
     assertEquals(observations[0]?.fallback_used, true);
     assertEquals(observations[0]?.rejection_code, "STRUCTURED_OUTPUT_REJECTED");
     assertEquals(observations[0]?.rejection_category, category);
+  }
+});
+
+Deno.test("NVIDIA prompt and parser share the canonical closed vocabularies", async () => {
+  const vocabulary = understandingVocabulary();
+  let promptBody = "";
+  const provider = new ControlledNvidiaUnderstandingProvider({
+    apiKey: "test-secret",
+    network: (request) => {
+      promptBody = request.body;
+      return Promise.resolve({ status: 200, body: response(valid) });
+    },
+  });
+  await provider.understand(messages);
+  for (
+    const label of [
+      ...vocabulary.journeys,
+      ...vocabulary.subintents,
+      ...vocabulary.transverse_states,
+      ...vocabulary.risk_signals,
+      ...vocabulary.complexity,
+      ...vocabulary.risk_levels,
+      ...vocabulary.confidence,
+    ]
+  ) assert(promptBody.includes(label));
+});
+
+Deno.test("NVIDIA enum rejection telemetry identifies only the safe structural path", async () => {
+  const vocabulary = understandingVocabulary();
+  const cases: Array<{ output: unknown; field: string; value: string | null; expected: string[] }> = [
+    {
+      output: { ...valid, complexity: "CRITICAL" },
+      field: "complexity",
+      value: "CRITICAL",
+      expected: vocabulary.complexity,
+    },
+    {
+      output: { ...valid, journeys: ["UNKNOWN_JOURNEY"] },
+      field: "journeys[0]",
+      value: null,
+      expected: vocabulary.journeys,
+    },
+    {
+      output: { ...valid, subintents: ["UNKNOWN_SUBINTENT"] },
+      field: "subintents[0]",
+      value: null,
+      expected: vocabulary.subintents,
+    },
+    {
+      output: { ...valid, transverse_states: ["UNKNOWN_STATE"] },
+      field: "transverse_states[0]",
+      value: null,
+      expected: vocabulary.transverse_states,
+    },
+    {
+      output: { ...valid, risk: { level: "P9", signals: [] } },
+      field: "risk.level",
+      value: null,
+      expected: vocabulary.risk_levels,
+    },
+    {
+      output: { ...valid, risk: { level: "none", signals: ["UNKNOWN_SIGNAL"] } },
+      field: "risk.signals[0]",
+      value: null,
+      expected: vocabulary.risk_signals,
+    },
+  ];
+  for (const item of cases) {
+    const observations: ControlledNvidiaAiObservation[] = [];
+    const provider = new ControlledNvidiaUnderstandingProvider({
+      apiKey: "test-secret",
+      network: () => Promise.resolve({ status: 200, body: response(item.output) }),
+      observe: (event) => observations.push(event),
+    });
+    await provider.understand(messages);
+    assertEquals(observations[0]?.rejection_category, "canonical_enum_invalid");
+    assertEquals(observations[0]?.rejection_field, item.field);
+    assertEquals(observations[0]?.rejection_value, item.value);
+    assertEquals(observations[0]?.rejection_expected, item.expected);
+    assertEquals(observations[0]?.ai_output_used, false);
+    assertEquals(observations[0]?.fallback_used, true);
   }
 });
 

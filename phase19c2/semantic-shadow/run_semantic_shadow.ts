@@ -207,6 +207,9 @@ function safeObservation(observation: ControlledNvidiaAiObservation | undefined)
     body_bytes: observation.body_bytes,
     parse_position: observation.parse_position,
     finish_reason: observation.finish_reason,
+    rejection_field: observation.rejection_field,
+    rejection_value: observation.rejection_value,
+    rejection_expected: observation.rejection_expected,
   };
 }
 

@@ -354,12 +354,18 @@ export function understandingVocabulary(): {
   subintents: string[];
   transverse_states: string[];
   risk_signals: string[];
+  complexity: Complexity[];
+  risk_levels: RiskLevel[];
+  confidence: Array<UnderstandingResult["confidence"]>;
 } {
   return {
     journeys: JOURNEYS.map((journey) => journey.code),
     subintents: INTENTS.map((intent) => intent.code),
     transverse_states: [...KNOWN_TRANSVERSE_STATES],
     risk_signals: [...KNOWN_RISK_SIGNALS],
+    complexity: ["low", "medium", "high", "critical"],
+    risk_levels: ["none", "P3", "P2", "P1", "P0"],
+    confidence: ["high", "medium", "low"],
   };
 }
 

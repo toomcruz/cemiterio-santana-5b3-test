@@ -30,6 +30,9 @@ export interface ControlledNvidiaAiObservation {
   body_bytes: number | null;
   parse_position: number | null;
   finish_reason: string | null;
+  rejection_field: string | null;
+  rejection_value: string | null;
+  rejection_expected: string[] | null;
 }
 
 export interface ControlledNvidiaUnderstandingOptions {
@@ -81,6 +84,9 @@ class ProviderOutputError extends Error {
     readonly outputTokens: number | null = null,
     readonly parsePosition: number | null = null,
     readonly finishReason: string | null = null,
+    readonly fieldPath: string | null = null,
+    readonly receivedValue: string | null = null,
+    readonly expectedVocabulary: string[] | null = null,
   ) {
     super("provider structured output rejected");
   }
@@ -94,7 +100,8 @@ function prompt(messages: readonly MotorV2Message[]): string {
     "Devolva somente um objeto JSON com exatamente estas chaves: schema_version, journeys, subintents, transverse_states, intent_changed, complexity, risk, confidence, evidence_turns.",
     'schema_version deve ser "motor-v2-understanding/1.0.0".',
     "risk deve conter exatamente level e signals.",
-    "complexity: low, medium, high ou critical. risk.level: none, P3, P2, P1 ou P0. confidence: high, medium ou low.",
+    "complexity: " + vocabulary.complexity.join(", ") + ". risk.level: " + vocabulary.risk_levels.join(", ") +
+    ". confidence: " + vocabulary.confidence.join(", ") + ".",
     "Use exclusivamente os rótulos fechados abaixo.",
     "Não crie regras administrativas, prazos, valores, documentos, autorizações, elegibilidade ou procedimentos.",
     "Não copie texto da conversa. evidence_turns contém somente IDs de turnos fornecidos que sustentam a classificação.",
@@ -170,6 +177,54 @@ function categorizeGuardError(error: unknown): ProviderRejectionCategory {
   return "canonical_other_invalid";
 }
 
+function safeSyntacticVariant(value: unknown, expected: readonly string[]): string | null {
+  if (typeof value !== "string" || value.length > 64 || !/^[A-Za-z0-9_:-]+$/.test(value)) return null;
+  return expected.some((item) => item.toLowerCase() === value.toLowerCase()) && !expected.includes(value)
+    ? value
+    : null;
+}
+
+function validateCanonicalEnums(value: Record<string, unknown>): void {
+  const vocabulary = understandingVocabulary();
+  const check = (path: string, received: unknown, expected: readonly string[]) => {
+    if (typeof received === "string" && !expected.includes(received)) {
+      throw new ProviderOutputError(
+        "canonical_enum_invalid",
+        null,
+        null,
+        null,
+        null,
+        path,
+        safeSyntacticVariant(received, expected),
+        [...expected],
+      );
+    }
+  };
+  check("schema_version", value.schema_version, ["motor-v2-understanding/1.0.0"]);
+  check("complexity", value.complexity, vocabulary.complexity);
+  check("confidence", value.confidence, vocabulary.confidence);
+  for (const [index, label] of (value.journeys as unknown[]).entries()) {
+    check(`journeys[${index}]`, label, vocabulary.journeys);
+  }
+  for (const [index, label] of (value.subintents as unknown[]).entries()) {
+    check(`subintents[${index}]`, label, vocabulary.subintents);
+  }
+  for (const [index, label] of (value.transverse_states as unknown[]).entries()) {
+    check(`transverse_states[${index}]`, label, vocabulary.transverse_states);
+  }
+  const risk = value.risk && typeof value.risk === "object" && !Array.isArray(value.risk)
+    ? value.risk as Record<string, unknown>
+    : null;
+  if (risk) {
+    check("risk.level", risk.level, vocabulary.risk_levels);
+    if (Array.isArray(risk.signals)) {
+      for (const [index, label] of risk.signals.entries()) {
+        check(`risk.signals[${index}]`, label, vocabulary.risk_signals);
+      }
+    }
+  }
+}
+
 function normalizedProviderUnderstanding(value: unknown): unknown {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new ProviderOutputError("canonical_shape_invalid");
@@ -218,10 +273,12 @@ function normalizedProviderUnderstanding(value: unknown): unknown {
   if (typeof riskRecord.level !== "string" || !Array.isArray(riskRecord.signals)) {
     throw new ProviderOutputError("canonical_type_invalid");
   }
-  return {
+  const normalized = {
     ...record,
     risk: normalizedRisk,
   };
+  validateCanonicalEnums(normalized);
+  return normalized;
 }
 
 /**
@@ -307,7 +364,16 @@ export class ControlledNvidiaUnderstandingProvider implements UnderstandingProvi
         validateProviderLabelsAndEvidence(result, messages);
       } catch (error) {
         if (error instanceof ProviderOutputError) {
-          throw new ProviderOutputError(error.category, inputTokens, outputTokens);
+          throw new ProviderOutputError(
+            error.category,
+            inputTokens,
+            outputTokens,
+            error.parsePosition,
+            error.finishReason,
+            error.fieldPath,
+            error.receivedValue,
+            error.expectedVocabulary,
+          );
         }
         throw new ProviderOutputError(categorizeGuardError(error), inputTokens, outputTokens);
       }
@@ -365,6 +431,9 @@ export class ControlledNvidiaUnderstandingProvider implements UnderstandingProvi
         bodyBytes,
         parsePosition,
         finishReason,
+        error instanceof ProviderOutputError ? error.fieldPath : null,
+        error instanceof ProviderOutputError ? error.receivedValue : null,
+        error instanceof ProviderOutputError ? error.expectedVocabulary : null,
       );
       if (this.#failOnFallback) throw new Error(rejectionCode);
       return understandMessages(messages);
@@ -387,6 +456,9 @@ export class ControlledNvidiaUnderstandingProvider implements UnderstandingProvi
     bodyBytes: number | null = null,
     parsePosition: number | null = null,
     finishReason: string | null = null,
+    rejectionField: string | null = null,
+    rejectionValue: string | null = null,
+    rejectionExpected: string[] | null = null,
   ): void {
     this.#observe?.({
       outcome,
@@ -405,6 +477,9 @@ export class ControlledNvidiaUnderstandingProvider implements UnderstandingProvi
       body_bytes: bodyBytes,
       parse_position: parsePosition,
       finish_reason: finishReason,
+      rejection_field: rejectionField,
+      rejection_value: rejectionValue,
+      rejection_expected: rejectionExpected,
     });
   }
 }
