@@ -154,12 +154,27 @@ function applyUnderstandingToOfficialInterpretation(
   let result = base;
   const blockingAmbiguity = result.ambiguities.some((ambiguity) => ambiguity.blocking);
   const clarificationOnlyMissingEvent = result.needs_clarification && !result.primary_event && !blockingAmbiguity;
+  const deterministicCurrent = understandMessages([{
+    turn_id: input.message_id,
+    role: "user",
+    content: input.text,
+  }]);
+  const deterministicGoalCount = semanticGoals(deterministicCurrent).size;
   const safeDeterministicRoute = Boolean(result.primary_event) &&
     ["NEW_GOAL", "CORRECTION", "CHANGE_OF_MIND", "COMPLEMENT", "ANSWER", "PARALLEL_QUESTION", "SOCIAL"].includes(
       baseKind ?? "",
     ) &&
-    !hasMultipleSemanticGoals && !mediaNeedsReview && !unmappedSemantic && !blockingAmbiguity &&
+    (
+      baseIsCorrection ||
+      baseIsAnswerOrComplement ||
+      (baseIsNewGoal && deterministicGoalCount <= 1) ||
+      !hasMultipleSemanticGoals
+    ) &&
+    !mediaNeedsReview && !blockingAmbiguity &&
     understanding.risk.level === "none";
+  const safeReclassification = result.primary_event?.event_kind === "RECLASSIFICATION" &&
+    mappedGoal !== null && !hasMultipleSemanticGoals && currentTurnIsEvidence &&
+    !mediaNeedsReview && !blockingAmbiguity && understanding.risk.level === "none";
   const semanticClaimNeedsEvidence = (
     mappedGoals.size > 0 || understanding.intent_changed || understanding.risk.level !== "none"
   ) && !currentTurnIsEvidence;
@@ -246,9 +261,11 @@ function applyUnderstandingToOfficialInterpretation(
   }
 
   if (
-    (!canMaterializeParallel && hasMultipleSemanticGoals) || mediaNeedsReview ||
-    (lowConfidence && !safeDeterministicRoute) ||
-    unmappedSemantic || (semanticClaimNeedsEvidence && !safeDeterministicRoute)
+    (!canMaterializeParallel && hasMultipleSemanticGoals && !safeDeterministicRoute && !safeReclassification) ||
+    mediaNeedsReview ||
+    (lowConfidence && !safeDeterministicRoute && !safeReclassification) ||
+    (unmappedSemantic && !safeDeterministicRoute) ||
+    (semanticClaimNeedsEvidence && !safeDeterministicRoute && !safeReclassification)
   ) {
     result = {
       ...result,
