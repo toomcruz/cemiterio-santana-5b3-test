@@ -10,7 +10,7 @@ import {
 } from "../official_turn_service.ts";
 import { interpret } from "../interpreter/deterministic.ts";
 import { canonicalJson, sha256 } from "../server_transition.ts";
-import { initState, type ConversationState } from "../../engine/engine.ts";
+import { type ConversationState, initState } from "../../engine/engine.ts";
 
 const CONVERSATION_ID = "92222222-2222-4222-8222-222222222222";
 const ALLOWED = { automatic_replies_allowed: true } as const;
@@ -107,7 +107,12 @@ Deno.test("official pipeline commits before suppressed delivery and replay is id
       return await interpret(message);
     },
   };
-  const first = await processOfficialTurn(input("replay-once"), new DurableTestStore(durable), countingInterpreter, ALLOWED);
+  const first = await processOfficialTurn(
+    input("replay-once"),
+    new DurableTestStore(durable),
+    countingInterpreter,
+    ALLOWED,
+  );
   assertEquals(first.kind, "COMMITTED");
   assertEquals(durable.commits, 1);
   assertEquals(durable.outbox.size, 1);
