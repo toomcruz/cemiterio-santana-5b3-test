@@ -181,6 +181,15 @@ Deno.test("controlled NVIDIA provider rejects incomplete output without retry", 
   assertEquals(observations[0]?.output_tokens, 11);
 });
 
+Deno.test("canary provider mode fails closed instead of using deterministic fallback", async () => {
+  const provider = new ControlledNvidiaUnderstandingProvider({
+    apiKey: "test-secret",
+    failOnFallback: true,
+    network: () => Promise.resolve({ status: 429, body: "private provider body" }),
+  });
+  await assertRejects(() => provider.understand(messages), Error, "PROVIDER_QUOTA");
+});
+
 Deno.test("controlled NVIDIA provider times out once and falls back deterministically", async () => {
   let calls = 0;
   const observations: ControlledNvidiaAiObservation[] = [];

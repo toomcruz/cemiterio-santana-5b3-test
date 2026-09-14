@@ -13,7 +13,7 @@ import { OfficialSupabaseRest } from "../_shared/official-rest.ts";
 import { SupabaseRuntimeStore } from "../_shared/official-runtime-store.ts";
 import { requireRuntimeIngressAccess } from "../_shared/official-security.ts";
 import { processOfficialOperator } from "../_shared/official-operator.ts";
-import { runDormantMotorV2Proposal } from "../_shared/dormant-motor-v2.ts";
+import { createMotorV2OfficialInterpreter } from "../_shared/dormant-motor-v2.ts";
 
 const MAX_REQUEST_BYTES = 2 * 1024 * 1024;
 
@@ -187,13 +187,26 @@ Deno.serve(async (request) => {
     // Fase 19B is dormant: with CANARY_ENABLED=false, the current workflow
     // remains the only reachable processing path. Activation is a later gate.
     if (route === "MOTOR_V2") {
-      const proposal = await runDormantMotorV2Proposal(inbound);
+      const apiKey = Deno.env.get("NVIDIA_API_KEY")?.trim() ?? "";
+      if (!apiKey) throw new HttpProblem(503, "MOTOR_V2_UNCONFIGURED", "Motor V2 provider is not configured");
+      const store = new SupabaseRuntimeStore(rest, new WapiAttachmentProcessor(rest));
+      const result = await processOfficialTurn(
+        inbound,
+        store,
+        createMotorV2OfficialInterpreter(apiKey, (event) => {
+          console.log("motor_v2_provider", event.outcome, event.provider, event.model, event.fallback_used);
+        }),
+        { automatic_replies_allowed: true },
+      );
+      const delivery = await deliver(rest, result.outbox_id, configuredCanaryHash, result.reply_body !== null);
       return json({
         accepted: true,
-        kind: "MOTOR_V2_PROPOSAL_ONLY",
-        replied: false,
-        delivery: "suppressed",
-        proposal,
+        kind: result.kind,
+        conversation_id: result.conversation_id,
+        replied: result.reply_body !== null,
+        delivery,
+        provider: "openai/gpt-oss-20b",
+        uses_ai: true,
       });
     }
     const automaticRepliesAllowed = await runtimeCanaryAllowsAutomaticReply(

@@ -32,6 +32,8 @@ export interface ControlledNvidiaUnderstandingOptions {
   model?: string;
   timeoutMs?: number;
   maxOutputTokens?: number;
+  /** Canary mode must fail closed instead of silently using deterministic fallback. */
+  failOnFallback?: boolean;
   network?: NetworkBoundary;
   observe?: (event: ControlledNvidiaAiObservation) => void;
 }
@@ -224,6 +226,7 @@ export class ControlledNvidiaUnderstandingProvider implements UnderstandingProvi
   readonly #network: NetworkBoundary;
   readonly #timeoutMs: number;
   readonly #maxOutputTokens: number;
+  readonly #failOnFallback: boolean;
   readonly #observe?: (event: ControlledNvidiaAiObservation) => void;
 
   constructor(options: ControlledNvidiaUnderstandingOptions) {
@@ -233,6 +236,7 @@ export class ControlledNvidiaUnderstandingProvider implements UnderstandingProvi
     if (model !== CONTROLLED_NVIDIA_MODEL) throw new Error("invalid NVIDIA model configuration");
     this.#timeoutMs = options.timeoutMs ?? 60_000;
     this.#maxOutputTokens = options.maxOutputTokens ?? 1024;
+    this.#failOnFallback = options.failOnFallback ?? false;
     if (!Number.isInteger(this.#timeoutMs) || this.#timeoutMs < 250 || this.#timeoutMs > 60_000) {
       throw new Error("invalid provider timeout");
     }
@@ -312,6 +316,7 @@ export class ControlledNvidiaUnderstandingProvider implements UnderstandingProvi
         ? "STRUCTURED_OUTPUT_REJECTED"
         : "PROVIDER_ERROR";
       this.emit(outcome, started, false, true, inputTokens, outputTokens, rejectionCode, rejectionCategory);
+      if (this.#failOnFallback) throw new Error(rejectionCode);
       return understandMessages(messages);
     } finally {
       clearTimeout(timer);
