@@ -31,7 +31,13 @@ function input(text: string) {
 
 function provider(result: UnderstandingResult): UnderstandingProvider {
   return {
-    metadata: { id: "test-v2", kind: "controlled_ai", uses_ai: true, model: "openai/gpt-oss-20b", schema_guarded: true },
+    metadata: {
+      id: "test-v2",
+      kind: "controlled_ai",
+      uses_ai: true,
+      model: "openai/gpt-oss-20b",
+      schema_guarded: true,
+    },
     understand: () => Promise.resolve(result),
   };
 }

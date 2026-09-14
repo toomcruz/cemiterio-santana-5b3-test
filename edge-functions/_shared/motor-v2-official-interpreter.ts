@@ -1,7 +1,7 @@
 import {
   CONTROLLED_NVIDIA_MODEL,
-  ControlledNvidiaUnderstandingProvider,
   type ControlledNvidiaAiObservation,
+  ControlledNvidiaUnderstandingProvider,
 } from "../../santana-conversation-domain/motor-v2/providers/nvidia.ts";
 import type { UnderstandingProvider } from "../../santana-conversation-domain/motor-v2/understanding.ts";
 import type { UnderstandingResult } from "../../santana-conversation-domain/motor-v2/types.ts";
