@@ -34,6 +34,20 @@ export interface CandidateGoal {
   evidence: string;
 }
 
+export interface OfficialMapping {
+  journeys: string[];
+  subintents: string[];
+  transverse_states: string[];
+  intent_changed: boolean;
+  complexity: string;
+  risk_level: string;
+  confidence: string;
+  evidence_turn_ids: string[];
+  selected_event: EventKind | null;
+  suppressed_events: EventKind[];
+  reason: string;
+}
+
 export interface CaseReference {
   /** CURRENT: segue o case em foco. NEW: outro falecido/pedido. AMBIGUOUS: nao da para decidir. */
   kind: "CURRENT" | "NEW" | "AMBIGUOUS";
@@ -70,6 +84,7 @@ export interface Interpretation {
   primary_event: CandidateEvent | null;
   secondary_events: CandidateEvent[];
   goal: CandidateGoal | null;
+  secondary_goals?: CandidateGoal[];
   case_reference: CaseReference;
   facts: CandidateFact[];
   ambiguities: Ambiguity[];
@@ -79,6 +94,7 @@ export interface Interpretation {
   refusals: Refusal[];
   /** Identificador do interpretador que produziu a proposta (mock, LLM, humano). */
   produced_by: string;
+  official_mapping?: OfficialMapping;
 }
 
 export interface InterpreterInput {

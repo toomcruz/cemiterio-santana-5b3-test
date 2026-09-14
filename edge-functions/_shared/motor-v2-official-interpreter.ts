@@ -8,6 +8,7 @@ import type { UnderstandingResult } from "../../santana-conversation-domain/moto
 import { interpret as deterministicInterpret } from "../../santana-conversation-domain/runtime/interpreter/deterministic.ts";
 import { guardInterpretation } from "../../santana-conversation-domain/runtime/interpreter/guard.ts";
 import type { LanguageInterpreter } from "../../santana-conversation-domain/runtime/adapter/adapter.ts";
+import type { EventKind } from "../../santana-conversation-domain/engine/catalog.ts";
 import type { Interpretation, InterpreterInput } from "../../santana-conversation-domain/runtime/interpreter/types.ts";
 
 export type MotorV2Observation = ControlledNvidiaAiObservation;
@@ -75,6 +76,14 @@ function semanticGoal(understanding: UnderstandingResult): string | null {
   return goals.size === 1 ? [...goals][0] ?? null : null;
 }
 
+function semanticGoalCandidates(understanding: UnderstandingResult, evidence: string) {
+  return [...semanticGoals(understanding)].map((goal_code) => ({
+    goal_code,
+    confidence: "MEDIUM" as const,
+    evidence,
+  }));
+}
+
 function applyUnderstandingToOfficialInterpretation(
   base: Interpretation,
   understanding: UnderstandingResult,
@@ -88,6 +97,11 @@ function applyUnderstandingToOfficialInterpretation(
   const lowConfidence = understanding.confidence === "low" || understanding.complexity === "critical";
   const currentTurnIsEvidence = understanding.evidence_turns.includes(input.message_id);
   const unmappedSemantic = understanding.subintents.length > 0 && mappedGoals.size === 0;
+  const baseKind = base.primary_event?.event_kind ?? null;
+  const baseIsHandoff = baseKind === "HUMAN_REQUEST";
+  const baseIsCorrection = baseKind === "CORRECTION" || baseKind === "CHANGE_OF_MIND";
+  const baseIsAnswerOrComplement = baseKind === "ANSWER" || baseKind === "COMPLEMENT";
+  const baseIsNewGoal = baseKind === "NEW_GOAL" || base.case_reference.kind === "NEW";
   let result = base;
   const blockingAmbiguity = result.ambiguities.some((ambiguity) => ambiguity.blocking);
   const clarificationOnlyMissingEvent = result.needs_clarification && !result.primary_event && !blockingAmbiguity;
@@ -123,6 +137,9 @@ function applyUnderstandingToOfficialInterpretation(
     understanding.intent_changed && mappedGoal && input.context.has_open_goal &&
     !hasMultipleSemanticGoals &&
     currentTurnIsEvidence &&
+    !baseIsCorrection &&
+    !baseIsAnswerOrComplement &&
+    !baseIsNewGoal &&
     !["HUMAN_REQUEST", "COMPLAINT"].includes(result.primary_event?.event_kind ?? "") &&
     (!result.needs_clarification || clarificationOnlyMissingEvent)
   ) {
@@ -137,17 +154,43 @@ function applyUnderstandingToOfficialInterpretation(
     };
   }
 
-  if (closing && !result.primary_event && !hasMultipleSemanticGoals) {
+  if (closing && !hasMultipleSemanticGoals && !baseIsCorrection) {
     result = {
       ...result,
       primary_event: { event_kind: "SOCIAL", confidence: "HIGH", evidence: input.text },
+      goal: null,
+      secondary_goals: [],
       overall_confidence: "HIGH",
       needs_clarification: false,
       clarification_reason: null,
     };
   }
 
-  if (hasMultipleSemanticGoals || mediaNeedsReview || lowConfidence || unmappedSemantic || semanticClaimNeedsEvidence) {
+  // A bounded multi-intent turn can preserve a primary goal and queue the
+  // other closed goals as parallel topics in the same case.  Unsupported or
+  // ambiguous shapes still fail closed rather than inventing a new case.
+  const parallelGoals = semanticGoalCandidates(understanding, input.text)
+    .filter((candidate) => candidate.goal_code !== result.goal?.goal_code);
+  const canMaterializeParallel = hasMultipleSemanticGoals &&
+    result.primary_event?.event_kind === "NEW_GOAL" &&
+    result.goal !== null &&
+    parallelGoals.length > 0 &&
+    currentTurnIsEvidence &&
+    !lowConfidence &&
+    !mediaNeedsReview &&
+    !unmappedSemantic &&
+    !blockingAmbiguity &&
+    understanding.risk.level === "none";
+  if (canMaterializeParallel) {
+    result = {
+      ...result,
+      secondary_goals: parallelGoals,
+      needs_clarification: false,
+      clarification_reason: null,
+    };
+  }
+
+  if ((!canMaterializeParallel && hasMultipleSemanticGoals) || mediaNeedsReview || lowConfidence || unmappedSemantic || semanticClaimNeedsEvidence) {
     result = {
       ...result,
       needs_clarification: true,
@@ -162,7 +205,36 @@ function applyUnderstandingToOfficialInterpretation(
         : "compreensão semântica de baixa confiança",
     };
   }
+
+  // Priority is explicit: P0 and a direct human request suppress automatic
+  // clarification/questions. The reducer will build the handoff model.
+  if (understanding.risk.level === "P0" || baseIsHandoff) {
+    result = { ...result, needs_clarification: false, clarification_reason: null };
+  }
   return result;
+}
+
+function mappingFor(understanding: UnderstandingResult, interpretation: Interpretation) {
+  const selected = interpretation.primary_event?.event_kind ?? null;
+  const suppressed: EventKind[] = [];
+  if (understanding.intent_changed && selected !== "RECLASSIFICATION") suppressed.push("RECLASSIFICATION");
+  if (understanding.risk.level === "P0" && selected !== "HUMAN_REQUEST") suppressed.push("HUMAN_REQUEST");
+  if (understanding.transverse_states.includes("CONVERSATION_CLOSING") && selected !== "SOCIAL") suppressed.push("SOCIAL");
+  return {
+    journeys: understanding.journeys,
+    subintents: understanding.subintents,
+    transverse_states: understanding.transverse_states,
+    intent_changed: understanding.intent_changed,
+    complexity: understanding.complexity,
+    risk_level: understanding.risk.level,
+    confidence: understanding.confidence,
+    evidence_turn_ids: understanding.evidence_turns,
+    selected_event: selected,
+    suppressed_events: suppressed,
+    reason: interpretation.needs_clarification
+      ? interpretation.clarification_reason ?? "blocked_by_official_guard"
+      : "closed_mapping_applied",
+  };
 }
 
 /**
@@ -183,7 +255,7 @@ export class MotorV2OfficialInterpreter implements LanguageInterpreter {
     const p0 = understanding.risk.level === "P0";
     const mediaNeedsReview = understanding.transverse_states.includes("MEDIA_NOT_ANALYZED");
     if (p0) {
-      return guardInterpretation({
+      const result = guardInterpretation({
         ...integrated,
         primary_event: { event_kind: "HUMAN_REQUEST", confidence: "HIGH", evidence: input.text },
         overall_confidence: "HIGH",
@@ -191,16 +263,19 @@ export class MotorV2OfficialInterpreter implements LanguageInterpreter {
         clarification_reason: null,
         produced_by: "motor-v2-official-interpreter",
       });
+      return { ...result, official_mapping: mappingFor(understanding, result) };
     }
     if (mediaNeedsReview) {
-      return guardInterpretation({
+      const result = guardInterpretation({
         ...integrated,
         needs_clarification: true,
         clarification_reason: "mídia essencial ainda não analisada",
         produced_by: "motor-v2-official-interpreter",
       });
+      return { ...result, official_mapping: mappingFor(understanding, result) };
     }
-    return guardInterpretation({ ...integrated, produced_by: "motor-v2-official-interpreter" });
+    const result = guardInterpretation({ ...integrated, produced_by: "motor-v2-official-interpreter" });
+    return { ...result, official_mapping: mappingFor(understanding, result) };
   }
 }
 

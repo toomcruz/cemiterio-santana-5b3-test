@@ -1044,6 +1044,9 @@
         "essential_context"
       ],
       "properties": {
+        "priority": {
+          "enum": ["normal", "P0"]
+        },
         "requested_at_seq": {
           "type": "integer"
         },

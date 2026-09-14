@@ -82,6 +82,8 @@ export interface PendingAction {
 }
 
 export interface HandoffModel {
+  /** Optional for backward-compatible persisted states; P0 is explicit when present. */
+  priority?: "normal" | "P0";
   requested_at_seq: number;
   goal_code: string | null;
   goal_status: string | null;
@@ -154,6 +156,7 @@ export interface ConversationEvent {
   abandon_current?: boolean;
   base_goal_code?: string;
   note?: string;
+  handoff_priority?: "normal" | "P0";
 }
 
 const OPEN_STATUSES: GoalStatus[] = ["ACTIVE", "SUSPENDED", "WAITING"];
@@ -840,12 +843,13 @@ function refreshPendingQuestion(state: ConversationState): void {
   }
 }
 
-export function buildHandoff(state: ConversationState): HandoffModel {
+export function buildHandoff(state: ConversationState, priority: "normal" | "P0" = "normal"): HandoffModel {
   const goal = contextGoal(state) ?? state.goals.filter((g) => OPEN_STATUSES.includes(g.status)).at(-1) ??
     [...state.goals].reverse().find((g) => g.status === "RESOLVED" && g.overlay_of === null) ?? null;
   const confirmed = (goal ? activeFactsForGoalCase(state, goal) : [])
     .map((f) => ({ fact_code: f.fact_code, value: f.value, source: f.source, confidence: f.confidence }));
   return {
+    priority,
     requested_at_seq: state.seq,
     goal_code: goal ? goal.goal_code : null,
     goal_status: goal ? goal.status : null,
@@ -879,7 +883,7 @@ export function applyEvent(previous: ConversationState, event: ConversationEvent
       return state;
 
     case "HUMAN_REQUEST": {
-      state.handoff = buildHandoff(state);
+      state.handoff = buildHandoff(state, event.handoff_priority ?? "normal");
       return state;
     }
 

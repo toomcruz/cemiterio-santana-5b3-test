@@ -45,7 +45,8 @@ export function contextFromState(state: ConversationState, knownHints: string[] 
 }
 
 export function toConversationEvents(interpretation: Interpretation, state?: ConversationState): BridgeResult {
-  if (interpretation.needs_clarification || !interpretation.primary_event) {
+  const priorityHandoff = interpretation.primary_event?.event_kind === "HUMAN_REQUEST";
+  if ((interpretation.needs_clarification && !priorityHandoff) || !interpretation.primary_event) {
     return {
       events: [],
       clarification: {
@@ -63,6 +64,7 @@ export function toConversationEvents(interpretation: Interpretation, state?: Con
   }));
 
   const kind = interpretation.primary_event.event_kind;
+  const p0Handoff = kind === "HUMAN_REQUEST" && interpretation.official_mapping?.risk_level === "P0";
   const currentCaseId = state ? contextGoal(state)?.case_id : null;
   const currentCaseRef = state?.cases.find((item) => item.case_id === currentCaseId)?.subject_ref;
   // A linguistic hint ("minha tia") is not a unique person identifier. A
@@ -77,6 +79,9 @@ export function toConversationEvents(interpretation: Interpretation, state?: Con
     }
     events.push({ kind: "NEW_GOAL", goal_code: interpretation.goal.goal_code, case_ref: caseRef });
     if (facts.length > 0) events.push({ kind: "COMPLEMENT", facts });
+    for (const secondary of interpretation.secondary_goals ?? []) {
+      events.push({ kind: "PARALLEL_QUESTION", goal_code: secondary.goal_code, facts: [] });
+    }
     return { events, clarification: null };
   }
 
@@ -113,7 +118,7 @@ export function toConversationEvents(interpretation: Interpretation, state?: Con
     return { events, clarification: null };
   }
 
-  events.push({ kind, facts });
+  events.push({ kind, facts, ...(p0Handoff ? { handoff_priority: "P0" as const } : {}) });
   return { events, clarification: null };
 }
 

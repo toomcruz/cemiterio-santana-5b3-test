@@ -284,3 +284,186 @@ Deno.test("V2 semantic claims without current-turn evidence fail closed", async 
   assert(result.clarification_reason?.includes("evidência"));
   assertEquals(result.primary_event, null);
 });
+
+Deno.test("planTurn preserves an intent change as official reclassification", async () => {
+  const state = applyEvent(initState("intent-change-plan"), {
+    kind: "NEW_GOAL",
+    goal_code: "GOAL_EXUMACAO",
+    case_ref: "same-person",
+  });
+  const plan = await planTurn(
+    {
+      message_id: "intent-change-plan-turn",
+      text: "Agora preciso tratar do recadastro.",
+      state,
+      automation_mode: "BOT_ACTIVE",
+    },
+    new MotorV2OfficialInterpreter(provider({
+      ...baseUnderstanding,
+      evidence_turns: ["intent-change-plan-turn"],
+      subintents: ["RECADASTRO"],
+      journeys: ["DIREITOS_CADASTRO"],
+      intent_changed: true,
+    })),
+  );
+
+  assertEquals(plan.outcome, "PROPOSED");
+  assertEquals(plan.interpretation?.primary_event?.event_kind, "RECLASSIFICATION");
+  assertEquals(plan.next_state.event_log.at(-1)?.event_kind, "RECLASSIFICATION");
+  assertEquals(plan.next_state.cases.length, 1);
+  assertEquals(plan.next_state.goals[0]?.goal_code, "GOAL_RECADASTRO");
+  assertEquals(plan.interpretation?.official_mapping?.selected_event, "RECLASSIFICATION");
+});
+
+Deno.test("a valid correction is not overwritten by V2 intent_changed", async () => {
+  const state = applyEvent(initState("correction-plan"), {
+    kind: "NEW_GOAL",
+    goal_code: "GOAL_EXUMACAO",
+    case_ref: "same-person",
+  });
+  const plan = await planTurn(
+    {
+      message_id: "correction-plan-turn",
+      text: "Na verdade, já foi exumado.",
+      state,
+      automation_mode: "BOT_ACTIVE",
+    },
+    new MotorV2OfficialInterpreter(provider({
+      ...baseUnderstanding,
+      evidence_turns: ["correction-plan-turn"],
+      intent_changed: true,
+      subintents: ["EXUMACAO"],
+    })),
+  );
+
+  assertEquals(plan.outcome, "PROPOSED");
+  assertEquals(plan.interpretation?.primary_event?.event_kind, "CORRECTION");
+  assertEquals(plan.next_state.event_log.at(-1)?.event_kind, "CORRECTION");
+  assertEquals(plan.next_state.facts.some((fact) => fact.fact_code === "remains_status"), true);
+});
+
+Deno.test("closing has social priority and does not create handoff or clarification", async () => {
+  const state = applyEvent(initState("closing-plan"), {
+    kind: "NEW_GOAL",
+    goal_code: "GOAL_EXUMACAO",
+    case_ref: "same-person",
+  });
+  const plan = await planTurn(
+    {
+      message_id: "closing-plan-turn",
+      text: "Obrigado, era só isso.",
+      state,
+      automation_mode: "BOT_ACTIVE",
+    },
+    new MotorV2OfficialInterpreter(provider({
+      ...baseUnderstanding,
+      evidence_turns: ["closing-plan-turn"],
+      transverse_states: ["CONVERSATION_CLOSING"],
+    })),
+  );
+
+  assertEquals(plan.outcome, "PROPOSED");
+  assertEquals(plan.interpretation?.primary_event?.event_kind, "SOCIAL");
+  assertEquals(plan.next_state.event_log.at(-1)?.event_kind, "SOCIAL");
+  assertEquals(plan.next_state.handoff, null);
+  assertEquals(plan.question_draft, null);
+});
+
+Deno.test("P0 has explicit priority and suppresses clarification", async () => {
+  const plan = await planTurn(
+    {
+      message_id: "p0-priority-turn",
+      text: "Há conflito familiar sobre quem pode autorizar.",
+      state: initState("p0-priority"),
+      automation_mode: "BOT_ACTIVE",
+    },
+    new MotorV2OfficialInterpreter(provider({
+      ...baseUnderstanding,
+      evidence_turns: ["p0-priority-turn"],
+      risk: { level: "P0", signals: ["family_conflict"] },
+    })),
+  );
+
+  assertEquals(plan.outcome, "PROPOSED");
+  assertEquals(plan.interpretation?.primary_event?.event_kind, "HUMAN_REQUEST");
+  assertEquals(plan.question_draft, null);
+  assertEquals(plan.next_state.handoff?.priority, "P0");
+  assertEquals(plan.next_state.event_log.at(-1)?.event_kind, "HUMAN_REQUEST");
+});
+
+Deno.test("a new case remains NEW_GOAL even when V2 reports intent_changed", async () => {
+  const plan = await planTurn(
+    {
+      message_id: "new-case-plan-turn",
+      text: "É para outro falecido; preciso de exumação.",
+      state: applyEvent(initState("new-case-plan"), {
+        kind: "NEW_GOAL",
+        goal_code: "GOAL_EXUMACAO",
+        case_ref: "first-person",
+      }),
+      automation_mode: "BOT_ACTIVE",
+    },
+    new MotorV2OfficialInterpreter(provider({
+      ...baseUnderstanding,
+      evidence_turns: ["new-case-plan-turn"],
+      subintents: ["EXUMACAO"],
+      intent_changed: true,
+    })),
+  );
+
+  assertEquals(plan.outcome, "PROPOSED");
+  assertEquals(plan.interpretation?.primary_event?.event_kind, "NEW_GOAL");
+  assertEquals(plan.next_state.event_log.at(-1)?.event_kind, "NEW_GOAL");
+  assertEquals(plan.next_state.cases.length, 2);
+});
+
+Deno.test("closed multi-intent goals are preserved as parallel official goals", async () => {
+  const plan = await planTurn(
+    {
+      message_id: "multi-plan-turn",
+      text: "Preciso de exumação e também de recadastro.",
+      state: initState("multi-plan"),
+      automation_mode: "BOT_ACTIVE",
+    },
+    new MotorV2OfficialInterpreter(provider({
+      ...baseUnderstanding,
+      evidence_turns: ["multi-plan-turn"],
+      subintents: ["EXUMACAO", "RECADASTRO"],
+      journeys: ["RESTOS_MORTAIS", "DIREITOS_CADASTRO"],
+      transverse_states: ["MULTI_INTENT"],
+      complexity: "medium",
+    })),
+  );
+
+  assertEquals(plan.outcome, "PROPOSED");
+  assertEquals(plan.next_state.cases.length, 1);
+  assertEquals(plan.next_state.goals.map((goal) => goal.goal_code), ["GOAL_EXUMACAO", "GOAL_RECADASTRO"]);
+  assertEquals(plan.next_state.event_log.map((event) => event.event_kind), ["NEW_GOAL", "PARALLEL_QUESTION"]);
+});
+
+Deno.test("handoff priority never emits an automatic clarification", async () => {
+  const plan = await planTurn(
+    {
+      message_id: "handoff-priority-turn",
+      text: "Quero falar com uma pessoa sobre este atendimento.",
+      state: applyEvent(initState("handoff-priority"), {
+        kind: "NEW_GOAL",
+        goal_code: "GOAL_EXUMACAO",
+        case_ref: "same-person",
+      }),
+      automation_mode: "BOT_ACTIVE",
+    },
+    new MotorV2OfficialInterpreter(provider({
+      ...baseUnderstanding,
+      evidence_turns: ["handoff-priority-turn"],
+      subintents: ["EXUMACAO", "RECADASTRO"],
+      journeys: ["RESTOS_MORTAIS", "DIREITOS_CADASTRO"],
+      transverse_states: ["MULTI_INTENT"],
+    })),
+  );
+
+  assertEquals(plan.outcome, "PROPOSED");
+  assertEquals(plan.interpretation?.primary_event?.event_kind, "HUMAN_REQUEST");
+  assertEquals(plan.question_draft, null);
+  assertEquals(plan.next_state.handoff?.priority, "normal");
+});
