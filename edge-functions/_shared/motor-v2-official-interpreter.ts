@@ -78,16 +78,25 @@ function applyUnderstandingToOfficialInterpretation(
 ): Interpretation {
   const mappedGoal = semanticGoal(understanding);
   const mappedGoals = semanticGoals(understanding);
-  const hasMultipleSemanticGoals = mappedGoals.size > 1 || understanding.transverse_states.includes("MULTI_INTENT");
+  const hasMultipleSemanticGoals = mappedGoals.size > 1 || understanding.journeys.length > 1 ||
+    understanding.transverse_states.includes("MULTI_INTENT");
   const mediaNeedsReview = understanding.transverse_states.includes("MEDIA_NOT_ANALYZED");
   const lowConfidence = understanding.confidence === "low" || understanding.complexity === "critical";
+  const currentTurnIsEvidence = understanding.evidence_turns.includes(input.message_id);
+  const unmappedSemantic = understanding.subintents.length > 0 && mappedGoals.size === 0;
+  const semanticClaimNeedsEvidence = (
+    mappedGoals.size > 0 || understanding.intent_changed || understanding.risk.level !== "none"
+  ) && !currentTurnIsEvidence;
   const closing = understanding.transverse_states.includes("CONVERSATION_CLOSING") &&
     understanding.risk.level === "none" && input.context.pending_question_fact === null;
   let result = base;
 
   // V2 can fill a missing semantic route only with a closed goal mapping. It
   // cannot create facts, rules, permissions or an administrative decision.
-  if (!result.goal && mappedGoal && !INFORMATIONAL_GOALS.has(mappedGoal)) {
+  if (
+    !result.goal && mappedGoal && !INFORMATIONAL_GOALS.has(mappedGoal) && !input.context.has_open_goal &&
+    !result.primary_event && currentTurnIsEvidence && understanding.confidence !== "low"
+  ) {
     result = {
       ...result,
       goal: { goal_code: mappedGoal, confidence: "MEDIUM", evidence: input.text },
@@ -103,7 +112,8 @@ function applyUnderstandingToOfficialInterpretation(
   if (
     understanding.intent_changed && mappedGoal && input.context.has_open_goal &&
     !hasMultipleSemanticGoals &&
-    ["COMPLEMENT", "ANSWER", "SOCIAL"].includes(result.primary_event?.event_kind ?? "")
+    currentTurnIsEvidence &&
+    [null, "COMPLEMENT", "ANSWER", "SOCIAL"].includes(result.primary_event?.event_kind ?? null)
   ) {
     result = {
       ...result,
@@ -123,7 +133,7 @@ function applyUnderstandingToOfficialInterpretation(
     };
   }
 
-  if (hasMultipleSemanticGoals || mediaNeedsReview || lowConfidence) {
+  if (hasMultipleSemanticGoals || mediaNeedsReview || lowConfidence || unmappedSemantic || semanticClaimNeedsEvidence) {
     result = {
       ...result,
       needs_clarification: true,
@@ -131,6 +141,10 @@ function applyUnderstandingToOfficialInterpretation(
         ? "mídia essencial ainda não analisada"
         : hasMultipleSemanticGoals
         ? "há mais de um assunto sem transição oficial única"
+        : unmappedSemantic
+        ? "subintenção sem mapeamento oficial seguro"
+        : semanticClaimNeedsEvidence
+        ? "evidência do turno atual ausente"
         : "compreensão semântica de baixa confiança",
     };
   }
@@ -139,8 +153,8 @@ function applyUnderstandingToOfficialInterpretation(
 
 /**
  * Bridges the approved V2 understanding boundary into the official reducer.
- * The reducer/store/outbox remain authoritative; V2 can only supply semantic
- * risk and confidence signals, never administrative facts or direct delivery.
+ * The reducer/store/outbox remain authoritative; V2 supplies only closed
+ * semantic hints and risk signals, never administrative facts or direct delivery.
  */
 export class MotorV2OfficialInterpreter implements LanguageInterpreter {
   constructor(

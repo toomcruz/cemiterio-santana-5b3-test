@@ -73,7 +73,7 @@ Deno.test("official V2 interpreter remains compatible with processOfficialTurn i
   assertEquals(result.message_id, "msg-1");
 });
 
-Deno.test("official bridge sends only the current turn and keeps the deterministic reducer authoritative", async () => {
+Deno.test("official bridge sends structured context and keeps the deterministic reducer authoritative", async () => {
   const calls: Array<Array<{ turn_id: string; role: string; content: string }>> = [];
   const capturingProvider: UnderstandingProvider = {
     metadata: provider(baseUnderstanding).metadata,
@@ -91,6 +91,11 @@ Deno.test("official bridge sends only the current turn and keeps the determinist
       pending_question_fact: "burial_reference",
       known_subject_hints: ["exumação"],
       known_facts: [{ fact_code: "burial_reference", value: "quadra 3" }],
+      active_case_id: "case-1",
+      active_goal_status: "WAITING",
+      handoff_active: true,
+      parallel_goal_codes: ["GOAL_INFO_HORARIO"],
+      pending_action_codes: ["propose_handoff"],
     },
   });
 
@@ -105,9 +110,11 @@ Deno.test("official bridge sends only the current turn and keeps the determinist
         pending_question: "burial_reference",
         known_subject_hints: ["exumação"],
         known_facts: [{ fact_code: "burial_reference", value: "quadra 3" }],
-        handoff_active: false,
-        parallel_goal_codes: [],
-        pending_action_codes: [],
+        active_case_id: "case-1",
+        active_goal_status: "WAITING",
+        handoff_active: true,
+        parallel_goal_codes: ["GOAL_INFO_HORARIO"],
+        pending_action_codes: ["propose_handoff"],
       }),
       synthetic: true,
     },
@@ -186,4 +193,69 @@ Deno.test("V2 closing state becomes a social no-op when no question is pending",
 
   assertEquals(result.primary_event?.event_kind, "SOCIAL");
   assertEquals(result.needs_clarification, false);
+});
+
+Deno.test("V2 does not open a goal from a simple closing response", async () => {
+  const result = await new MotorV2OfficialInterpreter(provider({
+    ...baseUnderstanding,
+    transverse_states: ["CONVERSATION_CLOSING"],
+  })).interpret({
+    ...input("Obrigado."),
+    context: {
+      has_open_goal: false,
+      open_goal_code: null,
+      pending_question_fact: null,
+      known_subject_hints: [],
+      known_facts: [],
+    },
+  });
+
+  assertEquals(result.primary_event?.event_kind, "SOCIAL");
+  assertEquals(result.goal, null);
+});
+
+Deno.test("V2 low confidence remains a clarification instead of an official transition", async () => {
+  const result = await new MotorV2OfficialInterpreter(provider({
+    ...baseUnderstanding,
+    confidence: "low",
+  })).interpret(input("Talvez seja sobre isso."));
+
+  assertEquals(result.needs_clarification, true);
+  assertEquals(result.primary_event, null);
+});
+
+Deno.test("V2 known but unmapped subintent fails closed instead of inventing an official goal", async () => {
+  const result = await new MotorV2OfficialInterpreter(provider({
+    ...baseUnderstanding,
+    subintents: ["ADMINISTRACAO_PROVISORIA"],
+  })).interpret(input("Preciso saber como prosseguir."));
+
+  assertEquals(result.needs_clarification, true);
+  assert(result.clarification_reason?.includes("mapeamento"));
+  assertEquals(result.goal, null);
+  assertEquals(result.primary_event, null);
+});
+
+Deno.test("V2 P0 crosses the bridge as a human handoff event without an action", async () => {
+  const result = await new MotorV2OfficialInterpreter(provider({
+    ...baseUnderstanding,
+    risk: { level: "P0", signals: ["family_conflict"] },
+  })).interpret(input("Há conflito familiar sobre quem pode autorizar."));
+  const events = toConversationEvents(result, initState("p0-bridge"));
+
+  assertEquals(events.events[0]?.kind, "HUMAN_REQUEST");
+  assertEquals(result.goal, null);
+  assertEquals(result.facts, []);
+});
+
+Deno.test("V2 semantic claims without current-turn evidence fail closed", async () => {
+  const result = await new MotorV2OfficialInterpreter(provider({
+    ...baseUnderstanding,
+    evidence_turns: ["older-turn"],
+    subintents: ["EXUMACAO"],
+  })).interpret(input("Preciso resolver isso."));
+
+  assertEquals(result.needs_clarification, true);
+  assert(result.clarification_reason?.includes("evidência"));
+  assertEquals(result.primary_event, null);
 });
