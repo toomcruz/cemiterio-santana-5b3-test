@@ -74,7 +74,7 @@ Deno.test("official V2 interpreter remains compatible with processOfficialTurn i
 });
 
 Deno.test("official bridge sends structured context and keeps the deterministic reducer authoritative", async () => {
-  const calls: Array<Array<{ turn_id: string; role: string; content: string }>> = [];
+  const calls: Array<ReadonlyArray<{ turn_id: string; role: string; content: string; synthetic?: boolean }>> = [];
   const capturingProvider: UnderstandingProvider = {
     metadata: provider(baseUnderstanding).metadata,
     understand: (turns) => {
@@ -90,7 +90,7 @@ Deno.test("official bridge sends structured context and keeps the deterministic 
       open_goal_code: "GOAL_EXUMACAO",
       pending_question_fact: "burial_reference",
       known_subject_hints: ["exumação"],
-      known_facts: [{ fact_code: "burial_reference", value: "quadra 3" }],
+      known_facts: [{ fact_code: "burial_reference", value: "quadra 3", confidence: "HIGH", source: "USER_EXPLICIT" }],
       active_case_id: "case-1",
       active_goal_status: "WAITING",
       handoff_active: true,
@@ -109,7 +109,7 @@ Deno.test("official bridge sends structured context and keeps the deterministic 
         current_goal: "GOAL_EXUMACAO",
         pending_question: "burial_reference",
         known_subject_hints: ["exumação"],
-        known_facts: [{ fact_code: "burial_reference", value: "quadra 3" }],
+        known_facts: [{ fact_code: "burial_reference", value: "quadra 3", confidence: "HIGH", source: "USER_EXPLICIT" }],
         active_case_id: "case-1",
         active_goal_status: "WAITING",
         handoff_active: true,
