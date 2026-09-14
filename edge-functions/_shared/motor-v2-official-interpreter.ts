@@ -5,7 +5,7 @@ import {
 } from "../../santana-conversation-domain/motor-v2/providers/nvidia.ts";
 import type { UnderstandingProvider } from "../../santana-conversation-domain/motor-v2/understanding.ts";
 import type { UnderstandingResult } from "../../santana-conversation-domain/motor-v2/types.ts";
-import { deterministicInterpret } from "../../santana-conversation-domain/runtime/interpreter/deterministic.ts";
+import { interpret as deterministicInterpret } from "../../santana-conversation-domain/runtime/interpreter/deterministic.ts";
 import { guardInterpretation } from "../../santana-conversation-domain/runtime/interpreter/guard.ts";
 import type { LanguageInterpreter } from "../../santana-conversation-domain/runtime/adapter/adapter.ts";
 import type { Interpretation, InterpreterInput } from "../../santana-conversation-domain/runtime/interpreter/types.ts";
