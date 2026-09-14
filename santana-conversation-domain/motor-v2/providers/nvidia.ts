@@ -25,6 +25,11 @@ export interface ControlledNvidiaAiObservation {
   output_tokens: number | null;
   rejection_code: string | null;
   rejection_category: ProviderRejectionCategory | null;
+  http_status: number | null;
+  content_type: string | null;
+  body_bytes: number | null;
+  parse_position: number | null;
+  finish_reason: string | null;
 }
 
 export interface ControlledNvidiaUnderstandingOptions {
@@ -74,6 +79,8 @@ class ProviderOutputError extends Error {
     readonly category: ProviderRejectionCategory,
     readonly inputTokens: number | null = null,
     readonly outputTokens: number | null = null,
+    readonly parsePosition: number | null = null,
+    readonly finishReason: string | null = null,
   ) {
     super("provider structured output rejected");
   }
@@ -110,12 +117,15 @@ function tokenCount(value: unknown): number | null {
 
 function extractStructuredBody(
   body: string,
-): { result: unknown; inputTokens: number | null; outputTokens: number | null } {
+): { result: unknown; inputTokens: number | null; outputTokens: number | null; finishReason: string | null } {
   let decoded: unknown;
   try {
     decoded = JSON.parse(body) as unknown;
-  } catch {
-    throw new ProviderOutputError("provider_body_json_invalid");
+  } catch (error) {
+    const position = error instanceof SyntaxError && /position (\d+)/.test(error.message)
+      ? Number(error.message.match(/position (\d+)/)?.[1])
+      : null;
+    throw new ProviderOutputError("provider_body_json_invalid", null, null, position);
   }
   if (!decoded || typeof decoded !== "object" || Array.isArray(decoded)) {
     throw new ProviderOutputError("provider_body_shape_invalid");
@@ -124,26 +134,26 @@ function extractStructuredBody(
   const inputTokens = tokenCount(parsed.usage?.prompt_tokens);
   const outputTokens = tokenCount(parsed.usage?.completion_tokens);
   const choice = parsed.choices?.[0];
-  if (choice?.finish_reason !== "stop" || typeof choice.message?.content !== "string") {
-    throw new ProviderOutputError("provider_choice_invalid", inputTokens, outputTokens);
+  const finishReason = typeof choice?.finish_reason === "string" ? choice.finish_reason : null;
+  if (finishReason !== "stop" || typeof choice?.message?.content !== "string") {
+    throw new ProviderOutputError("provider_choice_invalid", inputTokens, outputTokens, null, finishReason);
   }
   const content = choice.message.content.trim();
   if (!content) throw new ProviderOutputError("provider_content_missing", inputTokens, outputTokens);
   try {
-    return { result: JSON.parse(extractJsonObjectText(content)), inputTokens, outputTokens };
-  } catch {
-    throw new ProviderOutputError("provider_content_json_invalid", inputTokens, outputTokens);
+    return { result: parseStrictJsonContent(content), inputTokens, outputTokens, finishReason };
+  } catch (error) {
+    const position = error instanceof SyntaxError && /position (\d+)/.test(error.message)
+      ? Number(error.message.match(/position (\d+)/)?.[1])
+      : null;
+    throw new ProviderOutputError("provider_content_json_invalid", inputTokens, outputTokens, position, finishReason);
   }
 }
 
-function extractJsonObjectText(content: string): string {
-  if (content.startsWith("{") && content.endsWith("}")) return content;
-  const fenced = content.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i)?.[1]?.trim();
-  if (fenced?.startsWith("{") && fenced.endsWith("}")) return fenced;
-  const start = content.indexOf("{");
-  const end = content.lastIndexOf("}");
-  if (start >= 0 && end > start) return content.slice(start, end + 1);
-  return content;
+function parseStrictJsonContent(content: string): unknown {
+  const trimmed = content.trim();
+  const fenced = trimmed.match(/^```json\s*([\s\S]*?)\s*```$/i)?.[1]?.trim();
+  return JSON.parse(fenced ?? trimmed) as unknown;
 }
 
 function categorizeGuardError(error: unknown): ProviderRejectionCategory {
@@ -260,6 +270,11 @@ export class ControlledNvidiaUnderstandingProvider implements UnderstandingProvi
     const timer = setTimeout(() => controller.abort(), this.#timeoutMs);
     let inputTokens: number | null = null;
     let outputTokens: number | null = null;
+    let httpStatus: number | null = null;
+    let contentType: string | null = null;
+    let bodyBytes: number | null = null;
+    let parsePosition: number | null = null;
+    let finishReason: string | null = null;
     try {
       const response = await this.#network({
         url: NVIDIA_CHAT_COMPLETIONS_URL,
@@ -277,10 +292,14 @@ export class ControlledNvidiaUnderstandingProvider implements UnderstandingProvi
           stream: false,
         }),
       }, controller.signal);
+      httpStatus = response.status;
+      contentType = response.headers?.["content-type"] ?? null;
+      bodyBytes = new TextEncoder().encode(response.body).byteLength;
       if (response.status < 200 || response.status >= 300) throw new ProviderHttpError(response.status);
       const extracted = extractStructuredBody(response.body);
       inputTokens = extracted.inputTokens;
       outputTokens = extracted.outputTokens;
+      finishReason = extracted.finishReason;
       let result: UnderstandingResult;
       try {
         result = guardUnderstanding(normalizedProviderUnderstanding(extracted.result));
@@ -291,7 +310,21 @@ export class ControlledNvidiaUnderstandingProvider implements UnderstandingProvi
         }
         throw new ProviderOutputError(categorizeGuardError(error), inputTokens, outputTokens);
       }
-      this.emit("llm_valid", started, true, false, inputTokens, outputTokens, null, null);
+      this.emit(
+        "llm_valid",
+        started,
+        true,
+        false,
+        inputTokens,
+        outputTokens,
+        null,
+        null,
+        httpStatus,
+        contentType,
+        bodyBytes,
+        null,
+        finishReason,
+      );
       return result;
     } catch (error) {
       let rejectionCategory: ProviderRejectionCategory | null = null;
@@ -299,6 +332,8 @@ export class ControlledNvidiaUnderstandingProvider implements UnderstandingProvi
         rejectionCategory = error.category;
         inputTokens = error.inputTokens;
         outputTokens = error.outputTokens;
+        parsePosition = error.parsePosition;
+        finishReason = error.finishReason;
       }
       const timeout = error instanceof DOMException && error.name === "AbortError";
       const outcome: ControlledNvidiaAiObservation["outcome"] = timeout
@@ -315,7 +350,21 @@ export class ControlledNvidiaUnderstandingProvider implements UnderstandingProvi
         : error instanceof ProviderOutputError
         ? "STRUCTURED_OUTPUT_REJECTED"
         : "PROVIDER_ERROR";
-      this.emit(outcome, started, false, true, inputTokens, outputTokens, rejectionCode, rejectionCategory);
+      this.emit(
+        outcome,
+        started,
+        false,
+        true,
+        inputTokens,
+        outputTokens,
+        rejectionCode,
+        rejectionCategory,
+        httpStatus,
+        contentType,
+        bodyBytes,
+        parsePosition,
+        finishReason,
+      );
       if (this.#failOnFallback) throw new Error(rejectionCode);
       return understandMessages(messages);
     } finally {
@@ -332,6 +381,11 @@ export class ControlledNvidiaUnderstandingProvider implements UnderstandingProvi
     outputTokens: number | null,
     rejectionCode: string | null,
     rejectionCategory: ProviderRejectionCategory | null,
+    httpStatus: number | null = null,
+    contentType: string | null = null,
+    bodyBytes: number | null = null,
+    parsePosition: number | null = null,
+    finishReason: string | null = null,
   ): void {
     this.#observe?.({
       outcome,
@@ -345,6 +399,11 @@ export class ControlledNvidiaUnderstandingProvider implements UnderstandingProvi
       output_tokens: outputTokens,
       rejection_code: rejectionCode,
       rejection_category: rejectionCategory,
+      http_status: httpStatus,
+      content_type: contentType,
+      body_bytes: bodyBytes,
+      parse_position: parsePosition,
+      finish_reason: finishReason,
     });
   }
 }

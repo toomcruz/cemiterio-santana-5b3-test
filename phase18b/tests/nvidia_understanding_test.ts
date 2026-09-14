@@ -33,8 +33,12 @@ Deno.test("NVIDIA catalog accepts only a closed set of safe public model IDs", (
 });
 
 function response(result: unknown, finishReason = "stop"): string {
+  return responseFromContent(JSON.stringify(result), finishReason);
+}
+
+function responseFromContent(content: string, finishReason = "stop"): string {
   return JSON.stringify({
-    choices: [{ finish_reason: finishReason, message: { content: JSON.stringify(result) } }],
+    choices: [{ finish_reason: finishReason, message: { content } }],
     usage: { prompt_tokens: 21, completion_tokens: 11 },
   });
 }
@@ -61,7 +65,7 @@ Deno.test("controlled NVIDIA provider uses one fixed bounded structured request"
     assertEquals(body.messages.length, 1);
     assert(body.messages[0].content.includes("Não crie regras administrativas"));
     assert(body.messages[0].content.includes('"turn_id":"turn_1"'));
-    return Promise.resolve({ status: 200, body: response(valid) });
+    return Promise.resolve({ status: 200, body: response(valid), headers: { "content-type": "application/json" } });
   };
   const provider = new ControlledNvidiaUnderstandingProvider({
     apiKey: "test-secret",
@@ -88,6 +92,10 @@ Deno.test("controlled NVIDIA provider uses one fixed bounded structured request"
   assertEquals(observations[0]?.input_tokens, 21);
   assertEquals(observations[0]?.output_tokens, 11);
   assertEquals(observations[0]?.rejection_category, null);
+  assertEquals(observations[0]?.http_status, 200);
+  assertEquals(observations[0]?.content_type, "application/json");
+  assertEquals(observations[0]?.finish_reason, "stop");
+  assert((observations[0]?.body_bytes ?? 0) > 0);
   assert((observations[0]?.duration_ms ?? -1) >= 0);
 });
 
@@ -126,6 +134,53 @@ Deno.test("controlled NVIDIA provider extracts a single JSON object from non-can
   assertEquals(await provider.understand(messages), valid);
   assertEquals(observations[0]?.outcome, "llm_valid");
   assertEquals(observations[0]?.fallback_used, false);
+});
+
+Deno.test("controlled NVIDIA provider rejects concatenated or surrounding JSON content", async () => {
+  const rejected = [
+    JSON.stringify(valid) + "\n" + JSON.stringify(valid),
+    "prefix " + JSON.stringify(valid),
+    JSON.stringify(valid) + " suffix",
+  ];
+  for (const content of rejected) {
+    const observations: ControlledNvidiaAiObservation[] = [];
+    const provider = new ControlledNvidiaUnderstandingProvider({
+      apiKey: "test-secret",
+      network: () => Promise.resolve({
+        status: 200,
+        headers: { "content-type": "application/json" },
+        body: responseFromContent(content),
+      }),
+      observe: (event) => observations.push(event),
+    });
+    const result = await provider.understand(messages);
+    assert(result.subintents.includes("EXUMACAO"));
+    assertEquals(observations[0]?.outcome, "fallback_invalid");
+    assertEquals(observations[0]?.rejection_category, "provider_content_json_invalid");
+    assert((observations[0]?.parse_position ?? -1) >= 0 || content.startsWith("prefix"));
+  }
+});
+
+Deno.test("controlled NVIDIA provider reports concatenated HTTP body without exposing it", async () => {
+  const observations: ControlledNvidiaAiObservation[] = [];
+  const provider = new ControlledNvidiaUnderstandingProvider({
+    apiKey: "test-secret",
+    network: () => Promise.resolve({
+      status: 200,
+      headers: { "content-type": "application/json" },
+      body: response(valid) + "\n" + response(valid),
+    }),
+    observe: (event) => observations.push(event),
+  });
+  const result = await provider.understand(messages);
+  assert(result.subintents.includes("EXUMACAO"));
+  assertEquals(observations[0]?.outcome, "fallback_invalid");
+  assertEquals(observations[0]?.rejection_category, "provider_body_json_invalid");
+  assertEquals(observations[0]?.http_status, 200);
+  assertEquals(observations[0]?.content_type, "application/json");
+  assert((observations[0]?.body_bytes ?? 0) > 0);
+  assert((observations[0]?.parse_position ?? -1) >= 0);
+  assert(!JSON.stringify(observations).includes(JSON.stringify(valid)));
 });
 
 Deno.test("controlled NVIDIA provider rejects model-created labels, evidence, and administrative rules", async () => {

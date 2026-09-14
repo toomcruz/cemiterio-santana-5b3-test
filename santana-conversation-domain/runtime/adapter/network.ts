@@ -9,5 +9,9 @@ export const fetchBoundary: NetworkBoundary = async (request, signal) => {
     body: request.body,
     signal,
   });
-  return { status: response.status, body: await response.text() };
+  return {
+    status: response.status,
+    body: await response.text(),
+    headers: { "content-type": response.headers.get("content-type") ?? "" },
+  };
 };

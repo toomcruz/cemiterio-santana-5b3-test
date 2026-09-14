@@ -8,6 +8,7 @@ export interface NetworkRequest {
 export interface NetworkResponse {
   status: number;
   body: string;
+  headers?: Readonly<Record<string, string>>;
 }
 
 export type NetworkBoundary = (request: NetworkRequest, signal: AbortSignal) => Promise<NetworkResponse>;
