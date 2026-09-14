@@ -22,6 +22,11 @@ on:
           - cohort
           - p0_supplement
           - phase18c_regression
+      precheck_only:
+        description: "Validate the private Phase 18B cohort without running any provider"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -108,6 +113,47 @@ jobs:
           destination.write_bytes(payload)
           destination.chmod(0o600)
           PY
+      - name: Preflight private Phase 18B cohort integrity
+        if: github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode == 'cohort'
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          EXPECTED_COHORT_HASH='2bd6b162b58db76ee84d498817b1c63e8b3073b461e9b553b49afdf675cee063' \
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib
+          path = pathlib.Path(os.environ["RUNNER_TEMP"]) / "phase18b-cohort.json"
+          if path.stat().st_mode & 0o777 != 0o600:
+              raise SystemExit("cohort permissions are not 0600")
+          payload = json.loads(path.read_text(encoding="utf-8"))
+          required = {"schema_version", "mode", "cohort_id", "cohort_hash", "source", "safety", "episodes"}
+          if set(payload) != required:
+              raise SystemExit("cohort schema keys are not closed")
+          if payload["schema_version"] != "phase18b-live-shadow-cohort/1.0.0" or payload["mode"] != "LIVE_PASSIVE":
+              raise SystemExit("unexpected cohort schema or mode")
+          if len(payload["episodes"]) != 50:
+              raise SystemExit("unexpected cohort size")
+          safety = payload["safety"]
+          if safety != {
+              "respond_allowed": False,
+              "action_allowed": False,
+              "official_write_allowed": False,
+              "tools_mode": "would_call_only",
+              "raw_content_persisted": False,
+              "raw_identifiers_persisted": False,
+          }:
+              raise SystemExit("cohort safety contract is not closed")
+          without_hash = dict(payload)
+          declared = without_hash.pop("cohort_hash")
+          canonical = json.dumps(without_hash, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode()
+          computed = hashlib.sha256(canonical).hexdigest()
+          if declared != computed or declared != os.environ["EXPECTED_COHORT_HASH"]:
+              raise SystemExit("cohort hash mismatch")
+          print(json.dumps({"preflight": "PASS", "episodes": len(payload["episodes"]), "cohort_hash": declared}))
+          PY
+      - name: Precheck only complete
+        if: github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode == 'cohort' && inputs.precheck_only == true
+        shell: bash
+        run: echo 'PRECHECK_ONLY= true; provider and replay stages are disabled.'
       - name: Validate Phase 18B provider and no-effects boundaries
         if: github.ref == 'refs/heads/phase18b-gate2-remediation'
         shell: bash
@@ -129,7 +175,7 @@ jobs:
           deno test --allow-read santana-conversation-domain/benchmark
           bash tests/postgres/verify_static.sh
       - name: Probe NVIDIA compatibility with synthetic input
-        if: github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode != 'catalog_probe' && inputs.phase18b_mode != 'p0_supplement' && inputs.phase18b_mode != 'phase18c_regression'
+        if: github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.precheck_only != true && inputs.phase18b_mode != 'catalog_probe' && inputs.phase18b_mode != 'p0_supplement' && inputs.phase18b_mode != 'phase18c_regression'
         shell: bash
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
@@ -142,7 +188,7 @@ jobs:
             phase18b/provider/probe_nvidia.ts \
             "$RUNNER_TEMP/phase18b-provider-probe.json"
       - name: Upload Phase 18B compatibility probe
-        if: always() && github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode != 'catalog_probe' && inputs.phase18b_mode != 'p0_supplement' && inputs.phase18b_mode != 'phase18c_regression'
+        if: always() && github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.precheck_only != true && inputs.phase18b_mode != 'catalog_probe' && inputs.phase18b_mode != 'p0_supplement' && inputs.phase18b_mode != 'phase18c_regression'
         uses: actions/upload-artifact@v4
         with:
           name: phase18b-provider-probe
@@ -150,7 +196,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Inventory NVIDIA model IDs
-        if: github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode == 'catalog_probe'
+        if: github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.precheck_only != true && inputs.phase18b_mode == 'catalog_probe'
         shell: bash
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
@@ -163,7 +209,7 @@ jobs:
             phase18b/provider/catalog_nvidia.ts \
             "$RUNNER_TEMP/phase18b-nvidia-model-catalog.json"
       - name: Upload NVIDIA model inventory
-        if: always() && github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode == 'catalog_probe'
+        if: always() && github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.precheck_only != true && inputs.phase18b_mode == 'catalog_probe'
         uses: actions/upload-artifact@v4
         with:
           name: phase18b-nvidia-model-catalog
@@ -171,7 +217,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Run real-AI passive shadow comparison
-        if: github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode == 'cohort' && success()
+        if: github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.precheck_only != true && inputs.phase18b_mode == 'cohort' && success()
         shell: bash
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
@@ -188,7 +234,7 @@ jobs:
             --model openai/gpt-oss-20b \
             --timeout-ms 60000
       - name: Run controlled P0 supplement
-        if: github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode == 'p0_supplement' && success()
+        if: github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.precheck_only != true && inputs.phase18b_mode == 'p0_supplement' && success()
         shell: bash
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
@@ -205,7 +251,7 @@ jobs:
             --model openai/gpt-oss-20b \
             --timeout-ms 60000
       - name: Upload controlled P0 supplement
-        if: always() && github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode == 'p0_supplement'
+        if: always() && github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.precheck_only != true && inputs.phase18b_mode == 'p0_supplement'
         uses: actions/upload-artifact@v4
         with:
           name: phase18b-p0-supplement-result
@@ -213,7 +259,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Upload sanitized Phase 18B result
-        if: always() && github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode == 'cohort'
+        if: always() && github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.precheck_only != true && inputs.phase18b_mode == 'cohort'
         uses: actions/upload-artifact@v4
         with:
           name: phase18b-live-ai-result
