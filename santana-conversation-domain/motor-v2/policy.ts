@@ -136,14 +136,16 @@ function isConversationClosing(lastUserText: string, understanding: Understandin
 function needsAdministrativeReview(understanding: UnderstandingResult, lastUserText: string): boolean {
   if (understanding.risk.level !== "none") return true;
   if (understanding.transverse_states.includes("MEDIA_NOT_ANALYZED")) return true;
-  if (hasAny(understanding.subintents, [
-    "CORRECAO_DE_AGENDAMENTO",
-    "RECUPERACAO_APOS_FALHA_DE_PAGAMENTO",
-    "SUPORTE_DOCUMENTAL",
-    "ASSINATURA_DIGITAL_DOCUMENTO",
-    "CONFLITO_CADASTRAL_DOCUMENTO_LEGADO",
-    "CONTRADICAO_ENTRE_CANAIS",
-  ])) return true;
+  if (
+    hasAny(understanding.subintents, [
+      "CORRECAO_DE_AGENDAMENTO",
+      "RECUPERACAO_APOS_FALHA_DE_PAGAMENTO",
+      "SUPORTE_DOCUMENTAL",
+      "ASSINATURA_DIGITAL_DOCUMENTO",
+      "CONFLITO_CADASTRAL_DOCUMENTO_LEGADO",
+      "CONTRADICAO_ENTRE_CANAIS",
+    ])
+  ) return true;
   return /(?:regra|documento|autorizacao|agendamento|agenda|pagamento|valor|prazo|procedimento|confirmad|pode|como fazer)/.test(
     lastUserText,
   );
