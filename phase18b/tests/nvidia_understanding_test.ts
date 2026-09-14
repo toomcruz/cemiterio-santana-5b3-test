@@ -146,11 +146,12 @@ Deno.test("controlled NVIDIA provider rejects concatenated or surrounding JSON c
     const observations: ControlledNvidiaAiObservation[] = [];
     const provider = new ControlledNvidiaUnderstandingProvider({
       apiKey: "test-secret",
-      network: () => Promise.resolve({
-        status: 200,
-        headers: { "content-type": "application/json" },
-        body: responseFromContent(content),
-      }),
+      network: () =>
+        Promise.resolve({
+          status: 200,
+          headers: { "content-type": "application/json" },
+          body: responseFromContent(content),
+        }),
       observe: (event) => observations.push(event),
     });
     const result = await provider.understand(messages);
@@ -165,11 +166,12 @@ Deno.test("controlled NVIDIA provider reports concatenated HTTP body without exp
   const observations: ControlledNvidiaAiObservation[] = [];
   const provider = new ControlledNvidiaUnderstandingProvider({
     apiKey: "test-secret",
-    network: () => Promise.resolve({
-      status: 200,
-      headers: { "content-type": "application/json" },
-      body: response(valid) + "\n" + response(valid),
-    }),
+    network: () =>
+      Promise.resolve({
+        status: 200,
+        headers: { "content-type": "application/json" },
+        body: response(valid) + "\n" + response(valid),
+      }),
     observe: (event) => observations.push(event),
   });
   const result = await provider.understand(messages);
