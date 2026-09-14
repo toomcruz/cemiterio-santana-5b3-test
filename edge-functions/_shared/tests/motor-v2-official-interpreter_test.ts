@@ -109,7 +109,12 @@ Deno.test("official bridge sends structured context and keeps the deterministic 
         current_goal: "GOAL_EXUMACAO",
         pending_question: "burial_reference",
         known_subject_hints: ["exumação"],
-        known_facts: [{ fact_code: "burial_reference", value: "quadra 3", confidence: "HIGH", source: "USER_EXPLICIT" }],
+        known_facts: [{
+          fact_code: "burial_reference",
+          value: "quadra 3",
+          confidence: "HIGH",
+          source: "USER_EXPLICIT",
+        }],
         active_case_id: "case-1",
         active_goal_status: "WAITING",
         handoff_active: true,
