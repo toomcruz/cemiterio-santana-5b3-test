@@ -99,7 +99,7 @@ function applyUnderstandingToOfficialInterpretation(
   // cannot create facts, rules, permissions or an administrative decision.
   if (
     !result.goal && mappedGoal && !INFORMATIONAL_GOALS.has(mappedGoal) && !input.context.has_open_goal &&
-    !result.primary_event && currentTurnIsEvidence && understanding.confidence !== "low"
+    !result.primary_event && !closing && currentTurnIsEvidence && understanding.confidence !== "low"
   ) {
     result = {
       ...result,
@@ -117,7 +117,8 @@ function applyUnderstandingToOfficialInterpretation(
     understanding.intent_changed && mappedGoal && input.context.has_open_goal &&
     !hasMultipleSemanticGoals &&
     currentTurnIsEvidence &&
-    [null, "COMPLEMENT", "ANSWER", "SOCIAL"].includes(result.primary_event?.event_kind ?? null)
+    !["HUMAN_REQUEST", "COMPLAINT"].includes(result.primary_event?.event_kind ?? "") &&
+    !result.needs_clarification
   ) {
     result = {
       ...result,

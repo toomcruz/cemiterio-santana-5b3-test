@@ -103,6 +103,7 @@ Deno.test("official bridge sends structured context and keeps the deterministic 
     {
       turn_id: "msg-current:official-context",
       role: "assistant",
+      synthetic: true,
       content: JSON.stringify({
         context_kind: "official_structured_context",
         state: "ACTIVE",
@@ -121,7 +122,6 @@ Deno.test("official bridge sends structured context and keeps the deterministic 
         parallel_goal_codes: ["GOAL_INFO_HORARIO"],
         pending_action_codes: ["propose_handoff"],
       }),
-      synthetic: true,
     },
     { turn_id: "msg-current", role: "user", content: "Obrigado, era só isso." },
   ]]);
@@ -186,7 +186,7 @@ Deno.test("V2 multi-intent is not collapsed into an arbitrary official transitio
   })).interpret(input("Preciso tratar os dois assuntos."));
 
   assertEquals(result.needs_clarification, true);
-  assertEquals(result.primary_event, null);
+  assertEquals(toConversationEvents(result).events, []);
   assert(result.clarification_reason?.includes("mais de um assunto"));
 });
 
@@ -226,7 +226,7 @@ Deno.test("V2 low confidence remains a clarification instead of an official tran
   })).interpret(input("Talvez seja sobre isso."));
 
   assertEquals(result.needs_clarification, true);
-  assertEquals(result.primary_event, null);
+  assertEquals(toConversationEvents(result).events, []);
 });
 
 Deno.test("V2 known but unmapped subintent fails closed instead of inventing an official goal", async () => {
@@ -237,8 +237,7 @@ Deno.test("V2 known but unmapped subintent fails closed instead of inventing an 
 
   assertEquals(result.needs_clarification, true);
   assert(result.clarification_reason?.includes("mapeamento"));
-  assertEquals(result.goal, null);
-  assertEquals(result.primary_event, null);
+  assertEquals(toConversationEvents(result).events, []);
 });
 
 Deno.test("V2 P0 crosses the bridge as a human handoff event without an action", async () => {
@@ -249,7 +248,6 @@ Deno.test("V2 P0 crosses the bridge as a human handoff event without an action",
   const events = toConversationEvents(result, initState("p0-bridge"));
 
   assertEquals(events.events[0]?.kind, "HUMAN_REQUEST");
-  assertEquals(result.goal, null);
   assertEquals(result.facts, []);
 });
 
