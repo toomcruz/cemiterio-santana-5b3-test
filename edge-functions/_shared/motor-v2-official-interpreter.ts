@@ -3,8 +3,12 @@ import {
   type ControlledNvidiaAiObservation,
   ControlledNvidiaUnderstandingProvider,
 } from "../../santana-conversation-domain/motor-v2/providers/nvidia.ts";
-import type { UnderstandingProvider } from "../../santana-conversation-domain/motor-v2/understanding.ts";
 import type { UnderstandingResult } from "../../santana-conversation-domain/motor-v2/types.ts";
+import {
+  enforceDeterministicRisk,
+  understandMessages,
+  type UnderstandingProvider,
+} from "../../santana-conversation-domain/motor-v2/understanding.ts";
 import { interpret as deterministicInterpret } from "../../santana-conversation-domain/runtime/interpreter/deterministic.ts";
 import { guardInterpretation } from "../../santana-conversation-domain/runtime/interpreter/guard.ts";
 import type { LanguageInterpreter } from "../../santana-conversation-domain/runtime/adapter/adapter.ts";
@@ -82,6 +86,49 @@ function semanticGoalCandidates(understanding: UnderstandingResult, evidence: st
     confidence: "MEDIUM" as const,
     evidence,
   }));
+}
+
+function mergeCurrentTurnSafetySignals(
+  understanding: UnderstandingResult,
+  input: InterpreterInput,
+): UnderstandingResult {
+  const deterministic = understandMessages([{
+    turn_id: input.message_id,
+    role: "user",
+    content: input.text,
+  }]);
+  const mergedSubintents = [...new Set([...understanding.subintents, ...deterministic.subintents])];
+  const mergedJourneys = [...new Set([
+    ...understanding.journeys,
+    ...deterministic.journeys.filter((journey) => journey !== "DESCONHECIDA_AMBIGUA"),
+  ])];
+  const mergedStates = [...new Set([...understanding.transverse_states, ...deterministic.transverse_states])];
+  const deterministicEvidence = deterministic.subintents.length > 0 || deterministic.transverse_states.length > 0 ||
+    deterministic.risk.level !== "none"
+    ? [input.message_id]
+    : [];
+  const merged: UnderstandingResult = {
+    ...understanding,
+    journeys: mergedJourneys,
+    subintents: mergedSubintents,
+    transverse_states: mergedStates,
+    intent_changed: understanding.intent_changed || deterministic.intent_changed,
+    evidence_turns: [...new Set([...understanding.evidence_turns, ...deterministicEvidence])],
+  };
+  const mapped = semanticGoal(merged);
+  if (
+    !merged.intent_changed && input.context.has_open_goal && mapped && input.context.open_goal_code &&
+    mapped !== input.context.open_goal_code
+  ) {
+    merged.intent_changed = true;
+    merged.transverse_states = [...new Set([...merged.transverse_states, "INTENT_CHANGED"])];
+    merged.evidence_turns = [...new Set([...merged.evidence_turns, input.message_id])];
+  }
+  return enforceDeterministicRisk([{
+    turn_id: input.message_id,
+    role: "user",
+    content: input.text,
+  }], merged);
 }
 
 function applyUnderstandingToOfficialInterpretation(
@@ -254,7 +301,8 @@ export class MotorV2OfficialInterpreter implements LanguageInterpreter {
 
   async interpret(input: InterpreterInput): Promise<Interpretation> {
     const messages = [contextMessage(input), { turn_id: input.message_id, role: "user" as const, content: input.text }];
-    const understanding = await this.provider.understand(messages) as UnderstandingResult;
+    const providerUnderstanding = await this.provider.understand(messages) as UnderstandingResult;
+    const understanding = mergeCurrentTurnSafetySignals(providerUnderstanding, input);
     const base = guardInterpretation(deterministicInterpret(input));
     const integrated = applyUnderstandingToOfficialInterpretation(base, understanding, input);
     const p0 = understanding.risk.level === "P0";
