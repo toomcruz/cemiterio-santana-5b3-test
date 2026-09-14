@@ -9,6 +9,7 @@ import type { MotorV2UnderstandingObservation } from "../../edge-functions/_shar
 import { applyEvent, type ConversationState, initState } from "../../santana-conversation-domain/engine/engine.ts";
 import { interpret as deterministicInterpret } from "../../santana-conversation-domain/runtime/interpreter/deterministic.ts";
 import { planTurn } from "../../santana-conversation-domain/runtime/turn.ts";
+import { arbitrateConfidence } from "../../santana-conversation-domain/runtime/interpreter/confidence_matrix.ts";
 import type { LanguageInterpreter } from "../../santana-conversation-domain/runtime/adapter/adapter.ts";
 
 interface ShadowCase {
@@ -230,6 +231,17 @@ function safeUnderstanding(observation: MotorV2UnderstandingObservation | undefi
 }
 
 function safePlan(plan: Awaited<ReturnType<typeof planTurn>>) {
+  const confidence_arbitration = plan.interpretation ? arbitrateConfidence(plan.interpretation) : null;
+  const confidence_fields = plan.interpretation
+    ? {
+      overall_confidence: plan.interpretation.overall_confidence,
+      primary_event_confidence: plan.interpretation.primary_event?.confidence ?? null,
+      goal_confidence: plan.interpretation.goal?.confidence ?? null,
+      case_reference_confidence: plan.interpretation.case_reference.confidence,
+      blocking_ambiguity: plan.interpretation.ambiguities.some((ambiguity) => ambiguity.blocking),
+      requires_confirmation: plan.interpretation.facts.some((fact) => fact.requires_confirmation),
+    }
+    : null;
   return {
     outcome: plan.outcome,
     event_kind: plan.interpretation?.primary_event?.event_kind ?? null,
@@ -237,6 +249,8 @@ function safePlan(plan: Awaited<ReturnType<typeof planTurn>>) {
     needs_clarification: plan.interpretation?.needs_clarification ?? null,
     handoff: plan.interpretation?.primary_event?.event_kind === "HUMAN_REQUEST",
     questions: plan.question_draft ? 1 : 0,
+    confidence_fields,
+    confidence_arbitration,
     reply_present: plan.reply_draft !== null,
     state_seq: plan.next_state.seq,
     cases: plan.next_state.cases.length,
@@ -337,7 +351,7 @@ async function main(): Promise<void> {
   }
 
   const summary = {
-    schema_version: "phase19c3-directed-semantic-shadow/1.0.0",
+    schema_version: "phase19c4-directed-semantic-shadow/1.0.0",
     synthetic_input_only: true,
     case_count: rows.length,
     provider: CONTROLLED_NVIDIA_MODEL,

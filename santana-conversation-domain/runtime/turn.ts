@@ -7,6 +7,7 @@ import { guardInterpretation } from "./interpreter/guard.ts";
 import type { Interpretation } from "./interpreter/types.ts";
 import { contextualExplanation, contextualStatus, draftReply } from "./reply.ts";
 import { isConversationRestart } from "./interpreter/conversation_controls.ts";
+import { arbitrateConfidence } from "./interpreter/confidence_matrix.ts";
 
 export interface TurnInput {
   message_id: string;
@@ -102,16 +103,18 @@ export async function planTurn(input: TurnInput, interpreter: LanguageInterprete
       return unchanged("INTERPRETATION_UNAVAILABLE");
     }
   }
-  if (
-    interpretation.overall_confidence === "LOW" ||
-    interpretation.primary_event?.confidence === "LOW" ||
-    interpretation.goal?.confidence === "LOW" ||
-    interpretation.case_reference.confidence === "LOW" ||
-    interpretation.case_reference.kind === "AMBIGUOUS" ||
-    (interpretation.primary_event?.event_kind === "UNCERTAIN" && interpretation.facts.length === 0) ||
-    interpretation.ambiguities.some((ambiguity) => ambiguity.blocking) ||
-    interpretation.facts.some((fact) => fact.requires_confirmation)
-  ) interpretation = { ...interpretation, needs_clarification: true };
+  const confidenceDecision = arbitrateConfidence(interpretation);
+  interpretation = confidenceDecision.force_clarification
+    ? {
+      ...interpretation,
+      needs_clarification: true,
+      clarification_reason: confidenceDecision.reason,
+    }
+    : {
+      ...interpretation,
+      needs_clarification: false,
+      clarification_reason: null,
+    };
   const bridge = toConversationEvents(interpretation, previous);
   if (bridge.clarification) {
     const questionDraft = clarificationQuestion(previous, bridge);

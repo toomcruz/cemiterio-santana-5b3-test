@@ -173,15 +173,20 @@ jobs:
           deno fmt --check edge-functions/_shared/motor-v2-official-interpreter.ts \
             edge-functions/_shared/tests/motor-v2-official-interpreter_test.ts \
             santana-conversation-domain/runtime/interpreter/bridge.ts \
+            santana-conversation-domain/runtime/interpreter/confidence_matrix.ts \
             santana-conversation-domain/runtime/interpreter/types.ts \
+            santana-conversation-domain/runtime/tests/confidence_matrix_test.ts \
             santana-conversation-domain/motor-v2/providers/nvidia.ts
           deno lint edge-functions/_shared/motor-v2-official-interpreter.ts \
             edge-functions/_shared/tests/motor-v2-official-interpreter_test.ts \
             santana-conversation-domain/runtime/interpreter/bridge.ts \
+            santana-conversation-domain/runtime/interpreter/confidence_matrix.ts \
             santana-conversation-domain/runtime/interpreter/types.ts
           deno check edge-functions/_shared/motor-v2-official-interpreter.ts \
             edge-functions/_shared/tests/motor-v2-official-interpreter_test.ts \
-            santana-conversation-domain/runtime/interpreter/bridge.ts
+            santana-conversation-domain/runtime/interpreter/bridge.ts \
+            santana-conversation-domain/runtime/interpreter/confidence_matrix.ts \
+            santana-conversation-domain/runtime/tests/confidence_matrix_test.ts
           deno test --allow-read edge-functions/_shared/tests/motor-v2-official-interpreter_test.ts
           deno test --allow-read santana-conversation-domain/motor-v2/tests/motor_v2_test.ts
           deno test --allow-read santana-conversation-domain/runtime/tests

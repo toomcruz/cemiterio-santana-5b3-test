@@ -22,6 +22,10 @@ export interface MotorV2UnderstandingObservation {
   merged: UnderstandingResult;
 }
 
+function officialConfidence(value: UnderstandingResult["confidence"]): "HIGH" | "MEDIUM" | "LOW" {
+  return value.toUpperCase() as "HIGH" | "MEDIUM" | "LOW";
+}
+
 const SUBINTENT_GOALS: Readonly<Record<string, string>> = {
   EXUMACAO: "GOAL_EXUMACAO",
   RETIRAR_RESTOS: "GOAL_EXUMACAO",
@@ -341,10 +345,17 @@ export class MotorV2OfficialInterpreter implements LanguageInterpreter {
     const p0 = understanding.risk.level === "P0";
     const mediaNeedsReview = understanding.transverse_states.includes("MEDIA_NOT_ANALYZED");
     if (p0) {
+      const p0Confidence = officialConfidence(understanding.confidence);
       const result = guardInterpretation({
         ...integrated,
-        primary_event: { event_kind: "HUMAN_REQUEST", confidence: "HIGH", evidence: input.text },
-        overall_confidence: "HIGH",
+        // Preserve the provider's confidence; P0 priority is an event rule,
+        // not a promotion of LOW to HIGH.
+        primary_event: {
+          event_kind: "HUMAN_REQUEST",
+          confidence: p0Confidence,
+          evidence: input.text,
+        },
+        overall_confidence: p0Confidence,
         needs_clarification: false,
         clarification_reason: null,
         produced_by: "motor-v2-official-interpreter",

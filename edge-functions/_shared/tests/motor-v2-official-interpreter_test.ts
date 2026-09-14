@@ -56,6 +56,19 @@ Deno.test("official V2 interpreter preserves the official reducer boundary for P
   assertEquals(result.needs_clarification, false);
 });
 
+Deno.test("P0 preserves provider LOW confidence without weakening handoff priority", async () => {
+  const result = await new MotorV2OfficialInterpreter(provider({
+    ...baseUnderstanding,
+    confidence: "low",
+    risk: { level: "P0", signals: ["family_conflict"] },
+  })).interpret(input("Há conflito familiar sobre quem pode autorizar."));
+
+  assertEquals(result.primary_event?.event_kind, "HUMAN_REQUEST");
+  assertEquals(result.primary_event?.confidence, "LOW");
+  assertEquals(result.overall_confidence, "LOW");
+  assertEquals(result.needs_clarification, false);
+});
+
 Deno.test("official V2 interpreter refuses conclusions when media was not analyzed", async () => {
   const result = await new MotorV2OfficialInterpreter(provider({
     ...baseUnderstanding,
