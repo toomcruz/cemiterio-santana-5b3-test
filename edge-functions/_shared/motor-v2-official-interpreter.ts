@@ -190,7 +190,10 @@ function applyUnderstandingToOfficialInterpretation(
     };
   }
 
-  if ((!canMaterializeParallel && hasMultipleSemanticGoals) || mediaNeedsReview || lowConfidence || unmappedSemantic || semanticClaimNeedsEvidence) {
+  if (
+    (!canMaterializeParallel && hasMultipleSemanticGoals) || mediaNeedsReview || lowConfidence || unmappedSemantic ||
+    semanticClaimNeedsEvidence
+  ) {
     result = {
       ...result,
       needs_clarification: true,
@@ -219,7 +222,9 @@ function mappingFor(understanding: UnderstandingResult, interpretation: Interpre
   const suppressed: EventKind[] = [];
   if (understanding.intent_changed && selected !== "RECLASSIFICATION") suppressed.push("RECLASSIFICATION");
   if (understanding.risk.level === "P0" && selected !== "HUMAN_REQUEST") suppressed.push("HUMAN_REQUEST");
-  if (understanding.transverse_states.includes("CONVERSATION_CLOSING") && selected !== "SOCIAL") suppressed.push("SOCIAL");
+  if (understanding.transverse_states.includes("CONVERSATION_CLOSING") && selected !== "SOCIAL") {
+    suppressed.push("SOCIAL");
+  }
   return {
     journeys: understanding.journeys,
     subintents: understanding.subintents,
