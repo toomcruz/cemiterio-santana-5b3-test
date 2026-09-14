@@ -63,7 +63,7 @@ function cases(): ShadowCase[] {
         goals: 1,
         needs_clarification: false,
         handoff: false,
-        questions: 0,
+        questions: 1,
       },
     },
     {
@@ -138,7 +138,7 @@ function cases(): ShadowCase[] {
         goals: 1,
         needs_clarification: false,
         handoff: false,
-        questions: 0,
+        questions: 1,
       },
     },
     {
@@ -153,7 +153,7 @@ function cases(): ShadowCase[] {
         goals: 1,
         needs_clarification: false,
         handoff: false,
-        questions: 0,
+        questions: 1,
       },
     },
     {
@@ -168,7 +168,7 @@ function cases(): ShadowCase[] {
         goals: 1,
         needs_clarification: false,
         handoff: false,
-        questions: 0,
+        questions: 1,
       },
     },
     {
@@ -183,7 +183,7 @@ function cases(): ShadowCase[] {
         goals: 2,
         needs_clarification: false,
         handoff: false,
-        questions: 0,
+        questions: 1,
       },
     },
   ];
