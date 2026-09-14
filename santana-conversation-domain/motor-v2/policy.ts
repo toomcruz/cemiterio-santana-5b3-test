@@ -128,6 +128,27 @@ function requiresPriority(understanding: UnderstandingResult, tracks: readonly M
     ]);
 }
 
+function isConversationClosing(lastUserText: string, understanding: UnderstandingResult): boolean {
+  if (understanding.risk.level !== "none") return false;
+  return /^(?:ok|obrigad[oa]|perfeito|certo|entendi|ta bom|tudo bem)[.! ]*$/.test(lastUserText);
+}
+
+function needsAdministrativeReview(understanding: UnderstandingResult, lastUserText: string): boolean {
+  if (understanding.risk.level !== "none") return true;
+  if (understanding.transverse_states.includes("MEDIA_NOT_ANALYZED")) return true;
+  if (hasAny(understanding.subintents, [
+    "CORRECAO_DE_AGENDAMENTO",
+    "RECUPERACAO_APOS_FALHA_DE_PAGAMENTO",
+    "SUPORTE_DOCUMENTAL",
+    "ASSINATURA_DIGITAL_DOCUMENTO",
+    "CONFLITO_CADASTRAL_DOCUMENTO_LEGADO",
+    "CONTRADICAO_ENTRE_CANAIS",
+  ])) return true;
+  return /(?:regra|documento|autorizacao|agendamento|agenda|pagamento|valor|prazo|procedimento|confirmad|pode|como fazer)/.test(
+    lastUserText,
+  );
+}
+
 /** Deterministic safety layer. It never turns corpus language into a current rule. */
 export function evaluatePolicy(input: {
   understanding: UnderstandingResult;
@@ -143,12 +164,14 @@ export function evaluatePolicy(input: {
     /contingencia verificada/.test(text) && /aceito explicitamente/.test(text);
   const versionedDraft = understanding.subintents.includes("CORRECAO_DE_DADO_EM_LAPIDE_PLACA");
   const noHandoff = understanding.risk.level !== "P0" && (acceptedVerifiedContingency || versionedDraft);
-  const currentPolicyNeeded = Object.values(gaps).some((status) => status !== "unknown");
   const lastUserText = normalizeText(input.messages.filter((message) => message.role === "user").at(-1)?.content ?? "");
   const requestedHumanNow = /falar com (?:um |uma )?atendente|atendimento humano|alguem pode responder/.test(
     lastUserText,
   );
-  const offered = !noHandoff && (
+  const closing = isConversationClosing(lastUserText, understanding);
+  const currentPolicyNeeded = Object.values(gaps).some((status) => status !== "unknown") &&
+    needsAdministrativeReview(understanding, lastUserText);
+  const offered = !noHandoff && !closing && (
     understanding.risk.level !== "none" ||
     requestedHumanNow ||
     currentPolicyNeeded

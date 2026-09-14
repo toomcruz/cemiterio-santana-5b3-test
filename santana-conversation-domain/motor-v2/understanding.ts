@@ -479,6 +479,8 @@ function transverseStates(text: string, intents: string[], journeys: string[], i
   if (/aceito explicitamente.*contingencia/.test(text)) states.push("ACCEPTED_PLAN_NOT_COMPLETED");
   if (/pagamento.*falh/.test(text)) states.push("PAYMENT_FAILURE_RECOVERY");
   if (/receipt/.test(text)) states.push("RECEIPT_AWARE_CLOSURE");
+  if (/\b(?:ok|obrigad[oa]|perfeito|certo|entendi)\b/.test(text)) states.push("CONVERSATION_CLOSING");
+  if (/\[midia_nao_analisada\]|midia nao analisada/.test(text)) states.push("MEDIA_NOT_ANALYZED");
   return unique(states);
 }
 

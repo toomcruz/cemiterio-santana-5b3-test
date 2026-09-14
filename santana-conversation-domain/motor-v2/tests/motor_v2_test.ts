@@ -218,6 +218,26 @@ Deno.test("safe local decisions avoid unnecessary handoff and ask at most one qu
   assert(draft.trace.actions.includes("REQUEST_EXPLICIT_CONFIRMATION"));
 });
 
+Deno.test("administrative gaps do not force generic handoff for a clear conversation closing", async () => {
+  const result = await runMotorV2LabCase(labInput("Obrigada, já entendi."));
+  assertEquals(result.trace.handoff.offered, false);
+  assertEquals(result.trace.actions.includes("HANDOFF"), false);
+  assert(result.trace.reply.startsWith("Certo."));
+});
+
+Deno.test("media that was not analyzed is never interpreted as evidence", async () => {
+  const result = await runMotorV2LabCase(labInput("Segue a foto para confirmar. [MIDIA_NAO_ANALISADA]"));
+  assert(result.state.understanding.transverse_states.includes("MEDIA_NOT_ANALYZED"));
+  assert(result.trace.reply.includes("mídia não foi analisada"));
+  assertEquals(result.trace.case_closed, false);
+});
+
+Deno.test("administrative gaps require review only when the current turn asks for it", async () => {
+  const result = await runMotorV2LabCase(labInput("Bom dia."));
+  assertEquals(result.trace.handoff.offered, false);
+  assertEquals(result.trace.actions.includes("HANDOFF"), false);
+});
+
 Deno.test("P0 overrides verified-contingency no-handoff exception", async () => {
   const result = await runMotorV2LabCase(labInput(
     "A morte foi não natural. Existe contingência verificada e aceito explicitamente seguir com a contingência.",
