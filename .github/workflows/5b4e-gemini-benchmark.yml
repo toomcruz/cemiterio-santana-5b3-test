@@ -187,6 +187,39 @@ jobs:
           deno test --allow-read santana-conversation-domain/runtime/tests
           deno test --allow-read santana-conversation-domain/benchmark
           bash tests/postgres/verify_static.sh
+      - name: Run Phase 19C.2 semantic shadow with suppressed delivery
+        if: (github.ref == 'refs/heads/phase18b-gate2-remediation' || github.ref == 'refs/heads/phase19b-hashed-allowlist') && inputs.phase18b_mode == 'phase18c_regression' && success()
+        shell: bash
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+        run: |
+          set -Eeuo pipefail
+          deno run \
+            --allow-env=NVIDIA_API_KEY \
+            --allow-net=integrate.api.nvidia.com \
+            --allow-read \
+            --allow-write="$RUNNER_TEMP" \
+            phase19c2/semantic-shadow/run_semantic_shadow.ts \
+            "$RUNNER_TEMP/phase19c2-semantic-shadow.json" \
+            "$RUNNER_TEMP/phase19c2-human-review.json"
+      - name: Upload Phase 19C.2 semantic shadow evidence
+        if: always() && (github.ref == 'refs/heads/phase18b-gate2-remediation' || github.ref == 'refs/heads/phase19b-hashed-allowlist') && inputs.phase18b_mode == 'phase18c_regression'
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase19c2-semantic-shadow
+          path: |
+            ${{ runner.temp }}/phase19c2-semantic-shadow.json
+            ${{ runner.temp }}/phase19c2-semantic-shadow.json.assignment
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload Phase 19C.2 blinded human review package
+        if: success() && (github.ref == 'refs/heads/phase18b-gate2-remediation' || github.ref == 'refs/heads/phase19b-hashed-allowlist') && inputs.phase18b_mode == 'phase18c_regression'
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase19c2-human-review
+          path: ${{ runner.temp }}/phase19c2-human-review.json
+          if-no-files-found: error
+          retention-days: 7
       - name: Probe NVIDIA compatibility with synthetic input
         if: (github.ref == 'refs/heads/phase18b-gate2-remediation' || github.ref == 'refs/heads/phase19b-hashed-allowlist') && inputs.precheck_only != true && inputs.phase18b_mode != 'catalog_probe' && inputs.phase18b_mode != 'p0_supplement' && inputs.phase18b_mode != 'phase18c_regression'
         shell: bash
