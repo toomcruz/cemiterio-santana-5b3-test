@@ -88,18 +88,21 @@ function applyUnderstandingToOfficialInterpretation(
   const lowConfidence = understanding.confidence === "low" || understanding.complexity === "critical";
   const currentTurnIsEvidence = understanding.evidence_turns.includes(input.message_id);
   const unmappedSemantic = understanding.subintents.length > 0 && mappedGoals.size === 0;
+  let result = base;
+  const blockingAmbiguity = result.ambiguities.some((ambiguity) => ambiguity.blocking);
+  const clarificationOnlyMissingEvent = result.needs_clarification && !result.primary_event && !blockingAmbiguity;
   const semanticClaimNeedsEvidence = (
     mappedGoals.size > 0 || understanding.intent_changed || understanding.risk.level !== "none"
   ) && !currentTurnIsEvidence;
   const closing = understanding.transverse_states.includes("CONVERSATION_CLOSING") &&
     understanding.risk.level === "none" && input.context.pending_question_fact === null;
-  let result = base;
 
   // V2 can fill a missing semantic route only with a closed goal mapping. It
   // cannot create facts, rules, permissions or an administrative decision.
   if (
     !result.goal && mappedGoal && !INFORMATIONAL_GOALS.has(mappedGoal) && !input.context.has_open_goal &&
-    !result.primary_event && !closing && currentTurnIsEvidence && understanding.confidence !== "low"
+    !result.primary_event && !closing && currentTurnIsEvidence && understanding.confidence !== "low" &&
+    understanding.risk.level === "none" && !blockingAmbiguity
   ) {
     result = {
       ...result,
@@ -107,6 +110,8 @@ function applyUnderstandingToOfficialInterpretation(
       primary_event: input.context.has_open_goal
         ? result.primary_event
         : { event_kind: "NEW_GOAL", confidence: "MEDIUM", evidence: input.text },
+      needs_clarification: false,
+      clarification_reason: null,
     };
   }
 
@@ -118,13 +123,15 @@ function applyUnderstandingToOfficialInterpretation(
     !hasMultipleSemanticGoals &&
     currentTurnIsEvidence &&
     !["HUMAN_REQUEST", "COMPLAINT"].includes(result.primary_event?.event_kind ?? "") &&
-    !result.needs_clarification
+    (!result.needs_clarification || clarificationOnlyMissingEvent)
   ) {
     result = {
       ...result,
       goal: { goal_code: mappedGoal, confidence: "MEDIUM", evidence: input.text },
       primary_event: { event_kind: "RECLASSIFICATION", confidence: "MEDIUM", evidence: input.text },
       case_reference: { ...result.case_reference, kind: "CURRENT" },
+      needs_clarification: false,
+      clarification_reason: null,
     };
   }
 
