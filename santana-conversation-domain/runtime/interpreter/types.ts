@@ -92,5 +92,10 @@ export interface InterpreterInput {
     known_subject_hints: string[];
     /** Only facts in the focused case/goal; other cases must never leak here. */
     known_facts?: Array<{ fact_code: string; value: FactValue; confidence: string; source: string }>;
+    active_case_id?: string | null;
+    active_goal_status?: string | null;
+    handoff_active?: boolean;
+    parallel_goal_codes?: string[];
+    pending_action_codes?: string[];
   };
 }

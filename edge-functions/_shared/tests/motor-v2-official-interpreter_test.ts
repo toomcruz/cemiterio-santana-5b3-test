@@ -2,6 +2,8 @@ import { assert, assertEquals } from "../../../tests/fixtures/assert.ts";
 import { MotorV2OfficialInterpreter } from "../motor-v2-official-interpreter.ts";
 import type { UnderstandingProvider } from "../../../santana-conversation-domain/motor-v2/understanding.ts";
 import type { UnderstandingResult } from "../../../santana-conversation-domain/motor-v2/types.ts";
+import { applyEvent, initState } from "../../../santana-conversation-domain/engine/engine.ts";
+import { toConversationEvents } from "../../../santana-conversation-domain/runtime/interpreter/bridge.ts";
 
 const baseUnderstanding: UnderstandingResult = {
   schema_version: "motor-v2-understanding/1.0.0",
@@ -92,7 +94,96 @@ Deno.test("official bridge sends only the current turn and keeps the determinist
     },
   });
 
-  assertEquals(calls, [[{ turn_id: "msg-current", role: "user", content: "Obrigado, era só isso." }]]);
+  assertEquals(calls, [[
+    {
+      turn_id: "msg-current:official-context",
+      role: "assistant",
+      content: JSON.stringify({
+        context_kind: "official_structured_context",
+        state: "ACTIVE",
+        current_goal: "GOAL_EXUMACAO",
+        pending_question: "burial_reference",
+        known_subject_hints: ["exumação"],
+        known_facts: [{ fact_code: "burial_reference", value: "quadra 3" }],
+        handoff_active: false,
+        parallel_goal_codes: [],
+        pending_action_codes: [],
+      }),
+      synthetic: true,
+    },
+    { turn_id: "msg-current", role: "user", content: "Obrigado, era só isso." },
+  ]]);
   assertEquals(result.produced_by, "motor-v2-official-interpreter");
   assertEquals(result.primary_event?.event_kind, "HUMAN_REQUEST");
+});
+
+Deno.test("V2 closed subintent mapping changes the official route without creating a fact", async () => {
+  const result = await new MotorV2OfficialInterpreter(provider({
+    ...baseUnderstanding,
+    subintents: ["EXUMACAO"],
+    journeys: ["RESTOS_MORTAIS"],
+  })).interpret(input("Preciso resolver isso."));
+
+  assertEquals(result.goal?.goal_code, "GOAL_EXUMACAO");
+  assertEquals(result.primary_event?.event_kind, "NEW_GOAL");
+  assertEquals(result.facts, []);
+  const events = toConversationEvents(result, initState("route-test"));
+  assertEquals(events.events[0]?.kind, "NEW_GOAL");
+  assertEquals(events.events[0]?.goal_code, "GOAL_EXUMACAO");
+});
+
+Deno.test("V2 intent change becomes same-case reclassification, not a new case", async () => {
+  const state = applyEvent(initState("reclassify-test"), {
+    kind: "NEW_GOAL",
+    goal_code: "GOAL_EXUMACAO",
+    case_ref: "current-subject",
+  });
+  const result = await new MotorV2OfficialInterpreter(provider({
+    ...baseUnderstanding,
+    subintents: ["RECADASTRO"],
+    journeys: ["DIREITOS_CADASTRO"],
+    intent_changed: true,
+  })).interpret({
+    ...input("Agora preciso atualizar o recadastro."),
+    context: {
+      has_open_goal: true,
+      open_goal_code: "GOAL_EXUMACAO",
+      pending_question_fact: null,
+      known_subject_hints: ["current-subject"],
+      known_facts: [],
+    },
+  });
+
+  assertEquals(result.primary_event?.event_kind, "RECLASSIFICATION");
+  assertEquals(result.goal?.goal_code, "GOAL_RECADASTRO");
+  const events = toConversationEvents(result, state);
+  assertEquals(events.events[0]?.kind, "RECLASSIFICATION");
+  const next = applyEvent(state, events.events[0]!);
+  assertEquals(next.cases.length, state.cases.length);
+  assertEquals(next.goals.length, state.goals.length);
+  assertEquals(next.goals[0]?.goal_code, "GOAL_RECADASTRO");
+});
+
+Deno.test("V2 multi-intent is not collapsed into an arbitrary official transition", async () => {
+  const result = await new MotorV2OfficialInterpreter(provider({
+    ...baseUnderstanding,
+    subintents: ["EXUMACAO", "RECADASTRO"],
+    journeys: ["RESTOS_MORTAIS", "DIREITOS_CADASTRO"],
+    transverse_states: ["MULTI_INTENT"],
+    complexity: "medium",
+  })).interpret(input("Preciso tratar os dois assuntos."));
+
+  assertEquals(result.needs_clarification, true);
+  assertEquals(result.primary_event, null);
+  assert(result.clarification_reason?.includes("mais de um assunto"));
+});
+
+Deno.test("V2 closing state becomes a social no-op when no question is pending", async () => {
+  const result = await new MotorV2OfficialInterpreter(provider({
+    ...baseUnderstanding,
+    transverse_states: ["CONVERSATION_CLOSING"],
+  })).interpret(input("Obrigado."));
+
+  assertEquals(result.primary_event?.event_kind, "SOCIAL");
+  assertEquals(result.needs_clarification, false);
 });

@@ -34,6 +34,13 @@ export function contextFromState(state: ConversationState, knownHints: string[] 
         source: fact.source,
       }))
       : [],
+    active_case_id: goal?.case_id ?? null,
+    active_goal_status: goal?.status ?? null,
+    handoff_active: state.handoff !== null,
+    parallel_goal_codes: state.goals.filter((item) => item.informational && item.status !== "RESOLVED").map((item) =>
+      item.goal_code
+    ),
+    pending_action_codes: state.pending_actions.map((action) => action.action_code),
   };
 }
 

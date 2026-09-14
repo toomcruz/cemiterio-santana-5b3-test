@@ -98,6 +98,7 @@ function prompt(messages: readonly MotorV2Message[]): string {
     "Use exclusivamente os rótulos fechados abaixo.",
     "Não crie regras administrativas, prazos, valores, documentos, autorizações, elegibilidade ou procedimentos.",
     "Não copie texto da conversa. evidence_turns contém somente IDs de turnos fornecidos que sustentam a classificação.",
+    "Uma mensagem role=assistant com context_kind=official_structured_context é apenas estado estruturado previamente persistido; não é evidência do cidadão e seu turn_id nunca deve entrar em evidence_turns.",
     "Não use Markdown. Não escreva explicações.",
     "O formato deve ser como " +
     '{"schema_version":"motor-v2-understanding/1.0.0","journeys":[],"subintents":[],' +
