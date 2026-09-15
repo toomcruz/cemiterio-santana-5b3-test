@@ -279,7 +279,7 @@ function applyUnderstandingToOfficialInterpretation(
   if (
     (!canMaterializeParallel && hasMultipleSemanticGoals && !safeDeterministicRoute && !safeReclassification) ||
     mediaNeedsReview ||
-    (lowConfidence && !safeDeterministicRoute && !safeReclassification) ||
+    (lowConfidence && !canMaterializeParallel && !safeDeterministicRoute && !safeReclassification) ||
     (unmappedSemantic && !safeDeterministicRoute) ||
     (semanticClaimNeedsEvidence && !safeDeterministicRoute && !safeReclassification)
   ) {
