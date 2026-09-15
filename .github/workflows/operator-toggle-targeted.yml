@@ -1,0 +1,48 @@
+name: Operator toggle targeted validation
+
+on:
+  push:
+    branches:
+      - fix/operator-toggle-decouple-canary-20260915
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  operator-toggle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.1.4
+      - name: Format and type boundary
+        run: |
+          set -Eeuo pipefail
+          deno fmt --check \
+            edge-functions/_shared/official-operator.ts \
+            edge-functions/support-runtime-inbound/index.ts \
+            edge-functions/_shared/tests/operator-toggle-control_test.ts
+          deno lint \
+            edge-functions/_shared/official-operator.ts \
+            edge-functions/_shared/tests/operator-toggle-control_test.ts
+          deno check \
+            edge-functions/_shared/official-operator.ts \
+            edge-functions/support-runtime-inbound/index.ts \
+            edge-functions/_shared/tests/operator-toggle-control_test.ts
+      - name: Operator and runtime regression tests
+        run: |
+          set -Eeuo pipefail
+          deno test --allow-env --allow-read \
+            edge-functions/_shared/tests/operator-toggle-control_test.ts \
+            santana-conversation-domain/runtime/tests/official_operations_test.ts \
+            edge-functions/_shared/tests/official-runtime-canary_test.ts
+      - name: Assert canary remains Motor V2 only
+        run: |
+          set -Eeuo pipefail
+          grep -q 'command.type !== "RESUME"' edge-functions/_shared/official-operator.ts
+          grep -q 'automatic_replies_allowed: true' edge-functions/support-runtime-inbound/index.ts
+          grep -q 'result.reply_body !== null,' edge-functions/support-runtime-inbound/index.ts
+          grep -q 'selectCanaryRoute' edge-functions/support-runtime-inbound/index.ts
