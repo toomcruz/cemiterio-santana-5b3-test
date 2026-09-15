@@ -27,6 +27,11 @@ on:
         required: true
         default: false
         type: boolean
+      phase19c5_probe:
+        description: "Run the single hosted constrained-schema probe"
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -180,7 +185,8 @@ jobs:
             santana-conversation-domain/runtime/turn.ts \
             santana-conversation-domain/runtime/official_turn_service.ts \
             santana-conversation-domain/runtime/tests/turn_failover_test.ts \
-            phase19c5/provider/probe_constrained_schema.ts
+            phase19c5/provider/probe_constrained_schema.ts \
+            phase19c2/semantic-shadow/run_semantic_shadow.ts
           deno lint edge-functions/_shared/motor-v2-official-interpreter.ts \
             edge-functions/_shared/tests/motor-v2-official-interpreter_test.ts \
             santana-conversation-domain/runtime/interpreter/bridge.ts \
@@ -194,7 +200,8 @@ jobs:
           deno check santana-conversation-domain/runtime/turn.ts \
             santana-conversation-domain/runtime/official_turn_service.ts \
             santana-conversation-domain/runtime/tests/turn_failover_test.ts \
-            phase19c5/provider/probe_constrained_schema.ts
+            phase19c5/provider/probe_constrained_schema.ts \
+            phase19c2/semantic-shadow/run_semantic_shadow.ts
           deno test --allow-read edge-functions/_shared/tests/motor-v2-official-interpreter_test.ts
           deno test --allow-read santana-conversation-domain/motor-v2/tests/motor_v2_test.ts
           deno test --allow-read santana-conversation-domain/runtime/tests
@@ -202,7 +209,7 @@ jobs:
           deno test --allow-read santana-conversation-domain/benchmark
           bash tests/postgres/verify_static.sh
       - name: Probe hosted NVIDIA constrained schema once
-        if: (github.ref == 'refs/heads/phase18b-gate2-remediation' || github.ref == 'refs/heads/phase19b-hashed-allowlist') && inputs.phase18b_mode == 'phase18c_regression' && success()
+        if: (github.ref == 'refs/heads/phase18b-gate2-remediation' || github.ref == 'refs/heads/phase19b-hashed-allowlist') && inputs.phase18b_mode == 'phase18c_regression' && inputs.phase19c5_probe == true && success()
         shell: bash
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}

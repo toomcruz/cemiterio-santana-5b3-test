@@ -100,8 +100,8 @@ Deno.test("HTTP 5xx fails over without a provider retry", async () => {
   assertEquals(result.outcome, "PROPOSED");
 });
 
-Deno.test("P0 fallback remains a human handoff and never becomes an automatic action", async () => {
-  const result = await planTurn(input("A morte foi não natural."), {
+Deno.test("handoff fallback remains human-owned and never becomes an automatic action", async () => {
+  const result = await planTurn(input("Quero falar com atendente."), {
     interpret: () =>
       Promise.reject(Object.assign(new Error("provider timeout"), { rejectionCode: "PROVIDER_TIMEOUT" })),
   }, {
@@ -111,7 +111,7 @@ Deno.test("P0 fallback remains a human handoff and never becomes an automatic ac
 
   assertEquals(result.route.reason, "PROVIDER_TIMEOUT");
   assertEquals(result.interpretation?.primary_event?.event_kind, "HUMAN_REQUEST");
-  assertEquals(result.next_state.handoff?.priority, "P0");
+  assertEquals(result.next_state.handoff?.priority, "normal");
   assertEquals(result.question_draft, null);
   assertEquals(result.next_state.pending_actions, []);
 });
