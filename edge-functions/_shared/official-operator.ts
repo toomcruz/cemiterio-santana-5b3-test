@@ -27,6 +27,42 @@ interface Snapshot {
   requests: unknown[];
 }
 
+function record(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+/**
+ * The panel's authenticated server route intentionally sends RESUME metadata at
+ * the envelope root and only `{ type: "RESUME" }` in `command`. Reconstruct the
+ * domain command here and create the audit note server-side. Older full nested
+ * commands remain supported for administrative decisions.
+ */
+function commandFromPayload(payload: Record<string, unknown>) {
+  if (payload.kind !== "OPERATOR_COMMAND") return null;
+  const nested = record(payload.command);
+  if (nested.type !== "RESUME" || payload.command_id === undefined) {
+    return parseOperatorCommand(payload.command);
+  }
+  const allowedRoot = new Set([
+    "kind",
+    "conversation_id",
+    "command_id",
+    "expected_revision",
+    "expected_control_version",
+    "command",
+  ]);
+  if (Object.keys(payload).some((key) => !allowedRoot.has(key))) throw new Error("INVALID_COMMAND");
+  if (Object.keys(nested).some((key) => key !== "type")) throw new Error("INVALID_COMMAND");
+  return parseOperatorCommand({
+    type: "RESUME",
+    conversation_id: payload.conversation_id,
+    command_id: payload.command_id,
+    expected_revision: payload.expected_revision,
+    expected_control_version: payload.expected_control_version,
+    note: "Retomada automática solicitada pelo painel.",
+  });
+}
+
 export async function processOfficialOperator(
   payload: Record<string, unknown>,
   request: Request,
@@ -37,7 +73,7 @@ export async function processOfficialOperator(
   const actor = await rest.authenticatedUser(access);
   let command;
   try {
-    command = payload.kind === "OPERATOR_COMMAND" ? parseOperatorCommand(payload.command) : null;
+    command = commandFromPayload(payload);
   } catch {
     throw new HttpProblem(400, "INVALID_OPERATOR_COMMAND", "Invalid operator command");
   }
