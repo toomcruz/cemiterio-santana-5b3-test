@@ -103,6 +103,7 @@ async function deliver(
   outboxId: string | null,
   configuredCanaryHash: string | undefined,
   automaticRepliesAllowed: boolean,
+  enforceCanary: boolean,
 ): Promise<"queued" | "sent" | "failed" | "suppressed"> {
   if (!automaticRepliesAllowed) return "suppressed";
   if (!outboxId) return "queued";
@@ -116,7 +117,10 @@ async function deliver(
     return claimed.status === "SENT" ? "sent" : "queued";
   }
   const claimedPhone = text(claimed.phone_e164);
-  if (!await runtimeCanaryAllowsAutomaticReply(claimedPhone, configuredCanaryHash)) {
+  // The canary protects only Motor V2 rollout. Baseline delivery is governed by
+  // the conversation's BOT/HUMAN mode, which is controlled by an authenticated
+  // attendant, and must not be limited to one test phone.
+  if (enforceCanary && !await runtimeCanaryAllowsAutomaticReply(claimedPhone, configuredCanaryHash)) {
     await rest.rpc("support_runtime_fail_delivery", {
       p_outbox_id: outboxId,
       p_error: "CANARY_PHONE_BLOCKED",
@@ -174,8 +178,15 @@ Deno.serve(async (request) => {
     if (input.kind === "OPERATOR_SNAPSHOT" || input.kind === "OPERATOR_COMMAND") {
       const result = object(await processOfficialOperator(input, request, rest, configuredCanaryHash));
       if (input.kind === "OPERATOR_SNAPSHOT") return json(result);
-      const allowed = await runtimeCanaryAllowsAutomaticReply(text(result.phone_e164), configuredCanaryHash);
-      const delivery = await deliver(rest, text(result.outbox_id) || null, configuredCanaryHash, allowed);
+      // Operator control is not a Motor V2 rollout. A RESUME is silent and
+      // produces no outbox; other official operator replies follow BOT mode.
+      const delivery = await deliver(
+        rest,
+        text(result.outbox_id) || null,
+        configuredCanaryHash,
+        true,
+        false,
+      );
       const { phone_e164: _privatePhone, ...response } = result;
       return json({ ...response, delivery });
     }
@@ -185,8 +196,8 @@ Deno.serve(async (request) => {
       Deno.env.get("CANARY_ENABLED"),
       configuredCanaryHash,
     );
-    // Fase 19B is dormant: with CANARY_ENABLED=false, the current workflow
-    // remains the only reachable processing path. Activation is a later gate.
+    // The canary selects Motor V2 only. Everyone else remains on the current
+    // production workflow and their conversation mode decides BOT vs HUMAN.
     if (route === "MOTOR_V2") {
       const apiKey = Deno.env.get("NVIDIA_API_KEY")?.trim() ?? "";
       if (!apiKey) throw new HttpProblem(503, "MOTOR_V2_UNCONFIGURED", "Motor V2 provider is not configured");
@@ -209,7 +220,13 @@ Deno.serve(async (request) => {
           },
         },
       );
-      const delivery = await deliver(rest, result.outbox_id, configuredCanaryHash, result.reply_body !== null);
+      const delivery = await deliver(
+        rest,
+        result.outbox_id,
+        configuredCanaryHash,
+        result.reply_body !== null,
+        true,
+      );
       return json({
         accepted: true,
         kind: result.kind,
@@ -220,19 +237,16 @@ Deno.serve(async (request) => {
         uses_ai: true,
       });
     }
-    const automaticRepliesAllowed = await runtimeCanaryAllowsAutomaticReply(
-      inbound.phone_e164,
-      configuredCanaryHash,
-    );
     const store = new SupabaseRuntimeStore(rest, new WapiAttachmentProcessor(rest));
     const result = await processOfficialTurn(inbound, store, interpreter(), {
-      automatic_replies_allowed: automaticRepliesAllowed,
+      automatic_replies_allowed: true,
     });
     const delivery = await deliver(
       rest,
       result.outbox_id,
       configuredCanaryHash,
-      automaticRepliesAllowed,
+      result.reply_body !== null,
+      false,
     );
     return json({
       accepted: true,
