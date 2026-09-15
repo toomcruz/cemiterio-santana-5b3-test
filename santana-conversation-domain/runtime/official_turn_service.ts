@@ -353,12 +353,16 @@ export async function processOfficialTurn(
         ai_output_used: false,
       },
     }
-    : await planTurn({
-      message_id: lease.inbound_message_id,
-      text: inbound.body,
-      state,
-      automation_mode: effectiveAutomationMode,
-    }, interpreter, executionOptions);
+    : await planTurn(
+      {
+        message_id: lease.inbound_message_id,
+        text: inbound.body,
+        state,
+        automation_mode: effectiveAutomationMode,
+      },
+      interpreter,
+      executionOptions,
+    );
   const receivedState = withReceivedDocument(plan.next_state, lease.received_document);
   const nextState = effectiveAutomationMode === "BOT_ACTIVE"
     ? await withOperationalRequests(receivedState)

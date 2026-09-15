@@ -117,7 +117,11 @@ export async function planTurn(
     // Revalidate even injected providers: TypeScript types are not a trust boundary.
     const candidate = await interpreter.interpret(request);
     interpretation = guardInterpretation(parseStrictInterpretation(JSON.stringify(candidate), request));
-    route = { ...defaultRoute, provider_result: options.route_attempted === "MOTOR_V2" ? "VALID" : "NOT_ATTEMPTED", ai_output_used: options.route_attempted === "MOTOR_V2" };
+    route = {
+      ...defaultRoute,
+      provider_result: options.route_attempted === "MOTOR_V2" ? "VALID" : "NOT_ATTEMPTED",
+      ai_output_used: options.route_attempted === "MOTOR_V2",
+    };
   } catch (error) {
     route = {
       ...defaultRoute,

@@ -102,7 +102,8 @@ Deno.test("HTTP 5xx fails over without a provider retry", async () => {
 
 Deno.test("P0 fallback remains a human handoff and never becomes an automatic action", async () => {
   const result = await planTurn(input("Há conflito familiar sobre quem pode autorizar."), {
-    interpret: () => Promise.reject(Object.assign(new Error("provider timeout"), { rejectionCode: "PROVIDER_TIMEOUT" })),
+    interpret: () =>
+      Promise.reject(Object.assign(new Error("provider timeout"), { rejectionCode: "PROVIDER_TIMEOUT" })),
   }, {
     route_attempted: "MOTOR_V2",
     fallbackInterpreter: fallback(),
