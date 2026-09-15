@@ -238,18 +238,21 @@ Deno.test("LOW global confidence preserves corroborated parallel goals without a
 
   assertEquals(result.needs_clarification, false);
   assertEquals(result.secondary_goals?.map((goal) => goal.goal_code), ["GOAL_RECADASTRO"]);
-  const plan = await planTurn({
-    ...input(inputText),
-    state: initState("low-multi-intent"),
-    automation_mode: "BOT_ACTIVE",
-  }, new MotorV2OfficialInterpreter(provider({
-    ...baseUnderstanding,
-    confidence: "low",
-    subintents: ["EXUMACAO", "RECADASTRO"],
-    journeys: ["RESTOS_MORTAIS", "DIREITOS_CADASTRO"],
-    transverse_states: ["MULTI_INTENT"],
-    evidence_turns: ["msg-1"],
-  })));
+  const plan = await planTurn(
+    {
+      ...input(inputText),
+      state: initState("low-multi-intent"),
+      automation_mode: "BOT_ACTIVE",
+    },
+    new MotorV2OfficialInterpreter(provider({
+      ...baseUnderstanding,
+      confidence: "low",
+      subintents: ["EXUMACAO", "RECADASTRO"],
+      journeys: ["RESTOS_MORTAIS", "DIREITOS_CADASTRO"],
+      transverse_states: ["MULTI_INTENT"],
+      evidence_turns: ["msg-1"],
+    })),
+  );
 
   assertEquals(plan.next_state.goals.length, 2);
   assertEquals(plan.next_state.pending_actions, []);
