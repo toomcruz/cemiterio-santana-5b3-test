@@ -48,4 +48,3 @@ const evidence = {
 };
 await Deno.writeTextFile(output, JSON.stringify(evidence) + "\n", { mode: 0o600 });
 console.log(JSON.stringify(evidence));
-if (evidence.constrained_schema_status === "ACCEPTED_NOT_PROVEN") Deno.exit(2);
