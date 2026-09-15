@@ -142,13 +142,27 @@ function graveReference(text: string): string | null {
   const identifier = "[0-9][a-z0-9-]{0,23}";
   const match = text.match(
     new RegExp(
-      `\\bquadra\\s*(?:n[ºo.]?\\s*)?${identifier}\\s*(?:(?:,|e|-)\\s*)?(?:jazigo|sepultura|t[uú]mulo)\\s*(?:n[ºo.]?\\s*)?${identifier}\\b`,
+      `\\bquadra\\s*(?:n[ºo.]?\\s*)?${identifier}\\s*(?:(?:,|e|-)\\s*)?(?:jazigo|sepultura|t[uú]mulo|terreno)\\s*(?:n[ºo.]?\\s*)?${identifier}\\b`,
       "i",
     ),
   ) ?? text.match(
-    new RegExp(`\\b(?:jazigo|sepultura|t[uú]mulo)\\s*(?:n[ºo.]?\\s*)?${identifier}\\b`, "i"),
+    new RegExp(`\\b(?:jazigo|sepultura|t[uú]mulo|terreno)\\s*(?:n[ºo.]?\\s*)?${identifier}\\b`, "i"),
   ) ?? text.match(new RegExp(`\\bquadra\\s*(?:n[ºo.]?\\s*)?${identifier}\\b`, "i"));
   return match?.[0]?.trim() || null;
+}
+
+function deceasedName(text: string): string | null {
+  const match = text.match(
+    /\b(?:o\s+)?falecido\s+(?:é|e)\s+(.+?)\s+(?:e|é)\s+(?:está|esta)\s+sepultad[oa]\b/i,
+  );
+  return match?.[1]?.trim() || null;
+}
+
+function burialReferenceValue(text: string): string | null {
+  const location = graveReference(text);
+  if (!location) return null;
+  const name = deceasedName(text);
+  return name ? `${name}, ${location}` : location;
 }
 
 const SUBJECT_HINTS = [
@@ -335,8 +349,11 @@ export function interpret(input: InterpreterInput): Interpretation {
   }
   // A user-supplied burial reference can be collected while an authorization
   // is pending; it remains a declaration, never an official identification.
-  const burialReference = input.context.open_goal_code === "GOAL_EXUMACAO" || goal?.goal_code === "GOAL_EXUMACAO"
-    ? graveReference(input.text)
+  const explicitBurialStatement = Boolean(deceasedName(text)) || matches(text, "sepultado") ||
+    matches(text, "sepultura");
+  const burialReference = input.context.open_goal_code === "GOAL_EXUMACAO" || goal?.goal_code === "GOAL_EXUMACAO" ||
+      explicitBurialStatement
+    ? burialReferenceValue(input.text)
     : null;
   if (burialReference && !seen.has("burial_reference")) {
     seen.add("burial_reference");
@@ -345,14 +362,14 @@ export function interpret(input: InterpreterInput): Interpretation {
       value: burialReference,
       source: correctionMarker ? "USER_CORRECTION" : "USER_EXPLICIT",
       confidence: "HIGH",
-      evidence: burialReference,
+      evidence: input.text,
       requires_confirmation: false,
     });
   }
   // The concession reference is only a locating hint supplied by the citizen.
   // It never proves ownership or that the recadastro is complete.
   const concessionReference =
-    input.context.open_goal_code === "GOAL_RECADASTRO" || goal?.goal_code === "GOAL_RECADASTRO"
+    !burialReference && (input.context.open_goal_code === "GOAL_RECADASTRO" || goal?.goal_code === "GOAL_RECADASTRO")
       ? graveReference(input.text)
       : null;
   if (concessionReference && !seen.has("concession_reference")) {
@@ -362,7 +379,7 @@ export function interpret(input: InterpreterInput): Interpretation {
       value: concessionReference,
       source: correctionMarker ? "USER_CORRECTION" : "USER_EXPLICIT",
       confidence: "HIGH",
-      evidence: concessionReference,
+      evidence: input.text,
       requires_confirmation: false,
     });
   }
