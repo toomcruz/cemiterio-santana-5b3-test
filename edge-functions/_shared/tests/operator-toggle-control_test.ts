@@ -86,7 +86,7 @@ Deno.test("operator snapshot enables manual control even when phone is outside M
     fixture.request,
     fixture.rest,
     CANARY_HASH,
-  );
+  ) as Record<string, unknown>;
   assertEquals(result.commands_enabled, true);
   assertEquals(result.automation_mode, "human");
   assert(!fixture.calls.some((call) => call.route.endsWith("support_runtime_commit_operator")));
