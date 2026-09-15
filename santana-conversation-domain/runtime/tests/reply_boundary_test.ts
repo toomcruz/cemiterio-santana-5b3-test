@@ -174,6 +174,34 @@ Deno.test("correction reply does not continue the denied exhumation question", a
   assert(!result.reply_draft?.includes("finalidade da exumação"));
 });
 
+Deno.test("correction reply uses the closed V2 topic mapping when reducer keeps the prior goal", async () => {
+  const before = stateWithGoal("correction-mapped-reply");
+  const result = await planTurn({
+    message_id: "correction-mapped-reply-message",
+    text: "Na verdade, quero recadastro, não exumação.",
+    state: before,
+    automation_mode: "BOT_ACTIVE",
+  }, {
+    interpret: (input) =>
+      Promise.resolve(candidate(input, {
+        primary_event: { event_kind: "CORRECTION", confidence: "HIGH", evidence: input.text },
+        goal: { goal_code: "GOAL_EXUMACAO", confidence: "HIGH", evidence: "exumação" },
+        case_reference: { kind: "CURRENT", subject_kind: "DECEASED", subject_hint: null, confidence: "HIGH" },
+        official_mapping: mapping({
+          subintents: ["RECADASTRO", "EXUMACAO"],
+          intent_changed: true,
+          selected_event: "CORRECTION",
+        }),
+        needs_clarification: false,
+        overall_confidence: "HIGH",
+      })),
+  });
+
+  assertEquals(result.next_state.goals[0]?.goal_code, "GOAL_EXUMACAO");
+  assert(result.reply_draft?.includes("recadastro, não de exumação"));
+  assert(!result.reply_draft?.includes("finalidade da exumação"));
+});
+
 Deno.test("priority handoff reply never adds a parallel clarification", async () => {
   const result = await planTurn({
     message_id: "p0-reply",

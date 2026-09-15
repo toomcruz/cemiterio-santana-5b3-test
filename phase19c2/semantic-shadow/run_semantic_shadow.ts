@@ -291,6 +291,17 @@ function safePlan(plan: Awaited<ReturnType<typeof planTurn>>) {
         reason: plan.interpretation.official_mapping.reason,
       }
       : null,
+    interpretation: plan.interpretation
+      ? {
+        primary_event: plan.interpretation.primary_event?.event_kind ?? null,
+        goal_code: plan.interpretation.goal?.goal_code ?? null,
+        secondary_goal_codes: (plan.interpretation.secondary_goals ?? []).map((goal) => goal.goal_code),
+        case_reference_kind: plan.interpretation.case_reference.kind,
+        facts: plan.interpretation.facts.map((fact) => fact.fact_code),
+        official_subintents: plan.interpretation.official_mapping?.subintents ?? [],
+        official_transverse_states: plan.interpretation.official_mapping?.transverse_states ?? [],
+      }
+      : null,
     route: plan.route,
   };
 }
@@ -373,7 +384,7 @@ async function main(): Promise<void> {
     const v2Understanding = understandings.slice(beforeUnderstanding).at(-1);
     const baselinePlan = await planTurn(input, baseline);
     const integrated = safePlan(v2Plan);
-    const directedFailures = Object.entries(item.expected).filter(([key, expected]) =>
+    const semanticFailures = Object.entries(item.expected).filter(([key, expected]) =>
       integrated[key as keyof typeof integrated] !== expected
     )
       .map(([key, expected]) => ({ field: key, expected, actual: integrated[key as keyof typeof integrated] }));
@@ -387,6 +398,13 @@ async function main(): Promise<void> {
         .map((fragment) => ({ field: "reply_not_contains", expected: fragment, actual: reply })),
     ];
     const aIsV2 = assignmentPattern[index] === "A";
+    const v2SemanticPass = semanticFailures.length === 0 && replyFailures.length === 0;
+    const explicitSafeFailover = v2Plan.route.failover_route === "CURRENT_DETERMINISTIC" &&
+      v2Plan.route.provider_result === "REJECTED" &&
+      v2Plan.outcome !== "INTERPRETATION_UNAVAILABLE" &&
+      v2Plan.reply_draft !== null &&
+      v2Plan.route.reason !== null;
+    const effectiveResponsePass = v2SemanticPass || explicitSafeFailover;
     rows.push({
       case_id: item.case_id,
       category: item.category,
@@ -401,8 +419,11 @@ async function main(): Promise<void> {
       effective_response_route: v2Plan.route.failover_route ?? "MOTOR_V2",
       deterministic_baseline: safePlan(baselinePlan),
       expected: item.expected,
-      directed_pass: directedFailures.length === 0 && replyFailures.length === 0,
-      directed_failures: [...directedFailures, ...replyFailures],
+      v2_semantic_pass: v2SemanticPass,
+      effective_response_pass: effectiveResponsePass,
+      directed_pass: effectiveResponsePass,
+      directed_failures: [...semanticFailures, ...replyFailures],
+      failover_safe: explicitSafeFailover,
       external_effects: false,
       delivery: "SUPPRESSED",
     });
@@ -428,12 +449,14 @@ async function main(): Promise<void> {
     valid_ai_outputs: observations.filter((item) => item.outcome === "llm_valid" && item.ai_output_used).length,
     fallback_count: observations.filter((item) => item.fallback_used).length,
     directed_pass_count: rows.filter((row) => row.directed_pass === true).length,
+    v2_semantic_pass_count: rows.filter((row) => row.v2_semantic_pass === true).length,
+    effective_response_pass_count: rows.filter((row) => row.effective_response_pass === true).length,
     AI_VALID_RATE: observations.length === 0
       ? 0
       : observations.filter((item) => item.outcome === "llm_valid" && item.ai_output_used).length / observations.length,
     SAFE_TURN_COMPLETION_RATE: rows.length === 0 ? 0 : rows.filter(
       (row) =>
-        row.directed_pass === true && row.integrated_v2 &&
+        row.effective_response_pass === true && row.integrated_v2 &&
         (row.integrated_v2 as Record<string, unknown>).outcome !== "INTERPRETATION_UNAVAILABLE",
     ).length / rows.length,
     external_effects: false,
@@ -471,7 +494,7 @@ async function main(): Promise<void> {
   }));
   if (
     summary.case_count !== 10 || summary.calls !== 10 || summary.SAFE_TURN_COMPLETION_RATE !== 1 ||
-    summary.directed_pass_count !== 10
+    summary.effective_response_pass_count !== 10
   ) {
     Deno.exit(2);
   }

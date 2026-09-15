@@ -149,6 +149,29 @@ const GOAL_LABELS: Record<string, string> = {
   GOAL_OUTROS_ASSUNTOS: "outro assunto",
 };
 
+// Presentation-only mapping for canonical V2 subintents already accepted by
+// the interpreter guard. It never creates a goal or changes reducer state.
+const OFFICIAL_SUBINTENT_GOALS: Readonly<Record<string, string>> = {
+  EXUMACAO: "GOAL_EXUMACAO",
+  RETIRAR_RESTOS: "GOAL_EXUMACAO",
+  DESTINO_OSSUARIO: "GOAL_EXUMACAO",
+  DESTINO_RESTOS: "GOAL_EXUMACAO",
+  CREMACAO: "GOAL_EXUMACAO",
+  CREMACAO_IMEDIATA: "GOAL_EXUMACAO",
+  RECADASTRO: "GOAL_RECADASTRO",
+  CONCESSAO: "GOAL_CONCESSAO",
+  SUCESSAO: "GOAL_CONCESSAO",
+  TRANSFERENCIA: "GOAL_CONCESSAO",
+  TITULARIDADE: "GOAL_CONCESSAO",
+  JAZIGO_GERAL: "GOAL_JAZIGO_SERVICOS",
+  LAPIDE_PLACA: "GOAL_JAZIGO_SERVICOS",
+  LIMPEZA_ZELADORIA: "GOAL_JAZIGO_SERVICOS",
+  MANUTENCAO_JAZIGO: "GOAL_JAZIGO_SERVICOS",
+  OBRA_REFORMA: "GOAL_JAZIGO_SERVICOS",
+  VISITA_JAZIGO: "GOAL_JAZIGO_SERVICOS",
+  PLANO_ZELADORIA: "GOAL_JAZIGO_SERVICOS",
+};
+
 function waitingRequirement(state: ConversationState, goal: GoalRecord): string {
   const actions = state.pending_actions.filter((item) => item.goal_id === goal.goal_id);
   const unknownSpouse = activeFact(state, "surviving_spouse_status", goal)?.value === "DESCONHECIDO";
@@ -237,6 +260,18 @@ function mediaNeedsReview(interpretation: Interpretation | null): boolean {
   return interpretation?.official_mapping?.transverse_states.includes("MEDIA_NOT_ANALYZED") === true;
 }
 
+function correctedGoalCode(
+  interpretation: Interpretation | null,
+  previousGoal: GoalRecord | null,
+): string | null {
+  if (!interpretation || !previousGoal) return null;
+  const explicit = interpretation.goal?.goal_code;
+  if (explicit && explicit !== previousGoal.goal_code) return explicit;
+  return interpretation.official_mapping?.subintents
+    .map((subintent) => OFFICIAL_SUBINTENT_GOALS[subintent])
+    .find((goalCode) => goalCode && goalCode !== previousGoal.goal_code) ?? null;
+}
+
 function transitionReply(
   interpretation: Interpretation | null,
   next: ConversationState,
@@ -255,10 +290,11 @@ function transitionReply(
     }`;
   }
 
-  if ((eventKind === "CORRECTION" || eventKind === "CHANGE_OF_MIND") && previousGoal && interpretation?.goal) {
-    if (interpretation.goal.goal_code !== previousGoal.goal_code) {
+  if ((eventKind === "CORRECTION" || eventKind === "CHANGE_OF_MIND") && previousGoal) {
+    const corrected = correctedGoalCode(interpretation, previousGoal);
+    if (corrected) {
       const from = GOAL_LABELS[previousGoal.goal_code] ?? "atendimento anterior";
-      const to = GOAL_LABELS[interpretation.goal.goal_code] ?? "novo assunto";
+      const to = GOAL_LABELS[corrected] ?? "novo assunto";
       return `Entendi a correção: você quer tratar de ${to}, não de ${from}. Mantive o atendimento de ${from} registrado para não misturar os assuntos. Confirme se deseja seguir com ${to}.`;
     }
   }
