@@ -53,13 +53,16 @@ export async function processOfficialOperator(
     throw new HttpProblem(404, "RUNTIME_NOT_FOUND", "Official attendance not found");
   }
   const state = asStoredState(snapshot.state, conversationId);
-  const allowed = await runtimeCanaryAllowsAutomaticReply(snapshot.phone_e164, canaryHash);
+  const canaryAllowed = await runtimeCanaryAllowsAutomaticReply(snapshot.phone_e164, canaryHash);
   if (!command) {
     return {
       revision: snapshot.revision,
       automation_mode: snapshot.automation_mode,
       control_version: snapshot.control_version,
-      commands_enabled: allowed,
+      // Manual BOT/HUMAN control belongs to the authenticated operator. The
+      // canary only selects Motor V2; it is not an authorization mechanism for
+      // the operator control switch.
+      commands_enabled: true,
       goals: state.goals.map((goal) => ({
         goal_id: goal.goal_id,
         goal_code: goal.goal_code,
@@ -77,7 +80,11 @@ export async function processOfficialOperator(
       requests: snapshot.requests ?? [],
     };
   }
-  if (!allowed) throw new HttpProblem(403, "CANARY_PHONE_BLOCKED", "Only the authorized canary can receive commands");
+  // Keep the Phase-19 canary restriction on administrative decision commands,
+  // but never use it to block the operator's explicit RESUME control.
+  if (!canaryAllowed && command.type !== "RESUME") {
+    throw new HttpProblem(403, "CANARY_PHONE_BLOCKED", "Only the authorized canary can receive this command");
+  }
   const catalogHash = await currentCatalogHash();
   if (snapshot.catalog_hash !== catalogHash) {
     throw new HttpProblem(409, "CATALOG_UPGRADE_REQUIRED", "A controlled catalog upgrade is required");
@@ -109,7 +116,13 @@ export async function processOfficialOperator(
   const projection = panelProjection(next);
   if (command.type !== "RESUME" && snapshot.automation_mode !== "bot") projection.automation_mode = "human";
   if (command.type === "RESUME") projection.automation_mode = "bot";
-  const reply = projection.automation_mode === "bot" ? operatorReply(next, command) : null;
+  // Toggling the control is silent. It must not send an unsolicited WhatsApp
+  // message simply because an operator chose to reactivate the robot.
+  const reply = command.type === "RESUME"
+    ? null
+    : projection.automation_mode === "bot"
+    ? operatorReply(next, command)
+    : null;
   const committed = await rest.rpc<Record<string, unknown>>("support_runtime_commit_operator", {
     p_conversation_id: conversationId,
     p_actor_id: actor,
