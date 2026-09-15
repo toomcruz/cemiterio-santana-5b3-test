@@ -1,5 +1,5 @@
 import { assert, assertEquals } from "../../../tests/fixtures/assert.ts";
-import { applyEvent, initState, type ConversationState } from "../../../santana-conversation-domain/engine/engine.ts";
+import { applyEvent, type ConversationState, initState } from "../../../santana-conversation-domain/engine/engine.ts";
 import { currentCatalogHash } from "../../../santana-conversation-domain/runtime/server_transition.ts";
 import { HttpProblem } from "../http.ts";
 import { processOfficialOperator } from "../official-operator.ts";
