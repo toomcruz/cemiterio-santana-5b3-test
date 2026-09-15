@@ -63,6 +63,40 @@ function commandFromPayload(payload: Record<string, unknown>) {
   });
 }
 
+async function readOperatorSnapshot(
+  rest: OfficialSupabaseRest,
+  conversationId: string,
+  actor: string,
+): Promise<Snapshot> {
+  const snapshot = await rest.rpc<Snapshot>("support_runtime_operator_snapshot", {
+    p_conversation_id: conversationId,
+    p_actor_id: actor,
+  });
+  if (!snapshot || !Number.isSafeInteger(snapshot.revision)) {
+    throw new HttpProblem(404, "RUNTIME_NOT_FOUND", "Official attendance not found");
+  }
+  return snapshot;
+}
+
+function resumeAcknowledgement(
+  snapshot: Snapshot,
+  command: ReturnType<typeof parseOperatorCommand>,
+  committed: Record<string, unknown>,
+) {
+  if (!command || command.type !== "RESUME") throw new Error("invalid resume acknowledgement");
+  return {
+    ok: true,
+    command: "RESUME",
+    command_id: command.command_id,
+    revision: snapshot.revision,
+    control_version: snapshot.control_version,
+    automation_mode: snapshot.automation_mode,
+    replayed: committed.replayed === true,
+    outbox_id: typeof committed.outbox_id === "string" ? committed.outbox_id : null,
+    phone_e164: snapshot.phone_e164,
+  };
+}
+
 export async function processOfficialOperator(
   payload: Record<string, unknown>,
   request: Request,
@@ -81,13 +115,7 @@ export async function processOfficialOperator(
   if (typeof conversationId !== "string" || !/^[0-9a-f-]{36}$/i.test(conversationId)) {
     throw new HttpProblem(400, "INVALID_CONVERSATION", "Invalid conversation");
   }
-  const snapshot = await rest.rpc<Snapshot>("support_runtime_operator_snapshot", {
-    p_conversation_id: conversationId,
-    p_actor_id: actor,
-  });
-  if (!snapshot || !Number.isSafeInteger(snapshot.revision)) {
-    throw new HttpProblem(404, "RUNTIME_NOT_FOUND", "Official attendance not found");
-  }
+  const snapshot = await readOperatorSnapshot(rest, conversationId, actor);
   const state = asStoredState(snapshot.state, conversationId);
   const canaryAllowed = await runtimeCanaryAllowsAutomaticReply(snapshot.phone_e164, canaryHash);
   if (!command) {
@@ -133,7 +161,13 @@ export async function processOfficialOperator(
     p_command_id: command.command_id,
     p_command: command,
   });
-  if (replay?.replayed === true) return { ...replay, accepted: true, phone_e164: snapshot.phone_e164 };
+  if (replay?.replayed === true) {
+    if (command.type === "RESUME") {
+      const latest = await readOperatorSnapshot(rest, conversationId, actor);
+      return resumeAcknowledgement(latest, command, replay);
+    }
+    return { ...replay, accepted: true, phone_e164: snapshot.phone_e164 };
+  }
   if (snapshot.revision !== command.expected_revision) {
     throw new HttpProblem(409, "RUNTIME_REVISION_CONFLICT", "Reload the attendance before retrying");
   }
@@ -171,5 +205,9 @@ export async function processOfficialOperator(
     p_reply_body: reply,
     p_projection: projection,
   });
+  if (command.type === "RESUME") {
+    const latest = await readOperatorSnapshot(rest, conversationId, actor);
+    return resumeAcknowledgement(latest, command, committed);
+  }
   return { ...committed, accepted: true, phone_e164: snapshot.phone_e164 };
 }
