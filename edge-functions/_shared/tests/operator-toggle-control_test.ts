@@ -9,6 +9,7 @@ const CONVERSATION = "33333333-3333-4333-a333-333333333333";
 const COMMAND = "44444444-4444-4444-a444-444444444444";
 const ACTOR = "55555555-5555-4555-a555-555555555555";
 const CONTROL_VERSION = "2026-09-15T15:07:07.639798+00:00";
+const CONTROL_VERSION_AFTER = "2026-09-15T15:07:08.639798+00:00";
 const NON_CANARY_PHONE = "+5511987654321";
 const CANARY_HASH = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
@@ -17,6 +18,10 @@ type Call = { route: string; body: Record<string, unknown> };
 async function harness(state: ConversationState) {
   const calls: Call[] = [];
   const catalogHash = await currentCatalogHash();
+  let currentState = state;
+  let currentRevision = 7;
+  let currentMode = "human";
+  let currentControlVersion = CONTROL_VERSION;
   const fetcher: typeof fetch = (input, init) => {
     const route = new URL(String(input)).pathname;
     const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : {};
@@ -24,27 +29,29 @@ async function harness(state: ConversationState) {
     if (route === "/auth/v1/user") return Promise.resolve(Response.json({ id: ACTOR }));
     if (route.endsWith("support_runtime_operator_snapshot")) {
       return Promise.resolve(Response.json({
-        state,
-        revision: 7,
+        state: currentState,
+        revision: currentRevision,
         catalog_hash: catalogHash,
-        automation_mode: "human",
-        control_version: CONTROL_VERSION,
+        automation_mode: currentMode,
+        control_version: currentControlVersion,
         phone_e164: NON_CANARY_PHONE,
         requests: [],
       }));
     }
     if (route.endsWith("support_runtime_operator_replay")) {
-      return Promise.resolve(Response.json({ replayed: false, revision: 7 }));
+      return Promise.resolve(Response.json({ replayed: false, revision: currentRevision }));
     }
     if (route.endsWith("support_runtime_commit_operator")) {
+      currentState = body.p_state as ConversationState;
+      currentRevision = 8;
+      currentMode = "bot";
+      currentControlVersion = CONTROL_VERSION_AFTER;
       return Promise.resolve(Response.json({
-        ok: true,
-        command: "RESUME",
-        command_id: COMMAND,
-        revision: 8,
-        control_version: "2026-09-15T15:07:08.639798+00:00",
-        automation_mode: "bot",
+        replayed: false,
+        revision: currentRevision,
         outbox_id: null,
+        requests: [],
+        reply_body: null,
       }));
     }
     return Promise.reject(new Error(`unexpected transport route ${route}`));
@@ -85,7 +92,7 @@ Deno.test("operator snapshot enables manual control even when phone is outside M
   assert(!fixture.calls.some((call) => call.route.endsWith("support_runtime_commit_operator")));
 });
 
-Deno.test("authenticated RESUME outside canary clears handoff and commits BOT silently", async () => {
+Deno.test("authenticated RESUME outside canary clears handoff and returns verifiable BOT acknowledgement", async () => {
   const state = applyEvent(initState(CONVERSATION), { kind: "HUMAN_REQUEST" });
   assert(state.handoff !== null);
   const fixture = await harness(state);
@@ -101,8 +108,15 @@ Deno.test("authenticated RESUME outside canary clears handoff and commits BOT si
   assertEquals(next.handoff, null);
   assertEquals((commit.body.p_projection as Record<string, unknown>).automation_mode, "bot");
   assertEquals(commit.body.p_reply_body, null);
-  assertEquals((result as Record<string, unknown>).automation_mode, "bot");
-  assertEquals((result as Record<string, unknown>).command_id, COMMAND);
+  const ack = result as Record<string, unknown>;
+  assertEquals(ack.ok, true);
+  assertEquals(ack.command, "RESUME");
+  assertEquals(ack.command_id, COMMAND);
+  assertEquals(ack.revision, 8);
+  assertEquals(ack.control_version, CONTROL_VERSION_AFTER);
+  assertEquals(ack.automation_mode, "bot");
+  assertEquals(ack.outbox_id, null);
+  assertEquals(fixture.calls.filter((call) => call.route.endsWith("support_runtime_operator_snapshot")).length, 2);
 });
 
 Deno.test("RESUME root envelope rejects extra browser identity fields before commit", async () => {
