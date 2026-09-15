@@ -101,8 +101,8 @@ Deno.test("authenticated RESUME outside canary clears handoff and commits BOT si
   assertEquals(next.handoff, null);
   assertEquals((commit.body.p_projection as Record<string, unknown>).automation_mode, "bot");
   assertEquals(commit.body.p_reply_body, null);
-  assertEquals(result.automation_mode, "bot");
-  assertEquals(result.command_id, COMMAND);
+  assertEquals((result as Record<string, unknown>).automation_mode, "bot");
+  assertEquals((result as Record<string, unknown>).command_id, COMMAND);
 });
 
 Deno.test("RESUME root envelope rejects extra browser identity fields before commit", async () => {
