@@ -151,6 +151,11 @@ function graveReference(text: string): string | null {
   return match?.[0]?.trim() || null;
 }
 
+function referenceAfter(text: string, anchor: RegExp): string | null {
+  const clause = text.match(anchor)?.[1]?.trim();
+  return clause ? graveReference(clause) : null;
+}
+
 function deceasedName(text: string): string | null {
   const match = text.match(
     /\b(?:o\s+)?falecido\s+(?:é|e)\s+(.+?)\s+(?:e|é)\s+(?:está|esta)\s+sepultad[oa]\b/i,
@@ -159,10 +164,11 @@ function deceasedName(text: string): string | null {
 }
 
 function burialReferenceValue(text: string): string | null {
-  const location = graveReference(text);
-  if (!location) return null;
-  const name = deceasedName(text);
-  return name ? `${name}, ${location}` : location;
+  return referenceAfter(text, /sepultad[oa]\s+(?:na|no|em)\s+([^.;]+)/i) ?? graveReference(text);
+}
+
+function concessionReferenceValue(text: string): string | null {
+  return referenceAfter(text, /concess[aã]o\s+(?:correta\s+)?(?:é|e)\s+([^.;]+)/i);
 }
 
 const SUBJECT_HINTS = [
@@ -366,11 +372,23 @@ export function interpret(input: InterpreterInput): Interpretation {
       requires_confirmation: false,
     });
   }
+  const suppliedDeceasedName = deceasedName(input.text);
+  if (suppliedDeceasedName && !seen.has("deceased_name")) {
+    seen.add("deceased_name");
+    facts.push({
+      fact_code: "deceased_name",
+      value: suppliedDeceasedName,
+      source: correctionMarker ? "USER_CORRECTION" : "USER_EXPLICIT",
+      confidence: "HIGH",
+      evidence: input.text,
+      requires_confirmation: false,
+    });
+  }
   // The concession reference is only a locating hint supplied by the citizen.
   // It never proves ownership or that the recadastro is complete.
   const concessionReference =
-    !burialReference && (input.context.open_goal_code === "GOAL_RECADASTRO" || goal?.goal_code === "GOAL_RECADASTRO")
-      ? graveReference(input.text)
+    (input.context.open_goal_code === "GOAL_RECADASTRO" || goal?.goal_code === "GOAL_RECADASTRO")
+      ? concessionReferenceValue(input.text) ?? (!explicitBurialStatement ? graveReference(input.text) : null)
       : null;
   if (concessionReference && !seen.has("concession_reference")) {
     seen.add("concession_reference");
