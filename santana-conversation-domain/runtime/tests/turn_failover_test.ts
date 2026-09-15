@@ -1,4 +1,4 @@
-import { assert, assertEquals } from "../../../tests/fixtures/assert.ts";
+import { assertEquals } from "../../../tests/fixtures/assert.ts";
 import { initState } from "../../engine/engine.ts";
 import { interpret } from "../interpreter/deterministic.ts";
 import { planTurn } from "../turn.ts";
@@ -31,9 +31,9 @@ Deno.test("canonical enum rejection fails over once to the current deterministic
   }, {
     route_attempted: "MOTOR_V2",
     fallbackInterpreter: {
-      interpret: async (value) => {
+      interpret: (value) => {
         fallbackCalls += 1;
-        return interpret(value);
+        return Promise.resolve(interpret(value));
       },
     },
   });
@@ -56,9 +56,9 @@ Deno.test("valid V2 output is used and does not invoke deterministic failover", 
   }, {
     route_attempted: "MOTOR_V2",
     fallbackInterpreter: {
-      interpret: async (value) => {
+      interpret: (value) => {
         fallbackCalls += 1;
-        return interpret(value);
+        return Promise.resolve(interpret(value));
       },
     },
   });

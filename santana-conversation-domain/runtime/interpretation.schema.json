@@ -94,7 +94,19 @@
     "official_mapping": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["journeys", "subintents", "transverse_states", "intent_changed", "complexity", "risk_level", "confidence", "evidence_turn_ids", "selected_event", "suppressed_events", "reason"],
+      "required": [
+        "journeys",
+        "subintents",
+        "transverse_states",
+        "intent_changed",
+        "complexity",
+        "risk_level",
+        "confidence",
+        "evidence_turn_ids",
+        "selected_event",
+        "suppressed_events",
+        "reason"
+      ],
       "properties": {
         "journeys": { "type": "array", "items": { "type": "string" } },
         "subintents": { "type": "array", "items": { "type": "string" } },

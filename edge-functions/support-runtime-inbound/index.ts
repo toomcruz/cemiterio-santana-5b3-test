@@ -8,7 +8,7 @@ import {
 import { GeminiProvider } from "../../santana-conversation-domain/integrations/gemini.ts";
 import { HttpProblem, json } from "../_shared/http.ts";
 import { WapiAttachmentProcessor } from "../_shared/official-attachments.ts";
-import { runtimeCanaryAllowsAutomaticReply, selectCanaryRoute } from "../_shared/official-runtime-canary.ts";
+import { selectCanaryRoute } from "../_shared/official-runtime-canary.ts";
 import { OfficialSupabaseRest } from "../_shared/official-rest.ts";
 import { SupabaseRuntimeStore } from "../_shared/official-runtime-store.ts";
 import { requireRuntimeIngressAccess } from "../_shared/official-security.ts";
@@ -101,10 +101,7 @@ function interpreter() {
 async function deliver(
   rest: OfficialSupabaseRest,
   outboxId: string | null,
-  configuredCanaryHash: string | undefined,
-  automaticRepliesAllowed: boolean,
-): Promise<"queued" | "sent" | "failed" | "suppressed"> {
-  if (!automaticRepliesAllowed) return "suppressed";
+): Promise<"queued" | "sent" | "failed"> {
   if (!outboxId) return "queued";
   const mode = (Deno.env.get("SUPPORT_RUNTIME_DELIVERY_MODE") ?? "QUEUE_ONLY").toUpperCase();
   if (mode !== "DIRECT") return "queued";
@@ -116,13 +113,6 @@ async function deliver(
     return claimed.status === "SENT" ? "sent" : "queued";
   }
   const claimedPhone = text(claimed.phone_e164);
-  if (!await runtimeCanaryAllowsAutomaticReply(claimedPhone, configuredCanaryHash)) {
-    await rest.rpc("support_runtime_fail_delivery", {
-      p_outbox_id: outboxId,
-      p_error: "CANARY_PHONE_BLOCKED",
-    }).catch(() => undefined);
-    return "failed";
-  }
   const phone = claimedPhone.replace(/\D/g, "");
   const body = text(claimed.body);
   if (!phone || !body) {
@@ -172,10 +162,9 @@ Deno.serve(async (request) => {
     const rest = new OfficialSupabaseRest();
     const input = object(payload);
     if (input.kind === "OPERATOR_SNAPSHOT" || input.kind === "OPERATOR_COMMAND") {
-      const result = object(await processOfficialOperator(input, request, rest, configuredCanaryHash));
+      const result = object(await processOfficialOperator(input, request, rest));
       if (input.kind === "OPERATOR_SNAPSHOT") return json(result);
-      const allowed = await runtimeCanaryAllowsAutomaticReply(text(result.phone_e164), configuredCanaryHash);
-      const delivery = await deliver(rest, text(result.outbox_id) || null, configuredCanaryHash, allowed);
+      const delivery = await deliver(rest, text(result.outbox_id) || null);
       const { phone_e164: _privatePhone, ...response } = result;
       return json({ ...response, delivery });
     }
@@ -192,7 +181,8 @@ Deno.serve(async (request) => {
       if (!apiKey) throw new HttpProblem(503, "MOTOR_V2_UNCONFIGURED", "Motor V2 provider is not configured");
       const store = new SupabaseRuntimeStore(rest, new WapiAttachmentProcessor(rest));
       const deterministicFallback = {
-        interpret: (input: Parameters<typeof deterministicInterpret>[0]) => Promise.resolve(deterministicInterpret(input)),
+        interpret: (input: Parameters<typeof deterministicInterpret>[0]) =>
+          Promise.resolve(deterministicInterpret(input)),
       };
       const result = await processOfficialTurn(
         inbound,
@@ -205,11 +195,17 @@ Deno.serve(async (request) => {
           route_attempted: "MOTOR_V2",
           fallbackInterpreter: deterministicFallback,
           onFailover: (route) => {
-            console.log("motor_v2_failover", route.route_attempted, route.provider_result, route.failover_route, route.reason);
+            console.log(
+              "motor_v2_failover",
+              route.route_attempted,
+              route.provider_result,
+              route.failover_route,
+              route.reason,
+            );
           },
         },
       );
-      const delivery = await deliver(rest, result.outbox_id, configuredCanaryHash, result.reply_body !== null);
+      const delivery = await deliver(rest, result.outbox_id);
       return json({
         accepted: true,
         kind: result.kind,
@@ -220,20 +216,13 @@ Deno.serve(async (request) => {
         uses_ai: true,
       });
     }
-    const automaticRepliesAllowed = await runtimeCanaryAllowsAutomaticReply(
-      inbound.phone_e164,
-      configuredCanaryHash,
-    );
     const store = new SupabaseRuntimeStore(rest, new WapiAttachmentProcessor(rest));
     const result = await processOfficialTurn(inbound, store, interpreter(), {
-      automatic_replies_allowed: automaticRepliesAllowed,
+      // The persisted conversation mode decides whether this turn may reply.
+      // Canary selection is intentionally independent from reply permission.
+      automatic_replies_allowed: true,
     });
-    const delivery = await deliver(
-      rest,
-      result.outbox_id,
-      configuredCanaryHash,
-      automaticRepliesAllowed,
-    );
+    const delivery = await deliver(rest, result.outbox_id);
     return json({
       accepted: true,
       kind: result.kind,

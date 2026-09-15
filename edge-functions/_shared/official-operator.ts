@@ -14,7 +14,6 @@ import {
 } from "../../santana-conversation-domain/runtime/server_transition.ts";
 import { validateState } from "../../santana-conversation-domain/engine/validate.ts";
 import { HttpProblem } from "./http.ts";
-import { runtimeCanaryAllowsAutomaticReply } from "./official-runtime-canary.ts";
 import { OfficialSupabaseRest } from "./official-rest.ts";
 
 interface Snapshot {
@@ -31,7 +30,6 @@ export async function processOfficialOperator(
   payload: Record<string, unknown>,
   request: Request,
   rest: OfficialSupabaseRest,
-  canaryHash: string | undefined,
 ) {
   const access = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1] ?? "";
   const actor = await rest.authenticatedUser(access);
@@ -53,13 +51,14 @@ export async function processOfficialOperator(
     throw new HttpProblem(404, "RUNTIME_NOT_FOUND", "Official attendance not found");
   }
   const state = asStoredState(snapshot.state, conversationId);
-  const allowed = await runtimeCanaryAllowsAutomaticReply(snapshot.phone_e164, canaryHash);
   if (!command) {
     return {
       revision: snapshot.revision,
       automation_mode: snapshot.automation_mode,
       control_version: snapshot.control_version,
-      commands_enabled: allowed,
+      // Authenticated operators control automation independently of canary
+      // rollout; the canary only selects the processing motor for inbound turns.
+      commands_enabled: true,
       goals: state.goals.map((goal) => ({
         goal_id: goal.goal_id,
         goal_code: goal.goal_code,
@@ -77,7 +76,6 @@ export async function processOfficialOperator(
       requests: snapshot.requests ?? [],
     };
   }
-  if (!allowed) throw new HttpProblem(403, "CANARY_PHONE_BLOCKED", "Only the authorized canary can receive commands");
   const catalogHash = await currentCatalogHash();
   if (snapshot.catalog_hash !== catalogHash) {
     throw new HttpProblem(409, "CATALOG_UPGRADE_REQUIRED", "A controlled catalog upgrade is required");
