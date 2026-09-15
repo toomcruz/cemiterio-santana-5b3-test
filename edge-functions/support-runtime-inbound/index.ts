@@ -203,7 +203,8 @@ Deno.serve(async (request) => {
       if (!apiKey) throw new HttpProblem(503, "MOTOR_V2_UNCONFIGURED", "Motor V2 provider is not configured");
       const store = new SupabaseRuntimeStore(rest, new WapiAttachmentProcessor(rest));
       const deterministicFallback = {
-        interpret: (input: Parameters<typeof deterministicInterpret>[0]) => Promise.resolve(deterministicInterpret(input)),
+        interpret: (input: Parameters<typeof deterministicInterpret>[0]) =>
+          Promise.resolve(deterministicInterpret(input)),
       };
       const result = await processOfficialTurn(
         inbound,
@@ -216,7 +217,13 @@ Deno.serve(async (request) => {
           route_attempted: "MOTOR_V2",
           fallbackInterpreter: deterministicFallback,
           onFailover: (route) => {
-            console.log("motor_v2_failover", route.route_attempted, route.provider_result, route.failover_route, route.reason);
+            console.log(
+              "motor_v2_failover",
+              route.route_attempted,
+              route.provider_result,
+              route.failover_route,
+              route.reason,
+            );
           },
         },
       );
