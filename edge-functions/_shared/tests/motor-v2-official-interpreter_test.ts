@@ -225,6 +225,50 @@ Deno.test("V2 multi-intent is not collapsed into an arbitrary official transitio
   assert(result.clarification_reason?.includes("mais de um assunto"));
 });
 
+Deno.test("LOW global confidence preserves corroborated parallel goals without advancing actions", async () => {
+  const inputText = "Preciso de exumação e também de recadastro.";
+  const result = await new MotorV2OfficialInterpreter(provider({
+    ...baseUnderstanding,
+    confidence: "low",
+    subintents: ["EXUMACAO", "RECADASTRO"],
+    journeys: ["RESTOS_MORTAIS", "DIREITOS_CADASTRO"],
+    transverse_states: ["MULTI_INTENT"],
+    evidence_turns: ["msg-1"],
+  })).interpret(input(inputText));
+
+  assertEquals(result.needs_clarification, false);
+  assertEquals(result.secondary_goals?.map((goal) => goal.goal_code), ["GOAL_RECADASTRO"]);
+  const plan = await planTurn({
+    ...input(inputText),
+    state: initState("low-multi-intent"),
+    automation_mode: "BOT_ACTIVE",
+  }, new MotorV2OfficialInterpreter(provider({
+    ...baseUnderstanding,
+    confidence: "low",
+    subintents: ["EXUMACAO", "RECADASTRO"],
+    journeys: ["RESTOS_MORTAIS", "DIREITOS_CADASTRO"],
+    transverse_states: ["MULTI_INTENT"],
+    evidence_turns: ["msg-1"],
+  })));
+
+  assertEquals(plan.next_state.goals.length, 2);
+  assertEquals(plan.next_state.pending_actions, []);
+});
+
+Deno.test("LOW global confidence does not invent an uncorroborated parallel goal", async () => {
+  const result = await new MotorV2OfficialInterpreter(provider({
+    ...baseUnderstanding,
+    confidence: "low",
+    subintents: ["EXUMACAO", "RECADASTRO"],
+    journeys: ["RESTOS_MORTAIS", "DIREITOS_CADASTRO"],
+    transverse_states: ["MULTI_INTENT"],
+  })).interpret(input("Preciso de exumação."));
+
+  assertEquals(result.goal?.goal_code, "GOAL_EXUMACAO");
+  assertEquals(result.secondary_goals, undefined);
+  assertEquals(result.primary_event?.event_kind, "NEW_GOAL");
+});
+
 Deno.test("V2 closing state becomes a social no-op when no question is pending", async () => {
   const result = await new MotorV2OfficialInterpreter(provider({
     ...baseUnderstanding,

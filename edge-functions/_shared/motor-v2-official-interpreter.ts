@@ -168,7 +168,8 @@ function applyUnderstandingToOfficialInterpretation(
     role: "user",
     content: input.text,
   }]);
-  const deterministicGoalCount = semanticGoals(deterministicCurrent).size;
+  const deterministicGoals = semanticGoals(deterministicCurrent);
+  const deterministicGoalCount = deterministicGoals.size;
   const safeDeterministicRoute = Boolean(result.primary_event) &&
     ["NEW_GOAL", "CORRECTION", "CHANGE_OF_MIND", "COMPLEMENT", "ANSWER", "PARALLEL_QUESTION", "SOCIAL"].includes(
       baseKind ?? "",
@@ -250,12 +251,18 @@ function applyUnderstandingToOfficialInterpretation(
   // ambiguous shapes still fail closed rather than inventing a new case.
   const parallelGoals = semanticGoalCandidates(understanding, input.text)
     .filter((candidate) => candidate.goal_code !== result.goal?.goal_code);
+  // LOW global confidence limits advancement, not preservation. Preserve a
+  // parallel goal at LOW only when the closed V2 mapping agrees with the
+  // deterministic interpretation of this same turn; no fuzzy or fallback
+  // goal matching is allowed.
+  const preservableParallelGoals = lowConfidence
+    ? parallelGoals.filter((candidate) => deterministicGoals.has(candidate.goal_code))
+    : parallelGoals;
   const canMaterializeParallel = hasMultipleSemanticGoals &&
     result.primary_event?.event_kind === "NEW_GOAL" &&
     result.goal !== null &&
-    parallelGoals.length > 0 &&
+    preservableParallelGoals.length > 0 &&
     currentTurnIsEvidence &&
-    !lowConfidence &&
     !mediaNeedsReview &&
     !unmappedSemantic &&
     !blockingAmbiguity &&
@@ -263,7 +270,7 @@ function applyUnderstandingToOfficialInterpretation(
   if (canMaterializeParallel) {
     result = {
       ...result,
-      secondary_goals: parallelGoals,
+      secondary_goals: preservableParallelGoals,
       needs_clarification: false,
       clarification_reason: null,
     };
