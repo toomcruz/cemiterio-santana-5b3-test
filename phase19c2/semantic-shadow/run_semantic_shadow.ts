@@ -365,8 +365,16 @@ async function main(): Promise<void> {
     valid_ai_outputs: observations.filter((item) => item.outcome === "llm_valid" && item.ai_output_used).length,
     fallback_count: observations.filter((item) => item.fallback_used).length,
     directed_pass_count: rows.filter((row) => row.directed_pass === true).length,
-    AI_VALID_RATE: observations.length === 0 ? 0 : observations.filter((item) => item.outcome === "llm_valid" && item.ai_output_used).length / observations.length,
-    SAFE_TURN_COMPLETION_RATE: rows.length === 0 ? 0 : rows.filter((row) => row.directed_pass === true && row.integrated_v2 && (row.integrated_v2 as Record<string, unknown>).outcome !== "INTERPRETATION_UNAVAILABLE").length / rows.length,
+    AI_VALID_RATE: observations.length === 0
+      ? 0
+      : observations.filter((item) => item.outcome === "llm_valid" && item.ai_output_used).length / observations.length,
+    SAFE_TURN_COMPLETION_RATE: rows.length === 0
+      ? 0
+      : rows.filter(
+        (row) =>
+          row.directed_pass === true && row.integrated_v2 &&
+          (row.integrated_v2 as Record<string, unknown>).outcome !== "INTERPRETATION_UNAVAILABLE",
+      ).length / rows.length,
     external_effects: false,
     whatsapp_delivery: "SUPPRESSED",
     review_package: "written separately without system-origin labels",
