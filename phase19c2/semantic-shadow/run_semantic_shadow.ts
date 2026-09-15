@@ -26,6 +26,8 @@ interface ShadowCase {
     handoff: boolean;
     questions: number;
   };
+  reply_contains?: string[];
+  reply_not_contains?: string[];
 }
 
 function openState(conversationId: string, goalCode: string): ConversationState {
@@ -52,6 +54,7 @@ function cases(): ShadowCase[] {
         handoff: false,
         questions: 1,
       },
+      reply_contains: ["recadastro", "outro assunto"],
     },
     {
       case_id: "semantic-02",
@@ -67,6 +70,7 @@ function cases(): ShadowCase[] {
         handoff: false,
         questions: 1,
       },
+      reply_contains: ["agora vamos tratar de recadastro", "exumação foi preservado"],
     },
     {
       case_id: "semantic-03",
@@ -82,6 +86,7 @@ function cases(): ShadowCase[] {
         handoff: false,
         questions: 0,
       },
+      reply_contains: ["Encerramos este atendimento"],
     },
     {
       case_id: "semantic-04",
@@ -97,6 +102,7 @@ function cases(): ShadowCase[] {
         handoff: false,
         questions: 1,
       },
+      reply_contains: ["imagem ainda não foi analisado"],
     },
     {
       case_id: "semantic-05",
@@ -112,6 +118,7 @@ function cases(): ShadowCase[] {
         handoff: true,
         questions: 0,
       },
+      reply_contains: ["encaminhamento"],
     },
     {
       case_id: "semantic-06",
@@ -127,6 +134,7 @@ function cases(): ShadowCase[] {
         handoff: true,
         questions: 0,
       },
+      reply_contains: ["encaminhamento"],
     },
     {
       case_id: "semantic-07",
@@ -142,6 +150,7 @@ function cases(): ShadowCase[] {
         handoff: false,
         questions: 1,
       },
+      reply_contains: ["finalidade"],
     },
     {
       case_id: "semantic-08",
@@ -157,12 +166,16 @@ function cases(): ShadowCase[] {
         handoff: false,
         questions: 1,
       },
+      reply_contains: ["recadastro", "não de exumação"],
     },
     {
       case_id: "semantic-09",
       category: "return_with_context",
-      text: "A referência é quadra 3.",
-      state: openState("semantic-09", "GOAL_EXUMACAO"),
+      text: "Voltei. A referência continua sendo quadra 3.",
+      state: applyEvent(
+        openState("semantic-09", "GOAL_EXUMACAO"),
+        { kind: "COMPLEMENT", facts: [{ code: "burial_reference", value: "quadra 3" }] },
+      ),
       expected: {
         outcome: "PROPOSED",
         event_kind: "COMPLEMENT",
@@ -172,6 +185,7 @@ function cases(): ShadowCase[] {
         handoff: false,
         questions: 1,
       },
+      reply_contains: ["exumação"],
     },
     {
       case_id: "semantic-10",
@@ -187,6 +201,7 @@ function cases(): ShadowCase[] {
         handoff: false,
         questions: 1,
       },
+      reply_contains: ["outro falecido", "atendimento anterior separado"],
     },
   ];
 }
@@ -252,9 +267,21 @@ function safePlan(plan: Awaited<ReturnType<typeof planTurn>>) {
     confidence_fields,
     confidence_arbitration,
     reply_present: plan.reply_draft !== null,
+    reply_draft: plan.reply_draft,
     state_seq: plan.next_state.seq,
     cases: plan.next_state.cases.length,
     goals: plan.next_state.goals.length,
+    state: {
+      current_topic: plan.next_state.current_topic,
+      pending_question: plan.next_state.pending_question?.fact_code ?? null,
+      handoff_priority: plan.next_state.handoff?.priority ?? null,
+      goals: plan.next_state.goals.map((goal) => ({
+        goal_code: goal.goal_code,
+        status: goal.status,
+        case_id: goal.case_id,
+      })),
+      cases: plan.next_state.cases.map((item) => ({ case_id: item.case_id, subject_kind: item.subject_kind })),
+    },
     official_mapping: plan.interpretation?.official_mapping
       ? {
         selected_event: plan.interpretation.official_mapping.selected_event,
@@ -266,6 +293,35 @@ function safePlan(plan: Awaited<ReturnType<typeof planTurn>>) {
       : null,
     route: plan.route,
   };
+}
+
+function reviewContext(state: ConversationState): string[] {
+  const labels: Record<string, string> = {
+    GOAL_EXUMACAO: "exumação",
+    GOAL_RECADASTRO: "recadastro",
+    GOAL_CONCESSAO: "concessão",
+    GOAL_TRANSPORTE: "transporte",
+  };
+  const active = state.goals.filter((goal) => ["ACTIVE", "SUSPENDED", "WAITING"].includes(goal.status));
+  const lines = active.length === 0
+    ? ["Não há atendimento anterior em andamento."]
+    : [`Atendimento(s) em andamento: ${
+      active.map((goal) => labels[goal.goal_code] ?? "assunto registrado").join(", ")
+    }.`];
+  const pendingLabels: Record<string, string> = {
+    exhumation_purpose: "finalidade da exumação",
+    burial_reference: "referência do sepultamento",
+    concession_reference: "referência da concessão",
+    recadastro_status: "status do recadastro",
+  };
+  if (state.pending_question) {
+    lines.push(
+      `Pergunta pendente: ${pendingLabels[state.pending_question.fact_code] ?? "uma informação do atendimento"}.`,
+    );
+  }
+  if (state.facts.length > 0) lines.push("Há fatos anteriores registrados no atendimento.");
+  if (state.cases.length > 1) lines.push(`Há ${state.cases.length} atendimentos separados no histórico.`);
+  return lines;
 }
 
 function humanPlan(plan: Awaited<ReturnType<typeof planTurn>>) {
@@ -321,6 +377,15 @@ async function main(): Promise<void> {
       integrated[key as keyof typeof integrated] !== expected
     )
       .map(([key, expected]) => ({ field: key, expected, actual: integrated[key as keyof typeof integrated] }));
+    const reply = v2Plan.reply_draft ?? "";
+    const replyFailures = [
+      ...(item.reply_contains ?? [])
+        .filter((fragment) => !reply.toLocaleLowerCase().includes(fragment.toLocaleLowerCase()))
+        .map((fragment) => ({ field: "reply_contains", expected: fragment, actual: reply })),
+      ...(item.reply_not_contains ?? [])
+        .filter((fragment) => reply.toLocaleLowerCase().includes(fragment.toLocaleLowerCase()))
+        .map((fragment) => ({ field: "reply_not_contains", expected: fragment, actual: reply })),
+    ];
     const aIsV2 = assignmentPattern[index] === "A";
     rows.push({
       case_id: item.case_id,
@@ -336,8 +401,8 @@ async function main(): Promise<void> {
       effective_response_route: v2Plan.route.failover_route ?? "MOTOR_V2",
       deterministic_baseline: safePlan(baselinePlan),
       expected: item.expected,
-      directed_pass: directedFailures.length === 0,
-      directed_failures: directedFailures,
+      directed_pass: directedFailures.length === 0 && replyFailures.length === 0,
+      directed_failures: [...directedFailures, ...replyFailures],
       external_effects: false,
       delivery: "SUPPRESSED",
     });
@@ -346,9 +411,7 @@ async function main(): Promise<void> {
       review_id: `review-${String(index + 1).padStart(2, "0")}`,
       category: item.category,
       context: [
-        item.state.goals.length > 0
-          ? "Há um atendimento anterior em andamento."
-          : "Não há atendimento anterior em andamento.",
+        ...reviewContext(item.state),
         item.text,
       ],
       response_a: aIsV2 ? humanPlan(v2Plan) : humanPlan(baselinePlan),
@@ -357,7 +420,7 @@ async function main(): Promise<void> {
   }
 
   const summary = {
-    schema_version: "phase19c5-directed-semantic-shadow/1.0.0",
+    schema_version: "phase19c6-reply-boundary-shadow/1.0.0",
     synthetic_input_only: true,
     case_count: rows.length,
     provider: CONTROLLED_NVIDIA_MODEL,

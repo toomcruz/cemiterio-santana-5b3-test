@@ -225,6 +225,69 @@ function isBereavementStatement(interpretation: Interpretation | null): boolean 
   return /\b(faleceu|falecimento|morreu|obito)\b/.test(text);
 }
 
+function newlyOpenedGoals(next: ConversationState, previous: ConversationState | undefined): GoalRecord[] {
+  const previousIds = new Set((previous?.goals ?? []).map((goal) => goal.goal_id));
+  return next.goals.filter((goal) =>
+    !previousIds.has(goal.goal_id) &&
+    ["ACTIVE", "SUSPENDED", "WAITING"].includes(goal.status)
+  );
+}
+
+function mediaNeedsReview(interpretation: Interpretation | null): boolean {
+  return interpretation?.official_mapping?.transverse_states.includes("MEDIA_NOT_ANALYZED") === true;
+}
+
+function transitionReply(
+  interpretation: Interpretation | null,
+  next: ConversationState,
+  previous: ConversationState | undefined,
+  question: string | null,
+): string | null {
+  const eventKind = interpretation?.primary_event?.event_kind;
+  const previousGoal = previous ? contextGoal(previous) : null;
+  const nextGoal = contextGoal(next);
+
+  if (eventKind === "RECLASSIFICATION" && previousGoal && nextGoal && previousGoal.goal_code !== nextGoal.goal_code) {
+    const from = GOAL_LABELS[previousGoal.goal_code] ?? "atendimento anterior";
+    const to = GOAL_LABELS[nextGoal.goal_code] ?? "novo assunto";
+    return `Entendi a mudança: agora vamos tratar de ${to}. O atendimento de ${from} foi preservado, e este assunto seguirá no mesmo histórico.${
+      question ? ` ${question}` : ""
+    }`;
+  }
+
+  if ((eventKind === "CORRECTION" || eventKind === "CHANGE_OF_MIND") && previousGoal && interpretation?.goal) {
+    if (interpretation.goal.goal_code !== previousGoal.goal_code) {
+      const from = GOAL_LABELS[previousGoal.goal_code] ?? "atendimento anterior";
+      const to = GOAL_LABELS[interpretation.goal.goal_code] ?? "novo assunto";
+      return `Entendi a correção: você quer tratar de ${to}, não de ${from}. Mantive o atendimento de ${from} registrado para não misturar os assuntos. Confirme se deseja seguir com ${to}.`;
+    }
+  }
+
+  if (eventKind === "NEW_GOAL") {
+    const opened = newlyOpenedGoals(next, previous);
+    const primaryCode = interpretation?.goal?.goal_code ?? nextGoal?.goal_code ?? null;
+    const secondaryCodes = (interpretation?.secondary_goals ?? [])
+      .map((goal) => goal.goal_code)
+      .filter((code) => code !== primaryCode && opened.some((goal) => goal.goal_code === code));
+    if (secondaryCodes.length > 0) {
+      const primary = GOAL_LABELS[primaryCode ?? ""] ?? "assunto principal";
+      const secondary = secondaryCodes.map((code) => GOAL_LABELS[code] ?? "outro assunto").join(" e ");
+      return `Entendi: vamos tratar de ${primary} e também manter ${secondary} como outro assunto deste atendimento.${
+        question ? ` Primeiro, ${question}` : ""
+      }`;
+    }
+
+    if (previous && previous.cases.length > 0 && next.cases.length > previous.cases.length) {
+      const label = GOAL_LABELS[nextGoal?.goal_code ?? primaryCode ?? ""] ?? "solicitação";
+      return `Entendi: este pedido é para outro falecido. Mantive o atendimento anterior separado e iniciei este atendimento de ${label}.${
+        question ? ` ${question}` : ""
+      }`;
+    }
+  }
+
+  return null;
+}
+
 export function draftReply(input: {
   outcome: ReplyOutcome;
   question_draft: string | null;
@@ -244,6 +307,11 @@ export function draftReply(input: {
     return "Olá! Como posso ajudar? Você pode explicar em poucas palavras o que precisa: recadastro, exumação, ossuário, concessão ou alguma situação no jazigo.";
   }
   const eventKind = input.interpretation?.primary_event?.event_kind;
+  const closing = eventKind === "SOCIAL" &&
+    input.interpretation?.official_mapping?.transverse_states.includes("CONVERSATION_CLOSING") === true;
+  if (closing) {
+    return "Certo. Encerramos este atendimento sem criar uma nova pendência. As informações já registradas permanecem no histórico.";
+  }
   if (eventKind === "SOCIAL" && input.question_draft && contextGoal(input.next_state)) {
     return `${greetingPrefix(input.interpretation?.text_normalized ?? "")} Continuamos no atendimento de ${
       GOAL_LABELS[contextGoal(input.next_state)!.goal_code] ?? "solicitação"
@@ -258,7 +326,7 @@ export function draftReply(input: {
     );
     if (repair) return repair;
   }
-  if (eventKind === "HUMAN_REQUEST" && input.outcome === "PROPOSED" && input.next_state.handoff) {
+  if (eventKind === "HUMAN_REQUEST" && input.next_state.handoff) {
     if (isConversationClose(input.interpretation?.text_normalized ?? "")) {
       return "As respostas automáticas ficam pausadas por aqui. As informações e o protocolo permanecem registrados para a equipe. Isso não cancela a solicitação de serviço.";
     }
@@ -280,6 +348,16 @@ export function draftReply(input: {
     questionDraft =
       "O falecido deixou esposo(a) ou companheiro(a) vivo? Responda: sim; não, já faleceu; ou não tinha esposo(a)/companheiro(a).";
   }
+  if (mediaNeedsReview(input.interpretation)) {
+    return "Recebi a referência à mídia, mas o conteúdo da imagem ainda não foi analisado. Por isso não posso confirmar o que aparece nela. Você pode descrever o conteúdo ou aguardar a análise da equipe.";
+  }
+  const transition = transitionReply(
+    input.interpretation,
+    input.next_state,
+    input.previous_state,
+    questionDraft,
+  );
+  if (transition) return transition;
   const exhumationPurpose = input.interpretation?.facts.find((fact) => fact.fact_code === "exhumation_purpose");
   if (questionDraft && exhumationPurpose?.value === "OSSUARIO") {
     return `Entendi, você quer colocar os restos no ossuário. ${questionDraft}`;
