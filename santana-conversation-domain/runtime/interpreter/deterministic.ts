@@ -168,6 +168,14 @@ function burialReferenceValue(text: string): string | null {
 }
 
 function concessionReferenceValue(text: string): string | null {
+  // When a turn contains an explicit correction, the corrected clause is the
+  // user's latest value. Do not keep the first concession reference by
+  // accident; this is generic for all supported reference formats.
+  const corrected = text.match(
+    /(?:corrigindo|na verdade|quis dizer)\s*:?\s*(?:a concess[aã]o\s+)?(?:é|e)\s+([^.;]+)/i,
+  );
+  const correctedValue = corrected?.[1] ? graveReference(corrected[1]) : null;
+  if (correctedValue) return correctedValue;
   return referenceAfter(text, /concess[aã]o\s+(?:correta\s+)?(?:é|e)\s+([^.;]+)/i);
 }
 

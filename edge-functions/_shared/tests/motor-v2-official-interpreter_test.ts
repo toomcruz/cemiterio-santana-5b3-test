@@ -2,8 +2,12 @@ import { assert, assertEquals } from "../../../tests/fixtures/assert.ts";
 import { MotorV2OfficialInterpreter } from "../motor-v2-official-interpreter.ts";
 import type { UnderstandingProvider } from "../../../santana-conversation-domain/motor-v2/understanding.ts";
 import type { UnderstandingResult } from "../../../santana-conversation-domain/motor-v2/types.ts";
-import { applyEvent, initState } from "../../../santana-conversation-domain/engine/engine.ts";
-import { toConversationEvents } from "../../../santana-conversation-domain/runtime/interpreter/bridge.ts";
+import { activeFacts, applyEvent, initState } from "../../../santana-conversation-domain/engine/engine.ts";
+import {
+  contextFromState,
+  toConversationEvents,
+} from "../../../santana-conversation-domain/runtime/interpreter/bridge.ts";
+import { understandMessages } from "../../../santana-conversation-domain/motor-v2/understanding.ts";
 import { planTurn } from "../../../santana-conversation-domain/runtime/turn.ts";
 
 const baseUnderstanding: UnderstandingResult = {
@@ -270,6 +274,112 @@ Deno.test("LOW global confidence does not invent an uncorroborated parallel goal
   assertEquals(result.goal?.goal_code, "GOAL_EXUMACAO");
   assertEquals(result.secondary_goals, undefined);
   assertEquals(result.primary_event?.event_kind, "NEW_GOAL");
+});
+
+Deno.test("same-case correction keeps concession, deceased and burial facts separate", async () => {
+  const text =
+    "A concessão correta é Quadra 15, terreno 63. O falecido é José da Silva e está sepultado na Quadra 8, terreno 42.";
+  let before = initState("real-revision-76-state");
+  before = applyEvent(before, { kind: "NEW_GOAL", goal_code: "GOAL_RECADASTRO", case_ref: "same-case" });
+  before = applyEvent(before, {
+    kind: "ANSWER",
+    facts: [{ code: "concession_reference", value: "Quadra 15", source: "USER_EXPLICIT" }],
+  });
+  before = applyEvent(before, {
+    kind: "ANSWER",
+    facts: [{ code: "concession_reference", value: "Quadra 8", source: "USER_EXPLICIT" }],
+  });
+  assertEquals(before.pending_question?.question_code, "Q_CONFLICT_CONFIRM");
+
+  const observations: Array<{ provider: UnderstandingResult; merged: UnderstandingResult }> = [];
+  const result = await new MotorV2OfficialInterpreter(
+    provider({
+      ...baseUnderstanding,
+      journeys: ["DIREITOS_CADASTRO"],
+      subintents: ["DIVERGENCIA_FISICO_CADASTRAL"],
+      transverse_states: ["CONFLICTING_EVIDENCE", "MULTI_INTENT"],
+      complexity: "medium",
+      risk: { level: "P2", signals: ["physical_register_divergence", "conflicting_evidence"] },
+      evidence_turns: ["msg-1"],
+    }),
+    (observation) => observations.push(observation),
+  ).interpret({
+    message_id: "msg-1",
+    text,
+    context: contextFromState(before),
+  });
+
+  const deterministic = understandMessages([{ turn_id: "msg-1", role: "user", content: text }]);
+  assertEquals(deterministic.risk.level, "none");
+  assertEquals(result.primary_event?.event_kind, "CORRECTION");
+  assertEquals(result.needs_clarification, false);
+  assertEquals(result.official_mapping?.risk_level, "none");
+  assertEquals(result.official_mapping?.intent_changed, false);
+  assert(!result.official_mapping?.subintents.includes("DIVERGENCIA_FISICO_CADASTRAL"));
+  assertEquals(observations[0]?.provider.risk.level, "P2");
+  assertEquals(observations[0]?.merged.risk.level, "none");
+  assert(!observations[0]?.merged.subintents.includes("DIVERGENCIA_FISICO_CADASTRAL"));
+
+  const bridge = toConversationEvents(result, before);
+  assert(bridge.events.length > 0);
+  const after = bridge.events.reduce(applyEvent, before);
+  const goal = after.goals.find((candidate) => candidate.goal_code === "GOAL_RECADASTRO")!;
+  assertEquals(activeFacts(after, "concession_reference", goal).map((fact) => fact.value), ["Quadra 15, terreno 63"]);
+  assertEquals(activeFacts(after, "deceased_name", goal).map((fact) => fact.value), ["José da Silva"]);
+  assertEquals(activeFacts(after, "burial_reference", goal).map((fact) => fact.value), ["Quadra 8, terreno 42"]);
+  assertEquals(after.pending_question?.question_code, "Q_RECADASTRO_HOLDER_DOCUMENT");
+});
+
+Deno.test("physical/register divergence remains protected when explicitly stated", async () => {
+  const result = await new MotorV2OfficialInterpreter(provider({
+    ...baseUnderstanding,
+    journeys: ["JAZIGO_ESPACO_FISICO"],
+    subintents: ["DIVERGENCIA_FISICO_CADASTRAL"],
+    risk: { level: "P2", signals: ["physical_register_divergence"] },
+    evidence_turns: ["msg-1"],
+  })).interpret(input("O jazigo que existe fisicamente não corresponde ao que aparece no cadastro."));
+
+  assertEquals(result.official_mapping?.risk_level, "P1");
+  assert(result.official_mapping?.subintents.includes("DIVERGENCIA_FISICO_CADASTRAL"));
+});
+
+Deno.test("operational multi-intent requires distinct goals, not same-goal facts", async () => {
+  const result = await new MotorV2OfficialInterpreter(provider({
+    ...baseUnderstanding,
+    journeys: ["RESTOS_MORTAIS", "DIREITOS_CADASTRO"],
+    subintents: ["EXUMACAO", "RECADASTRO"],
+    transverse_states: ["MULTI_INTENT"],
+    evidence_turns: ["msg-1"],
+  })).interpret(input("Quero corrigir meu recadastro e também iniciar uma exumação de outro falecido."));
+
+  assert(result.goal?.goal_code === "GOAL_RECADASTRO" || result.goal?.goal_code === "GOAL_EXUMACAO");
+  assert((result.secondary_goals ?? []).length > 0);
+});
+
+Deno.test("true concession correction supersedes the previous concession without burial mixing", async () => {
+  let before = initState("true-concession-correction");
+  before = applyEvent(before, { kind: "NEW_GOAL", goal_code: "GOAL_RECADASTRO", case_ref: "same-case" });
+  before = applyEvent(before, {
+    kind: "ANSWER",
+    facts: [{ code: "concession_reference", value: "Quadra 15, terreno 63", source: "USER_EXPLICIT" }],
+  });
+  const result = await new MotorV2OfficialInterpreter(provider({
+    ...baseUnderstanding,
+    journeys: ["DIREITOS_CADASTRO"],
+    subintents: ["CONCESSAO"],
+    evidence_turns: ["msg-1"],
+  })).interpret({
+    message_id: "msg-1",
+    text: "A concessão é Quadra 15, terreno 63. Não, corrigindo: é Quadra 17, terreno 10.",
+    context: contextFromState(before),
+  });
+  assertEquals(result.primary_event?.event_kind, "CORRECTION");
+  const bridge = toConversationEvents(result, before);
+  assert(bridge.events.length > 0);
+  const after = bridge.events.reduce(applyEvent, before);
+  const goal = after.goals.find((candidate) => candidate.goal_code === "GOAL_RECADASTRO")!;
+  assertEquals(activeFacts(after, "concession_reference", goal).map((fact) => fact.value), ["Quadra 17, terreno 10"]);
+  assertEquals(activeFacts(after, "burial_reference", goal), []);
 });
 
 Deno.test("V2 closing state becomes a social no-op when no question is pending", async () => {

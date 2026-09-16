@@ -442,17 +442,21 @@ export function enforceDeterministicRisk(
     messages.filter((message) => message.role === "user").map((message) => message.content).join("\n"),
   );
   const deterministicIntents = intentsFor(text);
-  let deterministic = riskFor(text, unique([...understanding.subintents, ...deterministicIntents]));
+  // Provider labels are semantic hints, not citizen evidence. Risk-sensitive
+  // intent labels may contribute only when the current text independently
+  // produced the same deterministic signal.
+  let deterministic = riskFor(text, deterministicIntents);
   if (deterministicIntents.length === 0 && /sensivel|falecimento|sepultamento/.test(text)) {
     deterministic = {
       level: "P0",
       signals: unique([...deterministic.signals, "low_confidence_sensitive_context"]),
     };
   }
-  const level = riskRank(deterministic.level) > riskRank(understanding.risk.level)
-    ? deterministic.level
-    : understanding.risk.level;
-  const signals = unique([...understanding.risk.signals, ...deterministic.signals]);
+  const providerRisk = deterministic.level === "none"
+    ? { level: "none" as const, signals: [] as string[] }
+    : understanding.risk;
+  const level = riskRank(deterministic.level) > riskRank(providerRisk.level) ? deterministic.level : providerRisk.level;
+  const signals = unique([...providerRisk.signals, ...deterministic.signals]);
   if (
     level === understanding.risk.level &&
     signals.length === understanding.risk.signals.length &&

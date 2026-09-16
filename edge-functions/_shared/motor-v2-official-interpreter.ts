@@ -52,6 +52,11 @@ const SUBINTENT_GOALS: Readonly<Record<string, string>> = {
 };
 
 const INFORMATIONAL_GOALS = new Set(["GOAL_INFO_OSSUARIO", "GOAL_INFO_HORARIO"]);
+const DETERMINISTIC_RISK_SUBINTENTS = new Set([
+  "DIVERGENCIA_FISICO_CADASTRAL",
+  "CONFLITO_CADASTRAL_DOCUMENTO_LEGADO",
+  "RECUPERACAO_APOS_FALHA_DE_PAGAMENTO",
+]);
 
 function contextMessage(
   input: InterpreterInput,
@@ -106,7 +111,11 @@ function mergeCurrentTurnSafetySignals(
     role: "user",
     content: input.text,
   }]);
-  const mergedSubintents = [...new Set([...understanding.subintents, ...deterministic.subintents])];
+  const deterministicSubintents = new Set(deterministic.subintents);
+  const providerSubintents = understanding.subintents.filter((subintent) =>
+    !DETERMINISTIC_RISK_SUBINTENTS.has(subintent) || deterministicSubintents.has(subintent)
+  );
+  const mergedSubintents = [...new Set([...providerSubintents, ...deterministic.subintents])];
   const mergedJourneys = [
     ...new Set([
       ...understanding.journeys,
@@ -118,17 +127,28 @@ function mergeCurrentTurnSafetySignals(
       deterministic.risk.level !== "none"
     ? [input.message_id]
     : [];
+  const deterministicInterpretation = guardInterpretation(deterministicInterpret({
+    message_id: input.message_id,
+    text: input.text,
+    context: input.context,
+  }));
+  const sameCaseFactEvent = ["CORRECTION", "CHANGE_OF_MIND", "ANSWER", "COMPLEMENT"].includes(
+    deterministicInterpretation.primary_event?.event_kind ?? "",
+  );
   const merged: UnderstandingResult = {
     ...understanding,
     journeys: mergedJourneys,
     subintents: mergedSubintents,
     transverse_states: mergedStates,
-    intent_changed: understanding.intent_changed || deterministic.intent_changed,
+    intent_changed: sameCaseFactEvent
+      ? deterministic.intent_changed
+      : understanding.intent_changed || deterministic.intent_changed,
     evidence_turns: [...new Set([...understanding.evidence_turns, ...deterministicEvidence])],
   };
-  const mapped = semanticGoal(merged);
+  const mapped = semanticGoal(deterministic);
   if (
-    !merged.intent_changed && input.context.has_open_goal && mapped && input.context.open_goal_code &&
+    !sameCaseFactEvent && !merged.intent_changed && input.context.has_open_goal && mapped &&
+    input.context.open_goal_code &&
     mapped !== input.context.open_goal_code
   ) {
     merged.intent_changed = true;
@@ -147,19 +167,22 @@ function applyUnderstandingToOfficialInterpretation(
   understanding: UnderstandingResult,
   input: InterpreterInput,
 ): Interpretation {
-  const mappedGoal = semanticGoal(understanding);
-  const mappedGoals = semanticGoals(understanding);
-  const hasMultipleSemanticGoals = mappedGoals.size > 1 || understanding.journeys.length > 1 ||
-    understanding.transverse_states.includes("MULTI_INTENT");
-  const mediaNeedsReview = understanding.transverse_states.includes("MEDIA_NOT_ANALYZED");
-  const lowConfidence = understanding.confidence === "low" || understanding.complexity === "critical";
-  const currentTurnIsEvidence = understanding.evidence_turns.includes(input.message_id);
-  const unmappedSemantic = understanding.subintents.length > 0 && mappedGoals.size === 0;
   const baseKind = base.primary_event?.event_kind ?? null;
   const baseIsHandoff = baseKind === "HUMAN_REQUEST";
   const baseIsCorrection = baseKind === "CORRECTION" || baseKind === "CHANGE_OF_MIND";
   const baseIsAnswerOrComplement = baseKind === "ANSWER" || baseKind === "COMPLEMENT";
   const baseIsNewGoal = baseKind === "NEW_GOAL" || base.case_reference.kind === "NEW";
+  const mappedGoal = semanticGoal(understanding);
+  const mappedGoals = semanticGoals(understanding);
+  // Operational multi-intent means multiple closed goal codes, not multiple
+  // journeys/facts or a provider's broad MULTI_INTENT label. A correction or
+  // complement can carry several facts for the same active goal.
+  const hasMultipleSemanticGoals = !baseIsCorrection && !baseIsAnswerOrComplement &&
+    mappedGoals.size > 1;
+  const mediaNeedsReview = understanding.transverse_states.includes("MEDIA_NOT_ANALYZED");
+  const lowConfidence = understanding.confidence === "low" || understanding.complexity === "critical";
+  const currentTurnIsEvidence = understanding.evidence_turns.includes(input.message_id);
+  const unmappedSemantic = understanding.subintents.length > 0 && mappedGoals.size === 0;
   let result = base;
   const blockingAmbiguity = result.ambiguities.some((ambiguity) => ambiguity.blocking);
   const clarificationOnlyMissingEvent = result.needs_clarification && !result.primary_event && !blockingAmbiguity;
