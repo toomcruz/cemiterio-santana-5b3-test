@@ -82,6 +82,40 @@ Deno.test("reply explains a same-case reclassification and preserves the prior t
   assert(!result.reply_draft?.includes("finalidade da exumação"));
 });
 
+Deno.test("same-goal concession correction drafts the committed next question", async () => {
+  const before = stateWithGoal("same-goal-correction", "GOAL_RECADASTRO");
+  const text =
+    "A concessão correta é Quadra 15, terreno 63. O falecido é José da Silva e está sepultado na Quadra 8, terreno 42.";
+  const result = await planTurn({
+    message_id: "same-goal-correction-message",
+    text,
+    state: before,
+    automation_mode: "BOT_ACTIVE",
+  }, {
+    interpret: (input) =>
+      Promise.resolve(candidate(input, {
+        primary_event: { event_kind: "CORRECTION", confidence: "HIGH", evidence: input.text },
+        goal: { goal_code: "GOAL_CONCESSAO", confidence: "HIGH", evidence: "concessão" },
+        case_reference: { kind: "CURRENT", subject_kind: "DECEASED", subject_hint: null, confidence: "HIGH" },
+        official_mapping: mapping({
+          journeys: ["DIREITOS_CADASTRO", "JAZIGO_ESPACO_FISICO"],
+          subintents: ["RECADASTRO", "CONCESSAO"],
+          intent_changed: true,
+          selected_event: "CORRECTION",
+        }),
+        needs_clarification: false,
+        overall_confidence: "HIGH",
+      })),
+  });
+
+  assertEquals(result.next_state.goals[0]?.goal_code, "GOAL_RECADASTRO");
+  assertEquals(result.next_state.pending_question?.question_code, "Q_RECADASTRO_HOLDER_DOCUMENT");
+  assert(result.reply_draft?.startsWith("Registrei a correção informada."));
+  assert(result.reply_draft?.includes("documento do titular"));
+  assert(!result.reply_draft?.includes("tratar de concessão"));
+  assert(!result.reply_draft?.includes("Confirme se deseja seguir"));
+});
+
 Deno.test("media clarification explains the boundary without claiming image analysis", async () => {
   const result = await planTurn({
     message_id: "media-reply",
@@ -150,7 +184,7 @@ Deno.test("new case reply explains separation from the previous deceased", async
   assert(result.reply_draft?.includes("finalidade"));
 });
 
-Deno.test("correction reply does not continue the denied exhumation question", async () => {
+Deno.test("correction reply does not announce a topic change without a state transition", async () => {
   const before = stateWithGoal("correction-reply");
   const result = await planTurn({
     message_id: "correction-reply-message",
@@ -169,12 +203,11 @@ Deno.test("correction reply does not continue the denied exhumation question", a
   });
 
   assertEquals(result.next_state.goals[0]?.goal_code, "GOAL_EXUMACAO");
-  assert(result.reply_draft?.includes("recadastro, não de exumação"));
-  assert(result.reply_draft?.includes("Confirme se deseja seguir"));
-  assert(!result.reply_draft?.includes("finalidade da exumação"));
+  assert(!result.reply_draft?.includes("recadastro, não de exumação"));
+  assert(!result.reply_draft?.includes("Confirme se deseja seguir"));
 });
 
-Deno.test("correction reply uses the closed V2 topic mapping when reducer keeps the prior goal", async () => {
+Deno.test("correction subintent cannot announce a topic change without a state transition", async () => {
   const before = stateWithGoal("correction-mapped-reply");
   const result = await planTurn({
     message_id: "correction-mapped-reply-message",
@@ -198,8 +231,8 @@ Deno.test("correction reply uses the closed V2 topic mapping when reducer keeps 
   });
 
   assertEquals(result.next_state.goals[0]?.goal_code, "GOAL_EXUMACAO");
-  assert(result.reply_draft?.includes("recadastro, não de exumação"));
-  assert(!result.reply_draft?.includes("finalidade da exumação"));
+  assert(!result.reply_draft?.includes("recadastro, não de exumação"));
+  assert(!result.reply_draft?.includes("Confirme se deseja seguir"));
 });
 
 Deno.test("priority handoff reply never adds a parallel clarification", async () => {
