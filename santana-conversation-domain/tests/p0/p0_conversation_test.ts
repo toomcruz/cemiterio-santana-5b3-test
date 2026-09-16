@@ -8,6 +8,7 @@ import {
   applyAuthoritativeSignal,
   applyEvent,
   buildHandoff,
+  contextGoal,
   type ConversationEvent,
   type ConversationState,
   focusGoal,
@@ -353,6 +354,108 @@ Deno.test("C16 Abandono de subfluxo + novo objetivo", () => {
   assertEquals(handoff.goal_code, "GOAL_COMERCIAL");
   assertEquals(handoff.current_question, "Q_COMMERCIAL_ITEM");
   assert(handoff.essential_context.goal_stack.includes("GOAL_TRANSPORTE:SUSPENDED"), "handoff mantem contexto");
+});
+
+function parkedQuestionFocusFixture(): ConversationState {
+  let state = applyEvent(initState("parked-question-focus"), {
+    kind: "NEW_GOAL",
+    goal_code: "GOAL_EXUMACAO",
+    case_ref: "case-exumacao",
+    facts: [
+      { code: "exhumation_purpose", value: "OSSUARIO" },
+      { code: "surviving_spouse_status", value: "FALECIDO" },
+    ],
+  });
+  const exumacao = goalByCode(state, "GOAL_EXUMACAO");
+  assertEquals(exumacao.status, "WAITING");
+  assertEquals(state.pending_question?.question_code, "Q_BURIAL_REFERENCE");
+
+  state = applyEvent(state, {
+    kind: "NEW_GOAL",
+    goal_code: "GOAL_RECADASTRO",
+    case_ref: "case-recadastro",
+  });
+  state = applyEvent(state, {
+    kind: "ANSWER",
+    facts: [{ code: "concession_reference", value: "Quadra 8, terreno 42" }],
+  });
+  state = applyEvent(state, {
+    kind: "ANSWER",
+    facts: [{ code: "concession_reference", value: "Quadra 15, terreno 63" }],
+  });
+  assertEquals(state.pending_question?.question_code, "Q_CONFLICT_CONFIRM");
+  assertEquals(state.pending_question?.goal_id, goalByCode(state, "GOAL_RECADASTRO").goal_id);
+  return state;
+}
+
+Deno.test("parked question de outro goal nao rouba o foco apos correcao do recadastro", () => {
+  let state = parkedQuestionFocusFixture();
+  const recadastro = goalByCode(state, "GOAL_RECADASTRO");
+  const exumacao = goalByCode(state, "GOAL_EXUMACAO");
+
+  state = applyEvent(state, {
+    kind: "CORRECTION",
+    facts: [
+      { code: "concession_reference", value: "Quadra 15, terreno 63" },
+      { code: "deceased_name", value: "José da Silva" },
+      { code: "burial_reference", value: "Quadra 8, terreno 42" },
+    ],
+  });
+
+  assertEquals(state.pending_question?.question_code, "Q_RECADASTRO_HOLDER_DOCUMENT");
+  assertEquals(state.pending_question?.goal_id, recadastro.goal_id);
+  assertEquals(contextGoal(state)?.goal_id, recadastro.goal_id);
+  assertEquals(
+    state.parked_questions.some((q) => q.goal_id === exumacao.goal_id && q.question_code === "Q_BURIAL_REFERENCE"),
+    true,
+  );
+  assertEquals(activeFact(state, "burial_reference", exumacao), null);
+  assertEquals(activeFact(state, "deceased_name", exumacao), null);
+});
+
+Deno.test("parked question volta quando seu goal retorna ao contexto", () => {
+  let state = parkedQuestionFocusFixture();
+  const recadastro = goalByCode(state, "GOAL_RECADASTRO");
+  const exumacao = goalByCode(state, "GOAL_EXUMACAO");
+  state = applyEvent(state, {
+    kind: "CORRECTION",
+    facts: [
+      { code: "concession_reference", value: "Quadra 15, terreno 63" },
+      { code: "deceased_name", value: "José da Silva" },
+      { code: "burial_reference", value: "Quadra 8, terreno 42" },
+    ],
+  });
+  state = applyEvent(state, {
+    kind: "ANSWER",
+    facts: [{ code: "recadastro_holder_document", value: "DOC-RECADASTRO" }],
+  });
+  state = applyAuthoritativeSignal(state, {
+    goal_id: recadastro.goal_id,
+    facts: [{ code: "recadastro_status", value: "OK" }],
+  });
+
+  assertEquals(state.goals.find((goal) => goal.goal_id === recadastro.goal_id)?.status, "RESOLVED");
+  assertEquals(contextGoal(state)?.goal_id, exumacao.goal_id);
+  assertEquals(state.pending_question?.question_code, "Q_BURIAL_REFERENCE");
+  assertEquals(state.pending_question?.goal_id, exumacao.goal_id);
+});
+
+Deno.test("pending question nunca termina fora do goal de contexto", () => {
+  let state = parkedQuestionFocusFixture();
+  const recadastro = goalByCode(state, "GOAL_RECADASTRO");
+  const exumacao = goalByCode(state, "GOAL_EXUMACAO");
+  state.pending_question = {
+    question_code: "Q_BURIAL_REFERENCE",
+    fact_code: "burial_reference",
+    goal_id: exumacao.goal_id,
+    priority_class: "NEXT_ACTION_DATA",
+    asked_at_seq: state.seq,
+  };
+  state = applyEvent(state, { kind: "SOCIAL" });
+
+  assertEquals(contextGoal(state)?.goal_id, recadastro.goal_id);
+  assertEquals(state.pending_question?.goal_id, recadastro.goal_id);
+  assert(state.pending_question?.question_code !== "Q_BURIAL_REFERENCE");
 });
 
 Deno.test("HANDOFF: modelo de estado para atendimento humano", () => {
