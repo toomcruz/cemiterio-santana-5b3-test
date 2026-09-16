@@ -4,6 +4,7 @@
   "phase": "5B.4-C",
   "note": "Lexico deterministico em pt-BR. Os padroes sao aplicados sobre o texto normalizado (minusculas, sem acentos, sem pontuacao, espacos colapsados). Nenhuma regra oficial, preco, documento ou autorizacao e definida aqui.",
   "correction_markers": [
+    "concessao correta",
     "na verdade",
     "na vdd",
     "corrigindo",

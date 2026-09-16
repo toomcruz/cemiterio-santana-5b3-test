@@ -34,11 +34,19 @@ export function contextFromState(state: ConversationState, knownHints: string[] 
         source: fact.source,
       }))
       : [],
+    active_case_id: goal?.case_id ?? null,
+    active_goal_status: goal?.status ?? null,
+    handoff_active: state.handoff !== null,
+    parallel_goal_codes: state.goals.filter((item) => item.informational && item.status !== "RESOLVED").map((item) =>
+      item.goal_code
+    ),
+    pending_action_codes: state.pending_actions.map((action) => action.action_code),
   };
 }
 
 export function toConversationEvents(interpretation: Interpretation, state?: ConversationState): BridgeResult {
-  if (interpretation.needs_clarification || !interpretation.primary_event) {
+  const priorityHandoff = interpretation.primary_event?.event_kind === "HUMAN_REQUEST";
+  if ((interpretation.needs_clarification && !priorityHandoff) || !interpretation.primary_event) {
     return {
       events: [],
       clarification: {
@@ -56,6 +64,9 @@ export function toConversationEvents(interpretation: Interpretation, state?: Con
   }));
 
   const kind = interpretation.primary_event.event_kind;
+  const p0Handoff = kind === "HUMAN_REQUEST" && interpretation.official_mapping?.risk_level === "P0";
+  const closeConversation = kind === "SOCIAL" &&
+    interpretation.official_mapping?.transverse_states.includes("CONVERSATION_CLOSING") === true;
   const currentCaseId = state ? contextGoal(state)?.case_id : null;
   const currentCaseRef = state?.cases.find((item) => item.case_id === currentCaseId)?.subject_ref;
   // A linguistic hint ("minha tia") is not a unique person identifier. A
@@ -70,6 +81,9 @@ export function toConversationEvents(interpretation: Interpretation, state?: Con
     }
     events.push({ kind: "NEW_GOAL", goal_code: interpretation.goal.goal_code, case_ref: caseRef });
     if (facts.length > 0) events.push({ kind: "COMPLEMENT", facts });
+    for (const secondary of interpretation.secondary_goals ?? []) {
+      events.push({ kind: "PARALLEL_QUESTION", goal_code: secondary.goal_code, facts: [] });
+    }
     return { events, clarification: null };
   }
 
@@ -98,7 +112,20 @@ export function toConversationEvents(interpretation: Interpretation, state?: Con
     return { events, clarification: null };
   }
 
-  events.push({ kind, facts });
+  if (kind === "RECLASSIFICATION") {
+    if (!interpretation.goal) {
+      return { events: [], clarification: { reason: "reclassificacao sem topico", options: [] } };
+    }
+    events.push({ kind: "RECLASSIFICATION", goal_code: interpretation.goal.goal_code, facts });
+    return { events, clarification: null };
+  }
+
+  events.push({
+    kind,
+    facts,
+    ...(p0Handoff ? { handoff_priority: "P0" as const } : {}),
+    ...(closeConversation ? { close_conversation: true } : {}),
+  });
   return { events, clarification: null };
 }
 

@@ -322,6 +322,20 @@
       "ai_extractable": true
     },
     {
+      "fact_code": "deceased_name",
+      "display_name": "Nome do falecido",
+      "scope": "CASE",
+      "value_type": "TEXT",
+      "priority_class": "NEXT_ACTION_DATA",
+      "allowed_sources": [
+        "USER_EXPLICIT",
+        "USER_CORRECTION",
+        "DOCUMENT",
+        "SYSTEM"
+      ],
+      "ai_extractable": true
+    },
+    {
       "fact_code": "recadastro_status",
       "display_name": "Situacao do recadastro",
       "scope": "CASE",

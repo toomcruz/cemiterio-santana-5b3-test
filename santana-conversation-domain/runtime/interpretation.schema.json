@@ -28,6 +28,8 @@
     "primary_event": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/candidate_event" }] },
     "secondary_events": { "type": "array", "items": { "$ref": "#/$defs/candidate_event" } },
     "goal": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/candidate_goal" }] },
+    "secondary_goals": { "type": "array", "items": { "$ref": "#/$defs/candidate_goal" } },
+    "official_mapping": { "$ref": "#/$defs/official_mapping" },
     "case_reference": { "$ref": "#/$defs/case_reference" },
     "facts": { "type": "array", "items": { "$ref": "#/$defs/candidate_fact" } },
     "ambiguities": { "type": "array", "items": { "$ref": "#/$defs/ambiguity" } },
@@ -55,7 +57,8 @@
             "COMPLAINT",
             "HUMAN_REQUEST",
             "SOCIAL",
-            "UNCERTAIN"
+            "UNCERTAIN",
+            "RECLASSIFICATION"
           ]
         },
         "confidence": { "$ref": "#/$defs/confidence" },
@@ -86,6 +89,36 @@
         "confidence": { "$ref": "#/$defs/confidence" },
         "evidence": { "type": "string", "minLength": 1 },
         "requires_confirmation": { "type": "boolean" }
+      }
+    },
+    "official_mapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "journeys",
+        "subintents",
+        "transverse_states",
+        "intent_changed",
+        "complexity",
+        "risk_level",
+        "confidence",
+        "evidence_turn_ids",
+        "selected_event",
+        "suppressed_events",
+        "reason"
+      ],
+      "properties": {
+        "journeys": { "type": "array", "items": { "type": "string" } },
+        "subintents": { "type": "array", "items": { "type": "string" } },
+        "transverse_states": { "type": "array", "items": { "type": "string" } },
+        "intent_changed": { "type": "boolean" },
+        "complexity": { "type": "string" },
+        "risk_level": { "type": "string" },
+        "confidence": { "type": "string" },
+        "evidence_turn_ids": { "type": "array", "items": { "type": "string" } },
+        "selected_event": { "type": ["string", "null"] },
+        "suppressed_events": { "type": "array", "items": { "type": "string" } },
+        "reason": { "type": "string" }
       }
     },
     "case_reference": {

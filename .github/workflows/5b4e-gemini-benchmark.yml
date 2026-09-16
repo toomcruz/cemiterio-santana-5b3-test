@@ -11,6 +11,27 @@ on:
         options:
           - smoke
           - full
+      phase18b_mode:
+        description: "Phase 18B provider probe or bounded cohort"
+        required: true
+        default: "cohort"
+        type: choice
+        options:
+          - catalog_probe
+          - provider_probe
+          - cohort
+          - p0_supplement
+          - phase18c_regression
+      precheck_only:
+        description: "Validate the private Phase 18B cohort without running any provider"
+        required: true
+        default: false
+        type: boolean
+      phase19c5_probe:
+        description: "Run the single hosted constrained-schema probe"
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -22,8 +43,8 @@ concurrency:
 jobs:
   benchmark:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     env:
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.PARLANT }}
       BENCHMARK_CASE_LIMIT: ${{ inputs.benchmark_size == 'smoke' && '25' || '300' }}
     steps:
       - uses: actions/checkout@v4
@@ -32,14 +53,26 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.1.4
-      - name: Require benchmark secret
+      - name: Require Gemini benchmark secret
+        if: github.ref != 'refs/heads/phase18b-gate2-remediation' && github.ref != 'refs/heads/phase19b-hashed-allowlist'
         shell: bash
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.PARLANT }}
         run: |
           set -Eeuo pipefail
           [[ -n "${GEMINI_API_KEY:-}" ]] || { echo "5B.4-E BLOCKED — repository secret GEMINI_API_KEY is unavailable" >&2; exit 1; }
+      - name: Require Phase 18B NVIDIA secret
+        if: (github.ref == 'refs/heads/phase18b-gate2-remediation' || github.ref == 'refs/heads/phase19b-hashed-allowlist') && inputs.phase18b_mode != 'phase18c_regression'
+        shell: bash
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+        run: |
+          set -Eeuo pipefail
+          [[ -n "${NVIDIA_API_KEY:-}" ]] || { echo "Phase 18B BLOCKED — repository secret NVIDIA_API_KEY is unavailable" >&2; exit 1; }
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq ripgrep >/dev/null
       - run: rg --version
       - name: Preserve baseline gates
+        if: github.ref != 'refs/heads/phase18b-gate2-remediation' && github.ref != 'refs/heads/phase19b-hashed-allowlist'
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -50,10 +83,13 @@ jobs:
           bash tests/postgres/verify_migration_manifest.sh
           bash tests/postgres/verify_static.sh
       - name: Run controlled Gemini benchmark
+        if: github.ref != 'refs/heads/phase18b-gate2-remediation' && github.ref != 'refs/heads/phase19b-hashed-allowlist'
         shell: bash
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.PARLANT }}
         run: deno task benchmark:gemini
       - name: Publish aggregate metrics only
-        if: always()
+        if: always() && github.ref != 'refs/heads/phase18b-gate2-remediation' && github.ref != 'refs/heads/phase19b-hashed-allowlist'
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -61,9 +97,264 @@ jobs:
           cp benchmark-report.json "$RUNNER_TEMP/benchmark-report.json"
           cat "$RUNNER_TEMP/benchmark-report.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload aggregate benchmark report
-        if: always()
+        if: always() && github.ref != 'refs/heads/phase18b-gate2-remediation' && github.ref != 'refs/heads/phase19b-hashed-allowlist'
         uses: actions/upload-artifact@v4
         with:
           name: 5b4e-gemini-benchmark-report
           path: benchmark-report.json
           if-no-files-found: ignore
+      - name: Decode private sanitized Phase 18B cohort
+        if: github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode == 'cohort'
+        shell: bash
+        env:
+          PHASE18B_COHORT_XZ_BASE64: ${{ secrets.PHASE18B_COHORT_XZ_BASE64 }}
+        run: |
+          set -Eeuo pipefail
+          [[ -n "${PHASE18B_COHORT_XZ_BASE64:-}" ]] || { echo "Phase 18B sanitized cohort is unavailable" >&2; exit 1; }
+          python3 - <<'PY'
+          import base64, lzma, os, pathlib
+          payload = lzma.decompress(base64.b64decode(os.environ["PHASE18B_COHORT_XZ_BASE64"], validate=True))
+          destination = pathlib.Path(os.environ["RUNNER_TEMP"]) / "phase18b-cohort.json"
+          destination.write_bytes(payload)
+          destination.chmod(0o600)
+          PY
+      - name: Preflight private Phase 18B cohort integrity
+        if: github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode == 'cohort'
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          EXPECTED_COHORT_HASH='2bd6b162b58db76ee84d498817b1c63e8b3073b461e9b553b49afdf675cee063' \
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib
+          path = pathlib.Path(os.environ["RUNNER_TEMP"]) / "phase18b-cohort.json"
+          if path.stat().st_mode & 0o777 != 0o600:
+              raise SystemExit("cohort permissions are not 0600")
+          payload = json.loads(path.read_text(encoding="utf-8"))
+          required = {"schema_version", "mode", "cohort_id", "cohort_hash", "source", "safety", "episodes"}
+          if set(payload) != required:
+              raise SystemExit("cohort schema keys are not closed")
+          if payload["schema_version"] != "phase18b-live-shadow-cohort/1.0.0" or payload["mode"] != "LIVE_PASSIVE":
+              raise SystemExit("unexpected cohort schema or mode")
+          if len(payload["episodes"]) != 50:
+              raise SystemExit("unexpected cohort size")
+          safety = payload["safety"]
+          if safety != {
+              "respond_allowed": False,
+              "action_allowed": False,
+              "official_write_allowed": False,
+              "tools_mode": "would_call_only",
+              "raw_content_persisted": False,
+              "raw_identifiers_persisted": False,
+          }:
+              raise SystemExit("cohort safety contract is not closed")
+          without_hash = dict(payload)
+          declared = without_hash.pop("cohort_hash")
+          canonical = json.dumps(without_hash, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode()
+          computed = hashlib.sha256(canonical).hexdigest()
+          if declared != computed or declared != os.environ["EXPECTED_COHORT_HASH"]:
+              raise SystemExit("cohort hash mismatch")
+          print(json.dumps({"preflight": "PASS", "episodes": len(payload["episodes"]), "cohort_hash": declared}))
+          PY
+      - name: Precheck only complete
+        if: github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.phase18b_mode == 'cohort' && inputs.precheck_only == true
+        shell: bash
+        run: echo 'PRECHECK_ONLY= true; provider and replay stages are disabled.'
+      - name: Validate Phase 18B provider and no-effects boundaries
+        if: (github.ref == 'refs/heads/phase18b-gate2-remediation' || github.ref == 'refs/heads/phase19b-hashed-allowlist')
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          deno fmt --check phase18b santana-conversation-domain/motor-v2
+          deno lint phase18b/live-shadow phase18b/provider phase18b/tests santana-conversation-domain/motor-v2/providers
+          deno check phase18b/provider/catalog_nvidia.ts phase18b/provider/probe_nvidia.ts phase18b/live-shadow/run_live_shadow.ts phase18b/p0-supplement/run_p0_supplement.ts phase18b/tests/nvidia_understanding_test.ts santana-conversation-domain/motor-v2/providers/nvidia.ts
+          deno test --allow-net=jsr.io phase18b/tests/gemini_understanding_test.ts phase18b/tests/nvidia_understanding_test.ts phase18b/tests/live_shadow_runner_test.ts santana-conversation-domain/motor-v2/tests/motor_v2_test.ts
+          python3 -m unittest phase18b/tests/test_live_cohort.py
+      - name: Run Phase 18C offline regression only
+        if: (github.ref == 'refs/heads/phase18b-gate2-remediation' || github.ref == 'refs/heads/phase19b-hashed-allowlist') && inputs.phase18b_mode == 'phase18c_regression' && success()
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 -m unittest phase18b/tests/test_remediation_review.py
+          deno fmt --check edge-functions/_shared/motor-v2-official-interpreter.ts \
+            edge-functions/_shared/tests/motor-v2-official-interpreter_test.ts \
+            santana-conversation-domain/runtime/interpreter/bridge.ts \
+            santana-conversation-domain/runtime/interpreter/confidence_matrix.ts \
+            santana-conversation-domain/runtime/interpreter/types.ts \
+            santana-conversation-domain/runtime/tests/confidence_matrix_test.ts \
+            santana-conversation-domain/motor-v2/providers/nvidia.ts \
+            santana-conversation-domain/runtime/turn.ts \
+            santana-conversation-domain/runtime/official_turn_service.ts \
+            santana-conversation-domain/runtime/tests/turn_failover_test.ts \
+            santana-conversation-domain/runtime/reply.ts \
+            santana-conversation-domain/runtime/tests/reply_boundary_test.ts \
+            phase19c5/provider/probe_constrained_schema.ts \
+            phase19c2/semantic-shadow/run_semantic_shadow.ts
+          deno lint edge-functions/_shared/motor-v2-official-interpreter.ts \
+            edge-functions/_shared/tests/motor-v2-official-interpreter_test.ts \
+            santana-conversation-domain/runtime/interpreter/bridge.ts \
+            santana-conversation-domain/runtime/interpreter/confidence_matrix.ts \
+            santana-conversation-domain/runtime/interpreter/types.ts
+          deno check edge-functions/_shared/motor-v2-official-interpreter.ts \
+            edge-functions/_shared/tests/motor-v2-official-interpreter_test.ts \
+            santana-conversation-domain/runtime/interpreter/bridge.ts \
+            santana-conversation-domain/runtime/interpreter/confidence_matrix.ts \
+            santana-conversation-domain/runtime/tests/confidence_matrix_test.ts
+          deno check santana-conversation-domain/runtime/turn.ts \
+            santana-conversation-domain/runtime/official_turn_service.ts \
+            santana-conversation-domain/runtime/tests/turn_failover_test.ts \
+            santana-conversation-domain/runtime/reply.ts \
+            santana-conversation-domain/runtime/tests/reply_boundary_test.ts \
+            phase19c5/provider/probe_constrained_schema.ts \
+            phase19c2/semantic-shadow/run_semantic_shadow.ts
+          deno test --allow-read edge-functions/_shared/tests/motor-v2-official-interpreter_test.ts
+          deno test --allow-read santana-conversation-domain/motor-v2/tests/motor_v2_test.ts
+          deno test --allow-read santana-conversation-domain/runtime/tests
+          deno test --allow-read santana-conversation-domain/runtime/tests/turn_failover_test.ts
+          deno test --allow-read santana-conversation-domain/benchmark
+          bash tests/postgres/verify_static.sh
+      - name: Probe hosted NVIDIA constrained schema once
+        if: (github.ref == 'refs/heads/phase18b-gate2-remediation' || github.ref == 'refs/heads/phase19b-hashed-allowlist') && inputs.phase18b_mode == 'phase18c_regression' && inputs.phase19c5_probe == true && success()
+        shell: bash
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+        run: |
+          set -Eeuo pipefail
+          deno run \
+            --allow-env=NVIDIA_API_KEY \
+            --allow-net=integrate.api.nvidia.com \
+            --allow-write="$RUNNER_TEMP/phase19c5-constrained-schema-probe.json" \
+            phase19c5/provider/probe_constrained_schema.ts \
+            "$RUNNER_TEMP/phase19c5-constrained-schema-probe.json"
+      - name: Upload hosted NVIDIA constrained schema probe
+        if: always() && (github.ref == 'refs/heads/phase18b-gate2-remediation' || github.ref == 'refs/heads/phase19b-hashed-allowlist') && inputs.phase18b_mode == 'phase18c_regression'
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase19c5-constrained-schema-probe
+          path: ${{ runner.temp }}/phase19c5-constrained-schema-probe.json
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Run Phase 19C.2 semantic shadow with suppressed delivery
+        if: (github.ref == 'refs/heads/phase18b-gate2-remediation' || github.ref == 'refs/heads/phase19b-hashed-allowlist') && inputs.phase18b_mode == 'phase18c_regression' && success()
+        shell: bash
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+        run: |
+          set -Eeuo pipefail
+          deno run \
+            --allow-env=NVIDIA_API_KEY \
+            --allow-net=integrate.api.nvidia.com \
+            --allow-read \
+            --allow-write="$RUNNER_TEMP" \
+            phase19c2/semantic-shadow/run_semantic_shadow.ts \
+            "$RUNNER_TEMP/phase19c2-semantic-shadow.json" \
+            "$RUNNER_TEMP/phase19c2-human-review.json"
+      - name: Upload Phase 19C.2 semantic shadow evidence
+        if: always() && (github.ref == 'refs/heads/phase18b-gate2-remediation' || github.ref == 'refs/heads/phase19b-hashed-allowlist') && inputs.phase18b_mode == 'phase18c_regression'
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase19c2-semantic-shadow
+          path: |
+            ${{ runner.temp }}/phase19c2-semantic-shadow.json
+            ${{ runner.temp }}/phase19c2-semantic-shadow.json.assignment
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload Phase 19C.2 blinded human review package
+        if: success() && (github.ref == 'refs/heads/phase18b-gate2-remediation' || github.ref == 'refs/heads/phase19b-hashed-allowlist') && inputs.phase18b_mode == 'phase18c_regression'
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase19c2-human-review
+          path: ${{ runner.temp }}/phase19c2-human-review.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Probe NVIDIA compatibility with synthetic input
+        if: (github.ref == 'refs/heads/phase18b-gate2-remediation' || github.ref == 'refs/heads/phase19b-hashed-allowlist') && inputs.precheck_only != true && inputs.phase18b_mode != 'catalog_probe' && inputs.phase18b_mode != 'p0_supplement' && inputs.phase18b_mode != 'phase18c_regression'
+        shell: bash
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+        run: |
+          set -Eeuo pipefail
+          deno run \
+            --allow-env=NVIDIA_API_KEY \
+            --allow-net=integrate.api.nvidia.com \
+            --allow-write="$RUNNER_TEMP/phase18b-provider-probe.json" \
+            phase18b/provider/probe_nvidia.ts \
+            "$RUNNER_TEMP/phase18b-provider-probe.json"
+      - name: Upload Phase 18B compatibility probe
+        if: always() && (github.ref == 'refs/heads/phase18b-gate2-remediation' || github.ref == 'refs/heads/phase19b-hashed-allowlist') && inputs.precheck_only != true && inputs.phase18b_mode != 'catalog_probe' && inputs.phase18b_mode != 'p0_supplement' && inputs.phase18b_mode != 'phase18c_regression'
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase18b-provider-probe
+          path: ${{ runner.temp }}/phase18b-provider-probe.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Inventory NVIDIA model IDs
+        if: github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.precheck_only != true && inputs.phase18b_mode == 'catalog_probe'
+        shell: bash
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+        run: |
+          set -Eeuo pipefail
+          deno run \
+            --allow-env=NVIDIA_API_KEY \
+            --allow-net=integrate.api.nvidia.com \
+            --allow-write="$RUNNER_TEMP/phase18b-nvidia-model-catalog.json" \
+            phase18b/provider/catalog_nvidia.ts \
+            "$RUNNER_TEMP/phase18b-nvidia-model-catalog.json"
+      - name: Upload NVIDIA model inventory
+        if: always() && github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.precheck_only != true && inputs.phase18b_mode == 'catalog_probe'
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase18b-nvidia-model-catalog
+          path: ${{ runner.temp }}/phase18b-nvidia-model-catalog.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Run real-AI passive shadow comparison
+        if: github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.precheck_only != true && inputs.phase18b_mode == 'cohort' && success()
+        shell: bash
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+        run: |
+          set -Eeuo pipefail
+          deno run \
+            --allow-env=NVIDIA_API_KEY \
+            --allow-net=integrate.api.nvidia.com \
+            --allow-read="$RUNNER_TEMP" \
+            --allow-write="$RUNNER_TEMP" \
+            phase18b/live-shadow/run_live_shadow.ts \
+            --cohort "$RUNNER_TEMP/phase18b-cohort.json" \
+            --output "$RUNNER_TEMP/phase18b-live-ai-result.json" \
+            --model openai/gpt-oss-20b \
+            --timeout-ms 60000
+      - name: Run controlled P0 supplement
+        if: github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.precheck_only != true && inputs.phase18b_mode == 'p0_supplement' && success()
+        shell: bash
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+        run: |
+          set -Eeuo pipefail
+          deno run \
+            --allow-env=NVIDIA_API_KEY \
+            --allow-net=integrate.api.nvidia.com \
+            --allow-read=phase18b/p0-supplement/fixtures/p0_controlled_cases.jsonl,"$RUNNER_TEMP" \
+            --allow-write="$RUNNER_TEMP" \
+            phase18b/p0-supplement/run_p0_supplement.ts \
+            --fixtures phase18b/p0-supplement/fixtures/p0_controlled_cases.jsonl \
+            --output "$RUNNER_TEMP/phase18b-p0-supplement-result.json" \
+            --model openai/gpt-oss-20b \
+            --timeout-ms 60000
+      - name: Upload controlled P0 supplement
+        if: always() && github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.precheck_only != true && inputs.phase18b_mode == 'p0_supplement'
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase18b-p0-supplement-result
+          path: ${{ runner.temp }}/phase18b-p0-supplement-result.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload sanitized Phase 18B result
+        if: always() && github.ref == 'refs/heads/phase18b-gate2-remediation' && inputs.precheck_only != true && inputs.phase18b_mode == 'cohort'
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase18b-live-ai-result
+          path: ${{ runner.temp }}/phase18b-live-ai-result.json
+          if-no-files-found: error
+          retention-days: 7

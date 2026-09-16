@@ -142,13 +142,41 @@ function graveReference(text: string): string | null {
   const identifier = "[0-9][a-z0-9-]{0,23}";
   const match = text.match(
     new RegExp(
-      `\\bquadra\\s*(?:n[ºo.]?\\s*)?${identifier}\\s*(?:(?:,|e|-)\\s*)?(?:jazigo|sepultura|t[uú]mulo)\\s*(?:n[ºo.]?\\s*)?${identifier}\\b`,
+      `\\bquadra\\s*(?:n[ºo.]?\\s*)?${identifier}\\s*(?:(?:,|e|-)\\s*)?(?:jazigo|sepultura|t[uú]mulo|terreno)\\s*(?:n[ºo.]?\\s*)?${identifier}\\b`,
       "i",
     ),
   ) ?? text.match(
-    new RegExp(`\\b(?:jazigo|sepultura|t[uú]mulo)\\s*(?:n[ºo.]?\\s*)?${identifier}\\b`, "i"),
+    new RegExp(`\\b(?:jazigo|sepultura|t[uú]mulo|terreno)\\s*(?:n[ºo.]?\\s*)?${identifier}\\b`, "i"),
   ) ?? text.match(new RegExp(`\\bquadra\\s*(?:n[ºo.]?\\s*)?${identifier}\\b`, "i"));
   return match?.[0]?.trim() || null;
+}
+
+function referenceAfter(text: string, anchor: RegExp): string | null {
+  const clause = text.match(anchor)?.[1]?.trim();
+  return clause ? graveReference(clause) : null;
+}
+
+function deceasedName(text: string): string | null {
+  const match = text.match(
+    /\b(?:o\s+)?falecido\s+(?:é|e)\s+(.+?)\s+(?:e|é)\s+(?:está|esta)\s+sepultad[oa]\b/i,
+  );
+  return match?.[1]?.trim() || null;
+}
+
+function burialReferenceValue(text: string): string | null {
+  return referenceAfter(text, /sepultad[oa]\s+(?:na|no|em)\s+([^.;]+)/i) ?? graveReference(text);
+}
+
+function concessionReferenceValue(text: string): string | null {
+  // When a turn contains an explicit correction, the corrected clause is the
+  // user's latest value. Do not keep the first concession reference by
+  // accident; this is generic for all supported reference formats.
+  const corrected = text.match(
+    /(?:corrigindo|na verdade|quis dizer)\s*:?\s*(?:a concess[aã]o\s+)?(?:é|e)\s+([^.;]+)/i,
+  );
+  const correctedValue = corrected?.[1] ? graveReference(corrected[1]) : null;
+  if (correctedValue) return correctedValue;
+  return referenceAfter(text, /concess[aã]o\s+(?:correta\s+)?(?:é|e)\s+([^.;]+)/i);
 }
 
 const SUBJECT_HINTS = [
@@ -335,8 +363,11 @@ export function interpret(input: InterpreterInput): Interpretation {
   }
   // A user-supplied burial reference can be collected while an authorization
   // is pending; it remains a declaration, never an official identification.
-  const burialReference = input.context.open_goal_code === "GOAL_EXUMACAO" || goal?.goal_code === "GOAL_EXUMACAO"
-    ? graveReference(input.text)
+  const explicitBurialStatement = Boolean(deceasedName(text)) || matches(text, "sepultado") ||
+    matches(text, "sepultura");
+  const burialReference = input.context.open_goal_code === "GOAL_EXUMACAO" || goal?.goal_code === "GOAL_EXUMACAO" ||
+      explicitBurialStatement
+    ? burialReferenceValue(input.text)
     : null;
   if (burialReference && !seen.has("burial_reference")) {
     seen.add("burial_reference");
@@ -345,15 +376,27 @@ export function interpret(input: InterpreterInput): Interpretation {
       value: burialReference,
       source: correctionMarker ? "USER_CORRECTION" : "USER_EXPLICIT",
       confidence: "HIGH",
-      evidence: burialReference,
+      evidence: input.text,
+      requires_confirmation: false,
+    });
+  }
+  const suppliedDeceasedName = deceasedName(input.text);
+  if (suppliedDeceasedName && !seen.has("deceased_name")) {
+    seen.add("deceased_name");
+    facts.push({
+      fact_code: "deceased_name",
+      value: suppliedDeceasedName,
+      source: correctionMarker ? "USER_CORRECTION" : "USER_EXPLICIT",
+      confidence: "HIGH",
+      evidence: input.text,
       requires_confirmation: false,
     });
   }
   // The concession reference is only a locating hint supplied by the citizen.
   // It never proves ownership or that the recadastro is complete.
   const concessionReference =
-    input.context.open_goal_code === "GOAL_RECADASTRO" || goal?.goal_code === "GOAL_RECADASTRO"
-      ? graveReference(input.text)
+    (input.context.open_goal_code === "GOAL_RECADASTRO" || goal?.goal_code === "GOAL_RECADASTRO")
+      ? concessionReferenceValue(input.text) ?? (!explicitBurialStatement ? graveReference(input.text) : null)
       : null;
   if (concessionReference && !seen.has("concession_reference")) {
     seen.add("concession_reference");
@@ -362,7 +405,7 @@ export function interpret(input: InterpreterInput): Interpretation {
       value: concessionReference,
       source: correctionMarker ? "USER_CORRECTION" : "USER_EXPLICIT",
       confidence: "HIGH",
-      evidence: concessionReference,
+      evidence: input.text,
       requires_confirmation: false,
     });
   }

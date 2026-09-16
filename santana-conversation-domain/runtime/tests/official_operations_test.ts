@@ -18,7 +18,7 @@ const CONVERSATION = "33333333-3333-4333-a333-333333333333";
 const COMMAND = "44444444-4444-4444-a444-444444444444";
 const ACTOR = "55555555-5555-4555-a555-555555555555";
 const NOW = "2026-09-09T20:00:00.000Z";
-const CANARY = "+5511999991234";
+const CANARY_PHONE = "+5511999991234";
 
 function command(overrides: Partial<OperatorCommand> = {}): OperatorCommand {
   return {
@@ -375,7 +375,7 @@ async function operatorHarness(
         revision: options.revision ?? 7,
         catalog_hash: hash,
         automation_mode: options.automationMode ?? "bot",
-        phone_e164: options.phone ?? CANARY,
+        phone_e164: options.phone ?? CANARY_PHONE,
         requests: [],
       }));
     }
@@ -394,7 +394,7 @@ async function operatorHarness(
   });
   const request = new Request("https://runtime.invalid", { headers: { authorization: "Bearer fixture-user" } });
   const invoke = (cmd = command()) =>
-    processOfficialOperator({ kind: "OPERATOR_COMMAND", command: cmd }, request, rest, CANARY);
+    processOfficialOperator({ kind: "OPERATOR_COMMAND", command: cmd }, request, rest);
   return { calls, rest, request, invoke };
 }
 
@@ -434,18 +434,22 @@ Deno.test("operations Edge aplica reducer real e envia decisão consistente à g
   assertEquals(commit.p_expected_revision, 7);
 });
 
-Deno.test("operations Edge exige sessão válida e restringe comandos ao canário", async () => {
-  for (const options of [{ authenticated: false }, { phone: "+5511999999999" }]) {
-    const harness = await operatorHarness(exhumation(), options);
-    try {
-      await harness.invoke();
-      throw new Error("expected rejection");
-    } catch (error) {
-      assert(error instanceof HttpProblem);
-      assert(["USER_SESSION_INVALID", "CANARY_PHONE_BLOCKED"].includes(error.code));
-    }
-    assert(!harness.calls.some((call) => call.route.endsWith("support_runtime_commit_operator")));
+Deno.test("operations Edge exige sessão válida e permite operador autenticado fora do canário", async () => {
+  const unauthenticated = await operatorHarness(exhumation(), { authenticated: false });
+  try {
+    await unauthenticated.invoke();
+    throw new Error("expected rejection");
+  } catch (error) {
+    assert(error instanceof HttpProblem);
+    assertEquals(error.code, "USER_SESSION_INVALID");
   }
+  assert(!unauthenticated.calls.some((call) => call.route.endsWith("support_runtime_commit_operator")));
+
+  const nonCanary = await operatorHarness(exhumation(), { phone: "+5511999999999" });
+  const result = await nonCanary.invoke();
+  if (!("accepted" in result)) throw new Error("expected accepted operator command result");
+  assertEquals(result.accepted, true);
+  assert(nonCanary.calls.some((call) => call.route.endsWith("support_runtime_commit_operator")));
 });
 
 Deno.test("operations Edge decisão em atendimento humano preserva pausa sem resposta automática", async () => {
@@ -462,7 +466,6 @@ Deno.test("operations snapshot entrega referências operacionais sem expor fatos
     { kind: "OPERATOR_SNAPSHOT", conversation_id: CONVERSATION },
     harness.request,
     harness.rest,
-    CANARY,
   );
   assert("goals" in result && "documents" in result);
   assertEquals(result.commands_enabled, true);

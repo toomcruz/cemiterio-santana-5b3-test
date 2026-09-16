@@ -8,6 +8,7 @@ import {
   type RuntimeStore,
 } from "../official_turn_service.ts";
 import { initState } from "../../engine/engine.ts";
+import { selectCanaryRoute } from "../../../edge-functions/_shared/official-runtime-canary.ts";
 
 class MemoryStore implements RuntimeStore {
   state: unknown | null = null;
@@ -56,10 +57,15 @@ const deterministicAdapter = new ControlledLlmAdapter({
 
 const automaticReplies = { automatic_replies_allowed: true } as const;
 
-function inbound(body: string): RuntimeInbound {
+async function sha256Hex(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function inbound(body: string, phone_e164 = "+5511959805497"): RuntimeInbound {
   return {
     external_message_id: "wapi-test-1",
-    phone_e164: "+5511959805497",
+    phone_e164,
     contact_name: "Teste autorizado",
     body,
     message_type: "text",
@@ -96,6 +102,66 @@ Deno.test("official runtime routes a human-owned conversation without an automat
   assertEquals(result.outbox_id, null);
   assertEquals(store.commits.length, 1);
   assertEquals(store.commits[0]?.reply_body, null);
+});
+
+Deno.test("canary separation A: disabled canary keeps BOT_ACTIVE on CURRENT_WORKFLOW with delivery data", async () => {
+  const phone = "+5511959805497";
+  assertEquals(await selectCanaryRoute(phone, "false", await sha256Hex(phone)), "CURRENT_WORKFLOW");
+  const store = new MemoryStore();
+  const result = await processOfficialTurn(
+    inbound("Meu jazigo está violado", phone),
+    store,
+    deterministicAdapter,
+    automaticReplies,
+  );
+  assert(result.reply_body !== null);
+  assertEquals(result.outbox_id, "outbox-1");
+  assertEquals(store.automation, "BOT_ACTIVE");
+});
+
+Deno.test("canary separation B: disabled canary never replies for HUMAN_ACTIVE", async () => {
+  const phone = "+5511959805497";
+  assertEquals(await selectCanaryRoute(phone, "false", await sha256Hex(phone)), "CURRENT_WORKFLOW");
+  const store = new MemoryStore();
+  store.automation = "HUMAN_ACTIVE";
+  store.state = initState("11111111-2222-4333-8444-555555555555");
+  const result = await processOfficialTurn(
+    inbound("Preciso de ajuda", phone),
+    store,
+    deterministicAdapter,
+    automaticReplies,
+  );
+  assertEquals(result.reply_body, null);
+  assertEquals(result.outbox_id, null);
+});
+
+Deno.test("canary separation C: authorized enabled canary selects MOTOR_V2 without changing reply permission", async () => {
+  const phone = "+5511959805497";
+  assertEquals(await selectCanaryRoute(phone, "true", await sha256Hex(phone)), "MOTOR_V2");
+  const store = new MemoryStore();
+  const result = await processOfficialTurn(
+    inbound("Meu jazigo está violado", phone),
+    store,
+    deterministicAdapter,
+    automaticReplies,
+  );
+  assert(result.reply_body !== null);
+  assertEquals(result.outbox_id, "outbox-1");
+});
+
+Deno.test("canary separation D: enabled canary leaves another BOT_ACTIVE phone on CURRENT_WORKFLOW", async () => {
+  const authorizedPhone = "+5511959805497";
+  const otherPhone = "+5511959805498";
+  assertEquals(await selectCanaryRoute(otherPhone, "true", await sha256Hex(authorizedPhone)), "CURRENT_WORKFLOW");
+  const store = new MemoryStore();
+  const result = await processOfficialTurn(
+    inbound("Meu jazigo está violado", otherPhone),
+    store,
+    deterministicAdapter,
+    automaticReplies,
+  );
+  assert(result.reply_body !== null);
+  assertEquals(result.outbox_id, "outbox-1");
 });
 
 Deno.test("official runtime never reinterprets an already persisted inbound message", async () => {

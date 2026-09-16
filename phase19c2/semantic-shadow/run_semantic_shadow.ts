@@ -1,0 +1,503 @@
+/** Ten synthetic, bounded cases through the official V2 bridge. */
+import { canonicalJson } from "../../santana-conversation-domain/motor-v2/canonical_json.ts";
+import {
+  CONTROLLED_NVIDIA_MODEL,
+  type ControlledNvidiaAiObservation,
+} from "../../santana-conversation-domain/motor-v2/providers/nvidia.ts";
+import { createMotorV2OfficialInterpreter } from "../../edge-functions/_shared/motor-v2-official-interpreter.ts";
+import type { MotorV2UnderstandingObservation } from "../../edge-functions/_shared/motor-v2-official-interpreter.ts";
+import { applyEvent, type ConversationState, initState } from "../../santana-conversation-domain/engine/engine.ts";
+import { interpret as deterministicInterpret } from "../../santana-conversation-domain/runtime/interpreter/deterministic.ts";
+import { planTurn } from "../../santana-conversation-domain/runtime/turn.ts";
+import { arbitrateConfidence } from "../../santana-conversation-domain/runtime/interpreter/confidence_matrix.ts";
+import type { LanguageInterpreter } from "../../santana-conversation-domain/runtime/adapter/adapter.ts";
+
+interface ShadowCase {
+  case_id: string;
+  category: string;
+  text: string;
+  state: ConversationState;
+  expected: {
+    outcome: "PROPOSED" | "CLARIFICATION";
+    event_kind: string | null;
+    cases: number;
+    goals: number;
+    needs_clarification: boolean;
+    handoff: boolean;
+    questions: number;
+  };
+  reply_contains?: string[];
+  reply_not_contains?: string[];
+}
+
+function openState(conversationId: string, goalCode: string): ConversationState {
+  return applyEvent(initState(conversationId), {
+    kind: "NEW_GOAL",
+    goal_code: goalCode,
+    case_ref: `synthetic-${conversationId}`,
+  });
+}
+
+function cases(): ShadowCase[] {
+  return [
+    {
+      case_id: "semantic-01",
+      category: "multi_intent",
+      text: "Preciso de exumação e também de recadastro.",
+      state: initState("semantic-01"),
+      expected: {
+        outcome: "PROPOSED",
+        event_kind: "NEW_GOAL",
+        cases: 1,
+        goals: 2,
+        needs_clarification: false,
+        handoff: false,
+        questions: 1,
+      },
+      reply_contains: ["recadastro", "outro assunto"],
+    },
+    {
+      case_id: "semantic-02",
+      category: "intent_change_context",
+      text: "Agora preciso tratar do recadastro.",
+      state: openState("semantic-02", "GOAL_EXUMACAO"),
+      expected: {
+        outcome: "PROPOSED",
+        event_kind: "RECLASSIFICATION",
+        cases: 1,
+        goals: 1,
+        needs_clarification: false,
+        handoff: false,
+        questions: 1,
+      },
+      reply_contains: ["agora vamos tratar de recadastro", "exumação foi preservado"],
+    },
+    {
+      case_id: "semantic-03",
+      category: "closing",
+      text: "Obrigado, era só isso.",
+      state: openState("semantic-03", "GOAL_EXUMACAO"),
+      expected: {
+        outcome: "PROPOSED",
+        event_kind: "SOCIAL",
+        cases: 1,
+        goals: 1,
+        needs_clarification: false,
+        handoff: false,
+        questions: 0,
+      },
+      reply_contains: ["Encerramos este atendimento"],
+    },
+    {
+      case_id: "semantic-04",
+      category: "media",
+      text: "Veja a foto e confirme o conteúdo. [MIDIA_NAO_ANALISADA]",
+      state: initState("semantic-04"),
+      expected: {
+        outcome: "CLARIFICATION",
+        event_kind: null,
+        cases: 0,
+        goals: 0,
+        needs_clarification: true,
+        handoff: false,
+        questions: 1,
+      },
+      reply_contains: ["imagem ainda não foi analisado"],
+    },
+    {
+      case_id: "semantic-05",
+      category: "p0",
+      text: "Há conflito familiar sobre quem pode autorizar.",
+      state: initState("semantic-05"),
+      expected: {
+        outcome: "PROPOSED",
+        event_kind: "HUMAN_REQUEST",
+        cases: 0,
+        goals: 0,
+        needs_clarification: false,
+        handoff: true,
+        questions: 0,
+      },
+      reply_contains: ["encaminhamento"],
+    },
+    {
+      case_id: "semantic-06",
+      category: "handoff",
+      text: "Quero falar com uma pessoa sobre este atendimento.",
+      state: openState("semantic-06", "GOAL_EXUMACAO"),
+      expected: {
+        outcome: "PROPOSED",
+        event_kind: "HUMAN_REQUEST",
+        cases: 1,
+        goals: 1,
+        needs_clarification: false,
+        handoff: true,
+        questions: 0,
+      },
+      reply_contains: ["encaminhamento"],
+    },
+    {
+      case_id: "semantic-07",
+      category: "simple_goal",
+      text: "Preciso de exumação.",
+      state: initState("semantic-07"),
+      expected: {
+        outcome: "PROPOSED",
+        event_kind: "NEW_GOAL",
+        cases: 1,
+        goals: 1,
+        needs_clarification: false,
+        handoff: false,
+        questions: 1,
+      },
+      reply_contains: ["finalidade"],
+    },
+    {
+      case_id: "semantic-08",
+      category: "correction",
+      text: "Na verdade, quero recadastro, não exumação.",
+      state: openState("semantic-08", "GOAL_EXUMACAO"),
+      expected: {
+        outcome: "PROPOSED",
+        event_kind: "CORRECTION",
+        cases: 1,
+        goals: 1,
+        needs_clarification: false,
+        handoff: false,
+        questions: 1,
+      },
+      reply_contains: ["recadastro", "não de exumação"],
+    },
+    {
+      case_id: "semantic-09",
+      category: "return_with_context",
+      text: "Voltei. A referência continua sendo quadra 3.",
+      state: applyEvent(
+        openState("semantic-09", "GOAL_EXUMACAO"),
+        { kind: "COMPLEMENT", facts: [{ code: "burial_reference", value: "quadra 3" }] },
+      ),
+      expected: {
+        outcome: "PROPOSED",
+        event_kind: "COMPLEMENT",
+        cases: 1,
+        goals: 1,
+        needs_clarification: false,
+        handoff: false,
+        questions: 1,
+      },
+      reply_contains: ["exumação"],
+    },
+    {
+      case_id: "semantic-10",
+      category: "new_case",
+      text: "É para outro falecido; preciso de exumação.",
+      state: openState("semantic-10", "GOAL_EXUMACAO"),
+      expected: {
+        outcome: "PROPOSED",
+        event_kind: "NEW_GOAL",
+        cases: 2,
+        goals: 2,
+        needs_clarification: false,
+        handoff: false,
+        questions: 1,
+      },
+      reply_contains: ["outro falecido", "atendimento anterior separado"],
+    },
+  ];
+}
+
+function safeObservation(observation: ControlledNvidiaAiObservation | undefined) {
+  if (!observation) return null;
+  return {
+    outcome: observation.outcome,
+    provider: observation.provider,
+    model: observation.model,
+    provider_attempted: observation.provider_attempted,
+    ai_output_used: observation.ai_output_used,
+    fallback_used: observation.fallback_used,
+    duration_ms: observation.duration_ms,
+    rejection_code: observation.rejection_code,
+    rejection_category: observation.rejection_category,
+    http_status: observation.http_status,
+    content_type: observation.content_type,
+    body_bytes: observation.body_bytes,
+    parse_position: observation.parse_position,
+    finish_reason: observation.finish_reason,
+    rejection_field: observation.rejection_field,
+    rejection_value: observation.rejection_value,
+    rejection_expected: observation.rejection_expected,
+  };
+}
+
+function safeUnderstanding(observation: MotorV2UnderstandingObservation | undefined) {
+  if (!observation) return null;
+  const project = (understanding: MotorV2UnderstandingObservation["provider"]) => ({
+    schema_version: understanding.schema_version,
+    journeys: understanding.journeys,
+    subintents: understanding.subintents,
+    transverse_states: understanding.transverse_states,
+    intent_changed: understanding.intent_changed,
+    complexity: understanding.complexity,
+    risk: understanding.risk,
+    confidence: understanding.confidence,
+    evidence_turns: understanding.evidence_turns,
+  });
+  return { provider: project(observation.provider), merged: project(observation.merged) };
+}
+
+function safePlan(plan: Awaited<ReturnType<typeof planTurn>>) {
+  const confidence_arbitration = plan.interpretation ? arbitrateConfidence(plan.interpretation) : null;
+  const confidence_fields = plan.interpretation
+    ? {
+      overall_confidence: plan.interpretation.overall_confidence,
+      primary_event_confidence: plan.interpretation.primary_event?.confidence ?? null,
+      goal_confidence: plan.interpretation.goal?.confidence ?? null,
+      case_reference_confidence: plan.interpretation.case_reference.confidence,
+      blocking_ambiguity: plan.interpretation.ambiguities.some((ambiguity) => ambiguity.blocking),
+      requires_confirmation: plan.interpretation.facts.some((fact) => fact.requires_confirmation),
+    }
+    : null;
+  return {
+    outcome: plan.outcome,
+    event_kind: plan.interpretation?.primary_event?.event_kind ?? null,
+    goal_code: plan.interpretation?.goal?.goal_code ?? null,
+    needs_clarification: plan.interpretation?.needs_clarification ?? null,
+    handoff: plan.interpretation?.primary_event?.event_kind === "HUMAN_REQUEST",
+    questions: plan.question_draft ? 1 : 0,
+    confidence_fields,
+    confidence_arbitration,
+    reply_present: plan.reply_draft !== null,
+    reply_draft: plan.reply_draft,
+    state_seq: plan.next_state.seq,
+    cases: plan.next_state.cases.length,
+    goals: plan.next_state.goals.length,
+    state: {
+      current_topic: plan.next_state.current_topic,
+      pending_question: plan.next_state.pending_question?.fact_code ?? null,
+      handoff_priority: plan.next_state.handoff?.priority ?? null,
+      goals: plan.next_state.goals.map((goal) => ({
+        goal_code: goal.goal_code,
+        status: goal.status,
+        case_id: goal.case_id,
+      })),
+      cases: plan.next_state.cases.map((item) => ({ case_id: item.case_id, subject_kind: item.subject_kind })),
+    },
+    official_mapping: plan.interpretation?.official_mapping
+      ? {
+        selected_event: plan.interpretation.official_mapping.selected_event,
+        suppressed_events: plan.interpretation.official_mapping.suppressed_events,
+        risk_level: plan.interpretation.official_mapping.risk_level,
+        intent_changed: plan.interpretation.official_mapping.intent_changed,
+        reason: plan.interpretation.official_mapping.reason,
+      }
+      : null,
+    interpretation: plan.interpretation
+      ? {
+        primary_event: plan.interpretation.primary_event?.event_kind ?? null,
+        goal_code: plan.interpretation.goal?.goal_code ?? null,
+        secondary_goal_codes: (plan.interpretation.secondary_goals ?? []).map((goal) => goal.goal_code),
+        case_reference_kind: plan.interpretation.case_reference.kind,
+        facts: plan.interpretation.facts.map((fact) => fact.fact_code),
+        official_subintents: plan.interpretation.official_mapping?.subintents ?? [],
+        official_transverse_states: plan.interpretation.official_mapping?.transverse_states ?? [],
+      }
+      : null,
+    route: plan.route,
+  };
+}
+
+function reviewContext(state: ConversationState): string[] {
+  const labels: Record<string, string> = {
+    GOAL_EXUMACAO: "exumação",
+    GOAL_RECADASTRO: "recadastro",
+    GOAL_CONCESSAO: "concessão",
+    GOAL_TRANSPORTE: "transporte",
+  };
+  const active = state.goals.filter((goal) => ["ACTIVE", "SUSPENDED", "WAITING"].includes(goal.status));
+  const lines = active.length === 0
+    ? ["Não há atendimento anterior em andamento."]
+    : [`Atendimento(s) em andamento: ${
+      active.map((goal) => labels[goal.goal_code] ?? "assunto registrado").join(", ")
+    }.`];
+  const pendingLabels: Record<string, string> = {
+    exhumation_purpose: "finalidade da exumação",
+    burial_reference: "referência do sepultamento",
+    concession_reference: "referência da concessão",
+    recadastro_status: "status do recadastro",
+  };
+  if (state.pending_question) {
+    lines.push(
+      `Pergunta pendente: ${pendingLabels[state.pending_question.fact_code] ?? "uma informação do atendimento"}.`,
+    );
+  }
+  if (state.facts.length > 0) lines.push("Há fatos anteriores registrados no atendimento.");
+  if (state.cases.length > 1) lines.push(`Há ${state.cases.length} atendimentos separados no histórico.`);
+  return lines;
+}
+
+function humanPlan(plan: Awaited<ReturnType<typeof planTurn>>) {
+  return {
+    text: plan.reply_draft ?? "(sem resposta proposta)",
+    handoff: plan.interpretation?.primary_event?.event_kind === "HUMAN_REQUEST",
+    questions: plan.question_draft ? 1 : 0,
+    actions: [],
+    receipts: [],
+  };
+}
+
+function writePrivate(path: string, value: unknown): Promise<void> {
+  return Deno.writeTextFile(path, canonicalJson(value) + "\n", { mode: 0o600 });
+}
+
+async function main(): Promise<void> {
+  const key = (Deno.env.get("NVIDIA_API_KEY") ?? "").trim();
+  const output = Deno.args[0];
+  const reviewOutput = Deno.args[1];
+  if (!key || !output || !reviewOutput) throw new Error("provider key and output paths are required");
+  const observations: ControlledNvidiaAiObservation[] = [];
+  const understandings: MotorV2UnderstandingObservation[] = [];
+  const v2 = createMotorV2OfficialInterpreter(
+    key,
+    (event) => observations.push(event),
+    (event) => understandings.push(event),
+  );
+  const baseline: LanguageInterpreter = { interpret: (input) => Promise.resolve(deterministicInterpret(input)) };
+  const rows: Array<Record<string, unknown>> = [];
+  const reviewRows: Array<Record<string, unknown>> = [];
+  const assignment: Array<Record<string, unknown>> = [];
+  const assignmentPattern = ["B", "A", "A", "B", "B", "A", "B", "A", "A", "B"];
+
+  for (const [index, item] of cases().entries()) {
+    const before = observations.length;
+    const beforeUnderstanding = understandings.length;
+    const input = {
+      message_id: `${item.case_id}-turn`,
+      text: item.text,
+      state: item.state,
+      automation_mode: "BOT_ACTIVE" as const,
+    };
+    const v2Plan = await planTurn(input, v2, {
+      route_attempted: "MOTOR_V2",
+      fallbackInterpreter: baseline,
+    });
+    const v2Observation = observations.slice(before).at(-1);
+    const v2Understanding = understandings.slice(beforeUnderstanding).at(-1);
+    const baselinePlan = await planTurn(input, baseline);
+    const integrated = safePlan(v2Plan);
+    const semanticFailures = Object.entries(item.expected).filter(([key, expected]) =>
+      integrated[key as keyof typeof integrated] !== expected
+    )
+      .map(([key, expected]) => ({ field: key, expected, actual: integrated[key as keyof typeof integrated] }));
+    const reply = v2Plan.reply_draft ?? "";
+    const replyFailures = [
+      ...(item.reply_contains ?? [])
+        .filter((fragment) => !reply.toLocaleLowerCase().includes(fragment.toLocaleLowerCase()))
+        .map((fragment) => ({ field: "reply_contains", expected: fragment, actual: reply })),
+      ...(item.reply_not_contains ?? [])
+        .filter((fragment) => reply.toLocaleLowerCase().includes(fragment.toLocaleLowerCase()))
+        .map((fragment) => ({ field: "reply_not_contains", expected: fragment, actual: reply })),
+    ];
+    const aIsV2 = assignmentPattern[index] === "A";
+    const v2SemanticPass = semanticFailures.length === 0 && replyFailures.length === 0;
+    const explicitSafeFailover = v2Plan.route.failover_route === "CURRENT_DETERMINISTIC" &&
+      v2Plan.route.provider_result === "REJECTED" &&
+      v2Plan.outcome !== "INTERPRETATION_UNAVAILABLE" &&
+      v2Plan.reply_draft !== null &&
+      v2Plan.route.reason !== null;
+    const effectiveResponsePass = v2SemanticPass || explicitSafeFailover;
+    rows.push({
+      case_id: item.case_id,
+      category: item.category,
+      provider: CONTROLLED_NVIDIA_MODEL,
+      uses_ai: v2Observation?.ai_output_used === true,
+      ai_output_used: v2Observation?.ai_output_used === true,
+      fallback_used: v2Observation?.fallback_used === true,
+      provider_attempted: v2Observation?.provider_attempted === true,
+      observation: safeObservation(v2Observation),
+      understanding: safeUnderstanding(v2Understanding),
+      integrated_v2: integrated,
+      effective_response_route: v2Plan.route.failover_route ?? "MOTOR_V2",
+      deterministic_baseline: safePlan(baselinePlan),
+      expected: item.expected,
+      v2_semantic_pass: v2SemanticPass,
+      effective_response_pass: effectiveResponsePass,
+      directed_pass: effectiveResponsePass,
+      directed_failures: [...semanticFailures, ...replyFailures],
+      failover_safe: explicitSafeFailover,
+      external_effects: false,
+      delivery: "SUPPRESSED",
+    });
+    assignment.push({ case_id: item.case_id, a_is_v2: aIsV2 });
+    reviewRows.push({
+      review_id: `review-${String(index + 1).padStart(2, "0")}`,
+      category: item.category,
+      context: [
+        ...reviewContext(item.state),
+        item.text,
+      ],
+      response_a: aIsV2 ? humanPlan(v2Plan) : humanPlan(baselinePlan),
+      response_b: aIsV2 ? humanPlan(baselinePlan) : humanPlan(v2Plan),
+    });
+  }
+
+  const summary = {
+    schema_version: "phase19c6-reply-boundary-shadow/1.0.0",
+    synthetic_input_only: true,
+    case_count: rows.length,
+    provider: CONTROLLED_NVIDIA_MODEL,
+    calls: observations.length,
+    valid_ai_outputs: observations.filter((item) => item.outcome === "llm_valid" && item.ai_output_used).length,
+    fallback_count: observations.filter((item) => item.fallback_used).length,
+    directed_pass_count: rows.filter((row) => row.directed_pass === true).length,
+    v2_semantic_pass_count: rows.filter((row) => row.v2_semantic_pass === true).length,
+    effective_response_pass_count: rows.filter((row) => row.effective_response_pass === true).length,
+    AI_VALID_RATE: observations.length === 0
+      ? 0
+      : observations.filter((item) => item.outcome === "llm_valid" && item.ai_output_used).length / observations.length,
+    SAFE_TURN_COMPLETION_RATE: rows.length === 0 ? 0 : rows.filter(
+      (row) =>
+        row.effective_response_pass === true && row.integrated_v2 &&
+        (row.integrated_v2 as Record<string, unknown>).outcome !== "INTERPRETATION_UNAVAILABLE",
+    ).length / rows.length,
+    external_effects: false,
+    whatsapp_delivery: "SUPPRESSED",
+    review_package: "written separately without system-origin labels",
+    rows,
+  };
+  await Deno.writeTextFile(output, canonicalJson(summary) + "\n", { mode: 0o600 });
+  await Deno.writeTextFile(
+    reviewOutput,
+    canonicalJson({
+      schema_version: "phase19c5-human-review/1.0.0",
+      synthetic_input_only: true,
+      case_count: reviewRows.length,
+      systems_blinded: true,
+      provider_blinded: true,
+      response_origin_blinded: true,
+      rows: reviewRows,
+    }) + "\n",
+    { mode: 0o600 },
+  );
+  await writePrivate(`${output}.assignment`, assignment);
+  console.log(canonicalJson({
+    schema_version: summary.schema_version,
+    synthetic_input_only: true,
+    case_count: summary.case_count,
+    calls: summary.calls,
+    valid_ai_outputs: summary.valid_ai_outputs,
+    fallback_count: summary.fallback_count,
+    directed_pass_count: summary.directed_pass_count,
+    AI_VALID_RATE: summary.AI_VALID_RATE,
+    SAFE_TURN_COMPLETION_RATE: summary.SAFE_TURN_COMPLETION_RATE,
+    external_effects: false,
+    whatsapp_delivery: "SUPPRESSED",
+  }));
+  if (
+    summary.case_count !== 10 || summary.calls !== 10 || summary.SAFE_TURN_COMPLETION_RATE !== 1 ||
+    summary.effective_response_pass_count !== 10
+  ) {
+    Deno.exit(2);
+  }
+}
+
+if (import.meta.main) await main();

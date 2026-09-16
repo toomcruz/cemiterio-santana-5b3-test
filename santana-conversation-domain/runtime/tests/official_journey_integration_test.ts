@@ -376,6 +376,84 @@ Deno.test("simultaneous recadastro cases keep references, documents, requests an
   );
 });
 
+Deno.test("recadastro preserves full concession then stores deceased burial facts without a concession conflict", async () => {
+  const store = new TransactionalMemoryStore();
+  await turn(store, "regression-75-start", "Preciso atualizar o cadastro do jazigo");
+
+  const reference = await turn(store, "regression-75-reference", "É a Quadra 15, terreno 63.");
+  const recadastro = store.state.goals.find((goal) => goal.goal_code === "GOAL_RECADASTRO")!;
+  assertEquals(activeFact(store.state, "concession_reference", recadastro)?.value, "Quadra 15, terreno 63");
+  assertEquals(store.state.pending_question?.fact_code, "recadastro_holder_document");
+  assert(!reference.reply_body?.toLowerCase().includes("conflito"));
+
+  const complement = await turn(
+    store,
+    "regression-76-burial",
+    "O falecido é José da Silva e está sepultado na Quadra 8, terreno 42.",
+  );
+  assertEquals(
+    activeFact(store.state, "burial_reference", recadastro)?.value,
+    "Quadra 8, terreno 42",
+  );
+  assertEquals(activeFact(store.state, "deceased_name", recadastro)?.value, "José da Silva");
+  assertEquals(activeFact(store.state, "concession_reference", recadastro)?.value, "Quadra 15, terreno 63");
+  assertEquals(store.state.pending_question?.question_code, "Q_RECADASTRO_HOLDER_DOCUMENT");
+  assert(!complement.reply_body?.toLowerCase().includes("conflito"));
+  assert(!complement.reply_body?.toLowerCase().includes("identificacao da concessao"));
+  assertEquals(store.state.facts.filter((fact) => fact.fact_code === "concession_reference").length, 1);
+});
+
+Deno.test("burial location does not conflict, while a true concession change does", async () => {
+  const store = new TransactionalMemoryStore();
+  await turn(store, "regression-location-start", "Preciso atualizar o cadastro do jazigo");
+  await turn(store, "regression-location-reference", "Quadra 15, terreno 63");
+  await turn(
+    store,
+    "regression-location-burial",
+    "O falecido é José da Silva e está sepultado na Quadra 8, terreno 42",
+  );
+  assertEquals(store.state.pending_question?.question_code, "Q_RECADASTRO_HOLDER_DOCUMENT");
+  assertEquals(store.state.facts.filter((fact) => fact.fact_code === "concession_reference").length, 1);
+
+  const conflictStore = new TransactionalMemoryStore();
+  await turn(conflictStore, "regression-true-conflict-start", "Preciso atualizar o cadastro do jazigo");
+  await turn(conflictStore, "regression-true-conflict-reference", "Quadra 15, terreno 63");
+  await turn(conflictStore, "regression-true-conflict-answer", "A concessão é a Quadra 8, terreno 42");
+  assertEquals(conflictStore.state.pending_question?.question_code, "Q_CONFLICT_CONFIRM");
+  assertEquals(conflictStore.state.facts.filter((fact) => fact.fact_code === "concession_reference").length, 2);
+});
+
+Deno.test("real revision 76 conflict state is corrected by the revision 77 multi-fact turn", async () => {
+  const store = new TransactionalMemoryStore();
+  await turn(store, "real-rev76-start", "Preciso atualizar o cadastro do jazigo");
+  await turn(store, "real-rev76-first-reference", "É a Quadra 15");
+  await turn(store, "real-rev76-conflicting-reference", "A concessão é Quadra 8");
+  assertEquals(store.state.pending_question?.question_code, "Q_CONFLICT_CONFIRM");
+  assertEquals(
+    store.state.facts.filter((fact) => fact.fact_code === "concession_reference" && fact.status === "ACTIVE")
+      .length,
+    2,
+  );
+
+  const corrected = await turn(
+    store,
+    "real-rev77",
+    "A concessão correta é Quadra 15, terreno 63. O falecido é José da Silva e está sepultado na Quadra 8, terreno 42.",
+  );
+  const recadastro = store.state.goals.find((goal) => goal.goal_code === "GOAL_RECADASTRO")!;
+  const activeConcessions = store.state.facts.filter((fact) =>
+    fact.fact_code === "concession_reference" && fact.status === "ACTIVE"
+  );
+  assertEquals(activeConcessions.length, 1);
+  assertEquals(activeConcessions[0]?.value, "Quadra 15, terreno 63");
+  assertEquals(activeFact(store.state, "burial_reference", recadastro)?.value, "Quadra 8, terreno 42");
+  assertEquals(activeFact(store.state, "deceased_name", recadastro)?.value, "José da Silva");
+  assertEquals(store.state.pending_question?.question_code, "Q_RECADASTRO_HOLDER_DOCUMENT");
+  assert(!corrected.reply_body?.toLowerCase().includes("identificacao da concessao"));
+  assert(!store.state.facts.some((fact) => fact.status === "ACTIVE" && fact.confidence === "CONFLICTING"));
+  assert(store.state.facts.some((fact) => fact.fact_code === "concession_reference" && fact.status === "SUPERSEDED"));
+});
+
 Deno.test("official exhumation journey reaches administrative authorization without claiming operational completion", async () => {
   const store = await collectedPurposeAndSpouse("journey");
   const requestId = store.state.solicitacoes![0]!.solicitacao_id;

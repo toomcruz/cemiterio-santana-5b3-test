@@ -56,6 +56,9 @@
         "exhumation_authorization",
         "burial_reference",
         "requester_document"
+      ],
+      "optional_facts": [
+        "deceased_name"
       ]
     },
     {
@@ -65,6 +68,11 @@
       "required_facts": [
         "concession_reference",
         "recadastro_holder_document"
+      ],
+      "optional_facts": [
+        "burial_reference",
+        "deceased_name",
+        "remains_status"
       ],
       "case_subject": "CONCESSION",
       "completion_required_facts": [

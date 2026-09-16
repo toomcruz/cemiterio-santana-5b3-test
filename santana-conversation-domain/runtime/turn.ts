@@ -7,6 +7,7 @@ import { guardInterpretation } from "./interpreter/guard.ts";
 import type { Interpretation } from "./interpreter/types.ts";
 import { contextualExplanation, contextualStatus, draftReply } from "./reply.ts";
 import { isConversationRestart } from "./interpreter/conversation_controls.ts";
+import { arbitrateConfidence } from "./interpreter/confidence_matrix.ts";
 
 export interface TurnInput {
   message_id: string;
@@ -24,6 +25,34 @@ export interface TurnPlan {
   question_draft: string | null;
   /** Human-facing draft; never send it before persistence/outbox commit. */
   reply_draft: string | null;
+  route: TurnRoute;
+}
+
+export type TurnRoute = {
+  route_attempted: "MOTOR_V2" | "CURRENT_DETERMINISTIC";
+  provider_result: "VALID" | "REJECTED" | "NOT_ATTEMPTED";
+  failover_route: "CURRENT_DETERMINISTIC" | null;
+  reason: string | null;
+  ai_output_used: boolean;
+};
+
+export interface TurnExecutionOptions {
+  fallbackInterpreter?: LanguageInterpreter;
+  route_attempted?: TurnRoute["route_attempted"];
+  onFailover?: (route: TurnRoute) => void;
+}
+
+function failureReason(error: unknown): string {
+  const value = error && typeof error === "object" ? error as Record<string, unknown> : {};
+  const category = typeof value.rejectionCategory === "string" ? value.rejectionCategory : "";
+  if (category === "canonical_enum_invalid") return "CANONICAL_ENUM_INVALID";
+  if (category.startsWith("canonical_")) return "CANONICAL_OUTPUT_REJECTED";
+  if (value.rejectionCode === "PROVIDER_TIMEOUT") return "PROVIDER_TIMEOUT";
+  if (typeof value.rejectionCode === "string" && value.rejectionCode.startsWith("PROVIDER_HTTP_")) {
+    return "PROVIDER_HTTP_ERROR";
+  }
+  if (value.rejectionCode === "STRUCTURED_OUTPUT_REJECTED") return "STRUCTURED_OUTPUT_REJECTED";
+  return "PROVIDER_ERROR";
 }
 
 /**
@@ -32,16 +61,28 @@ export interface TurnPlan {
  * The caller must atomically deduplicate, check version/mode, persist and enqueue.
  * A plan is not proof of storage, request creation, or delivery.
  */
-export async function planTurn(input: TurnInput, interpreter: LanguageInterpreter): Promise<TurnPlan> {
+export async function planTurn(
+  input: TurnInput,
+  interpreter: LanguageInterpreter,
+  options: TurnExecutionOptions = {},
+): Promise<TurnPlan> {
   if (!input.message_id.trim()) throw new Error("message_id required");
   const previous = structuredClone(input.state);
-  const unchanged = (outcome: TurnPlan["outcome"]): TurnPlan => ({
+  const defaultRoute: TurnRoute = {
+    route_attempted: options.route_attempted ?? "CURRENT_DETERMINISTIC",
+    provider_result: options.route_attempted === "MOTOR_V2" ? "NOT_ATTEMPTED" : "NOT_ATTEMPTED",
+    failover_route: null,
+    reason: null,
+    ai_output_used: false,
+  };
+  const unchanged = (outcome: TurnPlan["outcome"], route = defaultRoute): TurnPlan => ({
     outcome,
     expected_seq: previous.seq,
     next_state: structuredClone(previous),
     interpretation: null,
     question_draft: null,
     reply_draft: null,
+    route,
   });
   if (input.automation_mode !== "BOT_ACTIVE") return unchanged("HUMAN_ACTIVE");
   if (
@@ -71,12 +112,34 @@ export async function planTurn(input: TurnInput, interpreter: LanguageInterprete
     context: contextFromState(previous),
   };
   let interpretation: Interpretation;
+  let route = defaultRoute;
   try {
     // Revalidate even injected providers: TypeScript types are not a trust boundary.
     const candidate = await interpreter.interpret(request);
     interpretation = guardInterpretation(parseStrictInterpretation(JSON.stringify(candidate), request));
-  } catch {
-    return unchanged("INTERPRETATION_UNAVAILABLE");
+    route = {
+      ...defaultRoute,
+      provider_result: options.route_attempted === "MOTOR_V2" ? "VALID" : "NOT_ATTEMPTED",
+      ai_output_used: options.route_attempted === "MOTOR_V2",
+    };
+  } catch (error) {
+    route = {
+      ...defaultRoute,
+      provider_result: options.route_attempted === "MOTOR_V2" ? "REJECTED" : "NOT_ATTEMPTED",
+      failover_route: options.fallbackInterpreter ? "CURRENT_DETERMINISTIC" : null,
+      reason: options.route_attempted === "MOTOR_V2" ? failureReason(error) : null,
+    };
+    if (options.fallbackInterpreter) {
+      options.onFailover?.(route);
+      try {
+        const fallback = await options.fallbackInterpreter.interpret(request);
+        interpretation = guardInterpretation(parseStrictInterpretation(JSON.stringify(fallback), request));
+      } catch {
+        return unchanged("INTERPRETATION_UNAVAILABLE", route);
+      }
+    } else {
+      return unchanged("INTERPRETATION_UNAVAILABLE", route);
+    }
   }
   // Status is a response to a narrowly identified return/status utterance,
   // never a keyword shortcut that swallows corrections, questions or handoff.
@@ -97,21 +160,24 @@ export async function planTurn(input: TurnInput, interpreter: LanguageInterprete
         },
         question_draft: next.pending_question ? questionForFact(next.pending_question.fact_code).text : null,
         reply_draft: contextualStatus(next, input.text, interpretation) ?? status,
+        route,
       };
     } catch {
-      return unchanged("INTERPRETATION_UNAVAILABLE");
+      return unchanged("INTERPRETATION_UNAVAILABLE", route);
     }
   }
-  if (
-    interpretation.overall_confidence === "LOW" ||
-    interpretation.primary_event?.confidence === "LOW" ||
-    interpretation.goal?.confidence === "LOW" ||
-    interpretation.case_reference.confidence === "LOW" ||
-    interpretation.case_reference.kind === "AMBIGUOUS" ||
-    (interpretation.primary_event?.event_kind === "UNCERTAIN" && interpretation.facts.length === 0) ||
-    interpretation.ambiguities.some((ambiguity) => ambiguity.blocking) ||
-    interpretation.facts.some((fact) => fact.requires_confirmation)
-  ) interpretation = { ...interpretation, needs_clarification: true };
+  const confidenceDecision = arbitrateConfidence(interpretation);
+  interpretation = confidenceDecision.force_clarification
+    ? {
+      ...interpretation,
+      needs_clarification: true,
+      clarification_reason: confidenceDecision.reason,
+    }
+    : {
+      ...interpretation,
+      needs_clarification: false,
+      clarification_reason: null,
+    };
   const bridge = toConversationEvents(interpretation, previous);
   if (bridge.clarification) {
     const questionDraft = clarificationQuestion(previous, bridge);
@@ -126,6 +192,7 @@ export async function planTurn(input: TurnInput, interpreter: LanguageInterprete
         next_state: previous,
         previous_state: previous,
       }),
+      route,
     };
   }
   try {
@@ -144,9 +211,10 @@ export async function planTurn(input: TurnInput, interpreter: LanguageInterprete
         next_state: next,
         previous_state: previous,
       }),
+      route,
     };
   } catch {
     // No partial transition escapes if an event cannot be applied.
-    return unchanged("INTERPRETATION_UNAVAILABLE");
+    return unchanged("INTERPRETATION_UNAVAILABLE", route);
   }
 }
