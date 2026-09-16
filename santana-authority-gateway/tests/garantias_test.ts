@@ -166,7 +166,7 @@ Deno.test("o release_id calculado pelo TS e o mesmo da referencia para o catálo
   Deno.env.delete("SANTANA_REPO_ROOT");
   definirEscopoDeFixture([]);
   const oficial = await carregar();
-  assertEquals(oficial.release_id, "exu-1.0-083c52799dc8");
+  assertEquals(oficial.release_id, "exu-1.0-be0300053f95");
 });
 
 // ------------------------------------------------------- Fase 4A — fronteira
@@ -179,7 +179,7 @@ Deno.test("4A: release_id recalculado corresponde ao catálogo oficial atual", a
   limparCache();
   definirEscopoDeFixture([]);
   const oficial = await carregar();
-  assertEquals(oficial.release_id, "exu-1.0-083c52799dc8");
+  assertEquals(oficial.release_id, "exu-1.0-be0300053f95");
 });
 
 Deno.test("4A: ARQUIVOS_DE_DOMINIO tem tamanho e ordem alfabetica fixos", () => {
@@ -236,7 +236,7 @@ Deno.test("4A: state.schema e conversation-events nao entram no release_id", asy
     limparCache();
     definirEscopoDeFixture([]);
     const antes = await carregar();
-    assertEquals(antes.release_id, "exu-1.0-083c52799dc8");
+    assertEquals(antes.release_id, "exu-1.0-be0300053f95");
 
     Deno.writeTextFileSync(juntar(dom, "state.schema.json"), '{"fase4a":"mutado"}');
     Deno.writeTextFileSync(
