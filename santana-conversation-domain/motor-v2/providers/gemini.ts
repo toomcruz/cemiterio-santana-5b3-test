@@ -28,8 +28,17 @@ export interface ControlledGeminiUnderstandingOptions {
   model: string;
   timeoutMs?: number;
   maxOutputTokens?: number;
+  /** Motor V2 canary must fail closed instead of silently using deterministic fallback. */
+  failOnFallback?: boolean;
   network?: NetworkBoundary;
   observe?: (event: ControlledAiObservation) => void;
+}
+
+export class ControlledGeminiFailure extends Error {
+  constructor(readonly rejectionCode: string) {
+    super(rejectionCode);
+    this.name = "ControlledGeminiFailure";
+  }
 }
 
 type GeminiResponse = {
@@ -156,7 +165,7 @@ export class ControlledGeminiUnderstandingProvider implements UnderstandingProvi
       kind: "controlled_ai",
       uses_ai: true,
       model: options.model,
-      schema_guarded: false,
+      schema_guarded: true,
     };
   }
 
@@ -206,6 +215,7 @@ export class ControlledGeminiUnderstandingProvider implements UnderstandingProvi
         ? "STRUCTURED_OUTPUT_REJECTED"
         : "PROVIDER_ERROR";
       this.emit(outcome, started, false, true, inputTokens, outputTokens, rejectionCode);
+      if (this.options.failOnFallback) throw new ControlledGeminiFailure(rejectionCode);
       return understandMessages(messages);
     } finally {
       clearTimeout(timer);

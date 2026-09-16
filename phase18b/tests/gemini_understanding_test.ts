@@ -1,6 +1,7 @@
-import { assert, assertEquals } from "jsr:@std/assert@1";
+import { assert, assertEquals, assertRejects } from "jsr:@std/assert@1";
 import {
   type ControlledAiObservation,
+  ControlledGeminiFailure,
   ControlledGeminiUnderstandingProvider,
 } from "../../santana-conversation-domain/motor-v2/providers/gemini.ts";
 import type { UnderstandingResult } from "../../santana-conversation-domain/motor-v2/types.ts";
@@ -104,4 +105,19 @@ Deno.test("controlled Gemini provider falls back on HTTP error without response 
   const result = await provider.understand(messages);
   assert(result.subintents.includes("EXUMACAO"));
   assertEquals(rejections, ["PROVIDER_QUOTA"]);
+});
+
+Deno.test("controlled Gemini Motor V2 mode fails closed instead of falling back", async () => {
+  const observations: ControlledAiObservation[] = [];
+  const provider = new ControlledGeminiUnderstandingProvider({
+    apiKey: "test-secret",
+    model: "gemini-test",
+    failOnFallback: true,
+    network: () => Promise.resolve({ status: 429, body: "private provider body" }),
+    observe: (event) => observations.push(event),
+  });
+  await assertRejects(() => provider.understand(messages), ControlledGeminiFailure, "PROVIDER_QUOTA");
+  assertEquals(observations[0]?.provider_attempted, true);
+  assertEquals(observations[0]?.fallback_used, true);
+  assertEquals(observations[0]?.ai_output_used, false);
 });
