@@ -817,8 +817,13 @@ function questionStillValid(state: ConversationState, q: QuestionRef): boolean {
 }
 
 function refreshPendingQuestion(state: ConversationState): void {
-  if (state.pending_question && !questionStillValid(state, state.pending_question)) {
-    state.pending_question = null;
+  const focusedGoalId = contextGoal(state)?.goal_id ?? null;
+  if (state.pending_question) {
+    const belongsToFocus = state.pending_question.goal_id === focusedGoalId;
+    if (!belongsToFocus || !questionStillValid(state, state.pending_question)) {
+      if (questionStillValid(state, state.pending_question)) state.parked_questions.push(state.pending_question);
+      state.pending_question = null;
+    }
   }
   const candidate = nextBestQuestion(state);
   const pending = state.pending_question;
@@ -833,9 +838,14 @@ function refreshPendingQuestion(state: ConversationState): void {
     }
   }
   if (!state.pending_question) {
-    while (state.parked_questions.length > 0) {
-      const parked = state.parked_questions.pop();
-      if (parked && questionStillValid(state, parked)) {
+    // Parked questions belong to different goals/cases. Only resume one that
+    // belongs to the current context goal; the others remain parked until
+    // their goal returns to focus.
+    for (let index = state.parked_questions.length - 1; index >= 0; index -= 1) {
+      const parked = state.parked_questions[index];
+      if (!parked || parked.goal_id !== focusedGoalId) continue;
+      state.parked_questions.splice(index, 1);
+      if (questionStillValid(state, parked)) {
         state.pending_question = parked;
         return;
       }
