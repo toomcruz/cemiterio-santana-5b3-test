@@ -14,7 +14,7 @@ Escopo: B8/B1. Este documento não autoriza merge, deploy ou migration.
 | Painel, rotas legadas e integração operacional | `toomcruz/atendimento-cemiterio-santana` | `main` | `436d3b8` (worktree local) | Publicação exata não verificada neste corte | Adapter de integração; não recebe cópia cega do domínio |
 | Shadow/lifecycle operacional | `toomcruz/atendimento-cemiterio-santana` | `lifecycle-shadow` | `4f6c9e1` (worktree local) | Não é a fonte do domínio oficial | Apenas referência de compatibilidade, não corte |
 | Candidata histórica V47 | worktree derivado de `atendimento-cemiterio-santana` | `sana-v1-release-candidate` | `1301508` (`073d6c5` baseline) | Não é runtime publicado rastreável | Evidência histórica; não é fonte para copiar |
-| Edge ativo no Supabase SANTANA | projeto `zwbiqywqpllxfdofxtkz`, função `support-runtime-inbound` | recurso remoto | versão **56**, `ezbr_sha256=a44468f…`; body SHA observado `275d97e…` | **Ativo** | Não há commit Git oficial correlacionado; bloqueio B1 |
+| Edge ativo no Supabase SANTANA | projeto `zwbiqywqpllxfdofxtkz`, função `support-runtime-inbound` | recurso remoto | versão **56**, `ezbr_sha256=a44468f…`; body SHA `275d97e…` | **Ativo** | `LEGACY_OPAQUE_BASELINE`; preservado integralmente, sem origem Git declarada |
 
 ## Decisão de fonte
 
@@ -22,20 +22,19 @@ Escopo: B8/B1. Este documento não autoriza merge, deploy ou migration.
    `cemiterio-santana-5b3-test@main` em `5fcba023…`.
 2. O repositório `atendimento-cemiterio-santana` fornece o painel e os adapters
    operacionais. Ele não deve receber o worktree histórico inteiro da candidata.
-3. O bundle remoto V56 é evidência de estado publicado, não evidência de
-   proveniência. Seu source map referencia `bridge/sana-runtime-bridge.mjs` e não
-   corresponde estruturalmente ao `support-runtime-inbound` de `5fcba023…`.
-4. O único corte LAB atual é `sana-v1-v47-integration-lab` em cima de
-   `5fcba023…`. O corte de implantação ainda não pode ser fixado porque a
-   proveniência do V56 ativo e a integração com o adapter operacional não foram
-   reconciliadas.
+3. A tentativa final comparou o bundle V56 com imports, marcadores, hashes,
+   histórico Git, workflows e artefatos preservados. Não houve correlação
+   comprovável com um commit Git. O V56 é, portanto, `LEGACY_OPAQUE_BASELINE`;
+   nenhum commit foi inventado.
+4. A nova linhagem rastreável é `sana-v1-official-cut-5fcba023-lab-493cefb`.
+   O bundle V56, seu metadata e instruções de recuperação estão preservados em
+   `exports/`; a restauração depende de o provedor aceitar o formato histórico.
 
 ## B1/B8 — estado
 
 - **B8 resolvido:** o repositório oficial está acessível, autenticado somente para
   leitura e verificado no commit acima.
-- **B1 parcialmente resolvido:** a fonte correta e o corte LAB estão definidos,
-  mas o runtime ativo V56 não tem linhagem Git comprovada. Não é seguro declarar
-  que V47 substitui V56, nem preparar rollback, antes de reconciliar esse bundle
-  com uma revisão do repositório oficial.
-
+- **B1 resolvido por decisão fail-closed:** V56 foi formalizado como baseline
+  remoto opaco; a nova candidata não depende de sua origem. O rollback preserva
+  duas rotas: restauração do artefato V56 se suportada pelo provedor ou fallback
+  seguro para modo humano/automação desligada.
