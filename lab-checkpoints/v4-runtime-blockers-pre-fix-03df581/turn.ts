@@ -6,7 +6,7 @@ import { clarificationQuestion, contextFromState, toConversationEvents } from ".
 import { guardInterpretation } from "./interpreter/guard.ts";
 import type { Interpretation } from "./interpreter/types.ts";
 import { contextualExplanation, contextualStatus, draftReply } from "./reply.ts";
-import { isConversationRestart, isValidatedConversationResume } from "./interpreter/conversation_controls.ts";
+import { isConversationRestart } from "./interpreter/conversation_controls.ts";
 import { arbitrateConfidence } from "./interpreter/confidence_matrix.ts";
 
 export interface TurnInput {
@@ -25,8 +25,6 @@ export interface TurnPlan {
   question_draft: string | null;
   /** Human-facing draft; never send it before persistence/outbox commit. */
   reply_draft: string | null;
-  /** Closed/paused ordinary inbound: receipt only, with no business mutation. */
-  reply_suppressed?: boolean;
   route: TurnRoute;
 }
 
@@ -91,9 +89,6 @@ export async function planTurn(
   // message cannot silently reactivate automation; only an authorized
   // operator/runtime resume path may clear state.handoff.
   if (input.state.handoff) return unchanged("HUMAN_ACTIVE");
-  if (input.state.session_lifecycle.status !== "ACTIVE" && !isValidatedConversationResume(input.text)) {
-    return { ...unchanged("CLARIFICATION"), reply_suppressed: true };
-  }
   if (
     input.state.goals.some((goal) => ["ACTIVE", "SUSPENDED", "WAITING"].includes(goal.status)) &&
     isConversationRestart(input.text)
@@ -126,37 +121,6 @@ export async function planTurn(
     // Revalidate even injected providers: TypeScript types are not a trust boundary.
     const candidate = await interpreter.interpret(request);
     interpretation = guardInterpretation(parseStrictInterpretation(JSON.stringify(candidate), request));
-    // Lifecycle is authoritative over a provider's topic label. A validated
-    // return after PAUSED/CLOSED is always the official resume transition;
-    // it must not be downgraded to RECLASSIFICATION by interpretation.
-    if (previous.session_lifecycle.status !== "ACTIVE" && isValidatedConversationResume(input.text)) {
-      const mapping = interpretation.official_mapping ?? {
-        journeys: [],
-        subintents: [],
-        transverse_states: [],
-        intent_changed: false,
-        complexity: "LOW",
-        risk_level: "LOW",
-        confidence: "HIGH",
-        evidence_turn_ids: [input.message_id],
-        selected_event: null,
-        suppressed_events: [],
-        reason: "validated session resume",
-      };
-      interpretation = {
-        ...interpretation,
-        primary_event: { event_kind: "SOCIAL", confidence: "HIGH", evidence: input.text },
-        official_mapping: {
-          ...mapping,
-          transverse_states: [
-            ...new Set([...mapping.transverse_states, "CONVERSATION_RESUMED"]),
-          ],
-          selected_event: "SOCIAL",
-        },
-        needs_clarification: false,
-        clarification_reason: null,
-      };
-    }
     route = {
       ...defaultRoute,
       provider_result: options.route_attempted === "MOTOR_V2" ? "VALID" : "NOT_ATTEMPTED",

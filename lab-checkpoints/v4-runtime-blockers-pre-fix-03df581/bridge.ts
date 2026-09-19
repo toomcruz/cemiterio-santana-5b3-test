@@ -90,7 +90,7 @@ export function toConversationEvents(interpretation: Interpretation, state?: Con
   const requestedHint = interpretation.case_reference.subject_hint ? normalizeHint(interpretation.case_reference.subject_hint) : null;
   const focusCandidates = state?.goals.filter((candidate) => ["ACTIVE", "WAITING", "SUSPENDED"].includes(candidate.status)) ?? [];
   const returnRequest = kind === "SOCIAL" && !!state && isConversationReturn(interpretation.text_normalized);
-  const pausedCaseReturn = returnRequest && state?.session_lifecycle.status !== "ACTIVE";
+  const pausedCaseReturn = returnRequest && state?.event_log.at(-1)?.note === "PAUSE_CASE";
   const focusTarget = kind === "SOCIAL" && state && isConversationReturn(interpretation.text_normalized)
     ? (pausedCaseReturn
       ? null
@@ -104,6 +104,7 @@ export function toConversationEvents(interpretation: Interpretation, state?: Con
         .find((candidate) => candidate.case_id !== currentCaseId)
     : null;
   const resumeConversation = kind === "SOCIAL" && !!state && pausedCaseReturn &&
+    ["CLOSE", "PAUSE_CASE"].includes(state.event_log.at(-1)?.note ?? "") &&
     isConversationReturn(interpretation.text_normalized);
   const currentCaseRef = state?.cases.find((item) => item.case_id === currentCaseId)?.subject_ref;
   const privacyBoundary = interpretation.facts.some((fact) => fact.fact_code === "privacy_boundary");

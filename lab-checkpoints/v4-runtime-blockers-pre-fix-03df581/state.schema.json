@@ -16,7 +16,6 @@
     "pending_actions",
     "forbidden_goals",
     "handoff",
-    "session_lifecycle",
     "event_log"
   ],
   "properties": {
@@ -86,23 +85,6 @@
           "$ref": "#/$defs/handoff"
         }
       ]
-    },
-    "session_lifecycle": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "status",
-        "changed_at_seq"
-      ],
-      "properties": {
-        "status": {
-          "enum": ["ACTIVE", "PAUSED", "CLOSED"]
-        },
-        "changed_at_seq": {
-          "type": "integer",
-          "minimum": 0
-        }
-      }
     },
     "event_log": {
       "type": "array",

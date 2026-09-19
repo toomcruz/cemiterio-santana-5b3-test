@@ -15,7 +15,6 @@ import { canonicalJson, currentCatalogHash, sha256 } from "./server_transition.t
 import { planTurn, type TurnExecutionOptions, type TurnPlan } from "./turn.ts";
 import { officialInformationReply } from "./official_information.ts";
 import { documentAwaitingReview, withOperationalRequests } from "./official_operations.ts";
-import { isValidatedConversationResume } from "./interpreter/conversation_controls.ts";
 
 export type RuntimeAutomationMode = "BOT_ACTIVE" | "HUMAN_ACTIVE";
 export type RuntimeMessageType = "text" | "image" | "document" | "audio";
@@ -117,14 +116,9 @@ export interface RuntimeTurnResult {
 
 export function asStoredState(raw: unknown, conversationId: string): ConversationState {
   if (raw === null || raw === undefined) return initState(conversationId);
-  const state = structuredClone(raw) as ConversationState;
-  // States written before the durable lifecycle gate are normalized once and
-  // persisted by the next real commit; no historical facts are changed.
-  if (!state.session_lifecycle) {
-    state.session_lifecycle = { status: "ACTIVE", changed_at_seq: state.seq };
-  }
-  const errors = validateState(state);
+  const errors = validateState(raw);
   if (errors.length) throw new Error(`persisted conversation state is invalid: ${errors.slice(0, 3).join("; ")}`);
+  const state = structuredClone(raw) as ConversationState;
   if (state.conversation_id !== conversationId) throw new Error("persisted state belongs to another conversation");
   return state;
 }
@@ -261,7 +255,6 @@ export function panelProjection(state: ConversationState): RuntimePanelProjectio
       runtime: "santana-conversation-domain/v1",
       current_goal: focus?.goal_code ?? null,
       current_topic: state.current_topic ?? null,
-      lifecycle_state: state.session_lifecycle.status,
       pending_question_code: state.pending_question?.question_code ?? null,
       pending_fact_code: state.pending_question?.fact_code ?? null,
       pending_action_codes: state.pending_actions.map((action) => action.action_code),
@@ -332,10 +325,7 @@ export async function processOfficialTurn(
   const effectiveAutomationMode: RuntimeAutomationMode = automationPolicy.automatic_replies_allowed === true
     ? lease.automation_mode
     : "HUMAN_ACTIVE";
-  const lifecycleSuppressed = effectiveAutomationMode === "BOT_ACTIVE" &&
-    state.session_lifecycle.status !== "ACTIVE" && !isValidatedConversationResume(inbound.body);
   const information = effectiveAutomationMode === "BOT_ACTIVE"
-    && !lifecycleSuppressed
     ? await officialInformationReply({ text: inbound.body, state })
     : null;
   const infoState = information ? structuredClone(state) : null;
@@ -374,7 +364,7 @@ export async function processOfficialTurn(
       executionOptions,
     );
   const receivedState = withReceivedDocument(plan.next_state, lease.received_document);
-  const nextState = effectiveAutomationMode === "BOT_ACTIVE" && !plan.reply_suppressed
+  const nextState = effectiveAutomationMode === "BOT_ACTIVE"
     ? await withOperationalRequests(receivedState)
     : receivedState;
   const stateErrors = validateState(nextState);
@@ -393,7 +383,7 @@ export async function processOfficialTurn(
       } ${reviewNotice}`;
     } else reviewedDraft = reviewNotice;
   }
-  const replyBody = plan.reply_suppressed ? null : replyWithAttachment(
+  const replyBody = replyWithAttachment(
     reviewedDraft,
     lease.received_document,
     lease.attachment_failure,

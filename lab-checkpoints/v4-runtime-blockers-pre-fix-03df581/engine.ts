@@ -111,11 +111,6 @@ export interface ConversationState {
   pending_actions: PendingAction[];
   forbidden_goals: string[];
   handoff: HandoffModel | null;
-  /** Sessão/controle persistente; distinto do status do goal e do handoff. */
-  session_lifecycle: {
-    status: "ACTIVE" | "PAUSED" | "CLOSED";
-    changed_at_seq: number;
-  };
   event_log: { seq: number; event_kind: EventKind; note?: string | null }[];
   /** Fase 4B / R7 — aditivo; ciclo por categoria, sem status global. */
   solicitacoes?: SolicitacaoRecord[];
@@ -182,7 +177,6 @@ export function initState(conversation_id: string): ConversationState {
     pending_actions: [],
     forbidden_goals: [],
     handoff: null,
-    session_lifecycle: { status: "ACTIVE", changed_at_seq: 0 },
     event_log: [],
     solicitacoes: [],
     documentos: [],
@@ -897,7 +891,6 @@ export function applyEvent(previous: ConversationState, event: ConversationEvent
   switch (event.kind) {
     case "SOCIAL":
       if (event.note === "PAUSE_CASE") {
-        state.session_lifecycle = { status: "PAUSED", changed_at_seq: state.seq };
         for (const candidate of state.goals) {
           if (OPEN_STATUSES.includes(candidate.status)) {
             candidate.status = "SUSPENDED";
@@ -908,7 +901,6 @@ export function applyEvent(previous: ConversationState, event: ConversationEvent
         return state;
       }
       if (event.note === "RESUME_CASE") {
-        state.session_lifecycle = { status: "ACTIVE", changed_at_seq: state.seq };
         const target = [...state.goals].reverse().find((candidate) => candidate.status === "SUSPENDED");
         if (target) {
           target.status = "ACTIVE";
@@ -935,7 +927,6 @@ export function applyEvent(previous: ConversationState, event: ConversationEvent
       // A greeting can recover the next collection question in an older
       // waiting snapshot, without changing facts, decisions or case status.
       if (event.close_conversation) {
-        if (event.note === "CLOSE") state.session_lifecycle = { status: "CLOSED", changed_at_seq: state.seq };
         state.pending_question = null;
       } else {
         refreshPendingQuestion(state);

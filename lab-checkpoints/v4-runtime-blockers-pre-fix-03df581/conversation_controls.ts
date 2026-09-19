@@ -19,14 +19,6 @@ export function isConversationReturn(text: string): boolean {
     /^(?:continuar|continue|retomar|retome)\s+(?:no|na|o|a|com|sobre)\b.+/.test(value);
 }
 
-/** Closed/paused sessions reopen only on an explicit, unambiguous return. */
-export function isValidatedConversationResume(text: string): boolean {
-  const value = normalized(text);
-  if (/^(?:oi|ola|ainda estou aqui|estou aqui|continuo aqui)$/.test(value)) return false;
-  return isConversationReturn(text) &&
-    /\b(?:voltei|volto|retomei|retomar|retorno|continuar|continue|retome)\b/.test(value);
-}
-
 /** Leaving temporarily is a pause, not a close or a new attendance. */
 export function isConversationPause(text: string): boolean {
   const value = normalized(text);

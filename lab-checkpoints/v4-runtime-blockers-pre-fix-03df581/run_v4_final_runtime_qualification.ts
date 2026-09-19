@@ -4,9 +4,6 @@ import { processOfficialTurn, type RuntimeInbound, type RuntimeTurnResult } from
 import type { LanguageInterpreter } from "../santana-conversation-domain/runtime/adapter/adapter.ts";
 import { interpret } from "../santana-conversation-domain/runtime/interpreter/deterministic.ts";
 import { currentCatalogHash } from "../santana-conversation-domain/runtime/server_transition.ts";
-import { asStoredState, panelProjection } from "../santana-conversation-domain/runtime/official_turn_service.ts";
-import { applyOperatorCommand, operatorReply, parseOperatorCommand } from "../santana-conversation-domain/runtime/official_operations.ts";
-import { canonicalJson, sha256 } from "../santana-conversation-domain/runtime/server_transition.ts";
 
 const PROJECT_REF = "vpinclyspbcrxazmnrie";
 const SUPABASE_URL = `https://${PROJECT_REF}.supabase.co`;
@@ -23,9 +20,6 @@ const assertions: Array<{ name: string; pass: boolean; detail?: string }> = [];
 const turns: Array<Record<string, unknown>> = [];
 const deliveries: Array<Record<string, unknown>> = [];
 const atomicityObservations: Array<Record<string, unknown>> = [];
-const operatorObservations: Array<Record<string, unknown>> = [];
-const operatorActors: string[] = [];
-let operatorResumeSurface: "PASS" | "MISSING_IN_LAB" = "MISSING_IN_LAB";
 
 function check(name: string, pass: boolean, detail?: string) {
   assertions.push({ name, pass, ...(detail ? { detail } : {}) });
@@ -110,7 +104,6 @@ async function cleanup() {
     select array_agg(id) into ids from public.support_conversations where contact_name like ${q(contactPrefix + "%")};
     if ids is null then return; end if;
     delete from support_runtime.turn_events where conversation_id=any(ids);
-    delete from support_runtime.operator_events where conversation_id=any(ids);
     delete from support_runtime.outbound_queue where conversation_id=any(ids);
     delete from support_runtime.sana_collected_facts where conversation_id=any(ids);
     delete from support_runtime.sana_handoff_requests where conversation_id=any(ids);
@@ -119,11 +112,8 @@ async function cleanup() {
     delete from support_runtime.inbound_receipts where conversation_id=any(ids);
     delete from support_runtime.conversation_state where conversation_id=any(ids);
     delete from public.support_documents where conversation_id=any(ids);
-    delete from public.support_service_requests where conversation_id=any(ids);
-    delete from public.support_events where conversation_id=any(ids);
     delete from public.support_messages where conversation_id=any(ids);
     delete from public.support_conversations where id=any(ids);
-    delete from public.support_members where display_name like ${q("SANA-V4-OPERATOR-" + runId + "%")};
   end $$;`);
 }
 
@@ -164,68 +154,6 @@ try {
   check("D: post-handoff turns are silent", d2.reply_body === null && d2.outbox_id === null && d3.reply_body === null && d3.outbox_id === null);
   check("D: suppressed turns create no outbox", dCounts2.outbox === dCounts1.outbox);
 
-  const k = scenario("K_OPERATOR_RESUME", 10);
-  await turn(k, "Tenho um problema no meu jazigo.");
-  const k1 = await turn(k, "humano");
-  const k2 = await turn(k, "oi", { deliver: false });
-  const actorId = crypto.randomUUID();
-  operatorActors.push(actorId);
-  await sql(`insert into public.support_members(user_id,display_name,role,is_active,approval_status,permissions)
-    values (${q(actorId)}::uuid,${q("SANA-V4-OPERATOR-" + runId)},'admin',true,'approved',array['atendimentos'])`);
-  const snapshot = await rest.rpc<Record<string, unknown>>("support_runtime_operator_snapshot", {
-    p_conversation_id: k.conversationId,
-    p_actor_id: actorId,
-  });
-  const operatorState = asStoredState(snapshot.state, k.conversationId!);
-  const command = parseOperatorCommand({
-    command_id: crypto.randomUUID(),
-    conversation_id: k.conversationId,
-    expected_revision: Number(snapshot.revision),
-    expected_control_version: String(snapshot.control_version),
-    type: "RESUME",
-    note: "Retomada autorizada para qualificação LAB",
-  });
-  const nextOperatorState = applyOperatorCommand(operatorState, command, new Date().toISOString());
-  const operatorProjection = panelProjection(nextOperatorState);
-  operatorProjection.automation_mode = "bot";
-  const operatorReplyBody = operatorReply(nextOperatorState, command);
-  const operatorReplayBefore = await rest.rpc<Record<string, unknown>>("support_runtime_operator_replay", {
-    p_conversation_id: k.conversationId,
-    p_actor_id: actorId,
-    p_command_id: command.command_id,
-    p_command: command,
-  });
-  const operatorCommit = await rest.rpc<Record<string, unknown>>("support_runtime_commit_operator", {
-    p_conversation_id: k.conversationId,
-    p_actor_id: actorId,
-    p_command_id: command.command_id,
-    p_expected_revision: command.expected_revision,
-    p_catalog_hash: String(snapshot.catalog_hash),
-    p_state_hash: await sha256(canonicalJson(nextOperatorState)),
-    p_state: nextOperatorState,
-    p_command: command,
-    p_reply_body: operatorReplyBody,
-    p_projection: operatorProjection,
-  });
-  const operatorReplayAfter = await rest.rpc<Record<string, unknown>>("support_runtime_operator_replay", {
-    p_conversation_id: k.conversationId,
-    p_actor_id: actorId,
-    p_command_id: command.command_id,
-    p_command: command,
-  });
-  const k3 = await turn(k, "quero continuar", { deliver: false });
-  const operatorRows = await sql<Record<string, unknown>>(`select c.automation_mode,s.revision,s.state,
-    (select count(*)::int from support_runtime.operator_events where conversation_id=c.id) operator_events,
-    (select count(*)::int from support_runtime.outbound_queue where conversation_id=c.id) outbox
-    from public.support_conversations c join support_runtime.conversation_state s on s.conversation_id=c.id
-    where c.id=${q(k.conversationId!)}::uuid`);
-  operatorObservations.push({ snapshot, command, replay_before: operatorReplayBefore, commit: operatorCommit, replay_after: operatorReplayAfter, post_resume: k3, persisted: operatorRows[0] ?? null });
-  check("K: takeover remains human and suppresses citizen message", k1.event_kind === "HUMAN_REQUEST" && k2.reply_body === null && k2.outbox_id === null);
-  check("K: authorized resume is audited and restores bot mode", operatorReplayBefore.replayed === false && operatorCommit.replayed === false && operatorReplayAfter.replayed === true && operatorRows[0]?.automation_mode === "bot");
-  check("K: resume clears handoff and preserves lifecycle context", !(nextOperatorState.handoff) && nextOperatorState.session_lifecycle.status === "ACTIVE");
-  check("K: first post-resume turn is processed once", k3.reply_body !== null && k3.outbox_id !== null && Number(operatorRows[0]?.operator_events) === 1);
-  operatorResumeSurface = "PASS";
-
   const e = scenario("E_DOCUMENTS", 4);
   await turn(e, "documento da Ana foi enviado");
   await turn(e, "agora quero falar do meu pai");
@@ -264,26 +192,9 @@ try {
   await turn(j, "Tenho um problema no meu jazigo.");
   const j2 = await turn(j, "Pode encerrar por enquanto.");
   const j3 = await turn(j, "Ainda estou aqui.");
-  const j3b = await turn(j, "Agora quero falar da lápide.");
-  const jClosedState = await stateFor(j);
-  const jClosedCounts = await countsFor(j);
   const j4 = await turn(j, "Voltei para continuar o atendimento do jazigo.");
-  const j4Counts = await countsFor(j);
-  const j4Replay = await turn(j, "Voltei para continuar o atendimento do jazigo.", { externalId: `${runId}-${j.id}-5`, deliver: false });
-  const j4AfterReplayCounts = await countsFor(j);
-  check("J: close and explicit resume persist", /SOCIAL/.test(j2.event_kind ?? "") && /SOCIAL/.test(j4.event_kind ?? "") && JSON.stringify((await stateFor(j)).state ?? {}).includes("ACTIVE"));
-  const closedLifecycle = ((jClosedState.state as Record<string, unknown>)?.session_lifecycle as Record<string, unknown> | undefined)?.status;
-  check("J: ordinary messages remain closed and silent", j3.reply_body === null && j3.outbox_id === null && j3b.reply_body === null && j3b.outbox_id === null && closedLifecycle === "CLOSED" && Number(jClosedCounts.outbox) === Number(j4Counts.outbox) - 1);
-  check("J: valid resume creates one effect and replay is duplicate", j4.reply_body !== null && j4.outbox_id !== null && j4Replay.kind === "DUPLICATE" && JSON.stringify(j4Counts) === JSON.stringify(j4AfterReplayCounts));
-  check("J: post-close messages do not corrupt conversation", j3.conversation_id === j.conversationId);
-
-  const ja = scenario("J_AMBIGUOUS", 11);
-  await turn(ja, "Tenho um problema no meu jazigo.");
-  await turn(ja, "Pode encerrar por enquanto.");
-  const ja1 = await turn(ja, "oi", { deliver: false });
-  const jaState = await stateFor(ja);
-  const ambiguousLifecycle = ((jaState.state as Record<string, unknown>)?.session_lifecycle as Record<string, unknown> | undefined)?.status;
-  check("J: ambiguous return is fail-safe", ja1.reply_body === null && ja1.outbox_id === null && ambiguousLifecycle === "CLOSED");
+  check("J: close and resume events persist", /CLOSE|SOCIAL/.test(j2.event_kind ?? "") && /RESUME_CASE|SOCIAL/.test(j4.event_kind ?? ""));
+  check("J: post-close message does not corrupt conversation", j3.conversation_id === j.conversationId);
 
   const replay = scenario("REPLAY", 0);
   const replayId = `${runId}-replay-once`;
@@ -373,24 +284,12 @@ try {
     metadata: { lab_only: true, qualification_run_id: runId, scenario: invalid.id }, catalog_hash: catalogHash,
   });
   invalid.conversationId = lease.conversation_id;
-  await sql(`create or replace function public.sana_v4_qualification_failpoint() returns trigger
-    language plpgsql as $$ begin
-      if position('SANA_V4_FAILPOINT_ROLLBACK' in coalesce(new.body, '')) > 0 then
-        raise exception 'SANA_V4_FAILPOINT_ROLLBACK';
-      end if;
-      return new;
-    end $$;
-    drop trigger if exists sana_v4_qualification_failpoint on public.support_messages;
-    create trigger sana_v4_qualification_failpoint before insert on public.support_messages
-      for each row execute function public.sana_v4_qualification_failpoint();`);
   try {
     await rest.rpc("support_runtime_commit_turn", {
       p_conversation_id: lease.conversation_id, p_inbound_message_id: lease.inbound_message_id,
       p_expected_revision: lease.revision, p_catalog_hash: catalogHash, p_state_hash: "0".repeat(64),
       p_state: {
         conversation_id: lease.conversation_id,
-        goals: [{ goal_id: "00000000-0000-4000-8000-000000000004", goal_code: "GOAL_JAZIGO_SERVICOS", status: "ACTIVE" }],
-        solicitacoes: [{ solicitacao_id: "00000000-0000-4000-8000-000000000005", goal_id: "00000000-0000-4000-8000-000000000004", topic_code: "JAZIGO_SERVICOS", summary: "rollback synthetic" }],
         binding_checkpoint: {
           current_binding_id: null,
           ledger: {
@@ -418,24 +317,23 @@ try {
         },
       },
       p_outcome: "PROPOSED", p_event_kind: "ANSWER",
-      p_reply_body: "SANA_V4_FAILPOINT_ROLLBACK", p_projection: { subject: "nao_classificado", stage: "novos", automation_mode: "bot", flow_state: {} },
+      p_reply_body: "não deve persistir", p_projection: { subject: "nao_classificado", stage: "novos", automation_mode: "bot", flow_state: {} },
     });
   } catch { /* expected */ }
-  await sql(`drop trigger if exists sana_v4_qualification_failpoint on public.support_messages; drop function if exists public.sana_v4_qualification_failpoint()`);
   const invalidCounts = await countsFor(invalid);
   const invalidState = await stateFor(invalid);
   const invalidDetails = await sql<Record<string, unknown>>(`select
     (select count(*)::int from support_runtime.subject_bindings where conversation_id=${q(invalid.conversationId!)}::uuid) bindings,
     (select array_agg(status order by created_at) from support_runtime.inbound_receipts where conversation_id=${q(invalid.conversationId!)}::uuid) receipts`);
   atomicityObservations.push({
-    stage: "post_materialization_failpoint",
+    stage: "binding_materialization_mid_commit",
     revision: invalidState.revision,
     counts: invalidCounts,
     bindings: invalidDetails[0]?.bindings ?? null,
     receipts: invalidDetails[0]?.receipts ?? null,
   });
   check(
-    "ATOMICITY: post-materialization failpoint rolls back state/event/outbox/requests",
+    "ATOMICITY: mid-commit binding failure rolls back state/event/outbox/bindings",
     Number(invalidCounts.events) === 0 && Number(invalidCounts.outbox) === 0 &&
       Number(invalidState.revision) === 0 && Number(invalidDetails[0]?.bindings) === 0,
   );
@@ -465,7 +363,7 @@ try {
     artifact: "SANA V4 FINAL RUNTIME QUALIFICATION",
     run_id: runId,
     project_ref: PROJECT_REF,
-    tested_commit: Deno.env.get("SANA_QUALIFICATION_COMMIT") ?? "e3beef9e0acbef5b67cf2873310520c3c679ad34",
+    tested_commit: "e3beef9e0acbef5b67cf2873310520c3c679ad34",
     status,
     failure,
     assertions,
@@ -473,8 +371,7 @@ try {
     deliveries,
     atomicity_observations: atomicityObservations,
     evidence,
-    operator_resume_surface: operatorResumeSurface,
-    operator_observations: operatorObservations,
+    operator_resume_surface: "MISSING_IN_LAB",
     production_changes: "NONE",
     whatsapp_messages_sent: 0,
     generated_at: new Date().toISOString(),

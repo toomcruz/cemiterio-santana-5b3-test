@@ -268,7 +268,7 @@ export function applyOperatorCommand(
   const state = structuredClone(previous);
   state.handoff = null;
   // Re-evaluate the same case; a SOCIAL event does not clear facts or goals.
-  return applyEvent(state, { kind: "SOCIAL", note: "Retomada solicitada pela equipe" });
+  return applyEvent(state, { kind: "SOCIAL", note: "RESUME_CASE" });
 }
 
 export function operatorReply(state: ConversationState, command: OperatorCommand): string {
