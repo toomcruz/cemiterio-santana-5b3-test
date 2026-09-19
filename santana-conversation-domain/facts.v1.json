@@ -570,6 +570,28 @@
       "ai_extractable": true
     },
     {
+      "fact_code": "document_declaration",
+      "display_name": "Declaração sobre envio de documento",
+      "scope": "CONVERSATION",
+      "value_type": "ENUM",
+      "allowed_values": ["WILL_SEND", "SENT", "SENT_WRONG", "WILL_CORRECT"],
+      "priority_class": "NEXT_ACTION_DATA",
+      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION"],
+      "ai_extractable": true,
+      "human_rule_note": "Declaração do munícipe não prova recebimento, conferência ou validação do arquivo."
+    },
+    {
+      "fact_code": "multiple_subjects_declaration",
+      "display_name": "Declaração de múltiplos falecidos ou jazigos",
+      "scope": "CONVERSATION",
+      "value_type": "TEXT",
+      "priority_class": "NEXT_ACTION_DATA",
+      "allowed_sources": ["USER_EXPLICIT"],
+      "ai_extractable": true,
+      "repeatable": false,
+      "human_rule_note": "A declaração organiza a conversa, mas não identifica nem mistura casos automaticamente."
+    },
+    {
       "fact_code": "exumacao_required",
       "display_name": "Exumacao necessaria (derivado)",
       "scope": "CASE",

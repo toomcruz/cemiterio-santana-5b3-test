@@ -890,6 +890,24 @@ export function applyEvent(previous: ConversationState, event: ConversationEvent
 
   switch (event.kind) {
     case "SOCIAL":
+      if (event.note === "PAUSE_CASE") {
+        for (const candidate of state.goals) {
+          if (OPEN_STATUSES.includes(candidate.status)) {
+            candidate.status = "SUSPENDED";
+            candidate.status_reason = "USER_PAUSED";
+          }
+        }
+        state.pending_question = null;
+        return state;
+      }
+      if (event.note === "RESUME_CASE") {
+        const target = [...state.goals].reverse().find((candidate) => candidate.status === "SUSPENDED");
+        if (target) {
+          target.status = "ACTIVE";
+          target.status_reason = null;
+          state.current_topic = goalDef(target.goal_code).topic_code;
+        }
+      }
       if (event.focus_case_id) {
         const target = goalById(state, event.focus_case_id);
         if (target) {

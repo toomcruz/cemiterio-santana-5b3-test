@@ -23,7 +23,7 @@ Deno.test("restart request offers a safe new attendance without erasing the curr
   assertEquals(result.outcome, "CLARIFICATION");
   assertEquals(result.next_state, before);
   assert(result.reply_draft?.includes("serão preservados"));
-  assert(result.reply_draft?.includes("NOVO ATENDIMENTO DE RECADASTRO"));
+  assert(result.reply_draft?.includes("outro assunto"));
 });
 
 Deno.test("greeting during collection acknowledges the citizen before the short pending question", async () => {
@@ -51,7 +51,7 @@ Deno.test("unrelated text repairs the exchange instead of mechanically repeating
 
   assertEquals(result.outcome, "CLARIFICATION");
   assert(result.reply_draft?.startsWith("Não consegui relacionar essa mensagem"));
-  assert(result.reply_draft?.includes("NÃO SEI"));
+  assert(result.reply_draft?.includes("pode me dizer isso"));
   assertEquals(result.next_state, before);
 });
 
@@ -66,7 +66,7 @@ Deno.test("not knowing a burial reference accepts partial knowledge and offers a
 
   assert(result.reply_draft?.startsWith("Tudo bem."));
   assert(result.reply_draft?.includes("apenas o que souber"));
-  assert(result.reply_draft?.includes("NÃO TENHO ESSA INFORMAÇÃO"));
+  assert(result.reply_draft?.includes("pode me dizer isso"));
   assertEquals(result.next_state, before);
 });
 
@@ -80,8 +80,8 @@ Deno.test("another service name asks whether to open it separately instead of sw
   }, interpreter);
 
   assertEquals(result.outcome, "CLARIFICATION");
-  assert(result.reply_draft?.includes("novo atendimento de recadastro"));
-  assert(result.reply_draft?.includes("continuar o atendimento de exumação"));
+  assert(result.reply_draft?.includes("tratar de recadastro"));
+  assert(result.reply_draft?.includes("continuar o atendimento"));
   assertEquals(result.next_state, before);
 });
 

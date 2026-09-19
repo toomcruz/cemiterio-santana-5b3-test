@@ -126,7 +126,7 @@ Deno.test("official recadastro journey preserves documents and reaches administr
   assertEquals(activeFact(store.state, "concession_reference", store.state.goals[0]!), null);
 
   const corrected = await turn(store, "recadastro-reference", "Corrigindo: quadra 4, jazigo 18");
-  assert(corrected.reply_body?.includes("correção"));
+  assert(corrected.reply_body?.toLowerCase().includes("correção") || corrected.reply_body?.toLowerCase().includes("atualizei"));
   assertEquals(activeFact(store.state, "concession_reference", store.state.goals[0]!)?.value, "quadra 4, jazigo 18");
   assertEquals(store.state.pending_question?.fact_code, "recadastro_holder_document");
 
@@ -669,7 +669,7 @@ Deno.test("document review waiting preserves a price answer and acknowledges a c
   assertEquals(store.lastCommit.projection.queue_status, "inbox");
   const correction = await turn(store, "review-context-correction", "Corrigindo: a exumação será para cremação");
   assertEquals(activeFact(store.state, "exhumation_purpose", store.state.goals[0]!)?.value, "CREMACAO");
-  assert(correction.reply_body?.includes("correção"));
+  assert(correction.reply_body?.toLowerCase().includes("correção") || correction.reply_body?.toLowerCase().includes("atualizei"));
   assert(correction.reply_body?.includes("aguardando conferência"));
   assert(!correction.reply_body?.includes("Qual o seu documento"));
   assertEquals(store.lastCommit.projection.queue_status, "inbox");

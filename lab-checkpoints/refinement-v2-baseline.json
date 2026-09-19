@@ -1,0 +1,27 @@
+{
+  "schema_version": "sana-conversational-refinement-v2-baseline/v1",
+  "source_commit": "74e1df58deda7727b679578e84efe51d6fea94df",
+  "source_tag": "sana-simulation-lab-frozen-74e1df5",
+  "branch": "sana-conversational-refinement-v2",
+  "production_changed": false,
+  "whatsapp_messages_sent": 0,
+  "invariants": [
+    "case isolation and no cross-case fact copying",
+    "FOCUS_CASE preserves separate cases",
+    "CLOSE and RESUME_CASE lifecycle events",
+    "correction supersession without false replacement values",
+    "authority boundaries and fail-closed behavior",
+    "no invented facts or document receipt/validation",
+    "handoff requires real persisted state/receipt",
+    "receipts and idempotency",
+    "atomic state plus outbox commit",
+    "binding isolation and replay safety"
+  ],
+  "baseline_evidence": [
+    "official suite from frozen lab: 286 passed, 0 failed, 1 ignored",
+    "deterministic development scenarios: 50/50",
+    "deterministic novel scenarios: 10/10",
+    "human review: 24 conversations, 3 approved, 9 review, 12 rejected"
+  ],
+  "next_step": "classify 21 directed cases and add V2 regressions without changing frozen worktree"
+}

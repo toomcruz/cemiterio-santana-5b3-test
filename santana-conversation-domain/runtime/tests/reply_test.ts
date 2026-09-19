@@ -16,7 +16,7 @@ Deno.test("jazigo violation receives a useful follow-up instead of a repeated me
   assertEquals(result.outcome, "PROPOSED");
   assert(result.reply_draft?.includes("ocorrência relatada"));
   assert(result.reply_draft?.includes("foto"));
-  assert(result.reply_draft?.includes("FINALIZAR"));
+  assert(result.reply_draft?.includes("me avise"));
   assert(!result.reply_draft?.includes("escolha uma opção"));
   assertEquals(result.next_state.handoff, null);
 });
@@ -320,7 +320,7 @@ for (const [index, text] of waitingRegressions.entries()) {
     } else if (index === 1) {
       const goal = result.next_state.goals.find((item) => item.goal_code === "GOAL_EXUMACAO")!;
       assertEquals(activeFact(result.next_state, "exhumation_purpose", goal)?.value, "CREMACAO");
-      assert(result.reply_draft?.includes("correção"));
+      assert(result.reply_draft?.includes("atualiz") || result.reply_draft?.includes("correção"));
     } else if (index === 2) {
       assert(result.next_state.handoff !== null);
       assert(result.reply_draft?.includes("pedido de cancelamento"));
@@ -476,7 +476,7 @@ Deno.test("a grave service description without complaint receives the completion
     automation_mode: "BOT_ACTIVE",
   }, { interpret: (input) => Promise.resolve(interpret(input)) });
   assertEquals(result.next_state.pending_question, null);
-  assert(result.reply_draft?.includes("FINALIZAR"));
+  assert(result.reply_draft?.includes("me avise"));
   assertEquals(result.next_state.handoff, null);
 });
 

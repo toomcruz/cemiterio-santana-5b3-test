@@ -91,7 +91,15 @@ export function arbitrateConfidence(interpretation: Interpretation): ConfidenceA
       : block(interpretation, "P0_REQUIRES_HUMAN_REQUEST", "P0 sem HUMAN_REQUEST oficial", ["ambiguity"]);
   }
   if (media) return block(interpretation, "MEDIA_NOT_ANALYZED", "mídia essencial não analisada", ["ambiguity"]);
-  if (blockingAmbiguity) return block(interpretation, "BLOCKING_AMBIGUITY", "ambiguidade bloqueadora", ["ambiguity"]);
+  const explicitReclassification = event === "RECLASSIFICATION" &&
+    interpretation.official_mapping?.intent_changed === true;
+  const multipleSubjects = interpretation.facts.some((fact) => fact.fact_code === "multiple_subjects_declaration");
+  if (blockingAmbiguity && !explicitReclassification && !multipleSubjects) {
+    return block(interpretation, "BLOCKING_AMBIGUITY", "ambiguidade bloqueadora", ["ambiguity"]);
+  }
+  if (multipleSubjects && event === "COMPLEMENT") {
+    return allow(interpretation, "MULTIPLE_SUBJECTS_DECLARATION", ["conversation_scope", "case_isolation"]);
+  }
   if (requiresConfirmation) {
     return block(interpretation, "FACT_REQUIRES_CONFIRMATION", "fato exige confirmação", ["requires_confirmation"]);
   }

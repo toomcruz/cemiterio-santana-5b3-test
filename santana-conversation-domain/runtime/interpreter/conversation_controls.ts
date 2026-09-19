@@ -12,9 +12,19 @@ export function isConversationReturn(text: string): boolean {
   const value = normalized(text);
   if (/\b(?:outro|outra)\s+(?:falecido|pessoa|caso|atendimento|conversa)\b/.test(value)) return false;
   if (/^(?:(?:oi|ola) )?(?:(?:quero|gostaria de|preciso) )?(?:continuar|retomar)(?: (?:o |meu |este |a |minha |esta )?(?:atendimento|pedido|conversa))?$/.test(value)) return true;
-  return /^(?:voltei|volto|retornei|retorno)\b.*\b(?:assunto|atendimento|pedido|conversa|caso|jazigo|falecido|exumacao|recadastro|concessao)\b/.test(value) ||
+  return /^(?:voltei|volto|voltando|retornei|retorno)\b.*\b(?:assunto|atendimento|pedido|conversa|caso|jazigo|falecido|exumacao|recadastro|concessao|pai|mae)\b/.test(value) ||
     /^volto\s+para\b.+/.test(value) ||
-    /^(?:quero|gostaria de|preciso)\s+(?:continuar|retomar)\b.+/.test(value);
+    /^(?:volto|volta|retorno|retornei)\s+(?:para|na|no|ao|a)\b.+/.test(value) ||
+    /^(?:quero|gostaria de|preciso)\s+(?:continuar|retomar)\b.+/.test(value) ||
+    /^(?:continuar|continue|retomar|retome)\s+(?:no|na|o|a|com|sobre)\b.+/.test(value);
+}
+
+/** Leaving temporarily is a pause, not a close or a new attendance. */
+export function isConversationPause(text: string): boolean {
+  const value = normalized(text);
+  return /\b(?:vou|preciso|tenho que|posso)\s+(?:sair|ir|parar)\b.*\b(?:volto|retorno|continuo|depois)\b/.test(value) ||
+    /\b(?:vou sair|estou saindo|preciso sair)\b.*\b(?:depois|mais tarde)\b/.test(value) ||
+    /\b(?:volto|retorno)\s+(?:depois|mais tarde)\b/.test(value);
 }
 
 export function isConversationClose(text: string): boolean {

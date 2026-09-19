@@ -274,7 +274,7 @@ Deno.test("an unclassified continuation of an open jazigo occurrence stays in co
   assertEquals(result.outcome, "CLARIFICATION");
   assert(result.next_state.goals.some((goal) => goal.goal_code === "GOAL_JAZIGO_SERVICOS" && goal.status === "ACTIVE"));
   assert(result.reply_draft?.includes("continuar explicando"));
-  assert(result.reply_draft?.includes("FINALIZAR"));
+  assert(result.reply_draft?.includes("me avise"));
   assert(!result.reply_draft?.includes("escolha uma opção"));
   assertEquals(result.next_state.handoff, null);
 });
@@ -313,7 +313,7 @@ Deno.test("jazigo reference and later damage detail are preserved without reopen
       fact.fact_code === "grave_service_description" && fact.status === "ACTIVE"
     ).length >= 2,
   );
-  assert(detailed.reply_draft?.includes("FINALIZAR"));
+  assert(detailed.reply_draft?.includes("me avise"));
 });
 
 Deno.test("handoff context excludes facts from another jazigo case", () => {

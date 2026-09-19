@@ -37,6 +37,12 @@
     "quero falar com atendente",
     "quero falar com uma pessoa",
     "quero falar com humano",
+    "quero falar com alguem",
+    "quero uma atendente",
+    "quero uma pessoa",
+    "chama alguem",
+    "pode chamar alguem",
+    "atendimento humano",
     "encaminhar para equipe",
     "encaminhe para equipe",
     "pode encaminhar"
@@ -56,6 +62,14 @@
     "nao resolveram",
     "descaso",
     "faz meses",
+    "ninguem resolve",
+    "ninguem responde",
+    "estou esperando",
+    "aguardando retorno",
+    "sem retorno",
+    "esta demorando",
+    "isso esta demorando",
+    "nao respondem",
     "violado",
     "violaram",
     "violacao",
@@ -153,7 +167,13 @@
         "zeladoria",
         "limpeza do jazigo",
         "manutencao do jazigo",
-        "meu tumulo"
+        "meu tumulo",
+        "localizar o jazigo",
+        "encontrar o jazigo",
+        "saber onde fica o jazigo",
+        "jazigo da",
+        "jazigo do",
+        "jazigo de"
       ],
       "confidence": "HIGH"
     },
@@ -168,7 +188,9 @@
         "encomendei",
         "pedido",
         "lapide",
-        "lapida"
+        "lapida",
+        "placa",
+        "placa com nome"
       ],
       "confidence": "MEDIUM"
     }
@@ -385,7 +407,9 @@
       "value": "LAPIDE",
       "any": [
         "lapide",
-        "lapida"
+        "lapida",
+        "placa",
+        "placa com nome"
       ],
       "confidence": "HIGH"
     },

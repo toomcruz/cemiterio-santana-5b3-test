@@ -15,28 +15,39 @@ export interface BridgeResult {
 
 export function contextFromState(state: ConversationState, knownHints: string[] = []): InterpreterInput["context"] {
   const goal = contextGoal(state);
-  const subjectRef = state.cases.find((item) => item.case_id === goal?.case_id)?.subject_ref;
+  const contextGoalRecord = goal ?? [...state.goals].reverse().find((item) => item.status === "SUSPENDED") ?? null;
+  const subjectRef = state.cases.find((item) => item.case_id === contextGoalRecord?.case_id)?.subject_ref;
+  const normalizeHint = (value: string): string => value.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
   // Legacy states may carry a message id instead of a subject hint. Do not
   // feed those ids to the interpreter as if they identified the deceased.
   const subjectHint = subjectRef?.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").match(
     /^(?:meu|minha) (?:pai|mae|avo|irmao|irma|marido|esposa|filho|filha|tio|tia)(?::|$)/,
   )?.[0]
     .replace(/:$/, "");
+  const caseHints = state.cases.map((item) => item.subject_ref.split(":")[0]?.trim() ?? "")
+    .filter((item) => item.length > 1 && !/^(?:demand|request|case|message)$/i.test(item))
+    .map(normalizeHint);
+  const allKnownHints = [...new Set([
+    ...knownHints.map(normalizeHint),
+    ...caseHints,
+    ...(subjectHint ? [subjectHint] : []),
+  ])];
   return {
     has_open_goal: state.goals.some((g) => ["ACTIVE", "SUSPENDED", "WAITING"].includes(g.status)),
-    open_goal_code: goal ? goal.goal_code : null,
+    open_goal_code: contextGoalRecord ? contextGoalRecord.goal_code : null,
     pending_question_fact: state.pending_question ? state.pending_question.fact_code : null,
-    known_subject_hints: knownHints.length > 0 ? knownHints : subjectHint ? [subjectHint] : [],
-    known_facts: goal
-      ? activeFactsForGoalCase(state, goal).map((fact) => ({
+    known_subject_hints: allKnownHints,
+    known_facts: (goal
+      ? activeFactsForGoalCase(state, goal)
+      : state.facts.filter((fact) => fact.status === "ACTIVE" && fact.case_id === null && fact.goal_id === null)
+    ).map((fact) => ({
         fact_code: fact.fact_code,
         value: fact.value,
         confidence: fact.confidence,
         source: fact.source,
-      }))
-      : [],
-    active_case_id: goal?.case_id ?? null,
-    active_goal_status: goal?.status ?? null,
+      })),
+    active_case_id: contextGoalRecord?.case_id ?? null,
+    active_goal_status: contextGoalRecord?.status ?? null,
     handoff_active: state.handoff !== null,
     parallel_goal_codes: state.goals.filter((item) => item.informational && item.status !== "RESOLVED").map((item) =>
       item.goal_code
@@ -47,7 +58,11 @@ export function contextFromState(state: ConversationState, knownHints: string[] 
 
 export function toConversationEvents(interpretation: Interpretation, state?: ConversationState): BridgeResult {
   const priorityHandoff = interpretation.primary_event?.event_kind === "HUMAN_REQUEST";
-  if ((interpretation.needs_clarification && !priorityHandoff) || !interpretation.primary_event) {
+  const priorityLifecycle = interpretation.primary_event?.event_kind === "SOCIAL" &&
+    (interpretation.official_mapping?.transverse_states.includes("CONVERSATION_CLOSING") === true ||
+      interpretation.official_mapping?.transverse_states.includes("CONVERSATION_PAUSED") === true ||
+      interpretation.official_mapping?.transverse_states.includes("CONVERSATION_RESUMED") === true);
+  if ((interpretation.needs_clarification && !priorityHandoff && !priorityLifecycle) || !interpretation.primary_event) {
     return {
       events: [],
       clarification: {
@@ -68,14 +83,28 @@ export function toConversationEvents(interpretation: Interpretation, state?: Con
   const p0Handoff = kind === "HUMAN_REQUEST" && interpretation.official_mapping?.risk_level === "P0";
   const closeConversation = kind === "SOCIAL" &&
     interpretation.official_mapping?.transverse_states.includes("CONVERSATION_CLOSING") === true;
+  const pauseConversation = kind === "SOCIAL" &&
+    interpretation.official_mapping?.transverse_states.includes("CONVERSATION_PAUSED") === true;
   const currentCaseId = state ? contextGoal(state)?.case_id : null;
+  const normalizeHint = (value: string): string => value.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+  const requestedHint = interpretation.case_reference.subject_hint ? normalizeHint(interpretation.case_reference.subject_hint) : null;
+  const focusCandidates = state?.goals.filter((candidate) => ["ACTIVE", "WAITING", "SUSPENDED"].includes(candidate.status)) ?? [];
+  const returnRequest = kind === "SOCIAL" && !!state && isConversationReturn(interpretation.text_normalized);
+  const pausedCaseReturn = returnRequest && state?.event_log.at(-1)?.note === "PAUSE_CASE";
   const focusTarget = kind === "SOCIAL" && state && isConversationReturn(interpretation.text_normalized)
-    ? state.goals.filter((candidate) => ["ACTIVE", "WAITING", "SUSPENDED"].includes(candidate.status))
-      .sort((a, b) => b.stack_index - a.stack_index)
-      .find((candidate) => candidate.case_id !== currentCaseId)
+    ? (pausedCaseReturn
+      ? null
+      : requestedHint
+      ? focusCandidates.find((candidate) => {
+        if (candidate.case_id === currentCaseId) return false;
+        const ref = state.cases.find((item) => item.case_id === candidate.case_id)?.subject_ref ?? "";
+        return normalizeHint(ref).includes(requestedHint);
+      })
+      : null) ?? focusCandidates.sort((a, b) => b.stack_index - a.stack_index)
+        .find((candidate) => candidate.case_id !== currentCaseId)
     : null;
-  const resumeConversation = kind === "SOCIAL" && !!state && !focusTarget &&
-    state.event_log.at(-1)?.note === "CLOSE" &&
+  const resumeConversation = kind === "SOCIAL" && !!state && pausedCaseReturn &&
+    ["CLOSE", "PAUSE_CASE"].includes(state.event_log.at(-1)?.note ?? "") &&
     isConversationReturn(interpretation.text_normalized);
   const currentCaseRef = state?.cases.find((item) => item.case_id === currentCaseId)?.subject_ref;
   // A linguistic hint ("minha tia") is not a unique person identifier. A
@@ -132,12 +161,12 @@ export function toConversationEvents(interpretation: Interpretation, state?: Con
   events.push({
     kind,
     facts,
-    ...((closeConversation || resumeConversation || focusTarget)
-      ? { note: closeConversation ? "CLOSE" : resumeConversation ? "RESUME_CASE" : "FOCUS_CASE" }
+    ...((closeConversation || pauseConversation || resumeConversation || focusTarget)
+      ? { note: closeConversation ? "CLOSE" : pauseConversation ? "PAUSE_CASE" : resumeConversation ? "RESUME_CASE" : "FOCUS_CASE" }
       : {}),
     ...(focusTarget ? { focus_case_id: focusTarget.goal_id } : {}),
     ...(p0Handoff ? { handoff_priority: "P0" as const } : {}),
-    ...(closeConversation ? { close_conversation: true } : {}),
+    ...(closeConversation || pauseConversation ? { close_conversation: true } : {}),
   });
   return { events, clarification: null };
 }
@@ -159,8 +188,8 @@ export function clarificationQuestion(state: ConversationState, result: BridgeRe
   if (
     goal && goalDef(goal.goal_code).completion_mode === "EXPLICIT_HANDOFF" && missingFacts(state, goal).length === 0
   ) {
-    return "Você pode continuar explicando a situação ou enviar uma foto e outras referências do jazigo. Quando terminar de enviar as informações, escreva FINALIZAR para encaminhar o atendimento à equipe.";
+    return "Você pode continuar explicando a situação ou enviar uma foto e outras referências do jazigo. Quando terminar, me avise e eu registro o pedido de encaminhamento à equipe.";
   }
   const missing = goal ? missingFacts(state, goal)[0] : undefined;
-  return missing ? questionForFact(missing.code).text : "Pode me explicar um pouco melhor?";
+  return missing ? questionForFact(missing.code).text : "O que você precisa resolver hoje? Pode me contar com suas palavras.";
 }

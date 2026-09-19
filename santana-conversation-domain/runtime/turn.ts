@@ -91,7 +91,7 @@ export async function planTurn(
   ) {
     const current = contextFromState(previous).open_goal_code?.replace(/^GOAL_/, "").toLowerCase() ?? "atual";
     const reply =
-      `Tudo bem. O atendimento de ${current} e o protocolo atual serão preservados. Para abrir outro atendimento, escreva o assunto, por exemplo: NOVO ATENDIMENTO DE RECADASTRO. Para permanecer neste, escreva CONTINUAR ATENDIMENTO.`;
+      `Tudo bem. O atendimento de ${current} e o protocolo atual serão preservados. Você quer tratar de outro assunto ou continuar neste atendimento? Diga qual assunto deseja seguir, e eu mantenho os casos separados.`;
     return {
       ...unchanged("CLARIFICATION"),
       question_draft: reply,

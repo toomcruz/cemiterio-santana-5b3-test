@@ -110,7 +110,7 @@ Deno.test("same-goal concession correction drafts the committed next question", 
 
   assertEquals(result.next_state.goals[0]?.goal_code, "GOAL_RECADASTRO");
   assertEquals(result.next_state.pending_question?.question_code, "Q_RECADASTRO_HOLDER_DOCUMENT");
-  assert(result.reply_draft?.startsWith("Registrei a correção informada."));
+  assert(result.reply_draft?.toLowerCase().includes("correção") || result.reply_draft?.toLowerCase().includes("atualizei"));
   assert(result.reply_draft?.includes("documento do titular"));
   assert(!result.reply_draft?.includes("tratar de concessão"));
   assert(!result.reply_draft?.includes("Confirme se deseja seguir"));

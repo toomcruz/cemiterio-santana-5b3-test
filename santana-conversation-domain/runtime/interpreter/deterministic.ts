@@ -15,6 +15,7 @@ import type {
 import type { EventKind } from "../../engine/catalog.ts";
 import {
   isConversationClose,
+  isConversationPause,
   isConversationReturn,
   isGreeting,
   requestsNewNamedAttendance,
@@ -146,6 +147,8 @@ function graveReference(text: string): string | null {
       "i",
     ),
   ) ?? text.match(
+    /\b(?:setor|rua)\s+[a-z0-9]+(?:\s+[a-z0-9]+){0,3}\s*,?\s*(?:jazigo|sepultura|terreno)\s*(?:n[ºo.]?\s*)?[a-z0-9-]+\b/i,
+  ) ?? text.match(
     new RegExp(`\\b(?:jazigo|sepultura|t[uú]mulo|terreno)\\s*(?:n[ºo.]?\\s*)?${identifier}\\b`, "i"),
   ) ?? text.match(new RegExp(`\\bquadra\\s*(?:n[ºo.]?\\s*)?${identifier}\\b`, "i"));
   return match?.[0]?.trim() || null;
@@ -196,8 +199,10 @@ const SUBJECT_HINTS = [
 
 export function interpret(input: InterpreterInput): Interpretation {
   const text = normalize(input.text);
+  const specificGraveReturn = isConversationReturn(input.text) &&
+    /\b(?:jazigo|pai|mae|m[aã]e|av[oó]|v[oó]|irmao|irm[aã]o|tio|tia)\b/.test(text);
   const socialGreeting = isGreeting(input.text) ||
-    (input.context.has_open_goal && isConversationReturn(input.text));
+    (input.context.has_open_goal && isConversationReturn(input.text) && !specificGraveReturn);
   const facts: CandidateFact[] = [];
   const secondary: CandidateEvent[] = [];
   const ambiguities: Ambiguity[] = [];
@@ -217,9 +222,15 @@ export function interpret(input: InterpreterInput): Interpretation {
   // temporary/session intent explicit ("por enquanto" / "esta conversa agora").
   const conversationClose = input.context.has_open_goal && isConversationClose(input.text) &&
     /\b(?:por enquanto|esta conversa agora|atendimento por enquanto)\b/.test(text);
-  const humanHandoffMarker = !conversationClose ? ((input.context.has_open_goal && isConversationClose(input.text) ? input.text : null) ??
+  const conversationPause = input.context.has_open_goal && isConversationPause(input.text);
+  const noRequest = /\b(?:nao|nunca)\s+(?:quero|vou|preciso|gostaria de)?\s*(?:abrir|criar|fazer|iniciar)\s+(?:um\s+)?(?:pedido|solicitacao|atendimento)\b/.test(text) ||
+    /\bnao quero abrir\s+(?:pedido|solicitacao|atendimento)\b/.test(text);
+  const multipleSubjectsMarker = /\b(?:tres|3|varios|varias|mais de um|mais de uma)\s+(?:jazigos|falecidos|pessoas|casos)\b/.test(text);
+  const humanHandoffMarker = !conversationClose && !conversationPause ? ((input.context.has_open_goal && isConversationClose(input.text) ? input.text : null) ??
     firstMatch(text, lexicon.human_handoff_markers) ??
-    (/(?:falar|conversar) com (?:um |uma |o |a )?(?:atendente|pessoa|humano|equipe|administracao)\b/.test(text)
+    (/(?:^|\b)(?:humano|atendente|atendimento humano|pessoa|chama algu[eé]m|falar com algu[eé]m)\b/.test(text) &&
+      !/\b(?:outra pessoa|prazo da outra pessoa|data da outra pessoa|outro atendimento)\b/.test(text) &&
+      !/\b(?:nao|nunca|sem)\s+(?:humano|atendente|pessoa)\b/.test(text)
       ? input.text
       : cancellation && input.context.has_open_goal
       ? input.text
@@ -228,7 +239,19 @@ export function interpret(input: InterpreterInput): Interpretation {
   // Assim uma palavra solta não converte uma conversa nova em encaminhamento.
   const completionMarker = input.context.has_open_goal ? firstMatch(text, lexicon.completion_markers) : null;
   const complaintMarker = firstMatch(text, lexicon.complaint_markers);
-  const newSubjectMarker = (requestsNewNamedAttendance(input.text) ? input.text : null) ??
+  const documentDeclaration =
+    /\b(?:vou|irei|pretendo)\s+(?:mandar|enviar)\s+(?:o\s+)?(?:documento|arquivo)\b/.test(text)
+      ? "WILL_SEND"
+      : (/\b(?:ja|já)\s+(?:mandei|enviei|foi enviado|foi mandado)\b.*\b(?:errad[oa]|incorreto|arquivo errado)\b/.test(text) ||
+          /\b(?:documento|arquivo)\b.*\b(?:foi enviado|foi mandado)\b.*\b(?:errad[oa]|incorreto)\b/.test(text))
+      ? "SENT_WRONG"
+      : (/\b(?:ja|já)\s+(?:mandei|enviei|foi enviado|foi mandado)\b/.test(text) ||
+          /\b(?:documento|arquivo)\b.*\b(?:foi enviado|foi mandado)\b/.test(text))
+      ? "SENT"
+      : /\b(?:vou|irei|pretendo)\s+(?:corrigir|reenviar|mandar outro|enviar outro)\b/.test(text)
+      ? "WILL_CORRECT"
+      : null;
+  let newSubjectMarker = (requestsNewNamedAttendance(input.text) ? input.text : null) ??
     firstMatch(text, lexicon.new_subject_markers) ??
     (/\b(?:tambem|outr[oa]|mais um|mais uma)\b/.test(text) &&
         /\b(?:falecid[oa]|pessoa|meu pai|minha mae|meu avo|minha avo|meu tio|minha tia|meu irmao|minha irma)\b/.test(
@@ -237,6 +260,8 @@ export function interpret(input: InterpreterInput): Interpretation {
       ? input.text
       : null);
   const explicitReturn = input.context.has_open_goal && isConversationReturn(input.text) && !newSubjectMarker;
+  const returnsToGraveCase = explicitReturn && input.context.active_goal_status !== "SUSPENDED" && specificGraveReturn;
+  const pausedReturn = input.context.active_goal_status === "SUSPENDED" && isConversationReturn(input.text);
   const uncertaintyMarker = firstMatch(text, lexicon.uncertainty_markers);
   const mentionsExhumationGoal = lexicon.goal_patterns.some((pattern) =>
     pattern.goal_code === "GOAL_EXUMACAO" && firstMatch(text, pattern.any) !== null
@@ -246,6 +271,28 @@ export function interpret(input: InterpreterInput): Interpretation {
 
   // Fatos candidatos.
   const seen = new Set<string>();
+  if (documentDeclaration) {
+    seen.add("document_declaration");
+    facts.push({
+      fact_code: "document_declaration",
+      value: documentDeclaration,
+      source: correctionMarker ? "USER_CORRECTION" : "USER_EXPLICIT",
+      confidence: "HIGH",
+      evidence: input.text,
+      requires_confirmation: false,
+    });
+  }
+  if (multipleSubjectsMarker) {
+    seen.add("multiple_subjects_declaration");
+    facts.push({
+      fact_code: "multiple_subjects_declaration",
+      value: input.text.trim(),
+      source: "USER_EXPLICIT",
+      confidence: "HIGH",
+      evidence: input.text,
+      requires_confirmation: false,
+    });
+  }
   if (input.context.pending_question_fact === "surviving_spouse_status") {
     const positive = new Set(["sim", "sim esta", "esta sim", "esta vivo", "esta viva"]);
     const negative = new Set(["nao", "nao esta", "nao esta vivo", "nao esta viva"]);
@@ -322,9 +369,20 @@ export function interpret(input: InterpreterInput): Interpretation {
   // A locating request can identify a family member without using the
   // catalog phrase "meu jazigo". Treat that explicit kinship + grave wording
   // as the grave-services goal; the kinship remains evidence, not an identity.
-  if (!goal && /\bjazigo\s+(?:da|do)\s+(?:minha|meu)\s+(?:m[aã]e|pai|av[oó]|v[oó]|irm[aã]o|tia|tio)\b/i.test(text)) {
+  if (!goal && (
+    /\bjazigo\s+(?:da|do)\s+(?:minha|meu)\s+(?:m[aã]e|pai|av[oó]|v[oó]|irm[aã]o|tia|tio)\b/i.test(text) ||
+    /\b(?:localizar|encontrar|saber\s+onde)\b.*\bjazigo\b/.test(text) ||
+    /^\s*(?:quero\s+)?(?:o\s+)?jazigo\s+(?:da|do)\s+[a-záéíóúãõâêôç]+(?:\s+[a-záéíóúãõâêôç]+){0,2}\s*$/i.test(input.text)
+  )) {
     goal = { goal_code: "GOAL_JAZIGO_SERVICOS", confidence: "HIGH", evidence: input.text };
     subjectKind = "GRAVE";
+  }
+
+  // A clear refusal to open a request is a conversational choice, not a
+  // commercial goal. Keep the reducer from opening a case for this message.
+  if (noRequest) {
+    goal = null;
+    subjectKind = "GENERIC";
   }
 
   // A new deceased/case marker can omit the service name because the citizen
@@ -343,6 +401,12 @@ export function interpret(input: InterpreterInput): Interpretation {
     };
     subjectKind = inheritedSubject as CaseReference["subject_kind"];
   }
+
+  const explicitTopicChange = input.context.has_open_goal && Boolean(goal) &&
+    goal?.goal_code !== input.context.open_goal_code &&
+    (/\b(?:agora|tambem|quero|preciso|gostaria)\b.*\b(?:sobre|falar de|tratar de|assunto)\b/.test(text) ||
+      (isConversationReturn(input.text) && /\b(?:jazigo|lapide|placa|exumacao|recadastro|concessao)\b/.test(text)) ||
+      facts.some((fact) => fact.fact_code === "commercial_item"));
 
   // A descrição de uma ocorrência de jazigo é sempre uma declaração do usuário:
   // ela pode orientar a triagem, mas não confirma titularidade, regularidade ou
@@ -503,13 +567,37 @@ export function interpret(input: InterpreterInput): Interpretation {
   }
 
   // Referencia de case.
-  const subjectHint = SUBJECT_HINTS.find((hint) => matches(text, hint)) ?? null;
+  const subjectHintCandidate =
+    input.text.match(/\b(?:voltando|volto|volta)\s+(?:ao|a|para|no|na)\s+(meu pai|minha mae|minha mãe|meu avo|minha avo|minha avó|meu irmao|minha irma|meu tio|minha tia)\b/i)?.[1]?.trim() ||
+    SUBJECT_HINTS.find((hint) => matches(text, hint)) ||
+    input.text.match(/\b(?:jazigo|falecido|falecida)\s+(?:da|do|de)\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+){0,2})/i)?.[1]?.trim() ||
+    input.text.match(/\b(?:falar|tratar)\s+(?:do|da)\s+(pai|mae|mae|avo|avó|irmao|irmão|tio|tia)\b/i)?.[1]?.trim() ||
+    input.text.match(/\b(?:nome\s+(?:e|é)|agora|voltando|volto|volta|primeiro|segundo|terceiro|e|é)\s+(?:o|a|para|na|no|de|do|da|e|é)?\s*([A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ]+(?:\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ]+){0,2})/u)?.[1]?.trim() ||
+    input.text.trim().match(/^[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ]+(?:\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ]+){0,2}$/u)?.[0] ||
+    null;
+  const subjectHint = subjectHintCandidate && !/^(?:recadastro|exumacao|concessao|transporte|ossuario|lapide|lapida|placa|jazigo|atendimento|pedido|humano|atendente)$/i.test(normalize(subjectHintCandidate))
+    ? subjectHintCandidate
+    : null;
+  if (input.context.has_open_goal && input.context.known_facts?.some((fact) => fact.fact_code === "multiple_subjects_declaration") &&
+    subjectHint && /\b(?:primeiro|segundo|terceiro|quarta|quarto)\b/.test(text)) {
+    newSubjectMarker = input.text;
+  }
+  if (!goal && subjectHint && (multipleSubjectsMarker || input.context.known_facts?.some((fact) => fact.fact_code === "multiple_subjects_declaration"))) {
+    goal = { goal_code: "GOAL_JAZIGO_SERVICOS", confidence: "HIGH", evidence: input.text };
+    subjectKind = "GRAVE";
+  }
+  if (!goal && returnsToGraveCase) {
+    goal = { goal_code: "GOAL_JAZIGO_SERVICOS", confidence: "HIGH", evidence: input.text };
+    subjectKind = "GRAVE";
+  }
   let caseKind: CaseReference["kind"] = input.context.has_open_goal ? "CURRENT" : "NEW";
   let caseConfidence: Confidence = "HIGH";
   if (newSubjectMarker) {
     caseKind = "NEW";
   } else if (subjectHint && input.context.known_subject_hints.length > 0) {
-    caseKind = input.context.known_subject_hints.includes(subjectHint) ? "CURRENT" : "NEW";
+    caseKind = input.context.known_subject_hints.some((hint) => normalize(hint) === normalize(subjectHint))
+      ? "CURRENT"
+      : "NEW";
   } else if (
     input.context.has_open_goal && !subjectHint && ambiguities.some((a) => a.code === "AMB_SUJEITO_INDEFINIDO")
   ) {
@@ -521,7 +609,7 @@ export function interpret(input: InterpreterInput): Interpretation {
   let primaryKind: EventKind | null = null;
   let primaryEvidence = "";
   let primaryConfidence: Confidence = "MEDIUM";
-  if (conversationClose || explicitReturn) {
+  if (conversationClose || conversationPause || pausedReturn || (explicitReturn && !returnsToGraveCase)) {
     primaryKind = "SOCIAL";
     primaryEvidence = input.text;
     primaryConfidence = "HIGH";
@@ -532,6 +620,10 @@ export function interpret(input: InterpreterInput): Interpretation {
   } else if (complaintMarker) {
     primaryKind = "COMPLAINT";
     primaryEvidence = complaintMarker;
+    primaryConfidence = "HIGH";
+  } else if (explicitTopicChange || returnsToGraveCase) {
+    primaryKind = "RECLASSIFICATION";
+    primaryEvidence = input.text;
     primaryConfidence = "HIGH";
   } else if (correctionMarker) {
     primaryKind = "CORRECTION";
@@ -555,6 +647,10 @@ export function interpret(input: InterpreterInput): Interpretation {
     primaryKind = answersPending ? "ANSWER" : "COMPLEMENT";
     primaryEvidence = facts[0]?.evidence ?? "";
     primaryConfidence = facts[0]?.confidence ?? "MEDIUM";
+  } else if (noRequest) {
+    primaryKind = "SOCIAL";
+    primaryEvidence = input.text;
+    primaryConfidence = "HIGH";
   } else if (uncertaintyMarker) {
     primaryKind = "UNCERTAIN";
     primaryEvidence = uncertaintyMarker;
@@ -580,7 +676,7 @@ export function interpret(input: InterpreterInput): Interpretation {
   if (!primaryKind) overall = "LOW";
 
   const blocking = ambiguities.some((a) => a.blocking);
-  const needsClarification = blocking || overall === "LOW" || primaryKind === null;
+  const needsClarification = (!explicitTopicChange && !multipleSubjectsMarker && blocking) || overall === "LOW" || primaryKind === null;
   const clarificationReason = blocking
     ? `ambiguidade bloqueadora: ${ambiguities.filter((a) => a.blocking).map((a) => a.code).join(", ")}`
     : primaryKind === null
@@ -611,12 +707,12 @@ export function interpret(input: InterpreterInput): Interpretation {
     clarification_reason: clarificationReason,
     refusals: [],
     produced_by: "deterministic-mock/v1",
-    ...(conversationClose
+    ...((conversationClose || conversationPause || (explicitReturn && !returnsToGraveCase))
       ? {
         official_mapping: {
           journeys: [],
           subintents: [],
-          transverse_states: ["CONVERSATION_CLOSING"],
+          transverse_states: [conversationClose ? "CONVERSATION_CLOSING" : conversationPause ? "CONVERSATION_PAUSED" : "CONVERSATION_RESUMED"],
           intent_changed: false,
           complexity: "LOW",
           risk_level: "LOW",
@@ -624,7 +720,28 @@ export function interpret(input: InterpreterInput): Interpretation {
           evidence_turn_ids: [input.message_id],
           selected_event: "SOCIAL" as const,
           suppressed_events: [],
-          reason: "pedido explícito de encerramento da conversa",
+          reason: conversationClose
+            ? "pedido explícito de encerramento da conversa"
+            : conversationPause
+            ? "pedido de pausa temporária da conversa"
+            : "retomada explícita da conversa",
+        },
+      }
+      : {}),
+    ...(explicitTopicChange || returnsToGraveCase
+      ? {
+        official_mapping: {
+          journeys: [],
+          subintents: [],
+          transverse_states: [],
+          intent_changed: true,
+          complexity: "LOW",
+          risk_level: "LOW",
+          confidence: "HIGH",
+          evidence_turn_ids: [input.message_id],
+          selected_event: "RECLASSIFICATION" as const,
+          suppressed_events: [],
+          reason: "mudança explícita de assunto no mesmo atendimento",
         },
       }
       : {}),
