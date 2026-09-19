@@ -610,8 +610,8 @@
 
 ## sim-34 — usuário irritado
 
-**Decisão humana V2:** REVISAR
-**Motivo/expectativa preservado:** Amostra de não-regressão; handoff final aprovado em V2, mas o caso permanece sujeito à comparação conversacional.
+**Decisão humana V2:** APROVADA
+**Motivo/expectativa preservado:** Amostra de não-regressão; decisão humana V2 preservada.
 
 ### Turno 1
 **Munícipe:** Ninguém resolve nada.

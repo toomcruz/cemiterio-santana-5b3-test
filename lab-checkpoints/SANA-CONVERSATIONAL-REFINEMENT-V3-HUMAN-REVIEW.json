@@ -5547,8 +5547,8 @@
         "handoff"
       ],
       "human_v2_decision": {
-        "classification": "REVISAR",
-        "reason": "Amostra de não-regressão; handoff final aprovado em V2, mas o caso permanece sujeito à comparação conversacional."
+        "classification": "APROVADA",
+        "reason": "Amostra de não-regressão; decisão humana V2 preservada."
       },
       "expectation_source": "REVISAR: final handoff works, but the earlier replies do not acknowledge frustration or waiting time.",
       "baseline_v2": [

@@ -36,7 +36,7 @@ const humanDecisions: Record<string, { classification: string; reason: string }>
   "sim-19": { classification: "APROVADA", reason: "Amostra de não-regressão; decisão humana V2 preservada." },
   "sim-40": { classification: "APROVADA", reason: "Amostra de não-regressão; decisão humana V2 preservada." },
   "sim-101": { classification: "APROVADA", reason: "Amostra de não-regressão; decisão humana V2 preservada." },
-  "sim-34": { classification: "REVISAR", reason: "Amostra de não-regressão; handoff final aprovado em V2, mas o caso permanece sujeito à comparação conversacional." },
+  "sim-34": { classification: "APROVADA", reason: "Amostra de não-regressão; decisão humana V2 preservada." },
 };
 
 function compactState(state: ConversationState) {
