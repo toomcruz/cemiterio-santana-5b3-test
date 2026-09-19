@@ -1,0 +1,4 @@
+project_id = "zwbiqywqpllxfdofxtkz"
+
+[functions.support-runtime-canary-v4]
+verify_jwt = false
