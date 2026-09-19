@@ -245,7 +245,13 @@ try {
         if (newCalls >= MAX_PROVIDER_CALLS_PER_RUN) break;
         if (msUntil(entry.next_eligible_at) > 0) { ledger.status = "WAITING_PROVIDER"; ledger.next_eligible_at = entry.next_eligible_at; await writeJsonAtomic(LEDGER_FILE, ledger); paused = true; break; }
       }
-      const replayInterpretation = raw?.interpretation as Interpretation | undefined;
+      // A raw 429 may contain the adapter's fallback interpretation, but it is
+      // not a terminal Gemini result and must never be replayed as one. Only
+      // terminal ledger states are eligible for context replay; blocked items
+      // must make a fresh provider call on a later scheduler run.
+      const replayInterpretation = (["PRIMARY_VALID", "PRIMARY_INVALID_REJECTED"] as LedgerStatus[]).includes(status)
+        ? raw?.interpretation as Interpretation | undefined
+        : undefined;
       const interpreter = replayInterpretation ? new ReplayInterpreter(replayInterpretation) : new NewGeminiInterpreter(conversationId ?? "pending", conversation.id, turn, entry);
       try {
         const inbound: RuntimeInbound = { external_message_id: `${ledger.run_id}-${conversation.id}-${turn}`, phone_e164: phone, contact_name: `${ledger.contact_prefix}-${conversation.id}`, body: conversation.turns[turn - 1]!, message_type: "text", metadata: { lab_only: true, qualification_run_id: ledger.run_id, matrix_id: conversation.id, turn } };
