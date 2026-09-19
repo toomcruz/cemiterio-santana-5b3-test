@@ -202,20 +202,28 @@ export function interpret(input: InterpreterInput): Interpretation {
   const secondary: CandidateEvent[] = [];
   const ambiguities: Ambiguity[] = [];
 
-  const correctionMarker = firstMatch(text, lexicon.correction_markers);
+  const correctionMarker = firstMatch(text, lexicon.correction_markers) ??
+    (/(?:estava|está|esta)\s+errad[ao]|n[aã]o\s+[eé]\s+essa|n[aã]o\s+[eé]\s+aquele|n[aã]o\s+[eé]\s+aquela/.test(text)
+      ? text
+      : null);
   const changeMarker = firstMatch(text, lexicon.change_of_mind_markers);
   const parallelMarker = firstMatch(text, lexicon.parallel_question_markers);
   const cancellation =
     /\b(?:quero|preciso|gostaria de|vou) (?:cancelar|desistir)(?:\b|$)|^(?:cancele|cancela|cancelar|desisto)\b/.test(
       text,
     ) && !/\b(?:nao|nunca|nem) (?:quero|preciso|gostaria de|vou) (?:cancelar|desistir)\b/.test(text);
-  const humanHandoffMarker = (input.context.has_open_goal && isConversationClose(input.text) ? input.text : null) ??
+  // Preserve the existing exact "Encerrar" -> human pause contract. A
+  // conversational close is promoted only when the citizen makes the
+  // temporary/session intent explicit ("por enquanto" / "esta conversa agora").
+  const conversationClose = input.context.has_open_goal && isConversationClose(input.text) &&
+    /\b(?:por enquanto|esta conversa agora|atendimento por enquanto)\b/.test(text);
+  const humanHandoffMarker = !conversationClose ? ((input.context.has_open_goal && isConversationClose(input.text) ? input.text : null) ??
     firstMatch(text, lexicon.human_handoff_markers) ??
     (/(?:falar|conversar) com (?:um |uma |o |a )?(?:atendente|pessoa|humano|equipe|administracao)\b/.test(text)
       ? input.text
       : cancellation && input.context.has_open_goal
       ? input.text
-      : null);
+      : null)) : null;
   // "FINALIZAR" só encerra a triagem quando já existe um atendimento aberto.
   // Assim uma palavra solta não converte uma conversa nova em encaminhamento.
   const completionMarker = input.context.has_open_goal ? firstMatch(text, lexicon.completion_markers) : null;
@@ -228,6 +236,7 @@ export function interpret(input: InterpreterInput): Interpretation {
         )
       ? input.text
       : null);
+  const explicitReturn = input.context.has_open_goal && isConversationReturn(input.text) && !newSubjectMarker;
   const uncertaintyMarker = firstMatch(text, lexicon.uncertainty_markers);
   const mentionsExhumationGoal = lexicon.goal_patterns.some((pattern) =>
     pattern.goal_code === "GOAL_EXUMACAO" && firstMatch(text, pattern.any) !== null
@@ -308,6 +317,31 @@ export function interpret(input: InterpreterInput): Interpretation {
       goal = { goal_code: pattern.goal_code, confidence: pattern.confidence, evidence };
       subjectKind = pattern.subject_kind as CaseReference["subject_kind"];
     }
+  }
+
+  // A locating request can identify a family member without using the
+  // catalog phrase "meu jazigo". Treat that explicit kinship + grave wording
+  // as the grave-services goal; the kinship remains evidence, not an identity.
+  if (!goal && /\bjazigo\s+(?:da|do)\s+(?:minha|meu)\s+(?:m[aã]e|pai|av[oó]|v[oó]|irm[aã]o|tia|tio)\b/i.test(text)) {
+    goal = { goal_code: "GOAL_JAZIGO_SERVICOS", confidence: "HIGH", evidence: input.text };
+    subjectKind = "GRAVE";
+  }
+
+  // A new deceased/case marker can omit the service name because the citizen
+  // is continuing the same kind of request. Reuse only the active goal kind;
+  // bridge.ts still creates a NEW case and never merges the old case facts.
+  if (!goal && newSubjectMarker && input.context.has_open_goal && input.context.open_goal_code) {
+    const inheritedSubject = ["GOAL_EXUMACAO", "GOAL_TRANSPORTE"].includes(input.context.open_goal_code)
+      ? "DECEASED"
+      : input.context.open_goal_code === "GOAL_JAZIGO_SERVICOS"
+      ? "GRAVE"
+      : "GENERIC";
+    goal = {
+      goal_code: input.context.open_goal_code,
+      confidence: "HIGH",
+      evidence: input.text,
+    };
+    subjectKind = inheritedSubject as CaseReference["subject_kind"];
   }
 
   // A descrição de uma ocorrência de jazigo é sempre uma declaração do usuário:
@@ -487,7 +521,11 @@ export function interpret(input: InterpreterInput): Interpretation {
   let primaryKind: EventKind | null = null;
   let primaryEvidence = "";
   let primaryConfidence: Confidence = "MEDIUM";
-  if (humanHandoffMarker || completionMarker) {
+  if (conversationClose || explicitReturn) {
+    primaryKind = "SOCIAL";
+    primaryEvidence = input.text;
+    primaryConfidence = "HIGH";
+  } else if (humanHandoffMarker || completionMarker) {
     primaryKind = "HUMAN_REQUEST";
     primaryEvidence = humanHandoffMarker ?? completionMarker ?? "";
     primaryConfidence = "HIGH";
@@ -573,5 +611,22 @@ export function interpret(input: InterpreterInput): Interpretation {
     clarification_reason: clarificationReason,
     refusals: [],
     produced_by: "deterministic-mock/v1",
+    ...(conversationClose
+      ? {
+        official_mapping: {
+          journeys: [],
+          subintents: [],
+          transverse_states: ["CONVERSATION_CLOSING"],
+          intent_changed: false,
+          complexity: "LOW",
+          risk_level: "LOW",
+          confidence: "HIGH",
+          evidence_turn_ids: [input.message_id],
+          selected_event: "SOCIAL" as const,
+          suppressed_events: [],
+          reason: "pedido explícito de encerramento da conversa",
+        },
+      }
+      : {}),
   };
 }

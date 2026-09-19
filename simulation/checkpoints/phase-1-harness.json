@@ -1,0 +1,17 @@
+{
+  "status": "harness_ready",
+  "base_commit": "d573ed8da909b3711dfef06fe3d281c250df59ed",
+  "worktree": "/data/.openclaw/workspace/.work/sana-simulation-lab",
+  "runner": "simulation/run_lab.ts",
+  "components": [
+    "SimulatedCitizen with hidden truth and visible-reply-driven next turn",
+    "LabStore implementing official RuntimeStore with state-before/after, receipts, idempotency, and QUEUE_ONLY outbox",
+    "independent evaluator for facts/evidence, continuity, isolation, correction, repetition, handoff, CLOSE/RESUME, and internal leaks",
+    "official processOfficialTurn -> planTurn -> interpreter -> reducer -> validateState -> commit path"
+  ],
+  "scenario_counts": {"development": 50, "novel": 10, "max_turns": 30},
+  "smoke_deterministic": {"conversations": 5, "turns": 12, "failed_conversations": 0, "production_changed": false, "whatsapp_sent": 0},
+  "provider_run": {"status": "running", "batch": "smoke", "provider": "gemini", "output": "simulation/runs/smoke-gemini.json"},
+  "divergence": "Frozen runtime has no separate Gemini draft stage; official reply renderer remains deterministic and is recorded as such.",
+  "next_action": "reconcile Gemini smoke, then run uncorrected development baseline batches"
+}

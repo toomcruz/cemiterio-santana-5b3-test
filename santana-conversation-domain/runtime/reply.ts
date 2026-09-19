@@ -342,6 +342,15 @@ export function draftReply(input: {
   } else if (questionDraft && input.next_state.pending_question?.fact_code === "surviving_spouse_status") {
     questionDraft =
       "O falecido deixou esposo(a) ou companheiro(a) vivo? Responda: sim; não, já faleceu; ou não tinha esposo(a)/companheiro(a).";
+  } else if (
+    questionDraft &&
+    input.next_state.pending_question?.fact_code === "grave_service_description" &&
+    input.next_state.facts.some((fact) => fact.fact_code === "grave_reference" && fact.status === "ACTIVE")
+  ) {
+    // A concrete reference already supplied is evidence, not a reason to ask
+    // for the same location again. Keep the next question focused on the
+    // missing occurrence description.
+    questionDraft = "Pode descrever o que aconteceu com o jazigo, a lápide ou a zeladoria?";
   }
   if (mediaNeedsReview(input.interpretation)) {
     return "Recebi a referência à mídia, mas o conteúdo da imagem ainda não foi analisado. Por isso não posso confirmar o que aparece nela. Você pode descrever o conteúdo ou aguardar a análise da equipe.";

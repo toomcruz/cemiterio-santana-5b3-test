@@ -1,0 +1,18 @@
+{
+  "cycle": 1,
+  "created_at": "2026-09-19T03:36:00Z",
+  "base_commit": "d573ed8da909b3711dfef06fe3d281c250df59ed",
+  "scope": "clarification presentation, natural close/return controls, independent evaluator semantics",
+  "root_causes": [
+    "bridge.clarificationQuestion renders canonical enum codes directly to the citizen",
+    "conversation_controls only recognizes exact close/return utterances",
+    "evaluator compares enum values literally instead of checking semantic evidence"
+  ],
+  "targeted_tests": [
+    "internal clarification codes are never exposed",
+    "natural close/return utterances are recognized",
+    "canonical enum facts with lexical evidence do not fail FACT_BOUNDARY"
+  ],
+  "production_changes": false,
+  "external_delivery": false
+}

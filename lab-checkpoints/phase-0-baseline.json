@@ -1,0 +1,24 @@
+{
+  "lab": "sana-simulation-lab",
+  "created_at": "2026-09-19T00:00:00Z",
+  "base_commit": "d573ed8da909b3711dfef06fe3d281c250df59ed",
+  "scope": "LAB_ONLY_NO_PRODUCTION_SIDE_EFFECTS",
+  "runtime": {
+    "entrypoint": "edge-functions/support-runtime-inbound/index.ts",
+    "turn_service": "santana-conversation-domain/runtime/official_turn_service.ts",
+    "adapter": "santana-conversation-domain/runtime/adapter/adapter.ts",
+    "store": "edge-functions/_shared/official-runtime-store.ts",
+    "delivery": "QUEUE_ONLY/fake transport"
+  },
+  "source_sha256": {
+    "edge_functions_support_runtime_inbound_index_ts": "bda69a6582ee858fa2e61610e82d91182f87c1593f4d3b1c0bbf23e5df14925c",
+    "official_turn_service_ts": "f73cfc8eb013cd8e61326cc9af1e1eeb99df6080393f4bc2b9ff9fe79aea7664",
+    "turn_ts": "2ef34dfda87506c3eba30a68e3d54aa2b0cf37250479cdfaa1c7156cc8217347",
+    "deterministic_interpreter_ts": "61795623c3749e14a0331efd8bbbf1f07b2e1e4978d7b4f6fbd57c8ce6cbcb19",
+    "reply_ts": "a0863a690ca12fd4cca74c657f8221845c8633f7163edc0048395561c8f2d365",
+    "state_schema_json": "84e51cc8b6ca8c277091118939aff24cf305af7d8b9e17026cb349abb99035ff"
+  },
+  "baseline_tests": {"passed": 286, "failed": 0, "ignored": 1, "command": "npx --yes deno test --allow-env=P10_INTEGRATION,SUPPORT_VNEXT_MODE --allow-read tests/unit tests/shadow tests/integration santana-conversation-domain/runtime/tests"},
+  "production_invariants": {"whatsapp_sent": 0, "production_changed": false, "gateway_changed": false, "wapi_changed": false, "edge_published": false, "outbox_delivery": "QUEUE_ONLY"},
+  "next_action": "implement real-runtime simulator and independent evaluator"
+}

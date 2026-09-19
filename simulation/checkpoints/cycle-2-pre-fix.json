@@ -1,0 +1,18 @@
+{
+  "cycle": 2,
+  "created_at": "2026-09-19T03:48:00Z",
+  "base_commit": "d573ed8da909b3711dfef06fe3d281c250df59ed",
+  "scope": "new subject routing within an active goal and lifecycle evaluator classification",
+  "root_causes": [
+    "a new-subject marker without a repeated goal leaves primary_event null",
+    "the scenario evaluator required CLOSE for a plain abandonment/return scenario",
+    "name-based return to a prior case is not represented by the current context hints"
+  ],
+  "targeted_tests": [
+    "new subject inherits only the active goal kind and creates a separate case",
+    "plain return is not misclassified as CLOSE",
+    "case focus never merges facts across cases"
+  ],
+  "production_changes": false,
+  "external_delivery": false
+}

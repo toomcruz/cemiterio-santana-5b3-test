@@ -5,6 +5,7 @@
 import type { ConversationEvent, ConversationState } from "../../engine/engine.ts";
 import { activeFactsForGoalCase, contextGoal, focusGoal, missingFacts } from "../../engine/engine.ts";
 import { goalDef, questionForFact } from "../../engine/catalog.ts";
+import { isConversationReturn } from "./conversation_controls.ts";
 import type { Interpretation, InterpreterInput } from "./types.ts";
 
 export interface BridgeResult {
@@ -68,6 +69,14 @@ export function toConversationEvents(interpretation: Interpretation, state?: Con
   const closeConversation = kind === "SOCIAL" &&
     interpretation.official_mapping?.transverse_states.includes("CONVERSATION_CLOSING") === true;
   const currentCaseId = state ? contextGoal(state)?.case_id : null;
+  const focusTarget = kind === "SOCIAL" && state && isConversationReturn(interpretation.text_normalized)
+    ? state.goals.filter((candidate) => ["ACTIVE", "WAITING", "SUSPENDED"].includes(candidate.status))
+      .sort((a, b) => b.stack_index - a.stack_index)
+      .find((candidate) => candidate.case_id !== currentCaseId)
+    : null;
+  const resumeConversation = kind === "SOCIAL" && !!state && !focusTarget &&
+    state.event_log.at(-1)?.note === "CLOSE" &&
+    isConversationReturn(interpretation.text_normalized);
   const currentCaseRef = state?.cases.find((item) => item.case_id === currentCaseId)?.subject_ref;
   // A linguistic hint ("minha tia") is not a unique person identifier. A
   // NEW demand must never silently reuse an older case bearing that hint.
@@ -123,6 +132,10 @@ export function toConversationEvents(interpretation: Interpretation, state?: Con
   events.push({
     kind,
     facts,
+    ...((closeConversation || resumeConversation || focusTarget)
+      ? { note: closeConversation ? "CLOSE" : resumeConversation ? "RESUME_CASE" : "FOCUS_CASE" }
+      : {}),
+    ...(focusTarget ? { focus_case_id: focusTarget.goal_id } : {}),
     ...(p0Handoff ? { handoff_priority: "P0" as const } : {}),
     ...(closeConversation ? { close_conversation: true } : {}),
   });
@@ -133,7 +146,13 @@ export function toConversationEvents(interpretation: Interpretation, state?: Con
 export function clarificationQuestion(state: ConversationState, result: BridgeResult): string | null {
   if (!result.clarification) return null;
   if (result.clarification.options.length > 0) {
-    return `Preciso confirmar: ${result.clarification.options.join(" ou ")}?`;
+    const labels: Record<string, string> = {
+      JAZIGO_FAMILIA: "o jazigo da família",
+      OUTRO_CEMITERIO: "outro cemitério",
+      COMPRA_DE_JAZIGO: "a compra de um jazigo",
+    };
+    const options = result.clarification.options.map((option) => labels[option] ?? option.toLocaleLowerCase("pt-BR"));
+    return `Para eu direcionar corretamente, você se refere a ${options.join(" ou ")}?`;
   }
   if (state.pending_question) return questionForFact(state.pending_question.fact_code).text;
   const goal = focusGoal(state);

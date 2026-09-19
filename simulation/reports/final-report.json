@@ -1,0 +1,51 @@
+{
+  "status": "PARTIAL",
+  "runtime": {
+    "entrypoint": "processOfficialTurn -> RuntimeStore/LabStore -> planTurn -> interpreter -> guard -> bridge -> reducer/applyEvent -> validateState -> commit/outbox",
+    "transport": "synthetic inbound + LabStore + QUEUE_ONLY outbox",
+    "production_changed": false,
+    "whatsapp_sent": 0,
+    "divergence": "The frozen source cut uses the official deterministic reply renderer; there is no separate Gemini draft stage."
+  },
+  "totals": {
+    "development_conversations": 50,
+    "development_turns": 147,
+    "novel_conversations": 10,
+    "novel_turns": 30,
+    "final_conversations": 60,
+    "final_turns": 177,
+    "gemini_calls_final_runs": 171,
+    "gemini_http_200_final_runs": 23,
+    "gemini_llm_valid_final_runs": 5,
+    "gemini_fallback_invalid_final_runs": 18,
+    "gemini_provider_quota_fallbacks_final_runs": 148,
+    "gemini_cost_final_runs_usd": 0.0058083
+  },
+  "baseline": {
+    "conversations": 50,
+    "turns": 147,
+    "failed_conversations": 9,
+    "official_suite": {"passed": 286, "failed": 0, "ignored": 1}
+  },
+  "final": {
+    "development": {"conversations": 50, "turns": 147, "failed_conversations": 0},
+    "novel": {"conversations": 10, "turns": 30, "failed_conversations": 0},
+    "regressions": {"passed": 6, "failed": 0},
+    "official_suite": {"passed": 286, "failed": 0, "ignored": 1},
+    "p0_p1_failures": 0
+  },
+  "gemini_gate": {
+    "status": "PARTIAL",
+    "model": "gemini-flash-lite-latest",
+    "http_statuses": {"200": 23, "429": 148},
+    "reason": "provider quota exhausted; safe deterministic fallback preserved the run but does not prove the primary path"
+  },
+  "recommendation": "READY FOR HUMAN REVIEW; NOT READY FOR CANARY until Gemini primary validation completes without quota-stop",
+  "artifacts": {
+    "final_deterministic": "simulation/runs/final-deterministic-v7.json",
+    "novel_deterministic": "simulation/runs/novel-deterministic-v5.json",
+    "final_gemini": "simulation/runs/final-gemini.json",
+    "novel_gemini": "simulation/runs/novel-gemini-10.json",
+    "triage": "simulation/reports/triage.md"
+  }
+}

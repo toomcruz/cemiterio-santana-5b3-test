@@ -1,0 +1,2232 @@
+{
+  "schema_version": "sana/simulation-lab/1.0.0",
+  "generated_at": "2026-09-19T03:28:34.076Z",
+  "batch": "smoke",
+  "provider_mode": "gemini",
+  "model_requested": "gemini-flash-lite-latest",
+  "runtime_entrypoint": "processOfficialTurn",
+  "transport": "synthetic inbound + LabStore + QUEUE_ONLY fake outbox",
+  "divergences": [
+    "Frozen runtime uses Gemini for interpretation only; reply.ts is the official response renderer and there is no separate Gemini draft stage in this source cut."
+  ],
+  "safety": {
+    "production_changed": false,
+    "whatsapp_sent": 0,
+    "edge_published": false,
+    "gateway_changed": false,
+    "wapi_changed": false,
+    "external_delivery": false
+  },
+  "limits": {
+    "max_conversations": 100,
+    "max_turns_per_conversation": 30,
+    "max_estimated_cost_usd": 2
+  },
+  "telemetry": {
+    "calls": 10,
+    "input_tokens": 8462,
+    "output_tokens": 4443,
+    "total_tokens": 12905,
+    "observations": [
+      {
+        "outcome": "fallback_invalid",
+        "adapter_version": "santana-llm-adapter/1.0.0",
+        "prompt_version": "santana-llm-prompt/1.1.0",
+        "provider": "gemini",
+        "model": "gemini-flash-lite-latest",
+        "duration_ms": 2474.401945,
+        "rejection_reason": "STRUCTURED_OUTPUT_MISMATCH"
+      },
+      {
+        "outcome": "fallback_invalid",
+        "adapter_version": "santana-llm-adapter/1.0.0",
+        "prompt_version": "santana-llm-prompt/1.1.0",
+        "provider": "gemini",
+        "model": "gemini-flash-lite-latest",
+        "duration_ms": 1668.9462669999998,
+        "rejection_reason": "STRUCTURED_OUTPUT_MISMATCH"
+      },
+      {
+        "outcome": "fallback_invalid",
+        "adapter_version": "santana-llm-adapter/1.0.0",
+        "prompt_version": "santana-llm-prompt/1.1.0",
+        "provider": "gemini",
+        "model": "gemini-flash-lite-latest",
+        "duration_ms": 1598.374175,
+        "rejection_reason": "STRUCTURED_OUTPUT_MISMATCH"
+      },
+      {
+        "outcome": "fallback_invalid",
+        "adapter_version": "santana-llm-adapter/1.0.0",
+        "prompt_version": "santana-llm-prompt/1.1.0",
+        "provider": "gemini",
+        "model": "gemini-flash-lite-latest",
+        "duration_ms": 1814.7058049999996,
+        "rejection_reason": "STRUCTURED_OUTPUT_MISMATCH"
+      },
+      {
+        "outcome": "fallback_invalid",
+        "adapter_version": "santana-llm-adapter/1.0.0",
+        "prompt_version": "santana-llm-prompt/1.1.0",
+        "provider": "gemini",
+        "model": "gemini-flash-lite-latest",
+        "duration_ms": 1694.3971299999994,
+        "rejection_reason": "STRUCTURED_OUTPUT_MISMATCH"
+      },
+      {
+        "outcome": "fallback_invalid",
+        "adapter_version": "santana-llm-adapter/1.0.0",
+        "prompt_version": "santana-llm-prompt/1.1.0",
+        "provider": "gemini",
+        "model": "gemini-flash-lite-latest",
+        "duration_ms": 2031.788747999999,
+        "rejection_reason": "STRUCTURED_OUTPUT_MISMATCH"
+      },
+      {
+        "outcome": "fallback_invalid",
+        "adapter_version": "santana-llm-adapter/1.0.0",
+        "prompt_version": "santana-llm-prompt/1.1.0",
+        "provider": "gemini",
+        "model": "gemini-flash-lite-latest",
+        "duration_ms": 2218.8009519999996,
+        "rejection_reason": "STRUCTURED_OUTPUT_MISMATCH"
+      },
+      {
+        "outcome": "llm_valid",
+        "adapter_version": "santana-llm-adapter/1.0.0",
+        "prompt_version": "santana-llm-prompt/1.1.0",
+        "provider": "gemini",
+        "model": "gemini-flash-lite-latest",
+        "duration_ms": 1910.036682
+      },
+      {
+        "outcome": "fallback_invalid",
+        "adapter_version": "santana-llm-adapter/1.0.0",
+        "prompt_version": "santana-llm-prompt/1.1.0",
+        "provider": "gemini",
+        "model": "gemini-flash-lite-latest",
+        "duration_ms": 1887.9263100000026,
+        "rejection_reason": "STRUCTURED_OUTPUT_MISMATCH"
+      },
+      {
+        "outcome": "fallback_invalid",
+        "adapter_version": "santana-llm-adapter/1.0.0",
+        "prompt_version": "santana-llm-prompt/1.1.0",
+        "provider": "gemini",
+        "model": "gemini-flash-lite-latest",
+        "duration_ms": 1660.6729019999984,
+        "rejection_reason": "STRUCTURED_OUTPUT_MISMATCH"
+      }
+    ],
+    "errors": [],
+    "started_at": "2026-09-19T03:28:15.051Z",
+    "elapsed_ms": 19025,
+    "estimated_standard_paid_text_cost_usd": 0.0026234
+  },
+  "summary": {
+    "conversations": 5,
+    "turns": 12,
+    "failed_conversations": 0,
+    "complete": true
+  },
+  "results": [
+    {
+      "scenario": {
+        "id": "sim-01",
+        "group": "A_NORMAL",
+        "title": "exumação objetiva",
+        "tags": [
+          "exumacao"
+        ],
+        "truth": {
+          "deceasedName": "Ana Fictícia"
+        }
+      },
+      "turns": [
+        {
+          "inbound": {
+            "external_message_id": "sim-01-m1",
+            "phone_e164": "+5511000000000",
+            "contact_name": "Munícipe Simulado",
+            "body": "Preciso saber como pedir uma exumação.",
+            "message_type": "text",
+            "metadata": {
+              "simulation": true,
+              "scenario_id": "sim-01"
+            },
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7"
+          },
+          "state_before": null,
+          "state_after": {
+            "schema_version": "santana-conversation-state/v1",
+            "conversation_id": "73696d2d-3031-4000-8000-000000000000",
+            "seq": 1,
+            "cases": [],
+            "goals": [],
+            "facts": [],
+            "pending_question": null,
+            "parked_questions": [],
+            "pending_actions": [],
+            "forbidden_goals": [],
+            "handoff": null,
+            "event_log": [
+              {
+                "seq": 1,
+                "event_kind": "PARALLEL_QUESTION",
+                "note": "official-information:EXUMACAO:PROCEDIMENTO_ADMINISTRATIVO:NOT_AVAILABLE"
+              }
+            ],
+            "solicitacoes": [],
+            "documentos": [],
+            "acoes": [],
+            "acompanhamentos": [],
+            "current_topic": null,
+            "origin_topic": null
+          },
+          "commit": {
+            "conversation_id": "73696d2d-3031-4000-8000-000000000000",
+            "inbound_message_id": "sim-01-m1",
+            "expected_revision": 0,
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7",
+            "state_hash": "690792d668bb22c80265123ec79feac623ed83749061a053c08dcf4275fe55cf",
+            "state": {
+              "schema_version": "santana-conversation-state/v1",
+              "conversation_id": "73696d2d-3031-4000-8000-000000000000",
+              "seq": 1,
+              "cases": [],
+              "goals": [],
+              "facts": [],
+              "pending_question": null,
+              "parked_questions": [],
+              "pending_actions": [],
+              "forbidden_goals": [],
+              "handoff": null,
+              "event_log": [
+                {
+                  "seq": 1,
+                  "event_kind": "PARALLEL_QUESTION",
+                  "note": "official-information:EXUMACAO:PROCEDIMENTO_ADMINISTRATIVO:NOT_AVAILABLE"
+                }
+              ],
+              "solicitacoes": [],
+              "documentos": [],
+              "acoes": [],
+              "acompanhamentos": [],
+              "current_topic": null,
+              "origin_topic": null
+            },
+            "outcome": "PROPOSED",
+            "event_kind": "PARALLEL_QUESTION",
+            "reply_body": "Ainda não tenho uma informação oficial publicada que confirme o procedimento para o seu caso. A Administração precisa confirmar esse ponto para orientar você com segurança.",
+            "projection": {
+              "subject": "nao_classificado",
+              "stage": "novos",
+              "automation_mode": "bot",
+              "queue_status": "inbox",
+              "flow_state": {
+                "runtime": "santana-conversation-domain/v1",
+                "current_goal": null,
+                "current_topic": null,
+                "pending_question_code": null,
+                "pending_fact_code": null,
+                "pending_action_codes": [],
+                "waiting_for": null,
+                "runtime_requests": [],
+                "handoff_requested": false,
+                "active_goal_status": null,
+                "goal_display_name": null,
+                "conversation_collection_status": "NOT_APPLICABLE",
+                "administrative_authorization_status": "NOT_APPLICABLE",
+                "operational_process_status": "NOT_APPLICABLE"
+              }
+            }
+          },
+          "result": {
+            "revision": 1,
+            "outbox_id": "lab-outbox-1",
+            "replayed": false
+          },
+          "receipt": {
+            "status": "COMMITTED",
+            "revision": 1
+          },
+          "outbox": {
+            "id": "lab-outbox-1",
+            "body": "Ainda não tenho uma informação oficial publicada que confirme o procedimento para o seu caso. A Administração precisa confirmar esse ponto para orientar você com segurança.",
+            "status": "PENDING"
+          }
+        },
+        {
+          "inbound": {
+            "external_message_id": "sim-01-m2",
+            "phone_e164": "+5511000000000",
+            "contact_name": "Munícipe Simulado",
+            "body": "É para Ana Fictícia.",
+            "message_type": "text",
+            "metadata": {
+              "simulation": true,
+              "scenario_id": "sim-01"
+            },
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7"
+          },
+          "state_before": {
+            "schema_version": "santana-conversation-state/v1",
+            "conversation_id": "73696d2d-3031-4000-8000-000000000000",
+            "seq": 1,
+            "cases": [],
+            "goals": [],
+            "facts": [],
+            "pending_question": null,
+            "parked_questions": [],
+            "pending_actions": [],
+            "forbidden_goals": [],
+            "handoff": null,
+            "event_log": [
+              {
+                "seq": 1,
+                "event_kind": "PARALLEL_QUESTION",
+                "note": "official-information:EXUMACAO:PROCEDIMENTO_ADMINISTRATIVO:NOT_AVAILABLE"
+              }
+            ],
+            "solicitacoes": [],
+            "documentos": [],
+            "acoes": [],
+            "acompanhamentos": [],
+            "current_topic": null,
+            "origin_topic": null
+          },
+          "state_after": {
+            "schema_version": "santana-conversation-state/v1",
+            "conversation_id": "73696d2d-3031-4000-8000-000000000000",
+            "seq": 1,
+            "cases": [],
+            "goals": [],
+            "facts": [],
+            "pending_question": null,
+            "parked_questions": [],
+            "pending_actions": [],
+            "forbidden_goals": [],
+            "handoff": null,
+            "event_log": [
+              {
+                "seq": 1,
+                "event_kind": "PARALLEL_QUESTION",
+                "note": "official-information:EXUMACAO:PROCEDIMENTO_ADMINISTRATIVO:NOT_AVAILABLE"
+              }
+            ],
+            "solicitacoes": [],
+            "documentos": [],
+            "acoes": [],
+            "acompanhamentos": [],
+            "current_topic": null,
+            "origin_topic": null
+          },
+          "commit": {
+            "conversation_id": "73696d2d-3031-4000-8000-000000000000",
+            "inbound_message_id": "sim-01-m2",
+            "expected_revision": 1,
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7",
+            "state_hash": "690792d668bb22c80265123ec79feac623ed83749061a053c08dcf4275fe55cf",
+            "state": {
+              "schema_version": "santana-conversation-state/v1",
+              "conversation_id": "73696d2d-3031-4000-8000-000000000000",
+              "seq": 1,
+              "cases": [],
+              "goals": [],
+              "facts": [],
+              "pending_question": null,
+              "parked_questions": [],
+              "pending_actions": [],
+              "forbidden_goals": [],
+              "handoff": null,
+              "event_log": [
+                {
+                  "seq": 1,
+                  "event_kind": "PARALLEL_QUESTION",
+                  "note": "official-information:EXUMACAO:PROCEDIMENTO_ADMINISTRATIVO:NOT_AVAILABLE"
+                }
+              ],
+              "solicitacoes": [],
+              "documentos": [],
+              "acoes": [],
+              "acompanhamentos": [],
+              "current_topic": null,
+              "origin_topic": null
+            },
+            "outcome": "CLARIFICATION",
+            "event_kind": null,
+            "reply_body": "Pode me explicar um pouco melhor?",
+            "projection": {
+              "subject": "nao_classificado",
+              "stage": "novos",
+              "automation_mode": "bot",
+              "queue_status": "inbox",
+              "flow_state": {
+                "runtime": "santana-conversation-domain/v1",
+                "current_goal": null,
+                "current_topic": null,
+                "pending_question_code": null,
+                "pending_fact_code": null,
+                "pending_action_codes": [],
+                "waiting_for": null,
+                "runtime_requests": [],
+                "handoff_requested": false,
+                "active_goal_status": null,
+                "goal_display_name": null,
+                "conversation_collection_status": "NOT_APPLICABLE",
+                "administrative_authorization_status": "NOT_APPLICABLE",
+                "operational_process_status": "NOT_APPLICABLE"
+              }
+            }
+          },
+          "result": {
+            "revision": 2,
+            "outbox_id": "lab-outbox-2",
+            "replayed": false
+          },
+          "receipt": {
+            "status": "COMMITTED",
+            "revision": 2
+          },
+          "outbox": {
+            "id": "lab-outbox-2",
+            "body": "Pode me explicar um pouco melhor?",
+            "status": "PENDING"
+          }
+        },
+        {
+          "inbound": {
+            "external_message_id": "sim-01-m3",
+            "phone_e164": "+5511000000000",
+            "contact_name": "Munícipe Simulado",
+            "body": "Pode registrar o pedido.",
+            "message_type": "text",
+            "metadata": {
+              "simulation": true,
+              "scenario_id": "sim-01"
+            },
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7"
+          },
+          "state_before": {
+            "schema_version": "santana-conversation-state/v1",
+            "conversation_id": "73696d2d-3031-4000-8000-000000000000",
+            "seq": 1,
+            "cases": [],
+            "goals": [],
+            "facts": [],
+            "pending_question": null,
+            "parked_questions": [],
+            "pending_actions": [],
+            "forbidden_goals": [],
+            "handoff": null,
+            "event_log": [
+              {
+                "seq": 1,
+                "event_kind": "PARALLEL_QUESTION",
+                "note": "official-information:EXUMACAO:PROCEDIMENTO_ADMINISTRATIVO:NOT_AVAILABLE"
+              }
+            ],
+            "solicitacoes": [],
+            "documentos": [],
+            "acoes": [],
+            "acompanhamentos": [],
+            "current_topic": null,
+            "origin_topic": null
+          },
+          "state_after": {
+            "schema_version": "santana-conversation-state/v1",
+            "conversation_id": "73696d2d-3031-4000-8000-000000000000",
+            "seq": 2,
+            "cases": [
+              {
+                "case_id": "case001",
+                "subject_kind": "ORDER",
+                "subject_ref": "demand:sim-01-m3",
+                "opened_at_seq": 2
+              }
+            ],
+            "goals": [
+              {
+                "goal_id": "g001",
+                "goal_code": "GOAL_COMERCIAL",
+                "case_id": "case001",
+                "status": "ACTIVE",
+                "status_reason": null,
+                "parent_goal_id": null,
+                "overlay_of": null,
+                "stack_index": 0,
+                "informational": false,
+                "return_to_parent": false,
+                "opened_at_seq": 2,
+                "closed_at_seq": null,
+                "created_by_relation": null
+              }
+            ],
+            "facts": [],
+            "pending_question": {
+              "question_code": "Q_COMMERCIAL_ITEM",
+              "fact_code": "commercial_item",
+              "goal_id": "g001",
+              "priority_class": "FLOW_BRANCH",
+              "asked_at_seq": 2
+            },
+            "parked_questions": [],
+            "pending_actions": [],
+            "forbidden_goals": [],
+            "handoff": null,
+            "event_log": [
+              {
+                "seq": 1,
+                "event_kind": "PARALLEL_QUESTION",
+                "note": "official-information:EXUMACAO:PROCEDIMENTO_ADMINISTRATIVO:NOT_AVAILABLE"
+              },
+              {
+                "seq": 2,
+                "event_kind": "NEW_GOAL",
+                "note": null
+              }
+            ],
+            "solicitacoes": [],
+            "documentos": [],
+            "acoes": [],
+            "acompanhamentos": [],
+            "current_topic": "COMERCIAL",
+            "origin_topic": null
+          },
+          "commit": {
+            "conversation_id": "73696d2d-3031-4000-8000-000000000000",
+            "inbound_message_id": "sim-01-m3",
+            "expected_revision": 2,
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7",
+            "state_hash": "86b0e5e103fe90db2dacafd8fed0e85faa19b36f11265fbfc78ee0d3752b583b",
+            "state": {
+              "schema_version": "santana-conversation-state/v1",
+              "conversation_id": "73696d2d-3031-4000-8000-000000000000",
+              "seq": 2,
+              "cases": [
+                {
+                  "case_id": "case001",
+                  "subject_kind": "ORDER",
+                  "subject_ref": "demand:sim-01-m3",
+                  "opened_at_seq": 2
+                }
+              ],
+              "goals": [
+                {
+                  "goal_id": "g001",
+                  "goal_code": "GOAL_COMERCIAL",
+                  "case_id": "case001",
+                  "status": "ACTIVE",
+                  "status_reason": null,
+                  "parent_goal_id": null,
+                  "overlay_of": null,
+                  "stack_index": 0,
+                  "informational": false,
+                  "return_to_parent": false,
+                  "opened_at_seq": 2,
+                  "closed_at_seq": null,
+                  "created_by_relation": null
+                }
+              ],
+              "facts": [],
+              "pending_question": {
+                "question_code": "Q_COMMERCIAL_ITEM",
+                "fact_code": "commercial_item",
+                "goal_id": "g001",
+                "priority_class": "FLOW_BRANCH",
+                "asked_at_seq": 2
+              },
+              "parked_questions": [],
+              "pending_actions": [],
+              "forbidden_goals": [],
+              "handoff": null,
+              "event_log": [
+                {
+                  "seq": 1,
+                  "event_kind": "PARALLEL_QUESTION",
+                  "note": "official-information:EXUMACAO:PROCEDIMENTO_ADMINISTRATIVO:NOT_AVAILABLE"
+                },
+                {
+                  "seq": 2,
+                  "event_kind": "NEW_GOAL",
+                  "note": null
+                }
+              ],
+              "solicitacoes": [],
+              "documentos": [],
+              "acoes": [],
+              "acompanhamentos": [],
+              "current_topic": "COMERCIAL",
+              "origin_topic": null
+            },
+            "outcome": "PROPOSED",
+            "event_kind": "NEW_GOAL",
+            "reply_body": "Qual item voce precisa?",
+            "projection": {
+              "subject": "comercial",
+              "stage": "pendencias",
+              "automation_mode": "bot",
+              "queue_status": "waiting_citizen",
+              "flow_state": {
+                "runtime": "santana-conversation-domain/v1",
+                "current_goal": "GOAL_COMERCIAL",
+                "current_topic": "COMERCIAL",
+                "pending_question_code": "Q_COMMERCIAL_ITEM",
+                "pending_fact_code": "commercial_item",
+                "pending_action_codes": [],
+                "waiting_for": "citizen",
+                "runtime_requests": [],
+                "handoff_requested": false,
+                "active_goal_status": "ACTIVE",
+                "goal_display_name": "COMERCIAL",
+                "conversation_collection_status": "NOT_APPLICABLE",
+                "administrative_authorization_status": "NOT_APPLICABLE",
+                "operational_process_status": "NOT_APPLICABLE"
+              }
+            }
+          },
+          "result": {
+            "revision": 3,
+            "outbox_id": "lab-outbox-3",
+            "replayed": false
+          },
+          "receipt": {
+            "status": "COMMITTED",
+            "revision": 3
+          },
+          "outbox": {
+            "id": "lab-outbox-3",
+            "body": "Qual item voce precisa?",
+            "status": "PENDING"
+          }
+        }
+      ],
+      "final_state": {
+        "schema_version": "santana-conversation-state/v1",
+        "conversation_id": "73696d2d-3031-4000-8000-000000000000",
+        "seq": 2,
+        "cases": [
+          {
+            "case_id": "case001",
+            "subject_kind": "ORDER",
+            "subject_ref": "demand:sim-01-m3",
+            "opened_at_seq": 2
+          }
+        ],
+        "goals": [
+          {
+            "goal_id": "g001",
+            "goal_code": "GOAL_COMERCIAL",
+            "case_id": "case001",
+            "status": "ACTIVE",
+            "status_reason": null,
+            "parent_goal_id": null,
+            "overlay_of": null,
+            "stack_index": 0,
+            "informational": false,
+            "return_to_parent": false,
+            "opened_at_seq": 2,
+            "closed_at_seq": null,
+            "created_by_relation": null
+          }
+        ],
+        "facts": [],
+        "pending_question": {
+          "question_code": "Q_COMMERCIAL_ITEM",
+          "fact_code": "commercial_item",
+          "goal_id": "g001",
+          "priority_class": "FLOW_BRANCH",
+          "asked_at_seq": 2
+        },
+        "parked_questions": [],
+        "pending_actions": [],
+        "forbidden_goals": [],
+        "handoff": null,
+        "event_log": [
+          {
+            "seq": 1,
+            "event_kind": "PARALLEL_QUESTION",
+            "note": "official-information:EXUMACAO:PROCEDIMENTO_ADMINISTRATIVO:NOT_AVAILABLE"
+          },
+          {
+            "seq": 2,
+            "event_kind": "NEW_GOAL",
+            "note": null
+          }
+        ],
+        "solicitacoes": [],
+        "documentos": [],
+        "acoes": [],
+        "acompanhamentos": [],
+        "current_topic": "COMERCIAL",
+        "origin_topic": null
+      },
+      "evaluation": {
+        "FACT_BOUNDARY": "PASS",
+        "CONTINUITY": "PASS",
+        "CASE_ISOLATION": "PASS",
+        "CORRECTION": "N/A",
+        "NATURALNESS": "PASS",
+        "REPETITION": 0,
+        "UNNECESSARY_QUESTIONS": 0,
+        "HANDOFF": "N/A",
+        "CLOSE_RESUME": "N/A",
+        "deterministic_failures": [],
+        "notes": [
+          "Evaluator is independent from the runtime reducer.",
+          "Human-facing draft is the official deterministic reply renderer in the frozen runtime; no separate Gemini draft stage exists in this source cut."
+        ]
+      },
+      "metrics": {
+        "turn_count": 3,
+        "revision": 3,
+        "outbox_count": 3,
+        "duration_ms": 4178
+      }
+    },
+    {
+      "scenario": {
+        "id": "sim-02",
+        "group": "A_NORMAL",
+        "title": "dúvida simples",
+        "tags": [
+          "informacao"
+        ],
+        "truth": {}
+      },
+      "turns": [
+        {
+          "inbound": {
+            "external_message_id": "sim-02-m1",
+            "phone_e164": "+5511000000000",
+            "contact_name": "Munícipe Simulado",
+            "body": "Qual é o horário de atendimento?",
+            "message_type": "text",
+            "metadata": {
+              "simulation": true,
+              "scenario_id": "sim-02"
+            },
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7"
+          },
+          "state_before": null,
+          "state_after": {
+            "schema_version": "santana-conversation-state/v1",
+            "conversation_id": "73696d2d-3032-4000-8000-000000000000",
+            "seq": 1,
+            "cases": [],
+            "goals": [],
+            "facts": [],
+            "pending_question": null,
+            "parked_questions": [],
+            "pending_actions": [],
+            "forbidden_goals": [],
+            "handoff": null,
+            "event_log": [
+              {
+                "seq": 1,
+                "event_kind": "PARALLEL_QUESTION",
+                "note": "official-information:HORARIO:HORARIO:NOT_AVAILABLE"
+              }
+            ],
+            "solicitacoes": [],
+            "documentos": [],
+            "acoes": [],
+            "acompanhamentos": [],
+            "current_topic": null,
+            "origin_topic": null
+          },
+          "commit": {
+            "conversation_id": "73696d2d-3032-4000-8000-000000000000",
+            "inbound_message_id": "sim-02-m1",
+            "expected_revision": 0,
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7",
+            "state_hash": "650eac3533016f2005933ec7c76e3248ee187ca94979eebd05195de9486ab4fe",
+            "state": {
+              "schema_version": "santana-conversation-state/v1",
+              "conversation_id": "73696d2d-3032-4000-8000-000000000000",
+              "seq": 1,
+              "cases": [],
+              "goals": [],
+              "facts": [],
+              "pending_question": null,
+              "parked_questions": [],
+              "pending_actions": [],
+              "forbidden_goals": [],
+              "handoff": null,
+              "event_log": [
+                {
+                  "seq": 1,
+                  "event_kind": "PARALLEL_QUESTION",
+                  "note": "official-information:HORARIO:HORARIO:NOT_AVAILABLE"
+                }
+              ],
+              "solicitacoes": [],
+              "documentos": [],
+              "acoes": [],
+              "acompanhamentos": [],
+              "current_topic": null,
+              "origin_topic": null
+            },
+            "outcome": "PROPOSED",
+            "event_kind": "PARALLEL_QUESTION",
+            "reply_body": "Ainda não tenho uma informação oficial publicada que confirme o horário de atendimento para o seu caso. A Administração precisa confirmar esse ponto para orientar você com segurança.",
+            "projection": {
+              "subject": "nao_classificado",
+              "stage": "novos",
+              "automation_mode": "bot",
+              "queue_status": "inbox",
+              "flow_state": {
+                "runtime": "santana-conversation-domain/v1",
+                "current_goal": null,
+                "current_topic": null,
+                "pending_question_code": null,
+                "pending_fact_code": null,
+                "pending_action_codes": [],
+                "waiting_for": null,
+                "runtime_requests": [],
+                "handoff_requested": false,
+                "active_goal_status": null,
+                "goal_display_name": null,
+                "conversation_collection_status": "NOT_APPLICABLE",
+                "administrative_authorization_status": "NOT_APPLICABLE",
+                "operational_process_status": "NOT_APPLICABLE"
+              }
+            }
+          },
+          "result": {
+            "revision": 1,
+            "outbox_id": "lab-outbox-1",
+            "replayed": false
+          },
+          "receipt": {
+            "status": "COMMITTED",
+            "revision": 1
+          },
+          "outbox": {
+            "id": "lab-outbox-1",
+            "body": "Ainda não tenho uma informação oficial publicada que confirme o horário de atendimento para o seu caso. A Administração precisa confirmar esse ponto para orientar você com segurança.",
+            "status": "PENDING"
+          }
+        },
+        {
+          "inbound": {
+            "external_message_id": "sim-02-m2",
+            "phone_e164": "+5511000000000",
+            "contact_name": "Munícipe Simulado",
+            "body": "Obrigado, era só isso.",
+            "message_type": "text",
+            "metadata": {
+              "simulation": true,
+              "scenario_id": "sim-02"
+            },
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7"
+          },
+          "state_before": {
+            "schema_version": "santana-conversation-state/v1",
+            "conversation_id": "73696d2d-3032-4000-8000-000000000000",
+            "seq": 1,
+            "cases": [],
+            "goals": [],
+            "facts": [],
+            "pending_question": null,
+            "parked_questions": [],
+            "pending_actions": [],
+            "forbidden_goals": [],
+            "handoff": null,
+            "event_log": [
+              {
+                "seq": 1,
+                "event_kind": "PARALLEL_QUESTION",
+                "note": "official-information:HORARIO:HORARIO:NOT_AVAILABLE"
+              }
+            ],
+            "solicitacoes": [],
+            "documentos": [],
+            "acoes": [],
+            "acompanhamentos": [],
+            "current_topic": null,
+            "origin_topic": null
+          },
+          "state_after": {
+            "schema_version": "santana-conversation-state/v1",
+            "conversation_id": "73696d2d-3032-4000-8000-000000000000",
+            "seq": 1,
+            "cases": [],
+            "goals": [],
+            "facts": [],
+            "pending_question": null,
+            "parked_questions": [],
+            "pending_actions": [],
+            "forbidden_goals": [],
+            "handoff": null,
+            "event_log": [
+              {
+                "seq": 1,
+                "event_kind": "PARALLEL_QUESTION",
+                "note": "official-information:HORARIO:HORARIO:NOT_AVAILABLE"
+              }
+            ],
+            "solicitacoes": [],
+            "documentos": [],
+            "acoes": [],
+            "acompanhamentos": [],
+            "current_topic": null,
+            "origin_topic": null
+          },
+          "commit": {
+            "conversation_id": "73696d2d-3032-4000-8000-000000000000",
+            "inbound_message_id": "sim-02-m2",
+            "expected_revision": 1,
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7",
+            "state_hash": "650eac3533016f2005933ec7c76e3248ee187ca94979eebd05195de9486ab4fe",
+            "state": {
+              "schema_version": "santana-conversation-state/v1",
+              "conversation_id": "73696d2d-3032-4000-8000-000000000000",
+              "seq": 1,
+              "cases": [],
+              "goals": [],
+              "facts": [],
+              "pending_question": null,
+              "parked_questions": [],
+              "pending_actions": [],
+              "forbidden_goals": [],
+              "handoff": null,
+              "event_log": [
+                {
+                  "seq": 1,
+                  "event_kind": "PARALLEL_QUESTION",
+                  "note": "official-information:HORARIO:HORARIO:NOT_AVAILABLE"
+                }
+              ],
+              "solicitacoes": [],
+              "documentos": [],
+              "acoes": [],
+              "acompanhamentos": [],
+              "current_topic": null,
+              "origin_topic": null
+            },
+            "outcome": "CLARIFICATION",
+            "event_kind": null,
+            "reply_body": "Pode me explicar um pouco melhor?",
+            "projection": {
+              "subject": "nao_classificado",
+              "stage": "novos",
+              "automation_mode": "bot",
+              "queue_status": "inbox",
+              "flow_state": {
+                "runtime": "santana-conversation-domain/v1",
+                "current_goal": null,
+                "current_topic": null,
+                "pending_question_code": null,
+                "pending_fact_code": null,
+                "pending_action_codes": [],
+                "waiting_for": null,
+                "runtime_requests": [],
+                "handoff_requested": false,
+                "active_goal_status": null,
+                "goal_display_name": null,
+                "conversation_collection_status": "NOT_APPLICABLE",
+                "administrative_authorization_status": "NOT_APPLICABLE",
+                "operational_process_status": "NOT_APPLICABLE"
+              }
+            }
+          },
+          "result": {
+            "revision": 2,
+            "outbox_id": "lab-outbox-2",
+            "replayed": false
+          },
+          "receipt": {
+            "status": "COMMITTED",
+            "revision": 2
+          },
+          "outbox": {
+            "id": "lab-outbox-2",
+            "body": "Pode me explicar um pouco melhor?",
+            "status": "PENDING"
+          }
+        }
+      ],
+      "final_state": {
+        "schema_version": "santana-conversation-state/v1",
+        "conversation_id": "73696d2d-3032-4000-8000-000000000000",
+        "seq": 1,
+        "cases": [],
+        "goals": [],
+        "facts": [],
+        "pending_question": null,
+        "parked_questions": [],
+        "pending_actions": [],
+        "forbidden_goals": [],
+        "handoff": null,
+        "event_log": [
+          {
+            "seq": 1,
+            "event_kind": "PARALLEL_QUESTION",
+            "note": "official-information:HORARIO:HORARIO:NOT_AVAILABLE"
+          }
+        ],
+        "solicitacoes": [],
+        "documentos": [],
+        "acoes": [],
+        "acompanhamentos": [],
+        "current_topic": null,
+        "origin_topic": null
+      },
+      "evaluation": {
+        "FACT_BOUNDARY": "PASS",
+        "CONTINUITY": "PASS",
+        "CASE_ISOLATION": "PASS",
+        "CORRECTION": "N/A",
+        "NATURALNESS": "PASS",
+        "REPETITION": 0,
+        "UNNECESSARY_QUESTIONS": 0,
+        "HANDOFF": "N/A",
+        "CLOSE_RESUME": "N/A",
+        "deterministic_failures": [],
+        "notes": [
+          "Evaluator is independent from the runtime reducer.",
+          "Human-facing draft is the official deterministic reply renderer in the frozen runtime; no separate Gemini draft stage exists in this source cut."
+        ]
+      },
+      "metrics": {
+        "turn_count": 2,
+        "revision": 2,
+        "outbox_count": 2,
+        "duration_ms": 1603
+      }
+    },
+    {
+      "scenario": {
+        "id": "sim-03",
+        "group": "A_NORMAL",
+        "title": "coleta gradual",
+        "tags": [
+          "localizacao"
+        ],
+        "truth": {
+          "kinship": "mãe",
+          "graveReference": "quadra 2, terreno 11"
+        }
+      },
+      "turns": [
+        {
+          "inbound": {
+            "external_message_id": "sim-03-m1",
+            "phone_e164": "+5511000000000",
+            "contact_name": "Munícipe Simulado",
+            "body": "Quero localizar um jazigo.",
+            "message_type": "text",
+            "metadata": {
+              "simulation": true,
+              "scenario_id": "sim-03"
+            },
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7"
+          },
+          "state_before": null,
+          "state_after": {
+            "schema_version": "santana-conversation-state/v1",
+            "conversation_id": "73696d2d-3033-4000-8000-000000000000",
+            "seq": 0,
+            "cases": [],
+            "goals": [],
+            "facts": [],
+            "pending_question": null,
+            "parked_questions": [],
+            "pending_actions": [],
+            "forbidden_goals": [],
+            "handoff": null,
+            "event_log": [],
+            "solicitacoes": [],
+            "documentos": [],
+            "acoes": [],
+            "acompanhamentos": [],
+            "current_topic": null,
+            "origin_topic": null
+          },
+          "commit": {
+            "conversation_id": "73696d2d-3033-4000-8000-000000000000",
+            "inbound_message_id": "sim-03-m1",
+            "expected_revision": 0,
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7",
+            "state_hash": "ffa521602e2a02db22a5e7802f3307cfe98dfd54197592e6f950a3bd09bcb79e",
+            "state": {
+              "schema_version": "santana-conversation-state/v1",
+              "conversation_id": "73696d2d-3033-4000-8000-000000000000",
+              "seq": 0,
+              "cases": [],
+              "goals": [],
+              "facts": [],
+              "pending_question": null,
+              "parked_questions": [],
+              "pending_actions": [],
+              "forbidden_goals": [],
+              "handoff": null,
+              "event_log": [],
+              "solicitacoes": [],
+              "documentos": [],
+              "acoes": [],
+              "acompanhamentos": [],
+              "current_topic": null,
+              "origin_topic": null
+            },
+            "outcome": "CLARIFICATION",
+            "event_kind": null,
+            "reply_body": "Preciso confirmar: JAZIGO_FAMILIA ou OUTRO_CEMITERIO ou COMPRA_DE_JAZIGO?",
+            "projection": {
+              "subject": "nao_classificado",
+              "stage": "novos",
+              "automation_mode": "bot",
+              "queue_status": "inbox",
+              "flow_state": {
+                "runtime": "santana-conversation-domain/v1",
+                "current_goal": null,
+                "current_topic": null,
+                "pending_question_code": null,
+                "pending_fact_code": null,
+                "pending_action_codes": [],
+                "waiting_for": null,
+                "runtime_requests": [],
+                "handoff_requested": false,
+                "active_goal_status": null,
+                "goal_display_name": null,
+                "conversation_collection_status": "NOT_APPLICABLE",
+                "administrative_authorization_status": "NOT_APPLICABLE",
+                "operational_process_status": "NOT_APPLICABLE"
+              }
+            }
+          },
+          "result": {
+            "revision": 1,
+            "outbox_id": "lab-outbox-1",
+            "replayed": false
+          },
+          "receipt": {
+            "status": "COMMITTED",
+            "revision": 1
+          },
+          "outbox": {
+            "id": "lab-outbox-1",
+            "body": "Preciso confirmar: JAZIGO_FAMILIA ou OUTRO_CEMITERIO ou COMPRA_DE_JAZIGO?",
+            "status": "PENDING"
+          }
+        },
+        {
+          "inbound": {
+            "external_message_id": "sim-03-m2",
+            "phone_e164": "+5511000000000",
+            "contact_name": "Munícipe Simulado",
+            "body": "quadra 2, terreno 11",
+            "message_type": "text",
+            "metadata": {
+              "simulation": true,
+              "scenario_id": "sim-03"
+            },
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7"
+          },
+          "state_before": {
+            "schema_version": "santana-conversation-state/v1",
+            "conversation_id": "73696d2d-3033-4000-8000-000000000000",
+            "seq": 0,
+            "cases": [],
+            "goals": [],
+            "facts": [],
+            "pending_question": null,
+            "parked_questions": [],
+            "pending_actions": [],
+            "forbidden_goals": [],
+            "handoff": null,
+            "event_log": [],
+            "solicitacoes": [],
+            "documentos": [],
+            "acoes": [],
+            "acompanhamentos": [],
+            "current_topic": null,
+            "origin_topic": null
+          },
+          "state_after": {
+            "schema_version": "santana-conversation-state/v1",
+            "conversation_id": "73696d2d-3033-4000-8000-000000000000",
+            "seq": 0,
+            "cases": [],
+            "goals": [],
+            "facts": [],
+            "pending_question": null,
+            "parked_questions": [],
+            "pending_actions": [],
+            "forbidden_goals": [],
+            "handoff": null,
+            "event_log": [],
+            "solicitacoes": [],
+            "documentos": [],
+            "acoes": [],
+            "acompanhamentos": [],
+            "current_topic": null,
+            "origin_topic": null
+          },
+          "commit": {
+            "conversation_id": "73696d2d-3033-4000-8000-000000000000",
+            "inbound_message_id": "sim-03-m2",
+            "expected_revision": 1,
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7",
+            "state_hash": "ffa521602e2a02db22a5e7802f3307cfe98dfd54197592e6f950a3bd09bcb79e",
+            "state": {
+              "schema_version": "santana-conversation-state/v1",
+              "conversation_id": "73696d2d-3033-4000-8000-000000000000",
+              "seq": 0,
+              "cases": [],
+              "goals": [],
+              "facts": [],
+              "pending_question": null,
+              "parked_questions": [],
+              "pending_actions": [],
+              "forbidden_goals": [],
+              "handoff": null,
+              "event_log": [],
+              "solicitacoes": [],
+              "documentos": [],
+              "acoes": [],
+              "acompanhamentos": [],
+              "current_topic": null,
+              "origin_topic": null
+            },
+            "outcome": "CLARIFICATION",
+            "event_kind": null,
+            "reply_body": "Pode me explicar um pouco melhor?",
+            "projection": {
+              "subject": "nao_classificado",
+              "stage": "novos",
+              "automation_mode": "bot",
+              "queue_status": "inbox",
+              "flow_state": {
+                "runtime": "santana-conversation-domain/v1",
+                "current_goal": null,
+                "current_topic": null,
+                "pending_question_code": null,
+                "pending_fact_code": null,
+                "pending_action_codes": [],
+                "waiting_for": null,
+                "runtime_requests": [],
+                "handoff_requested": false,
+                "active_goal_status": null,
+                "goal_display_name": null,
+                "conversation_collection_status": "NOT_APPLICABLE",
+                "administrative_authorization_status": "NOT_APPLICABLE",
+                "operational_process_status": "NOT_APPLICABLE"
+              }
+            }
+          },
+          "result": {
+            "revision": 2,
+            "outbox_id": "lab-outbox-2",
+            "replayed": false
+          },
+          "receipt": {
+            "status": "COMMITTED",
+            "revision": 2
+          },
+          "outbox": {
+            "id": "lab-outbox-2",
+            "body": "Pode me explicar um pouco melhor?",
+            "status": "PENDING"
+          }
+        },
+        {
+          "inbound": {
+            "external_message_id": "sim-03-m3",
+            "phone_e164": "+5511000000000",
+            "contact_name": "Munícipe Simulado",
+            "body": "O local é quadra 2, terreno 11.",
+            "message_type": "text",
+            "metadata": {
+              "simulation": true,
+              "scenario_id": "sim-03"
+            },
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7"
+          },
+          "state_before": {
+            "schema_version": "santana-conversation-state/v1",
+            "conversation_id": "73696d2d-3033-4000-8000-000000000000",
+            "seq": 0,
+            "cases": [],
+            "goals": [],
+            "facts": [],
+            "pending_question": null,
+            "parked_questions": [],
+            "pending_actions": [],
+            "forbidden_goals": [],
+            "handoff": null,
+            "event_log": [],
+            "solicitacoes": [],
+            "documentos": [],
+            "acoes": [],
+            "acompanhamentos": [],
+            "current_topic": null,
+            "origin_topic": null
+          },
+          "state_after": {
+            "schema_version": "santana-conversation-state/v1",
+            "conversation_id": "73696d2d-3033-4000-8000-000000000000",
+            "seq": 0,
+            "cases": [],
+            "goals": [],
+            "facts": [],
+            "pending_question": null,
+            "parked_questions": [],
+            "pending_actions": [],
+            "forbidden_goals": [],
+            "handoff": null,
+            "event_log": [],
+            "solicitacoes": [],
+            "documentos": [],
+            "acoes": [],
+            "acompanhamentos": [],
+            "current_topic": null,
+            "origin_topic": null
+          },
+          "commit": {
+            "conversation_id": "73696d2d-3033-4000-8000-000000000000",
+            "inbound_message_id": "sim-03-m3",
+            "expected_revision": 2,
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7",
+            "state_hash": "ffa521602e2a02db22a5e7802f3307cfe98dfd54197592e6f950a3bd09bcb79e",
+            "state": {
+              "schema_version": "santana-conversation-state/v1",
+              "conversation_id": "73696d2d-3033-4000-8000-000000000000",
+              "seq": 0,
+              "cases": [],
+              "goals": [],
+              "facts": [],
+              "pending_question": null,
+              "parked_questions": [],
+              "pending_actions": [],
+              "forbidden_goals": [],
+              "handoff": null,
+              "event_log": [],
+              "solicitacoes": [],
+              "documentos": [],
+              "acoes": [],
+              "acompanhamentos": [],
+              "current_topic": null,
+              "origin_topic": null
+            },
+            "outcome": "CLARIFICATION",
+            "event_kind": null,
+            "reply_body": "Pode me explicar um pouco melhor?",
+            "projection": {
+              "subject": "nao_classificado",
+              "stage": "novos",
+              "automation_mode": "bot",
+              "queue_status": "inbox",
+              "flow_state": {
+                "runtime": "santana-conversation-domain/v1",
+                "current_goal": null,
+                "current_topic": null,
+                "pending_question_code": null,
+                "pending_fact_code": null,
+                "pending_action_codes": [],
+                "waiting_for": null,
+                "runtime_requests": [],
+                "handoff_requested": false,
+                "active_goal_status": null,
+                "goal_display_name": null,
+                "conversation_collection_status": "NOT_APPLICABLE",
+                "administrative_authorization_status": "NOT_APPLICABLE",
+                "operational_process_status": "NOT_APPLICABLE"
+              }
+            }
+          },
+          "result": {
+            "revision": 3,
+            "outbox_id": "lab-outbox-3",
+            "replayed": false
+          },
+          "receipt": {
+            "status": "COMMITTED",
+            "revision": 3
+          },
+          "outbox": {
+            "id": "lab-outbox-3",
+            "body": "Pode me explicar um pouco melhor?",
+            "status": "PENDING"
+          }
+        }
+      ],
+      "final_state": {
+        "schema_version": "santana-conversation-state/v1",
+        "conversation_id": "73696d2d-3033-4000-8000-000000000000",
+        "seq": 0,
+        "cases": [],
+        "goals": [],
+        "facts": [],
+        "pending_question": null,
+        "parked_questions": [],
+        "pending_actions": [],
+        "forbidden_goals": [],
+        "handoff": null,
+        "event_log": [],
+        "solicitacoes": [],
+        "documentos": [],
+        "acoes": [],
+        "acompanhamentos": [],
+        "current_topic": null,
+        "origin_topic": null
+      },
+      "evaluation": {
+        "FACT_BOUNDARY": "PASS",
+        "CONTINUITY": "PASS",
+        "CASE_ISOLATION": "PASS",
+        "CORRECTION": "N/A",
+        "NATURALNESS": "PASS",
+        "REPETITION": 1,
+        "UNNECESSARY_QUESTIONS": 0,
+        "HANDOFF": "N/A",
+        "CLOSE_RESUME": "N/A",
+        "deterministic_failures": [],
+        "notes": [
+          "Evaluator is independent from the runtime reducer.",
+          "Human-facing draft is the official deterministic reply renderer in the frozen runtime; no separate Gemini draft stage exists in this source cut."
+        ]
+      },
+      "metrics": {
+        "turn_count": 3,
+        "revision": 3,
+        "outbox_count": 3,
+        "duration_ms": 5550
+      }
+    },
+    {
+      "scenario": {
+        "id": "sim-04",
+        "group": "A_NORMAL",
+        "title": "informação completa logo no início",
+        "tags": [
+          "localizacao"
+        ],
+        "truth": {
+          "deceasedName": "Bruno Sintético",
+          "graveReference": "quadra 4, terreno 9"
+        }
+      },
+      "turns": [
+        {
+          "inbound": {
+            "external_message_id": "sim-04-m1",
+            "phone_e164": "+5511000000000",
+            "contact_name": "Munícipe Simulado",
+            "body": "Quero localizar o jazigo de Bruno Sintético, quadra 4, terreno 9.",
+            "message_type": "text",
+            "metadata": {
+              "simulation": true,
+              "scenario_id": "sim-04"
+            },
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7"
+          },
+          "state_before": null,
+          "state_after": {
+            "schema_version": "santana-conversation-state/v1",
+            "conversation_id": "73696d2d-3034-4000-8000-000000000000",
+            "seq": 0,
+            "cases": [],
+            "goals": [],
+            "facts": [],
+            "pending_question": null,
+            "parked_questions": [],
+            "pending_actions": [],
+            "forbidden_goals": [],
+            "handoff": null,
+            "event_log": [],
+            "solicitacoes": [],
+            "documentos": [],
+            "acoes": [],
+            "acompanhamentos": [],
+            "current_topic": null,
+            "origin_topic": null
+          },
+          "commit": {
+            "conversation_id": "73696d2d-3034-4000-8000-000000000000",
+            "inbound_message_id": "sim-04-m1",
+            "expected_revision": 0,
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7",
+            "state_hash": "3914d4602ed89f85369b059bc5e1939932ee3e877c040b065b4034279f5729fe",
+            "state": {
+              "schema_version": "santana-conversation-state/v1",
+              "conversation_id": "73696d2d-3034-4000-8000-000000000000",
+              "seq": 0,
+              "cases": [],
+              "goals": [],
+              "facts": [],
+              "pending_question": null,
+              "parked_questions": [],
+              "pending_actions": [],
+              "forbidden_goals": [],
+              "handoff": null,
+              "event_log": [],
+              "solicitacoes": [],
+              "documentos": [],
+              "acoes": [],
+              "acompanhamentos": [],
+              "current_topic": null,
+              "origin_topic": null
+            },
+            "outcome": "CLARIFICATION",
+            "event_kind": null,
+            "reply_body": "Preciso confirmar: JAZIGO_FAMILIA ou OUTRO_CEMITERIO ou COMPRA_DE_JAZIGO?",
+            "projection": {
+              "subject": "nao_classificado",
+              "stage": "novos",
+              "automation_mode": "bot",
+              "queue_status": "inbox",
+              "flow_state": {
+                "runtime": "santana-conversation-domain/v1",
+                "current_goal": null,
+                "current_topic": null,
+                "pending_question_code": null,
+                "pending_fact_code": null,
+                "pending_action_codes": [],
+                "waiting_for": null,
+                "runtime_requests": [],
+                "handoff_requested": false,
+                "active_goal_status": null,
+                "goal_display_name": null,
+                "conversation_collection_status": "NOT_APPLICABLE",
+                "administrative_authorization_status": "NOT_APPLICABLE",
+                "operational_process_status": "NOT_APPLICABLE"
+              }
+            }
+          },
+          "result": {
+            "revision": 1,
+            "outbox_id": "lab-outbox-1",
+            "replayed": false
+          },
+          "receipt": {
+            "status": "COMMITTED",
+            "revision": 1
+          },
+          "outbox": {
+            "id": "lab-outbox-1",
+            "body": "Preciso confirmar: JAZIGO_FAMILIA ou OUTRO_CEMITERIO ou COMPRA_DE_JAZIGO?",
+            "status": "PENDING"
+          }
+        },
+        {
+          "inbound": {
+            "external_message_id": "sim-04-m2",
+            "phone_e164": "+5511000000000",
+            "contact_name": "Munícipe Simulado",
+            "body": "quadra 4, terreno 9",
+            "message_type": "text",
+            "metadata": {
+              "simulation": true,
+              "scenario_id": "sim-04"
+            },
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7"
+          },
+          "state_before": {
+            "schema_version": "santana-conversation-state/v1",
+            "conversation_id": "73696d2d-3034-4000-8000-000000000000",
+            "seq": 0,
+            "cases": [],
+            "goals": [],
+            "facts": [],
+            "pending_question": null,
+            "parked_questions": [],
+            "pending_actions": [],
+            "forbidden_goals": [],
+            "handoff": null,
+            "event_log": [],
+            "solicitacoes": [],
+            "documentos": [],
+            "acoes": [],
+            "acompanhamentos": [],
+            "current_topic": null,
+            "origin_topic": null
+          },
+          "state_after": {
+            "schema_version": "santana-conversation-state/v1",
+            "conversation_id": "73696d2d-3034-4000-8000-000000000000",
+            "seq": 1,
+            "cases": [],
+            "goals": [],
+            "facts": [
+              {
+                "fact_id": "f001",
+                "fact_code": "grave_reference",
+                "case_id": null,
+                "goal_id": null,
+                "value": "quadra 4, terreno 9",
+                "source": "USER_EXPLICIT",
+                "confidence": "CONFIRMED",
+                "status": "ACTIVE",
+                "recorded_at_seq": 1,
+                "superseded_by": null,
+                "superseded_at_seq": null,
+                "supersession_reason": null,
+                "conflicts_with": null,
+                "authoritative": false,
+                "derived_from": []
+              }
+            ],
+            "pending_question": null,
+            "parked_questions": [],
+            "pending_actions": [],
+            "forbidden_goals": [],
+            "handoff": null,
+            "event_log": [
+              {
+                "seq": 1,
+                "event_kind": "ANSWER",
+                "note": null
+              }
+            ],
+            "solicitacoes": [],
+            "documentos": [],
+            "acoes": [],
+            "acompanhamentos": [],
+            "current_topic": null,
+            "origin_topic": null
+          },
+          "commit": {
+            "conversation_id": "73696d2d-3034-4000-8000-000000000000",
+            "inbound_message_id": "sim-04-m2",
+            "expected_revision": 1,
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7",
+            "state_hash": "c99ffeb61c37ede6308b6def208e85fd67110f217703d3647aa5d0dc1c51d94d",
+            "state": {
+              "schema_version": "santana-conversation-state/v1",
+              "conversation_id": "73696d2d-3034-4000-8000-000000000000",
+              "seq": 1,
+              "cases": [],
+              "goals": [],
+              "facts": [
+                {
+                  "fact_id": "f001",
+                  "fact_code": "grave_reference",
+                  "case_id": null,
+                  "goal_id": null,
+                  "value": "quadra 4, terreno 9",
+                  "source": "USER_EXPLICIT",
+                  "confidence": "CONFIRMED",
+                  "status": "ACTIVE",
+                  "recorded_at_seq": 1,
+                  "superseded_by": null,
+                  "superseded_at_seq": null,
+                  "supersession_reason": null,
+                  "conflicts_with": null,
+                  "authoritative": false,
+                  "derived_from": []
+                }
+              ],
+              "pending_question": null,
+              "parked_questions": [],
+              "pending_actions": [],
+              "forbidden_goals": [],
+              "handoff": null,
+              "event_log": [
+                {
+                  "seq": 1,
+                  "event_kind": "ANSWER",
+                  "note": null
+                }
+              ],
+              "solicitacoes": [],
+              "documentos": [],
+              "acoes": [],
+              "acompanhamentos": [],
+              "current_topic": null,
+              "origin_topic": null
+            },
+            "outcome": "PROPOSED",
+            "event_kind": "ANSWER",
+            "reply_body": null,
+            "projection": {
+              "subject": "nao_classificado",
+              "stage": "novos",
+              "automation_mode": "bot",
+              "queue_status": "inbox",
+              "flow_state": {
+                "runtime": "santana-conversation-domain/v1",
+                "current_goal": null,
+                "current_topic": null,
+                "pending_question_code": null,
+                "pending_fact_code": null,
+                "pending_action_codes": [],
+                "waiting_for": null,
+                "runtime_requests": [],
+                "handoff_requested": false,
+                "active_goal_status": null,
+                "goal_display_name": null,
+                "conversation_collection_status": "NOT_APPLICABLE",
+                "administrative_authorization_status": "NOT_APPLICABLE",
+                "operational_process_status": "NOT_APPLICABLE"
+              }
+            }
+          },
+          "result": {
+            "revision": 2,
+            "outbox_id": null,
+            "replayed": false
+          },
+          "receipt": {
+            "status": "COMMITTED",
+            "revision": 2
+          },
+          "outbox": null
+        }
+      ],
+      "final_state": {
+        "schema_version": "santana-conversation-state/v1",
+        "conversation_id": "73696d2d-3034-4000-8000-000000000000",
+        "seq": 1,
+        "cases": [],
+        "goals": [],
+        "facts": [
+          {
+            "fact_id": "f001",
+            "fact_code": "grave_reference",
+            "case_id": null,
+            "goal_id": null,
+            "value": "quadra 4, terreno 9",
+            "source": "USER_EXPLICIT",
+            "confidence": "CONFIRMED",
+            "status": "ACTIVE",
+            "recorded_at_seq": 1,
+            "superseded_by": null,
+            "superseded_at_seq": null,
+            "supersession_reason": null,
+            "conflicts_with": null,
+            "authoritative": false,
+            "derived_from": []
+          }
+        ],
+        "pending_question": null,
+        "parked_questions": [],
+        "pending_actions": [],
+        "forbidden_goals": [],
+        "handoff": null,
+        "event_log": [
+          {
+            "seq": 1,
+            "event_kind": "ANSWER",
+            "note": null
+          }
+        ],
+        "solicitacoes": [],
+        "documentos": [],
+        "acoes": [],
+        "acompanhamentos": [],
+        "current_topic": null,
+        "origin_topic": null
+      },
+      "evaluation": {
+        "FACT_BOUNDARY": "PASS",
+        "CONTINUITY": "PASS",
+        "CASE_ISOLATION": "PASS",
+        "CORRECTION": "N/A",
+        "NATURALNESS": "PASS",
+        "REPETITION": 0,
+        "UNNECESSARY_QUESTIONS": 0,
+        "HANDOFF": "N/A",
+        "CLOSE_RESUME": "N/A",
+        "deterministic_failures": [],
+        "notes": [
+          "Evaluator is independent from the runtime reducer.",
+          "Human-facing draft is the official deterministic reply renderer in the frozen runtime; no separate Gemini draft stage exists in this source cut."
+        ]
+      },
+      "metrics": {
+        "turn_count": 2,
+        "revision": 2,
+        "outbox_count": 1,
+        "duration_ms": 4137
+      }
+    },
+    {
+      "scenario": {
+        "id": "sim-05",
+        "group": "A_NORMAL",
+        "title": "documento faltante",
+        "tags": [
+          "documento"
+        ],
+        "truth": {}
+      },
+      "turns": [
+        {
+          "inbound": {
+            "external_message_id": "sim-05-m1",
+            "phone_e164": "+5511000000000",
+            "contact_name": "Munícipe Simulado",
+            "body": "Quero fazer o recadastro, mas ainda não tenho o documento.",
+            "message_type": "text",
+            "metadata": {
+              "simulation": true,
+              "scenario_id": "sim-05"
+            },
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7"
+          },
+          "state_before": null,
+          "state_after": {
+            "schema_version": "santana-conversation-state/v1",
+            "conversation_id": "73696d2d-3035-4000-8000-000000000000",
+            "seq": 1,
+            "cases": [
+              {
+                "case_id": "case001",
+                "subject_kind": "CONCESSION",
+                "subject_ref": "demand:sim-05-m1",
+                "opened_at_seq": 1
+              }
+            ],
+            "goals": [
+              {
+                "goal_id": "g001",
+                "goal_code": "GOAL_RECADASTRO",
+                "case_id": "case001",
+                "status": "ACTIVE",
+                "status_reason": null,
+                "parent_goal_id": null,
+                "overlay_of": null,
+                "stack_index": 0,
+                "informational": false,
+                "return_to_parent": false,
+                "opened_at_seq": 1,
+                "closed_at_seq": null,
+                "created_by_relation": null
+              }
+            ],
+            "facts": [],
+            "pending_question": {
+              "question_code": "Q_CONCESSION_REFERENCE",
+              "fact_code": "concession_reference",
+              "goal_id": "g001",
+              "priority_class": "NEXT_ACTION_DATA",
+              "asked_at_seq": 1
+            },
+            "parked_questions": [],
+            "pending_actions": [],
+            "forbidden_goals": [],
+            "handoff": null,
+            "event_log": [
+              {
+                "seq": 1,
+                "event_kind": "NEW_GOAL",
+                "note": null
+              }
+            ],
+            "solicitacoes": [],
+            "documentos": [],
+            "acoes": [],
+            "acompanhamentos": [],
+            "current_topic": "RECADASTRO",
+            "origin_topic": null
+          },
+          "commit": {
+            "conversation_id": "73696d2d-3035-4000-8000-000000000000",
+            "inbound_message_id": "sim-05-m1",
+            "expected_revision": 0,
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7",
+            "state_hash": "a06316624e15f04852977f89cd7dc7845e5e7c28a057ed3862a1a3467e4e112b",
+            "state": {
+              "schema_version": "santana-conversation-state/v1",
+              "conversation_id": "73696d2d-3035-4000-8000-000000000000",
+              "seq": 1,
+              "cases": [
+                {
+                  "case_id": "case001",
+                  "subject_kind": "CONCESSION",
+                  "subject_ref": "demand:sim-05-m1",
+                  "opened_at_seq": 1
+                }
+              ],
+              "goals": [
+                {
+                  "goal_id": "g001",
+                  "goal_code": "GOAL_RECADASTRO",
+                  "case_id": "case001",
+                  "status": "ACTIVE",
+                  "status_reason": null,
+                  "parent_goal_id": null,
+                  "overlay_of": null,
+                  "stack_index": 0,
+                  "informational": false,
+                  "return_to_parent": false,
+                  "opened_at_seq": 1,
+                  "closed_at_seq": null,
+                  "created_by_relation": null
+                }
+              ],
+              "facts": [],
+              "pending_question": {
+                "question_code": "Q_CONCESSION_REFERENCE",
+                "fact_code": "concession_reference",
+                "goal_id": "g001",
+                "priority_class": "NEXT_ACTION_DATA",
+                "asked_at_seq": 1
+              },
+              "parked_questions": [],
+              "pending_actions": [],
+              "forbidden_goals": [],
+              "handoff": null,
+              "event_log": [
+                {
+                  "seq": 1,
+                  "event_kind": "NEW_GOAL",
+                  "note": null
+                }
+              ],
+              "solicitacoes": [],
+              "documentos": [],
+              "acoes": [],
+              "acompanhamentos": [],
+              "current_topic": "RECADASTRO",
+              "origin_topic": null
+            },
+            "outcome": "PROPOSED",
+            "event_kind": "NEW_GOAL",
+            "reply_body": "Qual e a identificacao da concessao?",
+            "projection": {
+              "subject": "recadastro",
+              "stage": "pendencias",
+              "automation_mode": "bot",
+              "queue_status": "waiting_citizen",
+              "flow_state": {
+                "runtime": "santana-conversation-domain/v1",
+                "current_goal": "GOAL_RECADASTRO",
+                "current_topic": "RECADASTRO",
+                "pending_question_code": "Q_CONCESSION_REFERENCE",
+                "pending_fact_code": "concession_reference",
+                "pending_action_codes": [],
+                "waiting_for": "citizen",
+                "runtime_requests": [],
+                "handoff_requested": false,
+                "active_goal_status": "ACTIVE",
+                "goal_display_name": "RECADASTRO",
+                "conversation_collection_status": "IN_PROGRESS",
+                "administrative_authorization_status": "PENDING",
+                "operational_process_status": "NOT_COMPLETED"
+              }
+            }
+          },
+          "result": {
+            "revision": 1,
+            "outbox_id": "lab-outbox-1",
+            "replayed": false
+          },
+          "receipt": {
+            "status": "COMMITTED",
+            "revision": 1
+          },
+          "outbox": {
+            "id": "lab-outbox-1",
+            "body": "Qual e a identificacao da concessao?",
+            "status": "PENDING"
+          }
+        },
+        {
+          "inbound": {
+            "external_message_id": "sim-05-m2",
+            "phone_e164": "+5511000000000",
+            "contact_name": "Munícipe Simulado",
+            "body": "Vou procurar e volto depois.",
+            "message_type": "text",
+            "metadata": {
+              "simulation": true,
+              "scenario_id": "sim-05"
+            },
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7"
+          },
+          "state_before": {
+            "schema_version": "santana-conversation-state/v1",
+            "conversation_id": "73696d2d-3035-4000-8000-000000000000",
+            "seq": 1,
+            "cases": [
+              {
+                "case_id": "case001",
+                "subject_kind": "CONCESSION",
+                "subject_ref": "demand:sim-05-m1",
+                "opened_at_seq": 1
+              }
+            ],
+            "goals": [
+              {
+                "goal_id": "g001",
+                "goal_code": "GOAL_RECADASTRO",
+                "case_id": "case001",
+                "status": "ACTIVE",
+                "status_reason": null,
+                "parent_goal_id": null,
+                "overlay_of": null,
+                "stack_index": 0,
+                "informational": false,
+                "return_to_parent": false,
+                "opened_at_seq": 1,
+                "closed_at_seq": null,
+                "created_by_relation": null
+              }
+            ],
+            "facts": [],
+            "pending_question": {
+              "question_code": "Q_CONCESSION_REFERENCE",
+              "fact_code": "concession_reference",
+              "goal_id": "g001",
+              "priority_class": "NEXT_ACTION_DATA",
+              "asked_at_seq": 1
+            },
+            "parked_questions": [],
+            "pending_actions": [],
+            "forbidden_goals": [],
+            "handoff": null,
+            "event_log": [
+              {
+                "seq": 1,
+                "event_kind": "NEW_GOAL",
+                "note": null
+              }
+            ],
+            "solicitacoes": [],
+            "documentos": [],
+            "acoes": [],
+            "acompanhamentos": [],
+            "current_topic": "RECADASTRO",
+            "origin_topic": null
+          },
+          "state_after": {
+            "schema_version": "santana-conversation-state/v1",
+            "conversation_id": "73696d2d-3035-4000-8000-000000000000",
+            "seq": 1,
+            "cases": [
+              {
+                "case_id": "case001",
+                "subject_kind": "CONCESSION",
+                "subject_ref": "demand:sim-05-m1",
+                "opened_at_seq": 1
+              }
+            ],
+            "goals": [
+              {
+                "goal_id": "g001",
+                "goal_code": "GOAL_RECADASTRO",
+                "case_id": "case001",
+                "status": "ACTIVE",
+                "status_reason": null,
+                "parent_goal_id": null,
+                "overlay_of": null,
+                "stack_index": 0,
+                "informational": false,
+                "return_to_parent": false,
+                "opened_at_seq": 1,
+                "closed_at_seq": null,
+                "created_by_relation": null
+              }
+            ],
+            "facts": [],
+            "pending_question": {
+              "question_code": "Q_CONCESSION_REFERENCE",
+              "fact_code": "concession_reference",
+              "goal_id": "g001",
+              "priority_class": "NEXT_ACTION_DATA",
+              "asked_at_seq": 1
+            },
+            "parked_questions": [],
+            "pending_actions": [],
+            "forbidden_goals": [],
+            "handoff": null,
+            "event_log": [
+              {
+                "seq": 1,
+                "event_kind": "NEW_GOAL",
+                "note": null
+              }
+            ],
+            "solicitacoes": [],
+            "documentos": [],
+            "acoes": [],
+            "acompanhamentos": [],
+            "current_topic": "RECADASTRO",
+            "origin_topic": null
+          },
+          "commit": {
+            "conversation_id": "73696d2d-3035-4000-8000-000000000000",
+            "inbound_message_id": "sim-05-m2",
+            "expected_revision": 1,
+            "catalog_hash": "ea0dfe52948815635d082647ba5db22fb31658ab16a9d2736c914076955d3ee7",
+            "state_hash": "a06316624e15f04852977f89cd7dc7845e5e7c28a057ed3862a1a3467e4e112b",
+            "state": {
+              "schema_version": "santana-conversation-state/v1",
+              "conversation_id": "73696d2d-3035-4000-8000-000000000000",
+              "seq": 1,
+              "cases": [
+                {
+                  "case_id": "case001",
+                  "subject_kind": "CONCESSION",
+                  "subject_ref": "demand:sim-05-m1",
+                  "opened_at_seq": 1
+                }
+              ],
+              "goals": [
+                {
+                  "goal_id": "g001",
+                  "goal_code": "GOAL_RECADASTRO",
+                  "case_id": "case001",
+                  "status": "ACTIVE",
+                  "status_reason": null,
+                  "parent_goal_id": null,
+                  "overlay_of": null,
+                  "stack_index": 0,
+                  "informational": false,
+                  "return_to_parent": false,
+                  "opened_at_seq": 1,
+                  "closed_at_seq": null,
+                  "created_by_relation": null
+                }
+              ],
+              "facts": [],
+              "pending_question": {
+                "question_code": "Q_CONCESSION_REFERENCE",
+                "fact_code": "concession_reference",
+                "goal_id": "g001",
+                "priority_class": "NEXT_ACTION_DATA",
+                "asked_at_seq": 1
+              },
+              "parked_questions": [],
+              "pending_actions": [],
+              "forbidden_goals": [],
+              "handoff": null,
+              "event_log": [
+                {
+                  "seq": 1,
+                  "event_kind": "NEW_GOAL",
+                  "note": null
+                }
+              ],
+              "solicitacoes": [],
+              "documentos": [],
+              "acoes": [],
+              "acompanhamentos": [],
+              "current_topic": "RECADASTRO",
+              "origin_topic": null
+            },
+            "outcome": "CLARIFICATION",
+            "event_kind": null,
+            "reply_body": "Não consegui relacionar essa mensagem à informação que estávamos reunindo. Qual e a identificacao da concessao? Se não souber, responda NÃO SEI; se quiser outro assunto, escreva NOVO ATENDIMENTO DE e o assunto.",
+            "projection": {
+              "subject": "recadastro",
+              "stage": "pendencias",
+              "automation_mode": "bot",
+              "queue_status": "waiting_citizen",
+              "flow_state": {
+                "runtime": "santana-conversation-domain/v1",
+                "current_goal": "GOAL_RECADASTRO",
+                "current_topic": "RECADASTRO",
+                "pending_question_code": "Q_CONCESSION_REFERENCE",
+                "pending_fact_code": "concession_reference",
+                "pending_action_codes": [],
+                "waiting_for": "citizen",
+                "runtime_requests": [],
+                "handoff_requested": false,
+                "active_goal_status": "ACTIVE",
+                "goal_display_name": "RECADASTRO",
+                "conversation_collection_status": "IN_PROGRESS",
+                "administrative_authorization_status": "PENDING",
+                "operational_process_status": "NOT_COMPLETED"
+              }
+            }
+          },
+          "result": {
+            "revision": 2,
+            "outbox_id": "lab-outbox-2",
+            "replayed": false
+          },
+          "receipt": {
+            "status": "COMMITTED",
+            "revision": 2
+          },
+          "outbox": {
+            "id": "lab-outbox-2",
+            "body": "Não consegui relacionar essa mensagem à informação que estávamos reunindo. Qual e a identificacao da concessao? Se não souber, responda NÃO SEI; se quiser outro assunto, escreva NOVO ATENDIMENTO DE e o assunto.",
+            "status": "PENDING"
+          }
+        }
+      ],
+      "final_state": {
+        "schema_version": "santana-conversation-state/v1",
+        "conversation_id": "73696d2d-3035-4000-8000-000000000000",
+        "seq": 1,
+        "cases": [
+          {
+            "case_id": "case001",
+            "subject_kind": "CONCESSION",
+            "subject_ref": "demand:sim-05-m1",
+            "opened_at_seq": 1
+          }
+        ],
+        "goals": [
+          {
+            "goal_id": "g001",
+            "goal_code": "GOAL_RECADASTRO",
+            "case_id": "case001",
+            "status": "ACTIVE",
+            "status_reason": null,
+            "parent_goal_id": null,
+            "overlay_of": null,
+            "stack_index": 0,
+            "informational": false,
+            "return_to_parent": false,
+            "opened_at_seq": 1,
+            "closed_at_seq": null,
+            "created_by_relation": null
+          }
+        ],
+        "facts": [],
+        "pending_question": {
+          "question_code": "Q_CONCESSION_REFERENCE",
+          "fact_code": "concession_reference",
+          "goal_id": "g001",
+          "priority_class": "NEXT_ACTION_DATA",
+          "asked_at_seq": 1
+        },
+        "parked_questions": [],
+        "pending_actions": [],
+        "forbidden_goals": [],
+        "handoff": null,
+        "event_log": [
+          {
+            "seq": 1,
+            "event_kind": "NEW_GOAL",
+            "note": null
+          }
+        ],
+        "solicitacoes": [],
+        "documentos": [],
+        "acoes": [],
+        "acompanhamentos": [],
+        "current_topic": "RECADASTRO",
+        "origin_topic": null
+      },
+      "evaluation": {
+        "FACT_BOUNDARY": "PASS",
+        "CONTINUITY": "PASS",
+        "CASE_ISOLATION": "PASS",
+        "CORRECTION": "N/A",
+        "NATURALNESS": "PASS",
+        "REPETITION": 1,
+        "UNNECESSARY_QUESTIONS": 1,
+        "HANDOFF": "N/A",
+        "CLOSE_RESUME": "N/A",
+        "deterministic_failures": [],
+        "notes": [
+          "Evaluator is independent from the runtime reducer.",
+          "Human-facing draft is the official deterministic reply renderer in the frozen runtime; no separate Gemini draft stage exists in this source cut."
+        ]
+      },
+      "metrics": {
+        "turn_count": 2,
+        "revision": 2,
+        "outbox_count": 2,
+        "duration_ms": 3555
+      }
+    }
+  ]
+}

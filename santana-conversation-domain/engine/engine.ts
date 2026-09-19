@@ -158,6 +158,8 @@ export interface ConversationEvent {
   note?: string;
   handoff_priority?: "normal" | "P0";
   close_conversation?: boolean;
+  /** Focus an existing case without copying facts or creating a new case. */
+  focus_case_id?: string;
 }
 
 const OPEN_STATUSES: GoalStatus[] = ["ACTIVE", "SUSPENDED", "WAITING"];
@@ -888,6 +890,22 @@ export function applyEvent(previous: ConversationState, event: ConversationEvent
 
   switch (event.kind) {
     case "SOCIAL":
+      if (event.focus_case_id) {
+        const target = goalById(state, event.focus_case_id);
+        if (target) {
+          for (const candidate of state.goals) {
+            if (candidate.case_id === target.case_id || !OPEN_STATUSES.includes(candidate.status)) continue;
+            candidate.status = "SUSPENDED";
+            candidate.status_reason = "FOCUS_CASE";
+          }
+          if (target.status === "SUSPENDED" || target.status === "WAITING") {
+            target.status = "ACTIVE";
+            target.status_reason = null;
+          }
+          state.current_topic = goalDef(target.goal_code).topic_code;
+          state.pending_question = null;
+        }
+      }
       // A greeting can recover the next collection question in an older
       // waiting snapshot, without changing facts, decisions or case status.
       if (event.close_conversation) {
