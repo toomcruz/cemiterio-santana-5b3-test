@@ -15,6 +15,7 @@ import { requireRuntimeIngressAccess } from "../_shared/official-security.ts";
 import { processOfficialOperator } from "../_shared/official-operator.ts";
 import { createMotorV2GeminiInterpreter } from "../_shared/motor-v2-gemini-interpreter.ts";
 import { interpret as deterministicInterpret } from "../../santana-conversation-domain/runtime/interpreter/deterministic.ts";
+import { selectPrivateCanaryRoute } from "../_shared/private-canary-route.ts";
 
 const MAX_REQUEST_BYTES = 2 * 1024 * 1024;
 
@@ -26,6 +27,46 @@ function object(value: unknown): JsonRecord {
 
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function privateCanaryUrl(): string | null {
+  const configured = Deno.env.get("SUPPORT_RUNTIME_CANARY_URL")?.trim();
+  if (configured) {
+    try {
+      const url = new URL(configured);
+      return url.protocol === "https:" ? url.toString() : null;
+    } catch {
+      return null;
+    }
+  }
+  const supabaseUrl = (Deno.env.get("SUPABASE_URL") ?? "").trim();
+  if (!supabaseUrl) return null;
+  try {
+    const base = new URL(supabaseUrl);
+    if (base.protocol !== "https:") return null;
+    return new URL("/functions/v1/support-runtime-canary-v4", base).toString();
+  } catch {
+    return null;
+  }
+}
+
+async function invokePrivateCanary(inbound: RuntimeInbound, ingressKey: string): Promise<JsonRecord> {
+  const url = privateCanaryUrl();
+  if (!url) throw new HttpProblem(503, "CANARY_ROUTE_UNCONFIGURED", "Private canary URL is not configured");
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-support-runtime-key": ingressKey,
+    },
+    body: JSON.stringify(inbound),
+    signal: AbortSignal.timeout(15_000),
+  });
+  const result = object(await response.json().catch(() => null));
+  if (!response.ok || result.accepted !== true || result.route !== "SANA_V4") {
+    throw new HttpProblem(502, "CANARY_RUNTIME_UNAVAILABLE", "Private canary did not accept the owner turn");
+  }
+  return result;
 }
 
 function inboundFromPayload(payload: unknown): RuntimeInbound {
@@ -169,6 +210,17 @@ Deno.serve(async (request) => {
       return json({ ...response, delivery });
     }
     const inbound = inboundFromPayload(payload);
+    const privateRoute = await selectPrivateCanaryRoute(
+      inbound.phone_e164,
+      Deno.env.get("CANARY_ENABLED"),
+      Deno.env.get("SUPPORT_RUNTIME_CANARY_HASH"),
+    );
+    if (privateRoute === "SANA_V4") {
+      const ingressKey = Deno.env.get("SUPPORT_RUNTIME_INGRESS_KEY")?.trim() ?? "";
+      if (!ingressKey) throw new HttpProblem(503, "CANARY_INGRESS_UNCONFIGURED", "Private canary ingress is not configured");
+      const result = await invokePrivateCanary(inbound, ingressKey);
+      return json({ ...result, routed_by: "support-runtime-inbound" });
+    }
     const route = await selectCanaryRoute(
       inbound.phone_e164,
       Deno.env.get("CANARY_ENABLED"),
