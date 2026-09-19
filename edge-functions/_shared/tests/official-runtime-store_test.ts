@@ -118,7 +118,7 @@ Deno.test("official store maps a committed turn to one service-only RPC", async 
 
   const result = await store.commitTurn(commit);
 
-  assertEquals(result, { replayed: false, revision: 1, outbox_id: "outbox-1" });
+  assertEquals(result, { replayed: false, revision: 1, outbox_id: "outbox-1", reply_suppressed: false });
   assertEquals(rest.calls[0]?.name, "support_runtime_commit_turn");
   assertEquals(rest.calls[0]?.body.p_state_hash, "b".repeat(64));
 });
