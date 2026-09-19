@@ -19,7 +19,7 @@ const ROOT = new URL("..", import.meta.url);
 const PROJECT_REF = "vpinclyspbcrxazmnrie";
 const SUPABASE_URL = `https://${PROJECT_REF}.supabase.co`;
 const RUNTIME_COMMIT = "5c78aa81e8eb437fbea53965861264683f97990e";
-const MAX_PROVIDER_CALLS_PER_RUN = 2;
+const MAX_PROVIDER_CALLS_PER_RUN = 1;
 const MIN_INTERVAL_MS = 15_000;
 const LEDGER_FILE = new URL("../lab-checkpoints/SANA-V4-GEMINI-LEDGER.json", import.meta.url);
 const LEDGER_LOCK_FILE = new URL("../lab-checkpoints/SANA-V4-GEMINI-LEDGER.lock", import.meta.url);
@@ -28,8 +28,7 @@ const MATRIX_FILE = new URL("./v4-final-gemini-matrix.json", import.meta.url);
 const SERVICE_KEY = Deno.env.get("SANA_V4_RUNTIME_SERVICE_KEY") ?? "";
 const ACCESS_TOKEN = Deno.env.get("SUPABASE_ACCESS_TOKEN") ?? "";
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
-const GEMINI_API_KEY_GATE2 = Deno.env.get("GEMINI_API_KEY_GATE2") ?? "";
-if (!ACCESS_TOKEN || !GEMINI_API_KEY || !GEMINI_API_KEY_GATE2) throw new Error("qualification credentials are not configured");
+if (!ACCESS_TOKEN || !GEMINI_API_KEY) throw new Error("qualification credential A is not configured");
 
 type MatrixConversation = { id: string; category: string; turns: string[]; adversarial?: boolean };
 type Matrix = { matrix_version: string; runtime_commit: string; provider: string; model: string; generation_config: Record<string, unknown>; conversations: MatrixConversation[] };
@@ -124,10 +123,8 @@ function q(value: string): string { return `'${value.replaceAll("'", "''")}'`; }
 async function sha256Text(text: string): Promise<string> { return await sha256(text); }
 function rawJson(raw: string): Record<string, unknown> { try { return JSON.parse(raw) as Record<string, unknown>; } catch { return {}; } }
 const credentialFingerprintA = await sha256Text(GEMINI_API_KEY).then((value) => value.slice(0, 12));
-const credentialFingerprintB = await sha256Text(GEMINI_API_KEY_GATE2).then((value) => value.slice(0, 12));
 const CREDENTIALS = {
   A: { slot: "A", key: GEMINI_API_KEY, fingerprint: credentialFingerprintA },
-  B: { slot: "B", key: GEMINI_API_KEY_GATE2, fingerprint: credentialFingerprintB },
 } as const;
 type CredentialSlot = keyof typeof CREDENTIALS;
 function countStatuses(entries: Record<string, LedgerEntry>): Record<string, number> {
@@ -198,7 +195,6 @@ function geminiSchema(value: unknown): unknown {
 }
 const providers = {
   A: new GeminiBenchmarkProvider(GEMINI_MODEL, CREDENTIALS.A.key, geminiSchema(schema) as Record<string, unknown>),
-  B: new GeminiBenchmarkProvider(GEMINI_MODEL, CREDENTIALS.B.key, geminiSchema(schema) as Record<string, unknown>),
 } satisfies Record<CredentialSlot, GeminiBenchmarkProvider>;
 const rest = new OfficialSupabaseRest({ url: SUPABASE_URL, serviceRoleKey: await resolveLabServiceKey() });
 const partial = JSON.parse(await readText(PARTIAL_FILE)) as { raw_calls?: Array<Record<string, unknown>>; run_id?: string };
@@ -234,13 +230,13 @@ async function buildInitialLedger(): Promise<Ledger> {
   }
   const counts: Record<string, number> = {}; for (const entry of Object.values(entries)) counts[entry.status] = (counts[entry.status] ?? 0) + 1;
   const runId = `v4g-resume-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
-  return { artifact: "SANA V4 FINAL GEMINI LEDGER", version: "2", revision: 0, matrix_sha: matrixSha, matrix_file_sha: matrixSha, runtime_commit: RUNTIME_COMMIT, model: GEMINI_MODEL, generation_config: matrix.generation_config, run_id: runId, contact_prefix: `SANA-V4-GEMINI-${runId}`, created_at: nowIso(), updated_at: nowIso(), status: "RUNNING", project_relationship: "USER_CONFIRMED_DISTINCT_PROJECTS", credential_slots: { A: { fingerprint: credentialFingerprintA, kind: "standard_api_key" }, B: { fingerprint: credentialFingerprintB, kind: "standard_api_key" } }, entries, counts, errors: [] };
+  return { artifact: "SANA V4 FINAL GEMINI LEDGER", version: "2", revision: 0, matrix_sha: matrixSha, matrix_file_sha: matrixSha, runtime_commit: RUNTIME_COMMIT, model: GEMINI_MODEL, generation_config: matrix.generation_config, run_id: runId, contact_prefix: `SANA-V4-GEMINI-${runId}`, created_at: nowIso(), updated_at: nowIso(), status: "RUNNING", project_relationship: "USER_CONFIRMED_DISTINCT_PROJECTS", credential_slots: { A: { fingerprint: credentialFingerprintA, kind: "standard_api_key" } }, entries, counts, errors: [] };
 }
 try { ledger = JSON.parse(await readText(LEDGER_FILE)) as Ledger; } catch { ledger = await buildInitialLedger(); await writeLedgerAtomic("initial-ledger"); }
 if (ledger.matrix_sha !== matrixSha || ledger.runtime_commit !== RUNTIME_COMMIT) throw new Error("ledger identity mismatch");
 ledger.revision = Number(ledger.revision ?? 0);
 ledger.project_relationship ??= "USER_CONFIRMED_DISTINCT_PROJECTS";
-ledger.credential_slots ??= { A: { fingerprint: credentialFingerprintA, kind: "standard_api_key" }, B: { fingerprint: credentialFingerprintB, kind: "standard_api_key" } };
+ledger.credential_slots ??= { A: { fingerprint: credentialFingerprintA, kind: "standard_api_key" } };
 // Reconcile an interrupted invocation: a preserved raw 200/llm_valid call is
 // authoritative even if the previous process died while replaying its LAB turn.
 for (const entry of Object.values(ledger.entries)) {
@@ -253,6 +249,23 @@ for (const entry of Object.values(ledger.entries)) {
 }
 if (Object.values(ledger.entries).every((entry) => entry.status !== "FAILED")) ledger.status = "RUNNING";
 for (const entry of Object.values(ledger.entries)) if (entry.status === "RUNNING") { entry.status = "PENDING"; entry.reason = "recovered after interrupted invocation"; }
+
+// The only FAILED item was created by the previously prohibited B failover
+// (HTTP 404 for gemini-2.5-flash). Reopen it for the frozen A-only matrix,
+// retaining the historical B raw attempt and adding a reconciliation note.
+for (const entry of Object.values(ledger.entries)) {
+  const raw = entry.raw_call;
+  const providerMessage = String((raw?.response_body as string | undefined) ?? "");
+  if (entry.status === "FAILED" && raw?.credential_slot === "B" && raw?.http_status === 404 && /gemini-2\.5-flash|NOT_FOUND/i.test(providerMessage)) {
+    entry.status = "PENDING";
+    entry.reason = "reopened for frozen A-only qualification; historical B 404 preserved";
+    ledger.reconciliations = [...(ledger.reconciliations ?? []), {
+      at: nowIso(), key: entry.key, conversation_id: entry.conversation_id, turn_id: entry.turn_id,
+      from_status: "FAILED", to_status: "PENDING", reason: "B 404 was outside the frozen A-only qualification",
+      preserved_credential_slot: "B", preserved_http_status: 404,
+    }].slice(-100);
+  }
+}
 
 const storedCounts = JSON.stringify(ledger.counts ?? {});
 const actualCounts = countStatuses(ledger.entries);
@@ -270,28 +283,19 @@ const entriesById = new Map<string, LedgerEntry>(); for (const entry of Object.v
 const rawByKey = new Map<string, Record<string, unknown>>(); for (const entry of Object.values(ledger.entries)) if (entry.raw_call) rawByKey.set(`${entry.conversation_id}:${entry.turn_id}`, entry.raw_call);
 const traces: Record<string, unknown>[] = [];
 function hasEligibleBlocked(entries: Record<string, LedgerEntry>): boolean {
-  return Object.values(entries).some((entry) => entry.status === "PROVIDER_BLOCKED" && (msUntil(entry.credential_next_eligible_at?.A ?? entry.next_eligible_at) <= 0 || msUntil(entry.credential_next_eligible_at?.B ?? entry.next_eligible_at) <= 0));
+  return Object.values(entries).some((entry) => entry.status === "PROVIDER_BLOCKED" && msUntil(entry.credential_next_eligible_at?.A ?? entry.next_eligible_at) <= 0);
 }
 function eligibleCredential(entry: LedgerEntry): CredentialSlot | null {
   if (msUntil(entry.credential_next_eligible_at?.A ?? entry.next_eligible_at) <= 0) return "A";
-  if (msUntil(entry.credential_next_eligible_at?.B ?? entry.next_eligible_at) <= 0) return "B";
   return null;
 }
 function credentialEligible(entry: LedgerEntry, slot: CredentialSlot): boolean {
-  // Legacy blocked entries have one shared cooldown from the original
-  // single-credential runner. Apply it to A, while B remains independently
-  // eligible unless B has its own recorded cooldown.
-  const next = slot === "A"
-    ? entry.credential_next_eligible_at?.A ?? entry.next_eligible_at
-    : entry.credential_next_eligible_at?.B;
+  const next = entry.credential_next_eligible_at?.A ?? entry.next_eligible_at;
   return msUntil(next) <= 0;
 }
 function slotsForEntry(entry: LedgerEntry): CredentialSlot[] {
-  if (entry.status !== "PROVIDER_BLOCKED") return ["A", "B"];
-  const slots: CredentialSlot[] = [];
-  if (credentialEligible(entry, "A")) slots.push("A");
-  if (credentialEligible(entry, "B")) slots.push("B");
-  return slots;
+  if (entry.status !== "PROVIDER_BLOCKED") return ["A"];
+  return credentialEligible(entry, "A") ? ["A"] : [];
 }
 function orderedEntries(): LedgerEntry[] {
   const order = new Map<string, number>();
@@ -428,7 +432,6 @@ try {
             paused = true;
             pauseCategory = entry.provider_category;
             pauseMetadata = entry.provider_metadata;
-            if (credentialSlot === "A" && slots.includes("B") && providerCalls < MAX_PROVIDER_CALLS_PER_RUN) continue;
             break;
           }
           conversationId ??= result.conversation_id; entry.runtime = { conversation_id: result.conversation_id, kind: result.kind, revision: result.revision, event_kind: result.event_kind, inbound_message_id: result.inbound_message_id, reply_body_present: result.reply_body !== null, outbox_id: result.outbox_id, credential_slot: credentialSlot, credential_fingerprint: CREDENTIALS[credentialSlot].fingerprint }; await deliver(rest, result.outbox_id, `${conversation.id}-${turn}`, ledger.run_id); entry.updated_at = nowIso(); ledger.updated_at = nowIso(); ledger.status = "RUNNING"; paused = false; pauseCategory = undefined; pauseMetadata = undefined; await writeLedgerAtomic("runtime-result"); runtimeSucceeded = true; processedRuntime++; break;
