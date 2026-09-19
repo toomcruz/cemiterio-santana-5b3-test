@@ -24,10 +24,10 @@ const MIN_INTERVAL_MS = 15_000;
 const LEDGER_FILE = new URL("../lab-checkpoints/SANA-V4-GEMINI-LEDGER.json", import.meta.url);
 const PARTIAL_FILE = new URL("../lab-checkpoints/SANA-V4-FINAL-GEMINI-QUALIFICATION.json", import.meta.url);
 const MATRIX_FILE = new URL("./v4-final-gemini-matrix.json", import.meta.url);
-const SERVICE_KEY = Deno.env.get("SANA_V4_RUNTIME_SERVICE_KEY") ?? Deno.env.get("SANA_SUPABASE_LAB_SECRET_KEY") ?? "";
+const SERVICE_KEY = Deno.env.get("SANA_V4_RUNTIME_SERVICE_KEY") ?? "";
 const ACCESS_TOKEN = Deno.env.get("SUPABASE_ACCESS_TOKEN") ?? "";
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
-if (!SERVICE_KEY || !ACCESS_TOKEN || !GEMINI_API_KEY) throw new Error("qualification credentials are not configured");
+if (!ACCESS_TOKEN || !GEMINI_API_KEY) throw new Error("qualification credentials are not configured");
 
 type MatrixConversation = { id: string; category: string; turns: string[]; adversarial?: boolean };
 type Matrix = { matrix_version: string; runtime_commit: string; provider: string; model: string; generation_config: Record<string, unknown>; conversations: MatrixConversation[] };
@@ -91,6 +91,17 @@ async function sql<T = Record<string, unknown>>(query: string): Promise<T[]> {
   if (!response.ok) throw new Error(`LAB management query failed (${response.status})`);
   return JSON.parse(await response.text()) as T[];
 }
+async function resolveLabServiceKey(): Promise<string> {
+  if (SERVICE_KEY) return SERVICE_KEY;
+  const response = await fetch(`https://api.supabase.com/v1/projects/${PROJECT_REF}/api-keys`, {
+    headers: { authorization: `Bearer ${ACCESS_TOKEN}` },
+  });
+  if (!response.ok) throw new Error(`LAB service-role key retrieval failed (${response.status})`);
+  const keys = await response.json() as Array<Record<string, unknown>>;
+  const serviceRole = keys.find((key) => key.name === "service_role" && typeof key.api_key === "string")?.api_key;
+  if (!serviceRole) throw new Error("LAB service-role key is unavailable");
+  return serviceRole;
+}
 async function deliver(rest: OfficialSupabaseRest, outboxId: string | null, label: string, runId: string): Promise<void> {
   if (!outboxId) return;
   const claimed = await rest.rpc<Record<string, unknown>>("support_runtime_claim_delivery", { p_outbox_id: outboxId });
@@ -113,7 +124,7 @@ function geminiSchema(value: unknown): unknown {
   return result;
 }
 const provider = new GeminiBenchmarkProvider(GEMINI_MODEL, GEMINI_API_KEY, geminiSchema(schema) as Record<string, unknown>);
-const rest = new OfficialSupabaseRest({ url: SUPABASE_URL, serviceRoleKey: SERVICE_KEY });
+const rest = new OfficialSupabaseRest({ url: SUPABASE_URL, serviceRoleKey: await resolveLabServiceKey() });
 const partial = JSON.parse(await readText(PARTIAL_FILE)) as { raw_calls?: Array<Record<string, unknown>>; run_id?: string };
 
 function makeEntries(): Record<string, LedgerEntry> {
