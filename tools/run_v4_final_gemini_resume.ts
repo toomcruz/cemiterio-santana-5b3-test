@@ -1,7 +1,7 @@
 /**
  * Durable one-batch continuation for the frozen V4 Gemini qualification.
  * This is harness/evidence code only; it must not change Sana runtime behavior.
- * One invocation performs at most four new provider calls, then exits. The
+ * One invocation performs at most one new provider call, then exits. The
  * scheduler invokes it again after the persisted next_eligible_at/pacing time.
  */
 import { ControlledLlmAdapter, type AdapterObservation, type LanguageInterpreter } from "../santana-conversation-domain/runtime/adapter/adapter.ts";
@@ -19,7 +19,7 @@ const ROOT = new URL("..", import.meta.url);
 const PROJECT_REF = "vpinclyspbcrxazmnrie";
 const SUPABASE_URL = `https://${PROJECT_REF}.supabase.co`;
 const RUNTIME_COMMIT = "5c78aa81e8eb437fbea53965861264683f97990e";
-const MAX_NEW_CALLS = Number.parseInt(Deno.env.get("SANA_V4_MAX_NEW_CALLS") ?? "4", 10);
+const MAX_PROVIDER_CALLS_PER_RUN = 1;
 const MIN_INTERVAL_MS = 15_000;
 const LEDGER_FILE = new URL("../lab-checkpoints/SANA-V4-GEMINI-LEDGER.json", import.meta.url);
 const PARTIAL_FILE = new URL("../lab-checkpoints/SANA-V4-FINAL-GEMINI-QUALIFICATION.json", import.meta.url);
@@ -46,6 +46,8 @@ type Ledger = {
   status: "RUNNING" | "WAITING_PROVIDER" | "MATRIX_COMPLETE" | "BLOCKED";
   provider_category?: string; provider_metadata?: Record<string, unknown>; entries: Record<string, LedgerEntry>;
   counts: Record<string, number>; errors: string[];
+  last_run?: { invocation_id: string; started_at: string; finished_at?: string; before: Record<string, number>; result?: Record<string, unknown>; after?: Record<string, number>; provider_calls: number; ledger_progressed?: boolean };
+  watchdog?: { consecutive_eligible_no_progress: number; last_checked_at?: string; last_action?: string };
 };
 
 async function readText(url: URL): Promise<string> { return await Deno.readTextFile(url); }
@@ -99,7 +101,7 @@ async function resolveLabServiceKey(): Promise<string> {
   if (!response.ok) throw new Error(`LAB service-role key retrieval failed (${response.status})`);
   const keys = await response.json() as Array<Record<string, unknown>>;
   const serviceRole = keys.find((key) => key.name === "service_role" && typeof key.api_key === "string")?.api_key;
-  if (!serviceRole) throw new Error("LAB service-role key is unavailable");
+  if (typeof serviceRole !== "string" || !serviceRole) throw new Error("LAB service-role key is unavailable");
   return serviceRole;
 }
 async function deliver(rest: OfficialSupabaseRest, outboxId: string | null, label: string, runId: string): Promise<void> {
@@ -179,6 +181,33 @@ for (const entry of Object.values(ledger.entries)) if (entry.status === "RUNNING
 const entriesById = new Map<string, LedgerEntry>(); for (const entry of Object.values(ledger.entries)) entriesById.set(`${entry.conversation_id}:${entry.turn_id}`, entry);
 const rawByKey = new Map<string, Record<string, unknown>>(); for (const entry of Object.values(ledger.entries)) if (entry.raw_call) rawByKey.set(`${entry.conversation_id}:${entry.turn_id}`, entry.raw_call);
 const traces: Record<string, unknown>[] = [];
+function countStatuses(entries: Record<string, LedgerEntry>): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const entry of Object.values(entries)) counts[entry.status] = (counts[entry.status] ?? 0) + 1;
+  return counts;
+}
+function hasEligibleBlocked(entries: Record<string, LedgerEntry>): boolean {
+  return Object.values(entries).some((entry) => entry.status === "PROVIDER_BLOCKED" && msUntil(entry.next_eligible_at) <= 0);
+}
+function orderedEntries(): LedgerEntry[] {
+  const order = new Map<string, number>();
+  let index = 0;
+  for (const conversation of matrix.conversations) for (let turn = 1; turn <= conversation.turns.length; turn++) order.set(`${conversation.id}:${turn}`, index++);
+  return Object.values(ledger.entries).sort((a, b) => (order.get(`${a.conversation_id}:${a.turn_id}`) ?? Number.MAX_SAFE_INTEGER) - (order.get(`${b.conversation_id}:${b.turn_id}`) ?? Number.MAX_SAFE_INTEGER));
+}
+function canReplayContext(target: LedgerEntry): boolean {
+  return orderedEntries().filter((entry) => entry.conversation_id === target.conversation_id && entry.turn_id < target.turn_id).every((entry) => ["PRIMARY_VALID", "PRIMARY_INVALID_REJECTED"].includes(entry.status) && Boolean(entry.raw_call?.interpretation));
+}
+const ordered = orderedEntries();
+const eligibleBlocked = ordered.find((entry) => entry.status === "PROVIDER_BLOCKED" && msUntil(entry.next_eligible_at) <= 0 && canReplayContext(entry));
+const firstPending = ordered.find((entry) => entry.status === "PENDING");
+const targetKey = (eligibleBlocked ?? firstPending)?.key;
+const invocationId = `scheduler-run-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+const beforeCounts = countStatuses(ledger.entries);
+const invocationStartedAt = nowIso();
+ledger.last_run = { invocation_id: invocationId, started_at: invocationStartedAt, before: beforeCounts, provider_calls: 0 };
+ledger.updated_at = invocationStartedAt;
+await writeJsonAtomic(LEDGER_FILE, ledger);
 let newCalls = 0; let paused = false; let pauseCategory: string | undefined; let pauseMetadata: Record<string, unknown> | undefined; let inputTokens = 0; let outputTokens = 0; let lastStart = ledger.last_call_started_at ? Date.parse(ledger.last_call_started_at) : 0;
 
 class QuotaPause extends Error { constructor(readonly category: string, readonly metadata: Record<string, unknown>) { super(category); } }
@@ -212,7 +241,8 @@ try {
       if (status === "PRIMARY_VALID" || status === "PRIMARY_INVALID_REJECTED" || status === "FAILED") {
         if (status === "FAILED") continue;
       } else {
-        if (newCalls >= MAX_NEW_CALLS) break;
+        if (entry.key !== targetKey) continue;
+        if (newCalls >= MAX_PROVIDER_CALLS_PER_RUN) break;
         if (msUntil(entry.next_eligible_at) > 0) { ledger.status = "WAITING_PROVIDER"; ledger.next_eligible_at = entry.next_eligible_at; await writeJsonAtomic(LEDGER_FILE, ledger); paused = true; break; }
       }
       const replayInterpretation = raw?.interpretation as Interpretation | undefined;
@@ -227,14 +257,26 @@ try {
         entry.status = "FAILED"; entry.reason = error instanceof Error ? error.message : String(error); entry.updated_at = nowIso(); ledger.errors.push(`${entry.key}: ${entry.reason}`); ledger.updated_at = nowIso(); await writeJsonAtomic(LEDGER_FILE, ledger); throw error;
       }
     }
-    if (paused || newCalls >= MAX_NEW_CALLS) break;
+    if (paused || newCalls >= MAX_PROVIDER_CALLS_PER_RUN) break;
   }
 } catch (error) { ledger.status = "BLOCKED"; ledger.errors.push(error instanceof Error ? error.message : String(error)); }
 
-const values = Object.values(ledger.entries); ledger.counts = {}; for (const entry of values) ledger.counts[entry.status] = (ledger.counts[entry.status] ?? 0) + 1;
-const terminal = values.every((entry) => ["PRIMARY_VALID", "PRIMARY_INVALID_REJECTED", "FAILED"].includes(entry.status));
-ledger.status = terminal ? "MATRIX_COMPLETE" : paused ? "WAITING_PROVIDER" : ledger.status === "BLOCKED" ? "BLOCKED" : "RUNNING";
+const values = Object.values(ledger.entries); ledger.counts = countStatuses(ledger.entries);
+const terminal = values.every((entry) => ["PRIMARY_VALID", "PRIMARY_INVALID_REJECTED"].includes(entry.status));
+ledger.status = terminal ? "MATRIX_COMPLETE" : ledger.status === "BLOCKED" || values.some((entry) => entry.status === "FAILED") ? "BLOCKED" : paused ? "WAITING_PROVIDER" : "RUNNING";
+const afterCounts = ledger.counts;
+const terminalBefore = (beforeCounts.PRIMARY_VALID ?? 0) + (beforeCounts.PRIMARY_INVALID_REJECTED ?? 0);
+const terminalAfter = (afterCounts.PRIMARY_VALID ?? 0) + (afterCounts.PRIMARY_INVALID_REJECTED ?? 0);
+const ledgerProgressed = terminalAfter > terminalBefore || (beforeCounts.PROVIDER_BLOCKED ?? 0) !== (afterCounts.PROVIDER_BLOCKED ?? 0) || (beforeCounts.PENDING ?? 0) !== (afterCounts.PENDING ?? 0);
+const eligible = hasEligibleBlocked(ledger.entries) || (afterCounts.PENDING ?? 0) > 0;
+const watchdog = ledger.watchdog ?? { consecutive_eligible_no_progress: 0 };
+if (eligible && !ledgerProgressed) watchdog.consecutive_eligible_no_progress += 1;
+else if (ledgerProgressed || !eligible) watchdog.consecutive_eligible_no_progress = 0;
+watchdog.last_checked_at = nowIso();
+if (watchdog.consecutive_eligible_no_progress >= 5) watchdog.last_action = ledger.provider_category ? "quota-only-wait; infrastructure/provider metadata rechecked" : "investigate runner/scheduler/provider";
+ledger.watchdog = watchdog;
+ledger.last_run = { ...ledger.last_run!, finished_at: nowIso(), after: afterCounts, provider_calls: newCalls, ledger_progressed: ledgerProgressed, result: { status: ledger.status, provider_category: pauseCategory ?? ledger.provider_category ?? null } };
 ledger.updated_at = nowIso(); await writeJsonAtomic(LEDGER_FILE, ledger);
-const output = { status: ledger.status, matrix_sha: matrixSha, new_calls: newCalls, processed_runtime: processedRuntime, counts: ledger.counts, next_eligible_at: ledger.next_eligible_at ?? null, provider_category: pauseCategory ?? ledger.provider_category ?? null, provider_metadata: pauseMetadata ?? ledger.provider_metadata ?? null, run_id: ledger.run_id };
+const output = { status: ledger.status, matrix_sha: matrixSha, invocation_id: invocationId, target_key: targetKey ?? null, max_provider_calls_per_run: MAX_PROVIDER_CALLS_PER_RUN, new_calls: newCalls, processed_runtime: processedRuntime, before: beforeCounts, result: { provider_category: pauseCategory ?? ledger.provider_category ?? null, provider_metadata: pauseMetadata ?? ledger.provider_metadata ?? null }, after: afterCounts, ledger_progressed: ledgerProgressed, watchdog: ledger.watchdog, counts: ledger.counts, next_eligible_at: ledger.next_eligible_at ?? null, provider_category: pauseCategory ?? ledger.provider_category ?? null, provider_metadata: pauseMetadata ?? ledger.provider_metadata ?? null, run_id: ledger.run_id };
 console.log(JSON.stringify(output));
 if (ledger.status === "BLOCKED") Deno.exit(2);
