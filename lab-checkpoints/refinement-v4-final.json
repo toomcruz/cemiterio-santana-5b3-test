@@ -1,0 +1,33 @@
+{
+  "phase": "SANA_CONVERSATIONAL_REFINEMENT_V4",
+  "base_commit": "bde9c63292314d0aa68397a9858ba019cf1186c1",
+  "branch": "sana-conversational-refinement-v4",
+  "status": "READY_FOR_HUMAN_REVIEW",
+  "cycle": 1,
+  "gemini": {"development_calls": 0, "status": "not_run", "cost": 0},
+  "production_changes": false,
+  "whatsapp_messages_sent": 0,
+  "human_scope": {
+    "focused_cases": ["sim-18", "sim-106", "sim-16", "sim-22", "sim-30", "sim-103", "sim-107", "sim-109"],
+    "review_status": "pending_human_review",
+    "expectations_changed": false
+  },
+  "validation": {
+    "v4_regression_file": {"passed": 40, "failed": 0, "scope": "8 focused + 10 approved V3 + 20 novel + structural/negative"},
+    "reply_boundary_regressions": {"passed": 10, "failed": 0},
+    "v4_novel": {"passed": 20, "failed": 0},
+    "official_suite": {"passed": 447, "failed": 0, "ignored": 1},
+    "typecheck": "PASS",
+    "internal_command_scan": "PASS",
+    "p0_p1_new": 0,
+    "gemini_matrix": "NOT_RUN_BY_POLICY"
+  },
+  "invariants_checked": [
+    "case_isolation", "FOCUS_CASE", "CLOSE", "PAUSE_CASE", "RESUME_CASE",
+    "correction_supersession", "fact_boundary", "authority_limits", "privacy",
+    "no_invented_documents", "complaint_recognition", "multiple_subjects",
+    "explicit_no_request", "handoff_receipt", "receipts_idempotency", "atomicity",
+    "no_cross_case", "no_internal_commands_in_citizen_reply"
+  ],
+  "delivery": {"production": "NONE", "whatsapp": 0, "edge": "NOT_PUBLISHED", "supabase": "NOT_CHANGED", "canary": "NOT_STARTED"}
+}

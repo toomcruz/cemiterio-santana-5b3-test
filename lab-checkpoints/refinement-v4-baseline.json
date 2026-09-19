@@ -1,0 +1,53 @@
+{
+  "phase": "SANA_CONVERSATIONAL_REFINEMENT_V4",
+  "base_commit": "bde9c63292314d0aa68397a9858ba019cf1186c1",
+  "base_label": "V3 candidate frozen before V4",
+  "branch": "sana-conversational-refinement-v4",
+  "cycle": 1,
+  "gemini": {"development_calls": 0, "status": "not_run", "cost": 0},
+  "production_changes": false,
+  "whatsapp_messages_sent": 0,
+  "human_source_of_truth": {
+    "approved_v3": ["sim-07", "sim-19", "sim-40", "sim-46", "sim-101", "sim-104", "sim-108", "sim-34"],
+    "review_v3": ["sim-22", "sim-30", "sim-103", "sim-107", "sim-109"],
+    "rejected_v3": ["sim-18", "sim-106", "sim-16"],
+    "expectations_are_frozen": true
+  },
+  "scope": [
+    "topic_reclassification_reply_and_fact_boundary",
+    "natural_plaque_and_grave_return",
+    "location_context_reuse",
+    "subject_named_focus_return",
+    "uncertainty_after_human_request",
+    "document_subject_case_isolation",
+    "privacy_non_repetition"
+  ],
+  "invariants": [
+    "case_isolation", "FOCUS_CASE", "CLOSE", "PAUSE_CASE", "RESUME_CASE",
+    "correction_supersession", "fact_boundary", "authority_limits", "privacy",
+    "no_invented_documents", "complaint_recognition", "multiple_subjects",
+    "explicit_no_request", "handoff_receipt", "receipts_idempotency", "atomicity",
+    "no_cross_case", "no_internal_commands_in_citizen_reply"
+  ],
+  "non_regression_policy": {
+    "v3_approved_cases_must_remain_green": true,
+    "human_expectations_must_not_be_changed": true,
+    "max_refinement_cycles": 2,
+    "production_touch": "forbidden"
+  },
+  "cycle_1_before_edit": {
+    "problems": [
+      {"id": "sim-18", "layer": "REPLY/FACT_BOUNDARY", "checkpoint": "v4-topic-reclassification"},
+      {"id": "sim-106", "layer": "REPLY", "checkpoint": "v4-natural-topic-return"},
+      {"id": "sim-16", "layer": "INTERPRETATION/REPLY", "checkpoint": "v4-location-context"},
+      {"id": "sim-22", "layer": "REPLY/FOCUS_CASE", "checkpoint": "v4-subject-focus"},
+      {"id": "sim-30", "layer": "REPLY/FOCUS_CASE", "checkpoint": "v4-subject-focus"},
+      {"id": "sim-103", "layer": "REPLY/HANDOFF", "checkpoint": "v4-human-uncertainty"},
+      {"id": "sim-107", "layer": "INTERPRETATION/STATE", "checkpoint": "v4-document-subject-case"},
+      {"id": "sim-109", "layer": "REPLY", "checkpoint": "v4-privacy-variation"}
+    ],
+    "directed_tests": "pending",
+    "official_suite": "pending",
+    "novel_tests": "pending"
+  }
+}

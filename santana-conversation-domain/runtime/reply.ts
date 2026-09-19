@@ -168,6 +168,15 @@ function waitingReply(state: ConversationState, goal: GoalRecord): string {
   } já está em andamento e aguarda ${requirement}. Você pode acrescentar informações, enviar documentos ou pedir uma correção por aqui. Se for um pedido para outra pessoa ou outro jazigo, informe isso na mensagem.`;
 }
 
+function subjectLabel(state: ConversationState, goal: GoalRecord | null): string | null {
+  if (!goal) return null;
+  const named = activeFact(state, "deceased_name", goal)?.value;
+  if (typeof named === "string" && named.trim()) return named.trim();
+  const raw = state.cases.find((item) => item.case_id === goal.case_id)?.subject_ref?.split(":")[0]?.trim();
+  if (!raw || /^(?:demand|request|case|message|pai|mae|avo|avó|irmao|irmã|tio|tia)$/i.test(raw)) return null;
+  return raw;
+}
+
 function completionReply(goal: GoalRecord): string {
   const label = GOAL_LABELS[goal.goal_code] ?? "atendimento";
   if (goal.informational || goal.goal_code.startsWith("GOAL_INFO_")) {
@@ -246,6 +255,11 @@ function contextualDirectReply(
   if (!interpretation) return null;
   const text = normalized(interpretation.text_normalized);
   const eventKind = interpretation.primary_event?.event_kind;
+  if (eventKind === "RECLASSIFICATION" && interpretation.facts.some((fact) => fact.fact_code === "commercial_item")) {
+    // Let transitionReply describe the applied topic change. A stale location
+    // fact must not win the response boundary during reclassification.
+    return null;
+  }
   if (/\b(?:nao quero|não quero) abrir\s+(?:pedido|solicitacao|atendimento)\b/.test(text)) {
     return "Tudo bem. Não vou abrir uma solicitação. Se você quer apenas uma informação, diga qual é a sua dúvida e eu respondo dentro do que puder confirmar.";
   }
@@ -253,6 +267,16 @@ function contextualDirectReply(
   if (documentReply) return documentReply;
   const privacyActive = state.facts.some((fact) => fact.status === "ACTIVE" && fact.fact_code === "privacy_boundary");
   if (privacyActive && /\b(?:data|prazo|insisto|s[oó] me diga|s[oó] quero|s[oó] falar)\b/.test(text)) {
+    const privacyJustDeclared = interpretation.facts.some((fact) => fact.fact_code === "privacy_boundary");
+    if (privacyJustDeclared) {
+      return "Não posso informar dados de outra pessoa ou atendimento. Posso ajudar somente com um atendimento seu.";
+    }
+    if (/\b(?:insisto|insistindo|vou insistir)\b/.test(text)) {
+      return "Entendo que você insiste, mas não posso abrir exceção: dados de outro atendimento continuam protegidos. Posso ajudar somente com um atendimento seu.";
+    }
+    if (/\b(?:s[oó] me diga|data|prazo)\b/.test(text)) {
+      return "Não posso informar essa data ou prazo porque pertence a outra pessoa ou atendimento. Posso orientar como consultar um atendimento seu.";
+    }
     return "Entendo que você quer uma resposta objetiva, mas continuo sem poder informar dados de outra pessoa ou atendimento. Posso ajudar a consultar apenas um atendimento que seja seu.";
   }
   if (/\b(?:outra pessoa|outro atendimento|outra conversa|prazo da outra pessoa|data da outra pessoa|atendimento de outra pessoa|outra familia|outra família)\b/.test(text)) {
@@ -299,6 +323,9 @@ function contextualDirectReply(
     return "Certo, desconsiderei a referência anterior. Qual é a quadra, rua, terreno ou número correto?";
   }
   if (eventKind === "UNCERTAIN" && /\b(?:nao sei dizer|nao sei|nao lembro|nao tenho certeza)\b/.test(text)) {
+    if (!contextGoal(state)) {
+      return "Tudo bem. Posso ajudar a localizar um jazigo, acompanhar um atendimento, orientar sobre um documento ou chamar uma pessoa da equipe. Qual dessas opções se aproxima do que você precisa?";
+    }
     if (question) {
       return `Tudo bem. Você pode informar apenas o que souber. ${question} Se não tiver essa informação, pode me dizer isso e eu apresentarei a próxima opção segura.`;
     }
@@ -315,10 +342,32 @@ function contextualDirectReply(
   }
   const locationRequested = interpretation.facts.some((fact) => fact.fact_code === "grave_location_intent") ||
     state.facts.some((fact) => fact.status === "ACTIVE" && fact.fact_code === "grave_location_intent");
-  if (locationRequested) {
+  const currentGoal = contextGoal(state);
+  const commercialActive = currentGoal?.goal_code === "GOAL_COMERCIAL" || state.current_topic === "COMERCIAL";
+  if (locationRequested && !commercialActive) {
     const reference = state.facts.find((fact) => fact.status === "ACTIVE" && fact.fact_code === "grave_reference")?.value;
-    if (reference) return `Certo, registrei a referência ${reference} para orientar a localização do jazigo. Isso ainda não confirma a localização oficial; você tem o nome completo da pessoa sepultada ou outro identificador?`;
+    const knownSubject = subjectLabel(state, currentGoal);
+    const currentReference = interpretation.facts.find((fact) => fact.fact_code === "grave_reference")?.value;
+    const repeatedReference = reference && currentReference &&
+      normalized(String(reference)) === normalized(String(currentReference));
+    if (reference && /\b(?:e esse mesmo|confirmo|isso mesmo|essa referencia)\b/.test(text)) {
+      return `Certo, mantive a referência ${reference} para${knownSubject ? ` ${knownSubject}` : " o jazigo"}. A confirmação oficial ainda depende de consulta autorizada.`;
+    }
+    if (repeatedReference) {
+      return `A referência ${reference} já está registrada${knownSubject ? ` para ${knownSubject}` : " no atendimento"}. Não preciso pedir o nome novamente; a confirmação oficial ainda depende de consulta autorizada.`;
+    }
+    if (reference) {
+      return knownSubject
+        ? `Certo, registrei a referência ${reference} para orientar a localização de ${knownSubject}. A localização oficial ainda depende de consulta autorizada; se tiver outra referência do local, pode informá-la.`
+        : `Certo, registrei a referência ${reference} para orientar a localização do jazigo. Isso ainda não confirma a localização oficial; se tiver outro identificador, pode informá-lo.`;
+    }
+    if (knownSubject) return `Entendi que você quer localizar ${knownSubject}. Qual referência você tem, como quadra, setor, rua ou número?`;
     return "Entendi que você quer localizar o jazigo, não abrir um pedido de manutenção. Qual é o nome completo da pessoa sepultada ou a referência que você tem, como quadra, setor, rua ou número?";
+  }
+  const namedSubject = interpretation.facts.find((fact) => fact.fact_code === "deceased_name");
+  if (namedSubject && eventKind !== "NEW_GOAL" && eventKind !== "RECLASSIFICATION" &&
+    eventKind !== "CORRECTION" && eventKind !== "CHANGE_OF_MIND" && currentGoal && !locationRequested) {
+    return `Certo, vou manter este atendimento separado para ${namedSubject.value}. ${question ?? "O que você precisa resolver agora?"}`;
   }
   if (interpretation.facts.some((fact) => fact.fact_code === "commercial_item" && fact.value === "LAPIDE") &&
     question && !/\b(?:documento|arquivo)\b/i.test(question)) {
@@ -368,28 +417,66 @@ function transitionReply(
   const latestNote = next.event_log.at(-1)?.note ?? null;
 
   if (latestNote === "FOCUS_CASE" && nextGoal) {
-    const reference = interpretation?.case_reference.subject_hint?.trim() ??
-      next.cases.find((item) => item.case_id === nextGoal.case_id)?.subject_ref?.split(":")[0];
-    const label = reference && !/^(?:demand|request|case|message)$/i.test(reference)
-      ? reference
+    const hintedReference = interpretation?.case_reference.subject_hint?.trim();
+    const caseReference = next.cases.find((item) => item.case_id === nextGoal.case_id)?.subject_ref?.split(":")[0]?.trim();
+    const reference = hintedReference && !/^(?:meu|minha)\b/i.test(hintedReference)
+      ? hintedReference
+      : caseReference;
+    const normalizedText = normalized(interpretation?.text_normalized ?? "");
+    const kinship = /\b(?:meu pai|minha mae|meu avo|minha avo|meu irmao|minha irma|meu tio|minha tia)\b/.test(normalizedText);
+    const kinshipLabel = /\bmeu pai\b/.test(normalizedText)
+      ? "seu pai"
+      : /\bminha mae\b/.test(normalizedText)
+      ? "sua mãe"
+      : /\b(?:meu avo|minha avo)\b/.test(normalizedText)
+      ? "seu avô/sua avó"
+      : /\b(?:meu irmao|minha irma)\b/.test(normalizedText)
+      ? "seu irmão/sua irmã"
+      : null;
+    const citizenLabel = reference && kinship && kinshipLabel
+      ? `${kinshipLabel}, ${reference}`
+      : reference;
+    const label = citizenLabel && !/^(?:demand|request|case|message)$/i.test(citizenLabel)
+      ? citizenLabel
       : GOAL_LABELS[nextGoal.goal_code] ?? "atendimento";
     return `Certo, voltamos ao atendimento de ${label}. ${followup ?? "Podemos continuar de onde paramos; o que você precisa resolver agora?"}`;
   }
 
   if (nextGoal && interpretation?.case_reference.subject_hint && isConversationReturn(interpretation.text_normalized)) {
-    const label = interpretation.case_reference.subject_hint;
+    const hinted = interpretation.case_reference.subject_hint;
+    const namedFact = interpretation.facts.find((fact) => fact.fact_code === "deceased_name")?.value;
+    const caseReference = next.cases.find((item) => item.case_id === nextGoal.case_id)?.subject_ref?.split(":")[0]?.trim();
+    const normalizedText = normalized(interpretation.text_normalized);
+    const kinshipLabel = /\bmeu pai\b/.test(normalizedText)
+      ? "seu pai"
+      : /\bminha mae\b/.test(normalizedText)
+      ? "sua mãe"
+      : /\b(?:meu avo|minha avo)\b/.test(normalizedText)
+      ? "seu avô/sua avó"
+      : null;
+    const namedReference = typeof namedFact === "string" && namedFact.trim() ? namedFact.trim() : caseReference;
+    const label = kinshipLabel && namedReference
+      ? `${kinshipLabel}, ${namedReference}`
+      : (!/^(?:meu|minha)\b/i.test(hinted) ? hinted : namedReference) ?? "atendimento";
     return `Certo, voltamos ao atendimento de ${label}. ${followup ?? "O que você precisa resolver agora?"}`;
   }
 
   if (eventKind === "RECLASSIFICATION" && previousGoal && nextGoal && previousGoal.goal_code !== nextGoal.goal_code) {
-    const from = GOAL_LABELS[previousGoal.goal_code] ?? "atendimento anterior";
+    const from = previousGoal.goal_code === "GOAL_JAZIGO_SERVICOS"
+      ? "jazigo"
+      : previousGoal.goal_code === "GOAL_COMERCIAL"
+      ? "placa ou lápide"
+      : GOAL_LABELS[previousGoal.goal_code] ?? "atendimento anterior";
     const to = GOAL_LABELS[nextGoal.goal_code] ?? "novo assunto";
     const commercialItem = next.facts.find((fact) => fact.status === "ACTIVE" && fact.fact_code === "commercial_item") ??
       interpretation?.facts.find((fact) => fact.fact_code === "commercial_item");
     const naturalTo = commercialItem?.value === "LAPIDE" ? "a placa ou lápide" : to;
-    const nextQuestion = followup ?? (commercialItem?.value === "LAPIDE"
+    const nextQuestion = commercialItem?.value === "LAPIDE"
       ? "Você quer orientação, orçamento ou já existe um pedido?"
-      : "O que você precisa resolver sobre esse assunto?");
+      : followup ?? "O que você precisa resolver sobre esse assunto?";
+    if (previousGoal.goal_code === "GOAL_COMERCIAL" && nextGoal.goal_code === "GOAL_JAZIGO_SERVICOS") {
+      return `Certo, voltamos ao assunto do jazigo. O assunto da placa ou lápide ficou preservado. ${nextQuestion}`;
+    }
     return naturalTo === "a placa ou lápide"
       ? `Certo, vamos falar da placa ou lápide agora. O assunto anterior de ${from} ficou preservado. ${nextQuestion}`
       : `Certo, agora vamos tratar de ${naturalTo}. O atendimento de ${from} foi preservado. ${nextQuestion}`;
@@ -457,7 +544,12 @@ export function draftReply(input: {
   }
   if (eventKind === "SOCIAL" && transverseStates.includes("CONVERSATION_RESUMED")) {
     const resumed = contextGoal(input.next_state);
-    const label = resumed ? GOAL_LABELS[resumed.goal_code] ?? "solicitação" : "solicitação";
+    const resumedCase = resumed
+      ? input.next_state.cases.find((item) => item.case_id === resumed.case_id)?.subject_ref?.split(":")[0]?.trim()
+      : null;
+    const label = resumedCase && !/^(?:demand|request|case|message)$/i.test(resumedCase)
+      ? resumedCase
+      : resumed ? GOAL_LABELS[resumed.goal_code] ?? "solicitação" : "solicitação";
     const followup = input.question_draft?.replace(/^Entendi\.\s*/i, "") ?? "o que você gostaria de fazer agora?";
     return `Retomamos o atendimento de ${label}. Podemos continuar de onde paramos; ${followup}`;
   }
@@ -545,7 +637,7 @@ export function draftReply(input: {
     return `Registrei a correção informada. ${questionDraft}`;
   }
   if (questionDraft && input.outcome === "PROPOSED" && input.interpretation?.facts.length) {
-    return `Entendi. ${questionDraft}`;
+    return `Entendi. ${questionDraft.replace(/^Entendi\.\s*/i, "")}`;
   }
   if (
     questionDraft &&

@@ -173,6 +173,24 @@ function documentSubjectHint(text: string): string | null {
   return correction?.[1]?.trim() ?? null;
 }
 
+function isBareNamedSubject(text: string): boolean {
+  return /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ]+(?:\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ]+){1,2}\s*$/u.test(text.trim());
+}
+
+function explicitNamedSubject(text: string): string | null {
+  const name = "([A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ]+(?:\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ]+){1,2})";
+  const patterns = [
+    new RegExp(`(?:nome\\s+(?:e|é)|falecido\\s+(?:e|é))\\s+${name}`, "u"),
+    new RegExp(`(?:^|\\s)(?:e|é)\\s+(?:o|a)\\s+(?:de|da|do)\\s+${name}`, "u"),
+    new RegExp(`(?:outro|outra)\\s+(?:falecido|falecida|pessoa)\\s*[,:-]\\s*${name}`, "u"),
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[1]?.trim()) return match[1].trim();
+  }
+  return null;
+}
+
 function isThirdPartyPrivacyRequest(text: string): boolean {
   const value = normalize(text);
   return /\b(?:outra pessoa|outro atendimento|outra conversa|prazo da outra pessoa|data da outra pessoa|atendimento de outra pessoa|processo de outra familia|outra familia)\b/.test(value);
@@ -284,6 +302,7 @@ export function interpret(input: InterpreterInput): Interpretation {
   const documentSubject = documentSubjectHint(input.text);
   const protocolRequest = isProtocolRequest(input.text);
   const privacyRequest = isThirdPartyPrivacyRequest(input.text);
+  const topicPivotMarker = /(?:agora|tambem|quero|preciso|gostaria|falar|tratar|assunto)\b[^.!?]*(?:placa|lapide|comercial)\b/.test(text);
   let newSubjectMarker = (requestsNewNamedAttendance(input.text) ? input.text : null) ??
     firstMatch(text, lexicon.new_subject_markers) ??
     (/\b(?:tambem|outr[oa]|mais um|mais uma)\b/.test(text) &&
@@ -326,7 +345,7 @@ export function interpret(input: InterpreterInput): Interpretation {
       requires_confirmation: false,
     });
   }
-  if (isGraveLocationRequest(input.text) || (input.context.open_goal_code === "GOAL_JAZIGO_SERVICOS" &&
+  if (isGraveLocationRequest(input.text) || (!topicPivotMarker && input.context.open_goal_code === "GOAL_JAZIGO_SERVICOS" &&
       input.context.known_facts?.some((fact) => fact.fact_code === "grave_location_intent"))) {
     seen.add("grave_location_intent");
     facts.push({
@@ -646,21 +665,47 @@ export function interpret(input: InterpreterInput): Interpretation {
 
   // Referencia de case.
   const subjectHintCandidate =
+    input.text.match(/(?:nome\s+(?:e|é)|falecido\s+(?:e|é))\s+([A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ]+(?:\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ]+){1,2})/u)?.[1]?.trim() ||
+    input.text.match(/(?:^|\s)(?:e|é)\s+(?:o|a)\s+(?:de|da|do)\s+([A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ]+(?:\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ]+){1,2})/u)?.[1]?.trim() ||
+    input.text.match(/(?:outro|outra)\s+(?:falecido|falecida|pessoa)\s*[,:-]\s*([A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ]+(?:\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ]+){1,2})/u)?.[1]?.trim() ||
+    explicitNamedSubject(input.text) ||
     input.text.match(/\b(?:voltando|volto|volta)\s+(?:ao|a|para|no|na)\s+(meu pai|minha mae|minha mãe|meu avo|minha avo|minha avó|meu irmao|minha irma|meu tio|minha tia)\b/i)?.[1]?.trim() ||
     SUBJECT_HINTS.find((hint) => matches(text, hint)) ||
     input.text.match(/\b(?:jazigo|falecido|falecida)\s+(?:da|do|de)\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+){0,2})/i)?.[1]?.trim() ||
     input.text.match(/\b(?:falar|tratar)\s+(?:do|da)\s+(pai|mae|mae|avo|avó|irmao|irmão|tio|tia)\b/i)?.[1]?.trim() ||
-    input.text.match(/\b(?:nome\s+(?:e|é)|agora|voltando|volto|volta|primeiro|segundo|terceiro|e|é)\s+(?:o|a|para|na|no|de|do|da|e|é)?\s*([A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ]+(?:\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ]+){0,2})/u)?.[1]?.trim() ||
+    input.text.match(/\b(?:agora|voltando|volto|volta|primeiro|segundo|terceiro|e|é)\s+(?:o|a|para|na|no|de|do|da|e|é)?\s*([A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ]+(?:\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ]+){0,2})/u)?.[1]?.trim() ||
     input.text.trim().match(/^[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ]+(?:\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ]+){0,2}$/u)?.[0] ||
     null;
   const subjectHint = subjectHintCandidate && !/^(?:recadastro|exumacao|concessao|transporte|ossuario|lapide|lapida|placa|jazigo|atendimento|pedido|humano|atendente)$/i.test(normalize(subjectHintCandidate))
     ? subjectHintCandidate
     : null;
+  const explicitSubjectSwitch = Boolean(subjectHint) &&
+    /\b(?:quero\s+falar|falar|tratar)\s+(?:do|da|sobre)\b/.test(text) &&
+    !isConversationReturn(input.text);
+  if (explicitSubjectSwitch) {
+    newSubjectMarker = input.text;
+    if (!goal) {
+      goal = { goal_code: input.context.open_goal_code ?? "GOAL_JAZIGO_SERVICOS", confidence: "HIGH", evidence: input.text };
+      subjectKind = goal.goal_code === "GOAL_JAZIGO_SERVICOS" ? "GRAVE" : "DECEASED";
+    }
+  }
+  if (subjectHint && /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ]+(?:\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ]+){1,2}$/u.test(subjectHint) &&
+    !seen.has("deceased_name")) {
+    seen.add("deceased_name");
+    facts.push({
+      fact_code: "deceased_name",
+      value: subjectHint,
+      source: correctionMarker ? "USER_CORRECTION" : "USER_EXPLICIT",
+      confidence: "HIGH",
+      evidence: input.text,
+      requires_confirmation: false,
+    });
+  }
   if (input.context.has_open_goal && input.context.known_facts?.some((fact) => fact.fact_code === "multiple_subjects_declaration") &&
     subjectHint && /\b(?:primeiro|segundo|terceiro|quarta|quarto)\b/.test(text)) {
     newSubjectMarker = input.text;
   }
-  if (!goal && subjectHint && (multipleSubjectsMarker || input.context.known_facts?.some((fact) => fact.fact_code === "multiple_subjects_declaration"))) {
+  if (!goal && subjectHint && (multipleSubjectsMarker || explicitSubjectSwitch || input.context.known_facts?.some((fact) => fact.fact_code === "multiple_subjects_declaration"))) {
     goal = { goal_code: "GOAL_JAZIGO_SERVICOS", confidence: "HIGH", evidence: input.text };
     subjectKind = "GRAVE";
   }
@@ -672,6 +717,8 @@ export function interpret(input: InterpreterInput): Interpretation {
   let caseConfidence: Confidence = "HIGH";
   if (newSubjectMarker) {
     caseKind = "NEW";
+  } else if (input.context.has_open_goal && isBareNamedSubject(input.text)) {
+    caseKind = "CURRENT";
   } else if (subjectHint && input.context.known_subject_hints.length > 0) {
     caseKind = input.context.known_subject_hints.some((hint) => normalize(hint) === normalize(subjectHint))
       ? "CURRENT"
