@@ -333,7 +333,12 @@ class NewGeminiInterpreter implements LanguageInterpreter {
     providerCalls++;
     const credential = CREDENTIALS[this.credentialSlot];
     const callStartedAt = nowIso();
-    const trace: Record<string, unknown> = { matrix_id: this.matrixId, conversation_id: this.conversationId, turn: this.turnNumber, invocation_id: invocationId, credential_slot: credential.slot, credential_fingerprint: credential.fingerprint, call_started_at: callStartedAt, input: { message_id: input.message_id, text: input.text, context: input.context }, provider: "gemini", model: GEMINI_MODEL, request_body: null, response_body: null, http_status: null, retry_count: 0, provider_output: null, interpretation: null, validation: null, observation: null };
+    // The ledger item identity remains matrix/conversation/turn/input hash.
+    // Runtime inbound dedupe is a separate idempotency boundary: a retry of a
+    // provider-blocked item must use a fresh synthetic inbound id, otherwise
+    // processOfficialTurn returns DUPLICATE before invoking Gemini again.
+    const providerAttemptMessageId = `${ledger.run_id}-${invocationId}-${this.conversationId}-${this.turnNumber}-${this.credentialSlot}`;
+    const trace: Record<string, unknown> = { matrix_id: this.matrixId, conversation_id: this.conversationId, turn: this.turnNumber, invocation_id: invocationId, provider_attempt_message_id: providerAttemptMessageId, credential_slot: credential.slot, credential_fingerprint: credential.fingerprint, call_started_at: callStartedAt, input: { message_id: input.message_id, text: input.text, context: input.context }, provider: "gemini", model: GEMINI_MODEL, request_body: null, response_body: null, http_status: null, retry_count: 0, provider_output: null, interpretation: null, validation: null, observation: null };
     this.entry.status = "RUNNING"; this.entry.attempts++; this.entry.attempts_by_credential = { ...(this.entry.attempts_by_credential ?? {}), [credential.slot]: ((this.entry.attempts_by_credential ?? {})[credential.slot] ?? 0) + 1 }; this.entry.updated_at = nowIso(); ledger.last_call_started_at = nowIso(); ledger.updated_at = nowIso(); await writeLedgerAtomic("provider-call-start");
     if (lastStart) await sleep(Math.max(0, MIN_INTERVAL_MS - (Date.now() - lastStart))); lastStart = Date.now();
     const provider = providers[this.credentialSlot];
@@ -396,7 +401,7 @@ try {
         if (providerCalls >= MAX_PROVIDER_CALLS_PER_RUN) break;
         const interpreter = new NewGeminiInterpreter(conversationId ?? "pending", conversation.id, turn, entry, credentialSlot);
         try {
-          const inbound: RuntimeInbound = { external_message_id: `${ledger.run_id}-${conversation.id}-${turn}`, phone_e164: phone, contact_name: `${ledger.contact_prefix}-${conversation.id}`, body: conversation.turns[turn - 1]!, message_type: "text", metadata: { lab_only: true, qualification_run_id: ledger.run_id, matrix_id: conversation.id, turn, credential_slot: credentialSlot } };
+          const inbound: RuntimeInbound = { external_message_id: `${ledger.run_id}-${invocationId}-${conversation.id}-${turn}-${credentialSlot}`, phone_e164: phone, contact_name: `${ledger.contact_prefix}-${conversation.id}`, body: conversation.turns[turn - 1]!, message_type: "text", metadata: { lab_only: true, qualification_run_id: ledger.run_id, matrix_id: conversation.id, turn, credential_slot: credentialSlot, provider_attempt_message_id: `${ledger.run_id}-${invocationId}-${conversation.id}-${turn}-${credentialSlot}` } };
           const result = await processOfficialTurn(inbound, new SupabaseRuntimeStore(rest), interpreter, { automatic_replies_allowed: true });
           conversationId ??= result.conversation_id; entry.runtime = { conversation_id: result.conversation_id, kind: result.kind, revision: result.revision, event_kind: result.event_kind, inbound_message_id: result.inbound_message_id, reply_body_present: result.reply_body !== null, outbox_id: result.outbox_id, credential_slot: credentialSlot, credential_fingerprint: CREDENTIALS[credentialSlot].fingerprint }; await deliver(rest, result.outbox_id, `${conversation.id}-${turn}`, ledger.run_id); entry.updated_at = nowIso(); ledger.updated_at = nowIso(); ledger.status = "RUNNING"; paused = false; pauseCategory = undefined; pauseMetadata = undefined; await writeLedgerAtomic("runtime-result"); runtimeSucceeded = true; processedRuntime++; break;
         } catch (error) {
