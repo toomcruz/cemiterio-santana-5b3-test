@@ -22,6 +22,7 @@ const RUNTIME_COMMIT = "5c78aa81e8eb437fbea53965861264683f97990e";
 const MAX_PROVIDER_CALLS_PER_RUN = 1;
 const MIN_INTERVAL_MS = 15_000;
 const LEDGER_FILE = new URL("../lab-checkpoints/SANA-V4-GEMINI-LEDGER.json", import.meta.url);
+const LEDGER_LOCK_FILE = new URL("../lab-checkpoints/SANA-V4-GEMINI-LEDGER.lock", import.meta.url);
 const PARTIAL_FILE = new URL("../lab-checkpoints/SANA-V4-FINAL-GEMINI-QUALIFICATION.json", import.meta.url);
 const MATRIX_FILE = new URL("./v4-final-gemini-matrix.json", import.meta.url);
 const SERVICE_KEY = Deno.env.get("SANA_V4_RUNTIME_SERVICE_KEY") ?? "";
@@ -40,12 +41,14 @@ type LedgerEntry = {
   reason?: string;
 };
 type Ledger = {
-  artifact: string; version: string; matrix_sha: string; matrix_file_sha: string; runtime_commit: string;
+  artifact: string; version: string; revision: number; matrix_sha: string; matrix_file_sha: string; runtime_commit: string;
   model: string; generation_config: Record<string, unknown>; run_id: string; contact_prefix: string;
   created_at: string; updated_at: string; last_call_started_at?: string; next_eligible_at?: string;
   status: "RUNNING" | "WAITING_PROVIDER" | "MATRIX_COMPLETE" | "BLOCKED";
   provider_category?: string; provider_metadata?: Record<string, unknown>; entries: Record<string, LedgerEntry>;
   counts: Record<string, number>; errors: string[];
+  reconciliations?: Array<Record<string, unknown>>;
+  last_provider_call?: { invocation_id: string; conversation_id: string; turn_id: number; started_at: string; finished_at?: string; http_status?: number | null; outcome?: string | null; provider_category?: string | null };
   last_run?: { invocation_id: string; started_at: string; finished_at?: string; before: Record<string, number>; result?: Record<string, unknown>; after?: Record<string, number>; provider_calls: number; ledger_progressed?: boolean };
   watchdog?: { consecutive_eligible_no_progress: number; last_checked_at?: string; last_action?: string };
 };
@@ -57,6 +60,57 @@ async function writeJsonAtomic(url: URL, value: unknown): Promise<void> {
   await Deno.writeTextFile(tmp, JSON.stringify(value, null, 2) + "\n");
   await Deno.rename(tmp, url);
 }
+class LedgerCommitError extends Error { constructor(message: string) { super(`FINALIZER_LEDGER_COMMIT_ERROR: ${message}`); } }
+async function acquireLedgerLock(): Promise<() => Promise<void>> {
+  const deadline = Date.now() + 8_000;
+  while (true) {
+    try {
+      const handle = await Deno.open(LEDGER_LOCK_FILE, { create: true, createNew: true, write: true });
+      await handle.write(new TextEncoder().encode(JSON.stringify({ pid: Deno.pid, acquired_at: nowIso() }) + "\n"));
+      handle.close();
+      return async () => { try { await Deno.remove(LEDGER_LOCK_FILE); } catch { /* already released */ } };
+    } catch (error) {
+      if (!(error instanceof Deno.errors.AlreadyExists)) throw error;
+      try {
+        const stat = await Deno.stat(LEDGER_LOCK_FILE);
+        if (Date.now() - stat.mtime!.getTime() > 120_000) { await Deno.remove(LEDGER_LOCK_FILE); continue; }
+      } catch { continue; }
+      if (Date.now() >= deadline) throw new LedgerCommitError("ledger lock timeout");
+      await sleep(100);
+    }
+  }
+}
+async function readLedgerFromDisk(): Promise<Ledger | null> {
+  try { return JSON.parse(await readText(LEDGER_FILE)) as Ledger; } catch { return null; }
+}
+let ledger: Ledger;
+async function writeLedgerAtomic(reason: string): Promise<void> {
+  const release = await acquireLedgerLock();
+  try {
+    const disk = await readLedgerFromDisk();
+    const expectedRevision = Number(ledger.revision ?? 0);
+    const actualRevision = Number(disk?.revision ?? 0);
+    if (disk && actualRevision !== expectedRevision) throw new LedgerCommitError(`revision conflict (${reason}): expected ${expectedRevision}, found ${actualRevision}`);
+    const next = { ...ledger, revision: expectedRevision + 1, updated_at: nowIso() };
+    await writeJsonAtomic(LEDGER_FILE, next);
+    ledger = next;
+  } finally { await release(); }
+}
+async function recordCommitError(error: unknown): Promise<void> {
+  const release = await acquireLedgerLock();
+  try {
+    const disk = await readLedgerFromDisk();
+    if (!disk) throw error;
+    const message = error instanceof Error ? error.message : String(error);
+    disk.status = "BLOCKED";
+    disk.errors = [...(disk.errors ?? []), message].slice(-100);
+    disk.last_run = { ...(disk.last_run ?? { invocation_id: "unknown", started_at: nowIso(), before: disk.counts ?? {}, provider_calls: 0 }), finished_at: nowIso(), result: { status: "BLOCKED", error: "FINALIZER_LEDGER_COMMIT_ERROR" } };
+    disk.revision = Number(disk.revision ?? 0) + 1;
+    disk.updated_at = nowIso();
+    await writeJsonAtomic(LEDGER_FILE, disk);
+    ledger = disk;
+  } finally { await release(); }
+}
 function nowIso(): string { return new Date().toISOString(); }
 function msUntil(value?: string): number { return value ? Math.max(0, Date.parse(value) - Date.now()) : 0; }
 function sleep(ms: number): Promise<void> { return new Promise((resolve) => setTimeout(resolve, ms)); }
@@ -64,6 +118,11 @@ function q(value: string): string { return `'${value.replaceAll("'", "''")}'`; }
 
 async function sha256Text(text: string): Promise<string> { return await sha256(text); }
 function rawJson(raw: string): Record<string, unknown> { try { return JSON.parse(raw) as Record<string, unknown>; } catch { return {}; } }
+function countStatuses(entries: Record<string, LedgerEntry>): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const entry of Object.values(entries)) counts[entry.status] = (counts[entry.status] ?? 0) + 1;
+  return counts;
+}
 function classify429(body: string): { category: string; retryMs: number | null; metadata: Record<string, unknown> } {
   const parsed = rawJson(body);
   const error = (parsed.error ?? {}) as Record<string, unknown>;
@@ -160,11 +219,11 @@ async function buildInitialLedger(): Promise<Ledger> {
   }
   const counts: Record<string, number> = {}; for (const entry of Object.values(entries)) counts[entry.status] = (counts[entry.status] ?? 0) + 1;
   const runId = `v4g-resume-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
-  return { artifact: "SANA V4 FINAL GEMINI LEDGER", version: "1", matrix_sha: matrixSha, matrix_file_sha: matrixSha, runtime_commit: RUNTIME_COMMIT, model: GEMINI_MODEL, generation_config: matrix.generation_config, run_id: runId, contact_prefix: `SANA-V4-GEMINI-${runId}`, created_at: nowIso(), updated_at: nowIso(), status: "RUNNING", entries, counts, errors: [] };
+  return { artifact: "SANA V4 FINAL GEMINI LEDGER", version: "2", revision: 0, matrix_sha: matrixSha, matrix_file_sha: matrixSha, runtime_commit: RUNTIME_COMMIT, model: GEMINI_MODEL, generation_config: matrix.generation_config, run_id: runId, contact_prefix: `SANA-V4-GEMINI-${runId}`, created_at: nowIso(), updated_at: nowIso(), status: "RUNNING", entries, counts, errors: [] };
 }
-let ledger: Ledger;
-try { ledger = JSON.parse(await readText(LEDGER_FILE)) as Ledger; } catch { ledger = await buildInitialLedger(); await writeJsonAtomic(LEDGER_FILE, ledger); }
+try { ledger = JSON.parse(await readText(LEDGER_FILE)) as Ledger; } catch { ledger = await buildInitialLedger(); await writeLedgerAtomic("initial-ledger"); }
 if (ledger.matrix_sha !== matrixSha || ledger.runtime_commit !== RUNTIME_COMMIT) throw new Error("ledger identity mismatch");
+ledger.revision = Number(ledger.revision ?? 0);
 // Reconcile an interrupted invocation: a preserved raw 200/llm_valid call is
 // authoritative even if the previous process died while replaying its LAB turn.
 for (const entry of Object.values(ledger.entries)) {
@@ -178,14 +237,21 @@ for (const entry of Object.values(ledger.entries)) {
 if (Object.values(ledger.entries).every((entry) => entry.status !== "FAILED")) ledger.status = "RUNNING";
 for (const entry of Object.values(ledger.entries)) if (entry.status === "RUNNING") { entry.status = "PENDING"; entry.reason = "recovered after interrupted invocation"; }
 
+const storedCounts = JSON.stringify(ledger.counts ?? {});
+const actualCounts = countStatuses(ledger.entries);
+if (storedCounts !== JSON.stringify(actualCounts)) {
+  const reconciledAt = nowIso();
+  const reconciled = Object.values(ledger.entries)
+    .filter((entry) => entry.status === "PRIMARY_VALID" && entry.raw_call?.http_status === 200 && (entry.raw_call.observation as Record<string, unknown> | undefined)?.outcome === "llm_valid")
+    .map((entry) => ({ at: reconciledAt, conversation_id: entry.conversation_id, turn_id: entry.turn_id, key: entry.key, from_counts: ledger.counts, to_counts: actualCounts, reason: "authoritative terminal entry reconciled from stale denormalized counters", http_status: entry.raw_call?.http_status }));
+  ledger.reconciliations = [...(ledger.reconciliations ?? []), ...reconciled].slice(-100);
+  ledger.counts = actualCounts;
+  ledger.updated_at = reconciledAt;
+  await writeLedgerAtomic("reconcile-denormalized-counts");
+}
 const entriesById = new Map<string, LedgerEntry>(); for (const entry of Object.values(ledger.entries)) entriesById.set(`${entry.conversation_id}:${entry.turn_id}`, entry);
 const rawByKey = new Map<string, Record<string, unknown>>(); for (const entry of Object.values(ledger.entries)) if (entry.raw_call) rawByKey.set(`${entry.conversation_id}:${entry.turn_id}`, entry.raw_call);
 const traces: Record<string, unknown>[] = [];
-function countStatuses(entries: Record<string, LedgerEntry>): Record<string, number> {
-  const counts: Record<string, number> = {};
-  for (const entry of Object.values(entries)) counts[entry.status] = (counts[entry.status] ?? 0) + 1;
-  return counts;
-}
 function hasEligibleBlocked(entries: Record<string, LedgerEntry>): boolean {
   return Object.values(entries).some((entry) => entry.status === "PROVIDER_BLOCKED" && msUntil(entry.next_eligible_at) <= 0);
 }
@@ -210,11 +276,11 @@ if (persistedProviderWaitMs > 0) {
   ledger.status = "WAITING_PROVIDER";
   ledger.last_run = { invocation_id: invocationId, started_at: startedAt, before: beforeCounts, provider_calls: 0 };
   ledger.updated_at = startedAt;
-  await writeJsonAtomic(LEDGER_FILE, ledger);
+  await writeLedgerAtomic("wait-start");
   const finishedAt = nowIso();
   ledger.last_run = { ...ledger.last_run, finished_at: finishedAt, after: beforeCounts, provider_calls: 0, ledger_progressed: false, result: { status: "WAITING_PROVIDER", provider_category: ledger.provider_category ?? null } };
   ledger.updated_at = finishedAt;
-  await writeJsonAtomic(LEDGER_FILE, ledger);
+  await writeLedgerAtomic("wait-finish");
   console.log(JSON.stringify({ status: "WAITING_PROVIDER", invocation_id: invocationId, max_provider_calls_per_run: MAX_PROVIDER_CALLS_PER_RUN, new_calls: 0, before: beforeCounts, result: { provider_category: ledger.provider_category ?? null, next_eligible_at: ledger.next_eligible_at }, after: beforeCounts, ledger_progressed: false, counts: beforeCounts, next_eligible_at: ledger.next_eligible_at }));
   Deno.exit(0);
 }
@@ -228,31 +294,46 @@ const beforeCounts = countStatuses(ledger.entries);
 const invocationStartedAt = nowIso();
 ledger.last_run = { invocation_id: invocationId, started_at: invocationStartedAt, before: beforeCounts, provider_calls: 0 };
 ledger.updated_at = invocationStartedAt;
-await writeJsonAtomic(LEDGER_FILE, ledger);
+await writeLedgerAtomic("run-start");
 let newCalls = 0; let paused = false; let pauseCategory: string | undefined; let pauseMetadata: Record<string, unknown> | undefined; let inputTokens = 0; let outputTokens = 0; let lastStart = ledger.last_call_started_at ? Date.parse(ledger.last_call_started_at) : 0;
 
 class QuotaPause extends Error { constructor(readonly category: string, readonly metadata: Record<string, unknown>) { super(category); } }
 class ReplayInterpreter implements LanguageInterpreter { constructor(private readonly interpretation: Interpretation) {} async interpret(): Promise<Interpretation> { return this.interpretation; } }
 class NewGeminiInterpreter implements LanguageInterpreter {
-  constructor(private readonly conversationId: string, private readonly matrixId: string, private readonly turnNumber: number, private readonly entry: LedgerEntry) {}
+  private readonly statusBeforeCall: LedgerStatus;
+  private readonly countsBeforeCall: Record<string, number>;
+  constructor(private readonly conversationId: string, private readonly matrixId: string, private readonly turnNumber: number, private readonly entry: LedgerEntry) {
+    this.statusBeforeCall = entry.status;
+    this.countsBeforeCall = countStatuses(ledger.entries);
+  }
   async interpret(input: Parameters<LanguageInterpreter["interpret"]>[0]): Promise<Interpretation> {
-    const trace: Record<string, unknown> = { matrix_id: this.matrixId, conversation_id: this.conversationId, turn: this.turnNumber, input: { message_id: input.message_id, text: input.text, context: input.context }, provider: "gemini", model: GEMINI_MODEL, request_body: null, response_body: null, http_status: null, retry_count: 0, provider_output: null, interpretation: null, validation: null, observation: null };
-    this.entry.status = "RUNNING"; this.entry.attempts++; this.entry.updated_at = nowIso(); ledger.last_call_started_at = nowIso(); ledger.updated_at = nowIso(); await writeJsonAtomic(LEDGER_FILE, ledger);
+    const callStartedAt = nowIso();
+    const trace: Record<string, unknown> = { matrix_id: this.matrixId, conversation_id: this.conversationId, turn: this.turnNumber, invocation_id: invocationId, call_started_at: callStartedAt, input: { message_id: input.message_id, text: input.text, context: input.context }, provider: "gemini", model: GEMINI_MODEL, request_body: null, response_body: null, http_status: null, retry_count: 0, provider_output: null, interpretation: null, validation: null, observation: null };
+    this.entry.status = "RUNNING"; this.entry.attempts++; this.entry.updated_at = nowIso(); ledger.last_call_started_at = nowIso(); ledger.updated_at = nowIso(); await writeLedgerAtomic("provider-call-start");
     if (lastStart) await sleep(Math.max(0, MIN_INTERVAL_MS - (Date.now() - lastStart))); lastStart = Date.now();
     const adapter = new ControlledLlmAdapter({ enabled: true, timeoutMs: 30_000, provider, network: async (request, signal) => { trace.request_body = JSON.parse(request.body); trace.prompt_hash = await sha256Text(String((trace.request_body as Record<string, unknown>).contents ?? "")); const response = await fetchBoundary(request, signal); trace.http_status = response.status; trace.response_body = response.body; if (response.status >= 200 && response.status < 300) { const usage = provider.usageFromResponse(response.body); if (usage) { inputTokens += usage.input_tokens; outputTokens += usage.output_tokens; } } try { trace.provider_output = provider.extractText(response.body); } catch { /* raw body retained */ } return response; }, observe: (event: AdapterObservation) => { trace.observation = event; } });
     let result: Interpretation;
     try { result = await adapter.interpret(input); } catch (error) { trace.error = String(error); traces.push(trace); throw error; }
-    trace.interpretation = result; const responseStatus = Number(trace.http_status ?? 0); const observation = trace.observation as AdapterObservation | null;
-    if (responseStatus === 429) { const parsed = classify429(String(trace.response_body ?? "")); trace.provider_metadata = parsed.metadata; trace.validation = { status: "provider_blocked", category: parsed.category }; this.entry.status = "PROVIDER_BLOCKED"; this.entry.provider_category = parsed.category; this.entry.provider_metadata = parsed.metadata; this.entry.next_eligible_at = new Date(Date.now() + (parsed.retryMs ?? 15 * 60_000)).toISOString(); this.entry.raw_call = trace; this.entry.prompt_hash = String(trace.prompt_hash); this.entry.updated_at = nowIso(); ledger.status = "WAITING_PROVIDER"; ledger.provider_category = parsed.category; ledger.provider_metadata = parsed.metadata; ledger.next_eligible_at = this.entry.next_eligible_at; ledger.updated_at = nowIso(); traces.push(trace); await writeJsonAtomic(LEDGER_FILE, ledger); throw new QuotaPause(parsed.category, parsed.metadata); }
+    trace.interpretation = result; trace.call_finished_at = nowIso(); const responseStatus = Number(trace.http_status ?? 0); const observation = trace.observation as AdapterObservation | null;
+    ledger.last_provider_call = { invocation_id: invocationId, conversation_id: this.matrixId, turn_id: this.turnNumber, started_at: callStartedAt, finished_at: String(trace.call_finished_at), http_status: responseStatus, outcome: observation?.outcome ?? null, provider_category: responseStatus === 429 ? "SHORT_WINDOW_RATE_LIMIT" : null };
+    if (responseStatus === 429) { const parsed = classify429(String(trace.response_body ?? "")); ledger.last_provider_call = { ...ledger.last_provider_call!, provider_category: parsed.category }; trace.provider_metadata = parsed.metadata; trace.validation = { status: "provider_blocked", category: parsed.category }; this.entry.status = "PROVIDER_BLOCKED"; this.entry.provider_category = parsed.category; this.entry.provider_metadata = parsed.metadata; this.entry.next_eligible_at = new Date(Date.now() + (parsed.retryMs ?? 15 * 60_000)).toISOString(); this.entry.raw_call = trace; this.entry.prompt_hash = String(trace.prompt_hash); this.entry.updated_at = nowIso(); ledger.status = "WAITING_PROVIDER"; ledger.provider_category = parsed.category; ledger.provider_metadata = parsed.metadata; ledger.next_eligible_at = this.entry.next_eligible_at; ledger.updated_at = nowIso(); traces.push(trace); await writeLedgerAtomic("provider-429"); throw new QuotaPause(parsed.category, parsed.metadata); }
     const valid = responseStatus >= 200 && responseStatus < 300 && observation?.outcome === "llm_valid";
     if (valid) { try { assertStrictInterpretation(result); assertNoAuthorityEscalation(result); trace.validation = { status: "accepted", fact_boundary: "PASS" }; this.entry.status = "PRIMARY_VALID"; } catch (error) { trace.validation = { status: "rejected", fact_boundary: "FAIL", reason: String(error) }; this.entry.status = "PRIMARY_INVALID_REJECTED"; } }
     else if (observation?.outcome === "fallback_invalid") { trace.validation = { status: "rejected_safely", fact_boundary: "PASS" }; this.entry.status = "PRIMARY_INVALID_REJECTED"; }
     else { trace.validation = { status: "provider_failure", fallback: true }; this.entry.status = "FAILED"; }
-    this.entry.raw_call = trace; this.entry.prompt_hash = String(trace.prompt_hash); this.entry.updated_at = nowIso(); ledger.updated_at = nowIso(); traces.push(trace); await writeJsonAtomic(LEDGER_FILE, ledger); return result;
+    this.entry.raw_call = trace; this.entry.prompt_hash = String(trace.prompt_hash); this.entry.updated_at = nowIso(); ledger.updated_at = nowIso(); traces.push(trace); const revisionBefore = ledger.revision; await writeLedgerAtomic("provider-result");
+    if (this.entry.status === "PRIMARY_VALID" && trace.http_status === 200 && observation?.outcome === "llm_valid") {
+      const committedCounts = countStatuses(ledger.entries);
+      const expectedPrimary = this.statusBeforeCall === "PRIMARY_VALID" ? this.countsBeforeCall.PRIMARY_VALID : (this.countsBeforeCall.PRIMARY_VALID ?? 0) + 1;
+      const expectedPending = this.statusBeforeCall === "PENDING" ? Math.max(0, (this.countsBeforeCall.PENDING ?? 0) - 1) : (this.countsBeforeCall.PENDING ?? 0);
+      if (ledger.revision !== revisionBefore + 1 || committedCounts.PRIMARY_VALID !== expectedPrimary || committedCounts.PENDING !== expectedPending) throw new LedgerCommitError(`PRIMARY_VALID commit invariant failed for ${this.matrixId}/${this.turnNumber}`);
+    }
+    return result;
   }
 }
 
 let processedRuntime = 0;
+let commitError: LedgerCommitError | null = null;
 try {
   for (const conversation of matrix.conversations) {
     let conversationId: string | null = null;
@@ -264,7 +345,7 @@ try {
       } else {
         if (entry.key !== targetKey) continue;
         if (newCalls >= MAX_PROVIDER_CALLS_PER_RUN) break;
-        if (msUntil(entry.next_eligible_at) > 0) { ledger.status = "WAITING_PROVIDER"; ledger.next_eligible_at = entry.next_eligible_at; await writeJsonAtomic(LEDGER_FILE, ledger); paused = true; break; }
+        if (msUntil(entry.next_eligible_at) > 0) { ledger.status = "WAITING_PROVIDER"; ledger.next_eligible_at = entry.next_eligible_at; await writeLedgerAtomic("entry-backoff"); paused = true; break; }
       }
       // A raw 429 may contain the adapter's fallback interpretation, but it is
       // not a terminal Gemini result and must never be replayed as one. Only
@@ -277,16 +358,18 @@ try {
       try {
         const inbound: RuntimeInbound = { external_message_id: `${ledger.run_id}-${conversation.id}-${turn}`, phone_e164: phone, contact_name: `${ledger.contact_prefix}-${conversation.id}`, body: conversation.turns[turn - 1]!, message_type: "text", metadata: { lab_only: true, qualification_run_id: ledger.run_id, matrix_id: conversation.id, turn } };
         const result = await processOfficialTurn(inbound, new SupabaseRuntimeStore(rest), interpreter, { automatic_replies_allowed: true });
-        conversationId ??= result.conversation_id; entry.runtime = { conversation_id: result.conversation_id, kind: result.kind, revision: result.revision, event_kind: result.event_kind, inbound_message_id: result.inbound_message_id, reply_body_present: result.reply_body !== null, outbox_id: result.outbox_id }; processedRuntime++; if (!replayInterpretation) { await deliver(rest, result.outbox_id, `${conversation.id}-${turn}`, ledger.run_id); newCalls++; }
-        entry.updated_at = nowIso(); ledger.updated_at = nowIso(); await writeJsonAtomic(LEDGER_FILE, ledger);
+        conversationId ??= result.conversation_id; if (!replayInterpretation) { entry.runtime = { conversation_id: result.conversation_id, kind: result.kind, revision: result.revision, event_kind: result.event_kind, inbound_message_id: result.inbound_message_id, reply_body_present: result.reply_body !== null, outbox_id: result.outbox_id }; await deliver(rest, result.outbox_id, `${conversation.id}-${turn}`, ledger.run_id); newCalls++; entry.updated_at = nowIso(); ledger.updated_at = nowIso(); await writeLedgerAtomic("runtime-result"); } processedRuntime++;
       } catch (error) {
         if (error instanceof QuotaPause) { paused = true; pauseCategory = error.category; pauseMetadata = error.metadata; break; }
-        entry.status = "FAILED"; entry.reason = error instanceof Error ? error.message : String(error); entry.updated_at = nowIso(); ledger.errors.push(`${entry.key}: ${entry.reason}`); ledger.updated_at = nowIso(); await writeJsonAtomic(LEDGER_FILE, ledger); throw error;
+        entry.status = "FAILED"; entry.reason = error instanceof Error ? error.message : String(error); entry.updated_at = nowIso(); ledger.errors.push(`${entry.key}: ${entry.reason}`); ledger.updated_at = nowIso(); await writeLedgerAtomic("runtime-failure"); throw error;
       }
     }
     if (paused || newCalls >= MAX_PROVIDER_CALLS_PER_RUN) break;
   }
-} catch (error) { ledger.status = "BLOCKED"; ledger.errors.push(error instanceof Error ? error.message : String(error)); }
+} catch (error) {
+  if (error instanceof LedgerCommitError) { commitError = error; try { await recordCommitError(error); } catch { /* preserve the original failure for the scheduler */ } }
+  else { ledger.status = "BLOCKED"; ledger.errors.push(error instanceof Error ? error.message : String(error)); }
+}
 
 const values = Object.values(ledger.entries); ledger.counts = countStatuses(ledger.entries);
 const terminal = values.every((entry) => ["PRIMARY_VALID", "PRIMARY_INVALID_REJECTED"].includes(entry.status));
@@ -303,7 +386,9 @@ watchdog.last_checked_at = nowIso();
 if (watchdog.consecutive_eligible_no_progress >= 5) watchdog.last_action = ledger.provider_category ? "quota-only-wait; infrastructure/provider metadata rechecked" : "investigate runner/scheduler/provider";
 ledger.watchdog = watchdog;
 ledger.last_run = { ...ledger.last_run!, finished_at: nowIso(), after: afterCounts, provider_calls: newCalls, ledger_progressed: ledgerProgressed, result: { status: ledger.status, provider_category: pauseCategory ?? ledger.provider_category ?? null } };
-ledger.updated_at = nowIso(); await writeJsonAtomic(LEDGER_FILE, ledger);
+ledger.updated_at = nowIso();
+try { await writeLedgerAtomic("run-finish"); } catch (error) { await recordCommitError(error); }
 const output = { status: ledger.status, matrix_sha: matrixSha, invocation_id: invocationId, target_key: targetKey ?? null, max_provider_calls_per_run: MAX_PROVIDER_CALLS_PER_RUN, new_calls: newCalls, processed_runtime: processedRuntime, before: beforeCounts, result: { provider_category: pauseCategory ?? ledger.provider_category ?? null, provider_metadata: pauseMetadata ?? ledger.provider_metadata ?? null }, after: afterCounts, ledger_progressed: ledgerProgressed, watchdog: ledger.watchdog, counts: ledger.counts, next_eligible_at: ledger.next_eligible_at ?? null, provider_category: pauseCategory ?? ledger.provider_category ?? null, provider_metadata: pauseMetadata ?? ledger.provider_metadata ?? null, run_id: ledger.run_id };
 console.log(JSON.stringify(output));
+if (commitError) Deno.exit(2);
 if (ledger.status === "BLOCKED") Deno.exit(2);
