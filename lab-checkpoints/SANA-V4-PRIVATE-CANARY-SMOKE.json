@@ -1,0 +1,52 @@
+{
+  "artifact": "SANA V4 PRIVATE CANARY SMOKE",
+  "runtime_commit": "5c78aa8",
+  "canary_commit": "e0555aec80d0f110d3d7502e3bad852452bd7c30",
+  "project_ref": "zwbiqywqpllxfdofxtkz",
+  "general_function": {
+    "slug": "support-runtime-inbound",
+    "version": 59,
+    "status": "ACTIVE",
+    "changed": false
+  },
+  "canary_function": {
+    "slug": "support-runtime-canary-v4",
+    "version": 1,
+    "status": "ACTIVE",
+    "verify_jwt": false,
+    "runtime_commit_marker": "5c78aa8",
+    "delivery": "QUEUE_ONLY",
+    "external_delivery": false
+  },
+  "configuration": {
+    "canary_enabled": false,
+    "owner_allowlist": "hash_configured",
+    "ingress_key": "configured",
+    "kill_switch": "CANARY_ENABLED=false"
+  },
+  "route_smoke": {
+    "owner_enabled": "SANA_V4",
+    "non_owner_enabled": "LEGACY",
+    "owner_disabled": "DISABLED",
+    "mismatched_identity": "LEGACY",
+    "tests_passed": 3,
+    "tests_failed": 0
+  },
+  "runtime_smoke": {
+    "tests_passed": 158,
+    "tests_failed": 0,
+    "lifecycle": "PASS",
+    "handoff": "PASS",
+    "outbox": "PASS",
+    "idempotency": "PASS",
+    "external_delivery": false
+  },
+  "deployed_ingress_smoke": {
+    "owner_without_ingress_key": 401,
+    "non_owner_without_ingress_key": 401,
+    "effects": 0
+  },
+  "production_general_changed": false,
+  "whatsapp_sent": 0,
+  "matrix_or_gemini_ledger_changed": false
+}
