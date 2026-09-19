@@ -277,6 +277,22 @@ function eligibleCredential(entry: LedgerEntry): CredentialSlot | null {
   if (msUntil(entry.credential_next_eligible_at?.B ?? entry.next_eligible_at) <= 0) return "B";
   return null;
 }
+function credentialEligible(entry: LedgerEntry, slot: CredentialSlot): boolean {
+  // Legacy blocked entries have one shared cooldown from the original
+  // single-credential runner. Apply it to A, while B remains independently
+  // eligible unless B has its own recorded cooldown.
+  const next = slot === "A"
+    ? entry.credential_next_eligible_at?.A ?? entry.next_eligible_at
+    : entry.credential_next_eligible_at?.B;
+  return msUntil(next) <= 0;
+}
+function slotsForEntry(entry: LedgerEntry): CredentialSlot[] {
+  if (entry.status !== "PROVIDER_BLOCKED") return ["A", "B"];
+  const slots: CredentialSlot[] = [];
+  if (credentialEligible(entry, "A")) slots.push("A");
+  if (credentialEligible(entry, "B")) slots.push("B");
+  return slots;
+}
 function orderedEntries(): LedgerEntry[] {
   const order = new Map<string, number>();
   let index = 0;
@@ -395,7 +411,7 @@ try {
         }
         continue;
       }
-      const slots: CredentialSlot[] = entry.status === "PROVIDER_BLOCKED" ? [eligibleCredential(entry)!] : ["A", "B"];
+      const slots = slotsForEntry(entry);
       let runtimeSucceeded = false;
       for (const credentialSlot of slots) {
         if (providerCalls >= MAX_PROVIDER_CALLS_PER_RUN) break;
