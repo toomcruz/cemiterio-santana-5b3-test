@@ -1,10 +1,10 @@
 {
   "artifact": "SANA V4 FINAL RUNTIME QUALIFICATION",
-  "run_id": "v4q-1789833744982-c599a46a",
+  "run_id": "v4q-1789836199504-2c055d5c",
   "project_ref": "vpinclyspbcrxazmnrie",
-  "tested_commit": "e3beef9e0acbef5b67cf2873310520c3c679ad34",
-  "status": "BLOCKED",
-  "failure": "J: close and resume events persist",
+  "tested_commit": "5c78aa81e8eb437fbea53965861264683f97990e",
+  "status": "PASS",
+  "failure": null,
   "assertions": [
     {
       "name": "A_TOPIC/1: stable conversation",
@@ -116,6 +116,46 @@
     },
     {
       "name": "D: suppressed turns create no outbox",
+      "pass": true
+    },
+    {
+      "name": "K_OPERATOR_RESUME/1: stable conversation",
+      "pass": true
+    },
+    {
+      "name": "K_OPERATOR_RESUME-1: synthetic delivery completes",
+      "pass": true
+    },
+    {
+      "name": "K_OPERATOR_RESUME/2: stable conversation",
+      "pass": true
+    },
+    {
+      "name": "K_OPERATOR_RESUME-2: synthetic delivery completes",
+      "pass": true
+    },
+    {
+      "name": "K_OPERATOR_RESUME/3: stable conversation",
+      "pass": true
+    },
+    {
+      "name": "K_OPERATOR_RESUME/4: stable conversation",
+      "pass": true
+    },
+    {
+      "name": "K: takeover remains human and suppresses citizen message",
+      "pass": true
+    },
+    {
+      "name": "K: authorized resume is audited and restores bot mode",
+      "pass": true
+    },
+    {
+      "name": "K: resume clears handoff and preserves lifecycle context",
+      "pass": true
+    },
+    {
+      "name": "K: first post-resume turn is processed once",
       "pass": true
     },
     {
@@ -279,23 +319,59 @@
       "pass": true
     },
     {
-      "name": "J_CLOSE-3: synthetic delivery completes",
-      "pass": true
-    },
-    {
       "name": "J_CLOSE/4: stable conversation",
       "pass": true
     },
     {
-      "name": "J_CLOSE-4: synthetic delivery completes",
+      "name": "J_CLOSE/5: stable conversation",
       "pass": true
     },
     {
-      "name": "J: close and resume events persist",
-      "pass": false
+      "name": "J_CLOSE-5: synthetic delivery completes",
+      "pass": true
     },
     {
-      "name": "J: post-close message does not corrupt conversation",
+      "name": "J_CLOSE/6: stable conversation",
+      "pass": true
+    },
+    {
+      "name": "J: close and explicit resume persist",
+      "pass": true
+    },
+    {
+      "name": "J: ordinary messages remain closed and silent",
+      "pass": true
+    },
+    {
+      "name": "J: valid resume creates one effect and replay is duplicate",
+      "pass": true
+    },
+    {
+      "name": "J: post-close messages do not corrupt conversation",
+      "pass": true
+    },
+    {
+      "name": "J_AMBIGUOUS/1: stable conversation",
+      "pass": true
+    },
+    {
+      "name": "J_AMBIGUOUS-1: synthetic delivery completes",
+      "pass": true
+    },
+    {
+      "name": "J_AMBIGUOUS/2: stable conversation",
+      "pass": true
+    },
+    {
+      "name": "J_AMBIGUOUS-2: synthetic delivery completes",
+      "pass": true
+    },
+    {
+      "name": "J_AMBIGUOUS/3: stable conversation",
+      "pass": true
+    },
+    {
+      "name": "J: ambiguous return is fail-safe",
       "pass": true
     },
     {
@@ -355,7 +431,7 @@
       "pass": true
     },
     {
-      "name": "ATOMICITY: mid-commit binding failure rolls back state/event/outbox/bindings",
+      "name": "ATOMICITY: post-materialization failpoint rolls back state/event/outbox/requests",
       "pass": true
     },
     {
@@ -367,141 +443,141 @@
     {
       "scenario": "A_TOPIC",
       "turn": 1,
-      "external_id": "v4q-1789833744982-c599a46a-A_TOPIC-1",
+      "external_id": "v4q-1789836199504-2c055d5c-A_TOPIC-1",
       "body": "Tenho um problema no jazigo da Ana Fictícia.",
       "kind": "COMMITTED",
-      "conversation_id": "ad17b882-b016-4b3d-adde-3c0fbfd4eb9b",
-      "inbound_message_id": "351eb4d1-42f1-41ea-b14f-66cecebd88c6",
+      "conversation_id": "2fda051b-26f4-43a3-b303-7bed4e45e840",
+      "inbound_message_id": "1200b36e-8250-4186-a13a-7af77d122e95",
       "revision": 1,
       "reply_body": "Entendi. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
-      "outbox_id": "5ad55504-141a-450b-bde8-21256db58124",
+      "outbox_id": "0fce737f-9b29-4632-8f41-159f23364feb",
       "event_kind": "NEW_GOAL"
     },
     {
       "scenario": "A_TOPIC",
       "turn": 2,
-      "external_id": "v4q-1789833744982-c599a46a-A_TOPIC-2",
+      "external_id": "v4q-1789836199504-2c055d5c-A_TOPIC-2",
       "body": "Agora quero falar da lápide.",
       "kind": "COMMITTED",
-      "conversation_id": "ad17b882-b016-4b3d-adde-3c0fbfd4eb9b",
-      "inbound_message_id": "d4c3eab1-abb7-429a-8a1b-d573b28fcab3",
+      "conversation_id": "2fda051b-26f4-43a3-b303-7bed4e45e840",
+      "inbound_message_id": "6d0d9cf2-e195-4292-b2ef-b86a6b662d5d",
       "revision": 2,
       "reply_body": "Certo, vamos falar da placa ou lápide agora. O assunto anterior de jazigo ficou preservado. Você quer orientação, orçamento ou já existe um pedido?",
-      "outbox_id": "76c38eba-1f98-40fe-a932-965a4e80e3d3",
+      "outbox_id": "098ed4b4-d168-4a10-aeef-c331e964dc2f",
       "event_kind": "RECLASSIFICATION"
     },
     {
       "scenario": "A_TOPIC",
       "turn": 3,
-      "external_id": "v4q-1789833744982-c599a46a-A_TOPIC-3",
+      "external_id": "v4q-1789836199504-2c055d5c-A_TOPIC-3",
       "body": "Continue no jazigo.",
       "kind": "COMMITTED",
-      "conversation_id": "ad17b882-b016-4b3d-adde-3c0fbfd4eb9b",
-      "inbound_message_id": "248f1a22-a306-44ba-93c3-3cc297390f4f",
+      "conversation_id": "2fda051b-26f4-43a3-b303-7bed4e45e840",
+      "inbound_message_id": "49daaace-0d76-4b45-b639-2b53dc4963cb",
       "revision": 3,
       "reply_body": "Certo, voltamos ao assunto do jazigo. O assunto da placa ou lápide ficou preservado. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
-      "outbox_id": "448ce33c-0f5c-4f92-a899-f497556c2f6e",
+      "outbox_id": "63c1cddc-60de-42dd-93f3-0d20af20627a",
       "event_kind": "RECLASSIFICATION"
     },
     {
       "scenario": "B_FOCUS",
       "turn": 1,
-      "external_id": "v4q-1789833744982-c599a46a-B_FOCUS-1",
+      "external_id": "v4q-1789836199504-2c055d5c-B_FOCUS-1",
       "body": "Tenho um problema no jazigo, é o de Ana Fictícia.",
       "kind": "COMMITTED",
-      "conversation_id": "81084aa5-ae29-4688-beb8-8f7e0c4df50a",
-      "inbound_message_id": "e24ed676-b121-4ff9-b3b2-e1581a62ad5f",
+      "conversation_id": "424e0041-211c-4ab9-9807-9088598a340b",
+      "inbound_message_id": "41e55340-b702-448f-b3f8-e4c966001af4",
       "revision": 1,
       "reply_body": "Entendi. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
-      "outbox_id": "9e7410bf-1edd-491e-ac3a-421b4f111005",
+      "outbox_id": "c1581fd8-587b-4a0b-b050-6f54062bd213",
       "event_kind": "NEW_GOAL"
     },
     {
       "scenario": "B_FOCUS",
       "turn": 2,
-      "external_id": "v4q-1789833744982-c599a46a-B_FOCUS-2",
+      "external_id": "v4q-1789836199504-2c055d5c-B_FOCUS-2",
       "body": "Agora quero tratar de outro falecido, Bruno Sintético.",
       "kind": "COMMITTED",
-      "conversation_id": "81084aa5-ae29-4688-beb8-8f7e0c4df50a",
-      "inbound_message_id": "887f79ed-ad0f-4be1-95a9-3b2334cbd779",
+      "conversation_id": "424e0041-211c-4ab9-9807-9088598a340b",
+      "inbound_message_id": "5c187f83-3cdd-4040-b333-cf373ad1e0ac",
       "revision": 2,
       "reply_body": "Entendi: este pedido é para Bruno Sintético. Mantive o atendimento anterior separado e iniciei este atendimento de serviços no jazigo. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
-      "outbox_id": "71874405-2781-460a-932c-133929297414",
+      "outbox_id": "81ad8896-8e70-4a6e-aab4-fbbc9da485ad",
       "event_kind": "NEW_GOAL"
     },
     {
       "scenario": "B_FOCUS",
       "turn": 3,
-      "external_id": "v4q-1789833744982-c599a46a-B_FOCUS-3",
+      "external_id": "v4q-1789836199504-2c055d5c-B_FOCUS-3",
       "body": "Volto para Ana Fictícia.",
       "kind": "COMMITTED",
-      "conversation_id": "81084aa5-ae29-4688-beb8-8f7e0c4df50a",
-      "inbound_message_id": "0de53c93-79b2-4a14-aa79-0c9ad753d45a",
+      "conversation_id": "424e0041-211c-4ab9-9807-9088598a340b",
+      "inbound_message_id": "7cf8c55f-27f1-4a61-b400-3fd978cf6c56",
       "revision": 3,
       "reply_body": "Retomamos o atendimento de Ana Fictícia. Podemos continuar de onde paramos; Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
-      "outbox_id": "f4c729ae-4da4-4ce7-9c88-2df684b7d8eb",
+      "outbox_id": "ec92aea8-63b9-4550-a3eb-2e5b93c14e23",
       "event_kind": "SOCIAL"
     },
     {
       "scenario": "C_PAUSE",
       "turn": 1,
-      "external_id": "v4q-1789833744982-c599a46a-C_PAUSE-1",
+      "external_id": "v4q-1789836199504-2c055d5c-C_PAUSE-1",
       "body": "Tenho um problema no meu jazigo.",
       "kind": "COMMITTED",
-      "conversation_id": "de9cc673-ee26-467d-bac2-c3de0eef2468",
-      "inbound_message_id": "ed23d552-e50c-441e-a178-2607cfcc1a54",
+      "conversation_id": "92738afd-58db-4cf8-954b-7e8b71f2009c",
+      "inbound_message_id": "824c22b5-e330-4197-98f4-bd13a8ce2dd7",
       "revision": 1,
       "reply_body": "Entendi. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
-      "outbox_id": "1952ec2c-75b2-449e-8e3a-9e8459e5c855",
+      "outbox_id": "e1b71ce2-8027-4f3c-b234-375eab022e7f",
       "event_kind": "NEW_GOAL"
     },
     {
       "scenario": "C_PAUSE",
       "turn": 2,
-      "external_id": "v4q-1789833744982-c599a46a-C_PAUSE-2",
+      "external_id": "v4q-1789836199504-2c055d5c-C_PAUSE-2",
       "body": "Vou sair agora e volto depois.",
       "kind": "COMMITTED",
-      "conversation_id": "de9cc673-ee26-467d-bac2-c3de0eef2468",
-      "inbound_message_id": "c220fffb-50bf-4e8f-bf51-0146a9aef518",
+      "conversation_id": "92738afd-58db-4cf8-954b-7e8b71f2009c",
+      "inbound_message_id": "7c5fdf78-ae50-4131-91e2-0f9af5e39ebc",
       "revision": 2,
       "reply_body": "Tudo bem. Pausamos este atendimento por enquanto. Quando você voltar, continuamos daqui sem misturar este caso com outro.",
-      "outbox_id": "4a9bfc08-397b-4337-b048-839af653954f",
+      "outbox_id": "5c5a7a35-a6e6-4372-b80a-9c51ad710760",
       "event_kind": "SOCIAL"
     },
     {
       "scenario": "C_PAUSE",
       "turn": 3,
-      "external_id": "v4q-1789833744982-c599a46a-C_PAUSE-3",
+      "external_id": "v4q-1789836199504-2c055d5c-C_PAUSE-3",
       "body": "Voltei para continuar o atendimento do jazigo.",
       "kind": "COMMITTED",
-      "conversation_id": "de9cc673-ee26-467d-bac2-c3de0eef2468",
-      "inbound_message_id": "242d5640-caa8-4c66-8df3-9d642ecda0b8",
+      "conversation_id": "92738afd-58db-4cf8-954b-7e8b71f2009c",
+      "inbound_message_id": "083d473b-03a4-4dae-899e-8662e03feeae",
       "revision": 3,
       "reply_body": "Retomamos o atendimento de serviços no jazigo. Podemos continuar de onde paramos; Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
-      "outbox_id": "91b82a79-fbae-47a3-80dc-1c9ab4b47c16",
+      "outbox_id": "7a4285da-b1a3-4ab0-bf8a-1e4901c3d77a",
       "event_kind": "SOCIAL"
     },
     {
       "scenario": "D_HANDOFF",
       "turn": 1,
-      "external_id": "v4q-1789833744982-c599a46a-D_HANDOFF-1",
+      "external_id": "v4q-1789836199504-2c055d5c-D_HANDOFF-1",
       "body": "humano",
       "kind": "COMMITTED",
-      "conversation_id": "694e4360-db20-438e-baa9-6174f59dff8a",
-      "inbound_message_id": "94dd2443-7c8a-4a28-96d1-dea58a5f2757",
+      "conversation_id": "f1242c09-562c-4001-a561-a9e4c988bde1",
+      "inbound_message_id": "11340e90-0f00-4adb-be11-ae102f8ed95d",
       "revision": 1,
       "reply_body": "Entendi. Registrei seu pedido de encaminhamento à equipe. As informações já enviadas permanecem no atendimento.",
-      "outbox_id": "ce330545-8a1b-45ed-b4e8-f96838541001",
+      "outbox_id": "19d544fc-f6c4-4289-9ba3-69c996265e70",
       "event_kind": "HUMAN_REQUEST"
     },
     {
       "scenario": "D_HANDOFF",
       "turn": 2,
-      "external_id": "v4q-1789833744982-c599a46a-D_HANDOFF-2",
+      "external_id": "v4q-1789836199504-2c055d5c-D_HANDOFF-2",
       "body": "não",
       "kind": "HUMAN_ACTIVE",
-      "conversation_id": "694e4360-db20-438e-baa9-6174f59dff8a",
-      "inbound_message_id": "0bb6a0be-8b4b-4b82-90a7-df43ba8f8196",
+      "conversation_id": "f1242c09-562c-4001-a561-a9e4c988bde1",
+      "inbound_message_id": "11344699-dd69-494b-95d8-bd7944574e63",
       "revision": 2,
       "reply_body": null,
       "outbox_id": null,
@@ -510,271 +586,388 @@
     {
       "scenario": "D_HANDOFF",
       "turn": 3,
-      "external_id": "v4q-1789833744982-c599a46a-D_HANDOFF-3",
+      "external_id": "v4q-1789836199504-2c055d5c-D_HANDOFF-3",
       "body": "oi",
       "kind": "HUMAN_ACTIVE",
-      "conversation_id": "694e4360-db20-438e-baa9-6174f59dff8a",
-      "inbound_message_id": "6c9b3be3-95d7-4388-9f20-ca2d130645f6",
+      "conversation_id": "f1242c09-562c-4001-a561-a9e4c988bde1",
+      "inbound_message_id": "8cff926a-f79e-4284-8439-2303cfa3a94c",
       "revision": 3,
       "reply_body": null,
       "outbox_id": null,
       "event_kind": null
     },
     {
+      "scenario": "K_OPERATOR_RESUME",
+      "turn": 1,
+      "external_id": "v4q-1789836199504-2c055d5c-K_OPERATOR_RESUME-1",
+      "body": "Tenho um problema no meu jazigo.",
+      "kind": "COMMITTED",
+      "conversation_id": "e653ac88-d2d9-4988-83f9-274ad95d364b",
+      "inbound_message_id": "dbd8a162-1cd6-41ca-a4a4-953f0adf523c",
+      "revision": 1,
+      "reply_body": "Entendi. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
+      "outbox_id": "b42d0db1-ea4c-4b7e-9e8e-1c2bdf154405",
+      "event_kind": "NEW_GOAL"
+    },
+    {
+      "scenario": "K_OPERATOR_RESUME",
+      "turn": 2,
+      "external_id": "v4q-1789836199504-2c055d5c-K_OPERATOR_RESUME-2",
+      "body": "humano",
+      "kind": "COMMITTED",
+      "conversation_id": "e653ac88-d2d9-4988-83f9-274ad95d364b",
+      "inbound_message_id": "4b58a47a-391c-413b-b1a3-a65eaa5f3013",
+      "revision": 2,
+      "reply_body": "Entendi. Registrei seu pedido de encaminhamento à equipe. As informações já enviadas permanecem no atendimento.\n\nProtocolo do atendimento: SAN-20260919-000006.",
+      "outbox_id": "f719c749-be21-4307-9626-828b26bfbd66",
+      "event_kind": "HUMAN_REQUEST"
+    },
+    {
+      "scenario": "K_OPERATOR_RESUME",
+      "turn": 3,
+      "external_id": "v4q-1789836199504-2c055d5c-K_OPERATOR_RESUME-3",
+      "body": "oi",
+      "kind": "HUMAN_ACTIVE",
+      "conversation_id": "e653ac88-d2d9-4988-83f9-274ad95d364b",
+      "inbound_message_id": "777bade4-2f8f-4716-b3fc-d511616cbf6d",
+      "revision": 3,
+      "reply_body": null,
+      "outbox_id": null,
+      "event_kind": null
+    },
+    {
+      "scenario": "K_OPERATOR_RESUME",
+      "turn": 4,
+      "external_id": "v4q-1789836199504-2c055d5c-K_OPERATOR_RESUME-4",
+      "body": "quero continuar",
+      "kind": "COMMITTED",
+      "conversation_id": "e653ac88-d2d9-4988-83f9-274ad95d364b",
+      "inbound_message_id": "08702c9e-d50a-4b99-a997-194baf0688ab",
+      "revision": 5,
+      "reply_body": "Retomamos o atendimento de serviços no jazigo. Podemos continuar de onde paramos; Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
+      "outbox_id": "0b420622-3228-4d2f-a3df-4b53d19ba58b",
+      "event_kind": "SOCIAL"
+    },
+    {
       "scenario": "E_DOCUMENTS",
       "turn": 1,
-      "external_id": "v4q-1789833744982-c599a46a-E_DOCUMENTS-1",
+      "external_id": "v4q-1789836199504-2c055d5c-E_DOCUMENTS-1",
       "body": "documento da Ana foi enviado",
       "kind": "COMMITTED",
-      "conversation_id": "c38959c2-0d8d-4456-ac8b-23e1a78ec84b",
-      "inbound_message_id": "a32e49a3-3478-415e-b4c8-eecd9c78aac3",
+      "conversation_id": "73db2e21-ce02-4872-9fbf-7f964cafaea3",
+      "inbound_message_id": "41c0ef07-e651-4a6c-9a76-87665650fc47",
       "revision": 1,
       "reply_body": "Entendi que você já enviou o documento sobre Ana. Registrei essa declaração, mas o arquivo ainda precisa estar disponível para confirmação de recebimento e conferência.",
-      "outbox_id": "452de69b-9620-4601-a1f2-6893a280a8ae",
+      "outbox_id": "e7c66f6b-c9c9-4d19-a0fb-42da386aaee7",
       "event_kind": "COMPLEMENT"
     },
     {
       "scenario": "E_DOCUMENTS",
       "turn": 2,
-      "external_id": "v4q-1789833744982-c599a46a-E_DOCUMENTS-2",
+      "external_id": "v4q-1789836199504-2c055d5c-E_DOCUMENTS-2",
       "body": "agora quero falar do meu pai",
       "kind": "COMMITTED",
-      "conversation_id": "c38959c2-0d8d-4456-ac8b-23e1a78ec84b",
-      "inbound_message_id": "0fe4fad5-4ffa-432c-a288-39af483d1c67",
+      "conversation_id": "73db2e21-ce02-4872-9fbf-7f964cafaea3",
+      "inbound_message_id": "f4e3b157-3351-4b71-8e31-ac4c2a1b47f5",
       "revision": 2,
       "reply_body": "Entendi. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
-      "outbox_id": "7d4acbc6-32d1-40f2-89b3-2e9ab45f5db3",
+      "outbox_id": "e9f83acf-0694-4f76-b356-c72e89e7db08",
       "event_kind": "NEW_GOAL"
     },
     {
       "scenario": "E_DOCUMENTS",
       "turn": 3,
-      "external_id": "v4q-1789833744982-c599a46a-E_DOCUMENTS-3",
+      "external_id": "v4q-1789836199504-2c055d5c-E_DOCUMENTS-3",
       "body": "Bruno Sintético",
       "kind": "COMMITTED",
-      "conversation_id": "c38959c2-0d8d-4456-ac8b-23e1a78ec84b",
-      "inbound_message_id": "d42716ee-8f14-42dc-9ed8-06a682dfad8d",
+      "conversation_id": "73db2e21-ce02-4872-9fbf-7f964cafaea3",
+      "inbound_message_id": "c5568fda-8f19-438f-858b-fd3e53badf2f",
       "revision": 3,
       "reply_body": "Certo, vou manter este atendimento separado para Bruno Sintético. Entendi. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
-      "outbox_id": "a4379bce-2b00-4268-8d59-2826f13b43fb",
+      "outbox_id": "ef5f5e57-ab0c-4b39-8be4-dd27c18359d8",
       "event_kind": "COMPLEMENT"
     },
     {
       "scenario": "E_DOCUMENTS",
       "turn": 4,
-      "external_id": "v4q-1789833744982-c599a46a-E_DOCUMENTS-4",
+      "external_id": "v4q-1789836199504-2c055d5c-E_DOCUMENTS-4",
       "body": "documento do Bruno foi enviado",
       "kind": "COMMITTED",
-      "conversation_id": "c38959c2-0d8d-4456-ac8b-23e1a78ec84b",
-      "inbound_message_id": "cb844bf4-5f82-49e8-8357-7f07d2e85760",
+      "conversation_id": "73db2e21-ce02-4872-9fbf-7f964cafaea3",
+      "inbound_message_id": "984bc62b-a4a2-478b-a325-a1b50528cb23",
       "revision": 4,
       "reply_body": "Entendi que você já enviou o documento sobre Bruno. Registrei essa declaração, mas o arquivo ainda precisa estar disponível para confirmação de recebimento e conferência.",
-      "outbox_id": "53b5edea-1291-4bd1-aff2-e7eb76ed0f6e",
+      "outbox_id": "3e84bfaf-0453-420d-87b6-e2c11ee26368",
       "event_kind": "COMPLEMENT"
     },
     {
       "scenario": "E_DOCUMENTS",
       "turn": 5,
-      "external_id": "v4q-1789833744982-c599a46a-E_DOCUMENTS-5",
+      "external_id": "v4q-1789836199504-2c055d5c-E_DOCUMENTS-5",
       "body": "o da Ana estava errado",
       "kind": "COMMITTED",
-      "conversation_id": "c38959c2-0d8d-4456-ac8b-23e1a78ec84b",
-      "inbound_message_id": "5880ca0a-3e1e-41fb-800c-22434eb5fa49",
+      "conversation_id": "73db2e21-ce02-4872-9fbf-7f964cafaea3",
+      "inbound_message_id": "e1d940b4-7a0b-4a14-aca8-2ba28651f738",
       "revision": 5,
       "reply_body": "Entendi que o arquivo sobre Ana enviado estava errado. Não vou tratá-lo como válido; quando puder, envie a versão correta para uma nova conferência.",
-      "outbox_id": "a7990d47-69b7-48b7-a1c0-aa370ede7fe0",
+      "outbox_id": "7709b657-c7a6-4f3c-978b-1d2d69195a5d",
       "event_kind": "CORRECTION"
     },
     {
       "scenario": "E_DOCUMENTS",
       "turn": 6,
-      "external_id": "v4q-1789833744982-c599a46a-E_DOCUMENTS-6",
+      "external_id": "v4q-1789836199504-2c055d5c-E_DOCUMENTS-6",
       "body": "vou mandar outro",
       "kind": "COMMITTED",
-      "conversation_id": "c38959c2-0d8d-4456-ac8b-23e1a78ec84b",
-      "inbound_message_id": "8127cbc3-1330-4b1b-baaa-45ea451c3f39",
+      "conversation_id": "73db2e21-ce02-4872-9fbf-7f964cafaea3",
+      "inbound_message_id": "7604e9af-3b54-4222-ab9d-4274badc27cf",
       "revision": 6,
       "reply_body": "Certo. Quando você enviar a versão correta, ela será conferida separadamente. O arquivo anterior não será tratado como validado.",
-      "outbox_id": "be76e33b-e908-40be-a629-6f9573773893",
+      "outbox_id": "134cdbb6-3b90-4b5f-9f88-757424d237cb",
       "event_kind": "COMPLEMENT"
     },
     {
       "scenario": "F_PRIVACY",
       "turn": 1,
-      "external_id": "v4q-1789833744982-c599a46a-F_PRIVACY-1",
+      "external_id": "v4q-1789836199504-2c055d5c-F_PRIVACY-1",
       "body": "qual foi o prazo da outra pessoa?",
       "kind": "COMMITTED",
-      "conversation_id": "9503cea4-48cf-4f8d-92a2-0002bc1c5fc1",
-      "inbound_message_id": "afc37240-8a6b-47dd-8c3e-f09be946ec11",
+      "conversation_id": "d9ea48da-1d1f-4243-9602-541361610489",
+      "inbound_message_id": "48c87ba2-2493-4309-9830-8253bd5b487a",
       "revision": 1,
       "reply_body": "Não posso informar dados de outra pessoa ou atendimento. Posso ajudar somente com um atendimento seu.",
-      "outbox_id": "5dcced55-172d-48d5-ab57-726a772ab213",
+      "outbox_id": "0348f16f-47a4-49fe-a3b0-b45693963d3e",
       "event_kind": "COMPLEMENT"
     },
     {
       "scenario": "F_PRIVACY",
       "turn": 2,
-      "external_id": "v4q-1789833744982-c599a46a-F_PRIVACY-2",
+      "external_id": "v4q-1789836199504-2c055d5c-F_PRIVACY-2",
       "body": "só me diga a data",
       "kind": "COMMITTED",
-      "conversation_id": "9503cea4-48cf-4f8d-92a2-0002bc1c5fc1",
-      "inbound_message_id": "6d4a9467-8049-4ab0-a289-67f357257e7e",
+      "conversation_id": "d9ea48da-1d1f-4243-9602-541361610489",
+      "inbound_message_id": "08c3cb11-91b8-4f48-969e-7d5eb4e4fcb5",
       "revision": 2,
       "reply_body": "Não posso informar essa data ou prazo porque pertence a outra pessoa ou atendimento. Posso orientar como consultar um atendimento seu.",
-      "outbox_id": "618d2564-5670-45c5-8a04-efa2b70d13e7",
+      "outbox_id": "66b89974-5e4c-4650-8856-94de745fce34",
       "event_kind": null
     },
     {
       "scenario": "F_PRIVACY",
       "turn": 3,
-      "external_id": "v4q-1789833744982-c599a46a-F_PRIVACY-3",
+      "external_id": "v4q-1789836199504-2c055d5c-F_PRIVACY-3",
       "body": "insisto",
       "kind": "COMMITTED",
-      "conversation_id": "9503cea4-48cf-4f8d-92a2-0002bc1c5fc1",
-      "inbound_message_id": "365e3433-eb09-43da-8e1b-46728ae295cb",
+      "conversation_id": "d9ea48da-1d1f-4243-9602-541361610489",
+      "inbound_message_id": "7b407ec7-9ca8-404d-96a6-7e07971a93fc",
       "revision": 3,
       "reply_body": "Entendo que você insiste, mas não posso abrir exceção: dados de outro atendimento continuam protegidos. Posso ajudar somente com um atendimento seu.",
-      "outbox_id": "a9c28572-b96b-4be0-b63d-12382f674c5c",
+      "outbox_id": "27989c34-0b62-4f8e-906d-e9ddf21f6f68",
       "event_kind": null
     },
     {
       "scenario": "G_LOCATION",
       "turn": 1,
-      "external_id": "v4q-1789833744982-c599a46a-G_LOCATION-1",
+      "external_id": "v4q-1789836199504-2c055d5c-G_LOCATION-1",
       "body": "Quero localizar o jazigo de Bruno Sintético.",
       "kind": "COMMITTED",
-      "conversation_id": "8b748dd3-9aef-4428-a50a-57d3643b8b34",
-      "inbound_message_id": "8df1ba17-0731-4e0c-880e-0e343f644c80",
+      "conversation_id": "4899e3f1-23a2-492f-bfe8-22532c95dbff",
+      "inbound_message_id": "de0ff5d6-9565-4d08-bdbe-cf3d553bef89",
       "revision": 1,
       "reply_body": "Entendi que você quer localizar Bruno Sintético. Qual referência você tem, como quadra, setor, rua ou número?",
-      "outbox_id": "5909ced4-bcc9-4ae6-9a4a-3beccb8405a6",
+      "outbox_id": "8c3b084c-b408-433d-bb45-b33b2bb80f1a",
       "event_kind": "NEW_GOAL"
     },
     {
       "scenario": "G_LOCATION",
       "turn": 2,
-      "external_id": "v4q-1789833744982-c599a46a-G_LOCATION-2",
+      "external_id": "v4q-1789836199504-2c055d5c-G_LOCATION-2",
       "body": "setor azul, jazigo 3",
       "kind": "COMMITTED",
-      "conversation_id": "8b748dd3-9aef-4428-a50a-57d3643b8b34",
-      "inbound_message_id": "3e1bb042-90a2-4a72-bac5-7a95680f2295",
+      "conversation_id": "4899e3f1-23a2-492f-bfe8-22532c95dbff",
+      "inbound_message_id": "ecdce47c-b17d-407f-882d-3c5b43f5aab5",
       "revision": 2,
       "reply_body": "A referência setor azul, jazigo 3 já está registrada para Bruno Sintético. Não preciso pedir o nome novamente; a confirmação oficial ainda depende de consulta autorizada.",
-      "outbox_id": "cab49e92-dec6-4a89-b9e8-aaf8ca16d007",
+      "outbox_id": "f20caa9c-19bb-4756-a44d-6da70fc6d797",
       "event_kind": "COMPLEMENT"
     },
     {
       "scenario": "G_LOCATION",
       "turn": 3,
-      "external_id": "v4q-1789833744982-c599a46a-G_LOCATION-3",
+      "external_id": "v4q-1789836199504-2c055d5c-G_LOCATION-3",
       "body": "setor azul, jazigo 3",
       "kind": "COMMITTED",
-      "conversation_id": "8b748dd3-9aef-4428-a50a-57d3643b8b34",
-      "inbound_message_id": "cebfc8fe-da50-45dc-84b3-1147e28758f3",
+      "conversation_id": "4899e3f1-23a2-492f-bfe8-22532c95dbff",
+      "inbound_message_id": "d6aa2458-0328-4378-a876-3322b3ec59e7",
       "revision": 3,
       "reply_body": "A referência setor azul, jazigo 3 já está registrada para Bruno Sintético. Não preciso pedir o nome novamente; a confirmação oficial ainda depende de consulta autorizada.",
-      "outbox_id": "09444f6b-5c30-417d-a1fb-eaa9f9353f85",
+      "outbox_id": "fbf2e7a6-be31-4e43-b1d8-70b28abf3adb",
       "event_kind": "COMPLEMENT"
     },
     {
       "scenario": "H_PROTOCOL",
       "turn": 1,
-      "external_id": "v4q-1789833744982-c599a46a-H_PROTOCOL-1",
+      "external_id": "v4q-1789836199504-2c055d5c-H_PROTOCOL-1",
       "body": "quero protocolo",
       "kind": "COMMITTED",
-      "conversation_id": "074b50f3-0031-4af9-bb7c-2f928dbe165f",
-      "inbound_message_id": "b506df42-1e9d-4387-a4be-408048e15b29",
+      "conversation_id": "81198f2e-57d7-482a-9611-fde43002420a",
+      "inbound_message_id": "d019208d-398c-41f8-ba26-5a2659c13728",
       "revision": 1,
       "reply_body": "Ainda não tenho um número de protocolo confirmado para informar. Se você já tem uma referência do atendimento, diga qual é; não vou inventar um número.",
-      "outbox_id": "a94a04b1-2c2c-480d-a739-ee9898b17591",
+      "outbox_id": "c0818b3d-35ba-43fa-9b0c-75b4c6f00b73",
       "event_kind": "COMPLEMENT"
     },
     {
       "scenario": "I_NO_REQUEST",
       "turn": 1,
-      "external_id": "v4q-1789833744982-c599a46a-I_NO_REQUEST-1",
+      "external_id": "v4q-1789836199504-2c055d5c-I_NO_REQUEST-1",
       "body": "Estou só perguntando, não quero abrir solicitação.",
       "kind": "COMMITTED",
-      "conversation_id": "3dcd74a8-f034-44c7-a305-b788fc5b3947",
-      "inbound_message_id": "1ee6d4e3-1754-4ea4-94a2-02a8efdabe7f",
+      "conversation_id": "2dd724c9-3f42-416e-97b3-e3c35f7762ef",
+      "inbound_message_id": "77e09f01-83e2-46c3-b980-40c8fd80ede8",
       "revision": 1,
       "reply_body": "Tudo bem. Não vou abrir uma solicitação. Se você quer apenas uma informação, diga qual é a sua dúvida e eu respondo dentro do que puder confirmar.",
-      "outbox_id": "e3c51c8b-0413-4ca5-8ab5-b4574661c78c",
+      "outbox_id": "dad7e6d3-10d9-4df1-8a10-f7851e511c32",
       "event_kind": "SOCIAL"
     },
     {
       "scenario": "J_CLOSE",
       "turn": 1,
-      "external_id": "v4q-1789833744982-c599a46a-J_CLOSE-1",
+      "external_id": "v4q-1789836199504-2c055d5c-J_CLOSE-1",
       "body": "Tenho um problema no meu jazigo.",
       "kind": "COMMITTED",
-      "conversation_id": "61d8a07c-f0d0-44d6-b84e-f1f5a684f5d4",
-      "inbound_message_id": "13ea2105-b371-4195-bb05-d4c42d05365f",
+      "conversation_id": "1723e621-493f-4bb8-8b85-a8ebd474cc88",
+      "inbound_message_id": "229061f4-fc84-4a1f-abae-c206d8e029d9",
       "revision": 1,
       "reply_body": "Entendi. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
-      "outbox_id": "46f9b59d-35af-4272-87a9-05ecd646e68c",
+      "outbox_id": "4f714995-7c4c-475f-a6dc-475ad33d87bf",
       "event_kind": "NEW_GOAL"
     },
     {
       "scenario": "J_CLOSE",
       "turn": 2,
-      "external_id": "v4q-1789833744982-c599a46a-J_CLOSE-2",
+      "external_id": "v4q-1789836199504-2c055d5c-J_CLOSE-2",
       "body": "Pode encerrar por enquanto.",
       "kind": "COMMITTED",
-      "conversation_id": "61d8a07c-f0d0-44d6-b84e-f1f5a684f5d4",
-      "inbound_message_id": "d8620f31-bad4-4771-8b6f-2f1b8eb9fa50",
+      "conversation_id": "1723e621-493f-4bb8-8b85-a8ebd474cc88",
+      "inbound_message_id": "eb72bfbc-007d-4755-a177-61ab488719ef",
       "revision": 2,
       "reply_body": "Certo. Encerramos este atendimento sem criar uma nova pendência. As informações já registradas permanecem no histórico.",
-      "outbox_id": "35d81049-3c06-4ed3-b74f-f838a4f1e790",
+      "outbox_id": "457f6204-74b6-4be8-9383-2572ed8b7275",
       "event_kind": "SOCIAL"
     },
     {
       "scenario": "J_CLOSE",
       "turn": 3,
-      "external_id": "v4q-1789833744982-c599a46a-J_CLOSE-3",
+      "external_id": "v4q-1789836199504-2c055d5c-J_CLOSE-3",
       "body": "Ainda estou aqui.",
       "kind": "COMMITTED",
-      "conversation_id": "61d8a07c-f0d0-44d6-b84e-f1f5a684f5d4",
-      "inbound_message_id": "283e365b-e1c0-485b-93c1-fb73aaf4fb97",
+      "conversation_id": "1723e621-493f-4bb8-8b85-a8ebd474cc88",
+      "inbound_message_id": "8da3965a-e4b1-4407-91a7-68910f873b6e",
       "revision": 3,
-      "reply_body": "Entendi. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
-      "outbox_id": "2f59da03-8023-4d3b-b8ed-6b77624185f4",
+      "reply_body": null,
+      "outbox_id": null,
       "event_kind": null
     },
     {
       "scenario": "J_CLOSE",
       "turn": 4,
-      "external_id": "v4q-1789833744982-c599a46a-J_CLOSE-4",
+      "external_id": "v4q-1789836199504-2c055d5c-J_CLOSE-4",
+      "body": "Agora quero falar da lápide.",
+      "kind": "COMMITTED",
+      "conversation_id": "1723e621-493f-4bb8-8b85-a8ebd474cc88",
+      "inbound_message_id": "7ebfe946-cb6b-4d67-b800-276633147951",
+      "revision": 4,
+      "reply_body": null,
+      "outbox_id": null,
+      "event_kind": null
+    },
+    {
+      "scenario": "J_CLOSE",
+      "turn": 5,
+      "external_id": "v4q-1789836199504-2c055d5c-J_CLOSE-5",
       "body": "Voltei para continuar o atendimento do jazigo.",
       "kind": "COMMITTED",
-      "conversation_id": "61d8a07c-f0d0-44d6-b84e-f1f5a684f5d4",
-      "inbound_message_id": "a232efaf-bf83-4285-9f36-2a9d01dad278",
-      "revision": 4,
+      "conversation_id": "1723e621-493f-4bb8-8b85-a8ebd474cc88",
+      "inbound_message_id": "06392223-35cd-46fc-ad1b-506ad98958ce",
+      "revision": 5,
+      "reply_body": "Retomamos o atendimento de serviços no jazigo. Podemos continuar de onde paramos; Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
+      "outbox_id": "6cb957fc-c49e-4b7d-92a6-3f4da7b9f80a",
+      "event_kind": "SOCIAL"
+    },
+    {
+      "scenario": "J_CLOSE",
+      "turn": 6,
+      "external_id": "v4q-1789836199504-2c055d5c-J_CLOSE-5",
+      "body": "Voltei para continuar o atendimento do jazigo.",
+      "kind": "DUPLICATE",
+      "conversation_id": "1723e621-493f-4bb8-8b85-a8ebd474cc88",
+      "inbound_message_id": "06392223-35cd-46fc-ad1b-506ad98958ce",
+      "revision": 5,
+      "reply_body": null,
+      "outbox_id": null,
+      "event_kind": null
+    },
+    {
+      "scenario": "J_AMBIGUOUS",
+      "turn": 1,
+      "external_id": "v4q-1789836199504-2c055d5c-J_AMBIGUOUS-1",
+      "body": "Tenho um problema no meu jazigo.",
+      "kind": "COMMITTED",
+      "conversation_id": "cffc6f9c-b665-4f08-bfc4-82232d725de3",
+      "inbound_message_id": "08b3c0ff-4b7f-44c0-a4e5-82ecccafb26f",
+      "revision": 1,
       "reply_body": "Entendi. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
-      "outbox_id": "2c6f5646-f491-45e3-ad7d-0685d4a6745d",
-      "event_kind": "RECLASSIFICATION"
+      "outbox_id": "d3cc6978-c080-4474-8ee4-057234a075b7",
+      "event_kind": "NEW_GOAL"
+    },
+    {
+      "scenario": "J_AMBIGUOUS",
+      "turn": 2,
+      "external_id": "v4q-1789836199504-2c055d5c-J_AMBIGUOUS-2",
+      "body": "Pode encerrar por enquanto.",
+      "kind": "COMMITTED",
+      "conversation_id": "cffc6f9c-b665-4f08-bfc4-82232d725de3",
+      "inbound_message_id": "69a2069d-5af4-46a7-b368-ad5df2cee25c",
+      "revision": 2,
+      "reply_body": "Certo. Encerramos este atendimento sem criar uma nova pendência. As informações já registradas permanecem no histórico.",
+      "outbox_id": "e791fa1b-ecc3-42a8-81a5-e5306066c0fd",
+      "event_kind": "SOCIAL"
+    },
+    {
+      "scenario": "J_AMBIGUOUS",
+      "turn": 3,
+      "external_id": "v4q-1789836199504-2c055d5c-J_AMBIGUOUS-3",
+      "body": "oi",
+      "kind": "COMMITTED",
+      "conversation_id": "cffc6f9c-b665-4f08-bfc4-82232d725de3",
+      "inbound_message_id": "8850b66b-fdc9-4832-aee7-a0f1ea56372a",
+      "revision": 3,
+      "reply_body": null,
+      "outbox_id": null,
+      "event_kind": null
     },
     {
       "scenario": "REPLAY",
       "turn": 1,
-      "external_id": "v4q-1789833744982-c599a46a-replay-once",
+      "external_id": "v4q-1789836199504-2c055d5c-replay-once",
       "body": "Tenho um problema no meu jazigo.",
       "kind": "COMMITTED",
-      "conversation_id": "07442168-8cf4-437d-a21f-097144bfe28a",
-      "inbound_message_id": "4263e926-434a-49d4-841a-fa674c9333b6",
+      "conversation_id": "6af8d870-783b-4558-b0f2-8c59d74079b7",
+      "inbound_message_id": "80011680-d261-44fd-8803-e5a06e69e954",
       "revision": 1,
       "reply_body": "Entendi. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
-      "outbox_id": "676b12c8-5941-42fd-b392-989e488aeb09",
+      "outbox_id": "b9a5071a-c9de-41ef-af7d-d6238a162a3b",
       "event_kind": "NEW_GOAL"
     },
     {
       "scenario": "REPLAY",
       "turn": 2,
-      "external_id": "v4q-1789833744982-c599a46a-replay-once",
+      "external_id": "v4q-1789836199504-2c055d5c-replay-once",
       "body": "Tenho um problema no meu jazigo.",
       "kind": "DUPLICATE",
-      "conversation_id": "07442168-8cf4-437d-a21f-097144bfe28a",
-      "inbound_message_id": "4263e926-434a-49d4-841a-fa674c9333b6",
+      "conversation_id": "6af8d870-783b-4558-b0f2-8c59d74079b7",
+      "inbound_message_id": "80011680-d261-44fd-8803-e5a06e69e954",
       "revision": 1,
       "reply_body": null,
       "outbox_id": null,
@@ -783,379 +976,418 @@
     {
       "scenario": "CRASH",
       "turn": 1,
-      "external_id": "v4q-1789833744982-c599a46a-CRASH-1",
+      "external_id": "v4q-1789836199504-2c055d5c-CRASH-1",
       "body": "Tenho um problema no meu jazigo.",
       "kind": "COMMITTED",
-      "conversation_id": "23f3a8b8-8d8c-4e4a-8403-ba82b1b4b93a",
-      "inbound_message_id": "0ac4fbda-d3c7-4035-81de-d7f226d4e000",
+      "conversation_id": "106e78ea-6f37-4682-890a-6dff087c5cf1",
+      "inbound_message_id": "b34cdcc7-2c47-4f03-853f-73286f4a5825",
       "revision": 1,
       "reply_body": "Entendi. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
-      "outbox_id": "bcc5a4d8-b8e8-4f92-acc1-7a2e2ab0b950",
+      "outbox_id": "b91870b7-5689-4e35-bba7-93b37a36ec72",
       "event_kind": "NEW_GOAL"
     }
   ],
   "deliveries": [
     {
       "label": "A_TOPIC-1",
-      "outbox_id": "5ad55504-141a-450b-bde8-21256db58124",
+      "outbox_id": "0fce737f-9b29-4632-8f41-159f23364feb",
       "first_claim": {
         "body": "Entendi. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
         "claimed": true,
-        "outbox_id": "5ad55504-141a-450b-bde8-21256db58124",
-        "message_id": "f333f69a-7da1-41f6-8e30-eedea7c2c71d",
-        "phone_e164": "+5511937454370",
-        "conversation_id": "ad17b882-b016-4b3d-adde-3c0fbfd4eb9b"
+        "outbox_id": "0fce737f-9b29-4632-8f41-159f23364feb",
+        "message_id": "ed850885-fe9c-428c-96fa-2237d7bd4350",
+        "phone_e164": "+5511962001070",
+        "conversation_id": "2fda051b-26f4-43a3-b303-7bed4e45e840"
       },
       "completed": true
     },
     {
       "label": "A_TOPIC-2",
-      "outbox_id": "76c38eba-1f98-40fe-a932-965a4e80e3d3",
+      "outbox_id": "098ed4b4-d168-4a10-aeef-c331e964dc2f",
       "first_claim": {
         "body": "Certo, vamos falar da placa ou lápide agora. O assunto anterior de jazigo ficou preservado. Você quer orientação, orçamento ou já existe um pedido?",
         "claimed": true,
-        "outbox_id": "76c38eba-1f98-40fe-a932-965a4e80e3d3",
-        "message_id": "de2d2586-4e39-4ac1-a106-c39f56c96160",
-        "phone_e164": "+5511937454370",
-        "conversation_id": "ad17b882-b016-4b3d-adde-3c0fbfd4eb9b"
+        "outbox_id": "098ed4b4-d168-4a10-aeef-c331e964dc2f",
+        "message_id": "edb0e302-fde5-4da2-8193-c6c2107c2adb",
+        "phone_e164": "+5511962001070",
+        "conversation_id": "2fda051b-26f4-43a3-b303-7bed4e45e840"
       },
       "completed": true
     },
     {
       "label": "A_TOPIC-3",
-      "outbox_id": "448ce33c-0f5c-4f92-a899-f497556c2f6e",
+      "outbox_id": "63c1cddc-60de-42dd-93f3-0d20af20627a",
       "first_claim": {
         "body": "Certo, voltamos ao assunto do jazigo. O assunto da placa ou lápide ficou preservado. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
         "claimed": true,
-        "outbox_id": "448ce33c-0f5c-4f92-a899-f497556c2f6e",
-        "message_id": "c6591fb7-671a-4d98-a56d-3c069fdda204",
-        "phone_e164": "+5511937454370",
-        "conversation_id": "ad17b882-b016-4b3d-adde-3c0fbfd4eb9b"
+        "outbox_id": "63c1cddc-60de-42dd-93f3-0d20af20627a",
+        "message_id": "b2cbfab2-6ebd-4958-bd01-fd3d817ccdff",
+        "phone_e164": "+5511962001070",
+        "conversation_id": "2fda051b-26f4-43a3-b303-7bed4e45e840"
       },
       "completed": true
     },
     {
       "label": "B_FOCUS-1",
-      "outbox_id": "9e7410bf-1edd-491e-ac3a-421b4f111005",
+      "outbox_id": "c1581fd8-587b-4a0b-b050-6f54062bd213",
       "first_claim": {
         "body": "Entendi. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
         "claimed": true,
-        "outbox_id": "9e7410bf-1edd-491e-ac3a-421b4f111005",
-        "message_id": "f392cee4-f47e-4d88-9046-f67fdf57ead6",
-        "phone_e164": "+5511937474751",
-        "conversation_id": "81084aa5-ae29-4688-beb8-8f7e0c4df50a"
+        "outbox_id": "c1581fd8-587b-4a0b-b050-6f54062bd213",
+        "message_id": "0b900284-d6b5-43dc-ac3d-15eb69e24211",
+        "phone_e164": "+5511962017921",
+        "conversation_id": "424e0041-211c-4ab9-9807-9088598a340b"
       },
       "completed": true
     },
     {
       "label": "B_FOCUS-2",
-      "outbox_id": "71874405-2781-460a-932c-133929297414",
+      "outbox_id": "81ad8896-8e70-4a6e-aab4-fbbc9da485ad",
       "first_claim": {
         "body": "Entendi: este pedido é para Bruno Sintético. Mantive o atendimento anterior separado e iniciei este atendimento de serviços no jazigo. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
         "claimed": true,
-        "outbox_id": "71874405-2781-460a-932c-133929297414",
-        "message_id": "de97d1ca-49e8-4e8f-976a-bddb96efc636",
-        "phone_e164": "+5511937474751",
-        "conversation_id": "81084aa5-ae29-4688-beb8-8f7e0c4df50a"
+        "outbox_id": "81ad8896-8e70-4a6e-aab4-fbbc9da485ad",
+        "message_id": "2c2a5db9-0c16-4849-95b6-6d4bb55a4290",
+        "phone_e164": "+5511962017921",
+        "conversation_id": "424e0041-211c-4ab9-9807-9088598a340b"
       },
       "completed": true
     },
     {
       "label": "B_FOCUS-3",
-      "outbox_id": "f4c729ae-4da4-4ce7-9c88-2df684b7d8eb",
+      "outbox_id": "ec92aea8-63b9-4550-a3eb-2e5b93c14e23",
       "first_claim": {
         "body": "Retomamos o atendimento de Ana Fictícia. Podemos continuar de onde paramos; Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
         "claimed": true,
-        "outbox_id": "f4c729ae-4da4-4ce7-9c88-2df684b7d8eb",
-        "message_id": "73c59c4d-7050-473d-9326-d6125fcfd3da",
-        "phone_e164": "+5511937474751",
-        "conversation_id": "81084aa5-ae29-4688-beb8-8f7e0c4df50a"
+        "outbox_id": "ec92aea8-63b9-4550-a3eb-2e5b93c14e23",
+        "message_id": "3d260357-8d93-414f-a25b-58383101b881",
+        "phone_e164": "+5511962017921",
+        "conversation_id": "424e0041-211c-4ab9-9807-9088598a340b"
       },
       "completed": true
     },
     {
       "label": "C_PAUSE-1",
-      "outbox_id": "1952ec2c-75b2-449e-8e3a-9e8459e5c855",
+      "outbox_id": "e1b71ce2-8027-4f3c-b234-375eab022e7f",
       "first_claim": {
         "body": "Entendi. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
         "claimed": true,
-        "outbox_id": "1952ec2c-75b2-449e-8e3a-9e8459e5c855",
-        "message_id": "c9d678d9-5d2b-4184-bf4e-d8b6fd55f510",
-        "phone_e164": "+5511937517702",
-        "conversation_id": "de9cc673-ee26-467d-bac2-c3de0eef2468"
+        "outbox_id": "e1b71ce2-8027-4f3c-b234-375eab022e7f",
+        "message_id": "459eafca-2322-42bd-b808-a2b004b689bc",
+        "phone_e164": "+5511962037662",
+        "conversation_id": "92738afd-58db-4cf8-954b-7e8b71f2009c"
       },
       "completed": true
     },
     {
       "label": "C_PAUSE-2",
-      "outbox_id": "4a9bfc08-397b-4337-b048-839af653954f",
+      "outbox_id": "5c5a7a35-a6e6-4372-b80a-9c51ad710760",
       "first_claim": {
         "body": "Tudo bem. Pausamos este atendimento por enquanto. Quando você voltar, continuamos daqui sem misturar este caso com outro.",
         "claimed": true,
-        "outbox_id": "4a9bfc08-397b-4337-b048-839af653954f",
-        "message_id": "64b33a77-763d-4b7a-b4cf-d255dfe75845",
-        "phone_e164": "+5511937517702",
-        "conversation_id": "de9cc673-ee26-467d-bac2-c3de0eef2468"
+        "outbox_id": "5c5a7a35-a6e6-4372-b80a-9c51ad710760",
+        "message_id": "af782e37-529d-4f25-9f2e-8c341d217cd4",
+        "phone_e164": "+5511962037662",
+        "conversation_id": "92738afd-58db-4cf8-954b-7e8b71f2009c"
       },
       "completed": true
     },
     {
       "label": "C_PAUSE-3",
-      "outbox_id": "91b82a79-fbae-47a3-80dc-1c9ab4b47c16",
+      "outbox_id": "7a4285da-b1a3-4ab0-bf8a-1e4901c3d77a",
       "first_claim": {
         "body": "Retomamos o atendimento de serviços no jazigo. Podemos continuar de onde paramos; Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
         "claimed": true,
-        "outbox_id": "91b82a79-fbae-47a3-80dc-1c9ab4b47c16",
-        "message_id": "3ffa7922-7254-4e93-bde8-a319689856da",
-        "phone_e164": "+5511937517702",
-        "conversation_id": "de9cc673-ee26-467d-bac2-c3de0eef2468"
+        "outbox_id": "7a4285da-b1a3-4ab0-bf8a-1e4901c3d77a",
+        "message_id": "7364b5f3-dd2c-4afa-9414-bc193cc95e06",
+        "phone_e164": "+5511962037662",
+        "conversation_id": "92738afd-58db-4cf8-954b-7e8b71f2009c"
       },
       "completed": true
     },
     {
       "label": "D_HANDOFF-1",
-      "outbox_id": "ce330545-8a1b-45ed-b4e8-f96838541001",
+      "outbox_id": "19d544fc-f6c4-4289-9ba3-69c996265e70",
       "first_claim": {
         "body": "Entendi. Registrei seu pedido de encaminhamento à equipe. As informações já enviadas permanecem no atendimento.",
         "claimed": true,
-        "outbox_id": "ce330545-8a1b-45ed-b4e8-f96838541001",
-        "message_id": "6f1a643b-6140-4ab0-90c8-dc7c99ea9c7c",
-        "phone_e164": "+5511937533043",
-        "conversation_id": "694e4360-db20-438e-baa9-6174f59dff8a"
+        "outbox_id": "19d544fc-f6c4-4289-9ba3-69c996265e70",
+        "message_id": "30c4e8c7-8a26-443f-8838-ec0a4de942d2",
+        "phone_e164": "+5511962052083",
+        "conversation_id": "f1242c09-562c-4001-a561-a9e4c988bde1"
+      },
+      "completed": true
+    },
+    {
+      "label": "K_OPERATOR_RESUME-1",
+      "outbox_id": "b42d0db1-ea4c-4b7e-9e8e-1c2bdf154405",
+      "first_claim": {
+        "body": "Entendi. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
+        "claimed": true,
+        "outbox_id": "b42d0db1-ea4c-4b7e-9e8e-1c2bdf154405",
+        "message_id": "4617731f-51cd-456a-b8aa-cfecc376a597",
+        "phone_e164": "+5511962075230",
+        "conversation_id": "e653ac88-d2d9-4988-83f9-274ad95d364b"
+      },
+      "completed": true
+    },
+    {
+      "label": "K_OPERATOR_RESUME-2",
+      "outbox_id": "f719c749-be21-4307-9626-828b26bfbd66",
+      "first_claim": {
+        "body": "Entendi. Registrei seu pedido de encaminhamento à equipe. As informações já enviadas permanecem no atendimento.\n\nProtocolo do atendimento: SAN-20260919-000006.",
+        "claimed": true,
+        "outbox_id": "f719c749-be21-4307-9626-828b26bfbd66",
+        "message_id": "af3f11c9-32f7-4bef-9525-b9e2a9f5af62",
+        "phone_e164": "+5511962075230",
+        "conversation_id": "e653ac88-d2d9-4988-83f9-274ad95d364b"
       },
       "completed": true
     },
     {
       "label": "E_DOCUMENTS-1",
-      "outbox_id": "452de69b-9620-4601-a1f2-6893a280a8ae",
+      "outbox_id": "e7c66f6b-c9c9-4d19-a0fb-42da386aaee7",
       "first_claim": {
         "body": "Entendi que você já enviou o documento sobre Ana. Registrei essa declaração, mas o arquivo ainda precisa estar disponível para confirmação de recebimento e conferência.",
         "claimed": true,
-        "outbox_id": "452de69b-9620-4601-a1f2-6893a280a8ae",
-        "message_id": "88875da9-d973-43c9-91ee-e7de53a49914",
-        "phone_e164": "+5511937556484",
-        "conversation_id": "c38959c2-0d8d-4456-ac8b-23e1a78ec84b"
+        "outbox_id": "e7c66f6b-c9c9-4d19-a0fb-42da386aaee7",
+        "message_id": "4f54148e-5fcb-4dc7-9b49-92d3a65bbabe",
+        "phone_e164": "+5511962104924",
+        "conversation_id": "73db2e21-ce02-4872-9fbf-7f964cafaea3"
       },
       "completed": true
     },
     {
       "label": "E_DOCUMENTS-2",
-      "outbox_id": "7d4acbc6-32d1-40f2-89b3-2e9ab45f5db3",
+      "outbox_id": "e9f83acf-0694-4f76-b356-c72e89e7db08",
       "first_claim": {
         "body": "Entendi. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
         "claimed": true,
-        "outbox_id": "7d4acbc6-32d1-40f2-89b3-2e9ab45f5db3",
-        "message_id": "03bd2837-cb63-4b1f-bd61-1f048b44a49c",
-        "phone_e164": "+5511937556484",
-        "conversation_id": "c38959c2-0d8d-4456-ac8b-23e1a78ec84b"
+        "outbox_id": "e9f83acf-0694-4f76-b356-c72e89e7db08",
+        "message_id": "370f9f4d-cba8-44e6-adf5-f868debbf03b",
+        "phone_e164": "+5511962104924",
+        "conversation_id": "73db2e21-ce02-4872-9fbf-7f964cafaea3"
       },
       "completed": true
     },
     {
       "label": "E_DOCUMENTS-3",
-      "outbox_id": "a4379bce-2b00-4268-8d59-2826f13b43fb",
+      "outbox_id": "ef5f5e57-ab0c-4b39-8be4-dd27c18359d8",
       "first_claim": {
         "body": "Certo, vou manter este atendimento separado para Bruno Sintético. Entendi. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
         "claimed": true,
-        "outbox_id": "a4379bce-2b00-4268-8d59-2826f13b43fb",
-        "message_id": "909ebf06-dc5c-499a-8492-b96bed3a2299",
-        "phone_e164": "+5511937556484",
-        "conversation_id": "c38959c2-0d8d-4456-ac8b-23e1a78ec84b"
+        "outbox_id": "ef5f5e57-ab0c-4b39-8be4-dd27c18359d8",
+        "message_id": "2beebc6e-10a5-4b4f-ac90-89512c80257d",
+        "phone_e164": "+5511962104924",
+        "conversation_id": "73db2e21-ce02-4872-9fbf-7f964cafaea3"
       },
       "completed": true
     },
     {
       "label": "E_DOCUMENTS-4",
-      "outbox_id": "53b5edea-1291-4bd1-aff2-e7eb76ed0f6e",
+      "outbox_id": "3e84bfaf-0453-420d-87b6-e2c11ee26368",
       "first_claim": {
         "body": "Entendi que você já enviou o documento sobre Bruno. Registrei essa declaração, mas o arquivo ainda precisa estar disponível para confirmação de recebimento e conferência.",
         "claimed": true,
-        "outbox_id": "53b5edea-1291-4bd1-aff2-e7eb76ed0f6e",
-        "message_id": "68f5c90b-1c25-457e-ae51-c76513f161cf",
-        "phone_e164": "+5511937556484",
-        "conversation_id": "c38959c2-0d8d-4456-ac8b-23e1a78ec84b"
+        "outbox_id": "3e84bfaf-0453-420d-87b6-e2c11ee26368",
+        "message_id": "2a63091f-ce8d-41c1-836a-24fcec649d1d",
+        "phone_e164": "+5511962104924",
+        "conversation_id": "73db2e21-ce02-4872-9fbf-7f964cafaea3"
       },
       "completed": true
     },
     {
       "label": "E_DOCUMENTS-5",
-      "outbox_id": "a7990d47-69b7-48b7-a1c0-aa370ede7fe0",
+      "outbox_id": "7709b657-c7a6-4f3c-978b-1d2d69195a5d",
       "first_claim": {
         "body": "Entendi que o arquivo sobre Ana enviado estava errado. Não vou tratá-lo como válido; quando puder, envie a versão correta para uma nova conferência.",
         "claimed": true,
-        "outbox_id": "a7990d47-69b7-48b7-a1c0-aa370ede7fe0",
-        "message_id": "2bf8dccb-5aa5-42f5-84fa-9a40a4774e29",
-        "phone_e164": "+5511937556484",
-        "conversation_id": "c38959c2-0d8d-4456-ac8b-23e1a78ec84b"
+        "outbox_id": "7709b657-c7a6-4f3c-978b-1d2d69195a5d",
+        "message_id": "d7f3f12d-69f8-44a4-b2ba-422e9b4d2210",
+        "phone_e164": "+5511962104924",
+        "conversation_id": "73db2e21-ce02-4872-9fbf-7f964cafaea3"
       },
       "completed": true
     },
     {
       "label": "E_DOCUMENTS-6",
-      "outbox_id": "be76e33b-e908-40be-a629-6f9573773893",
+      "outbox_id": "134cdbb6-3b90-4b5f-9f88-757424d237cb",
       "first_claim": {
         "body": "Certo. Quando você enviar a versão correta, ela será conferida separadamente. O arquivo anterior não será tratado como validado.",
         "claimed": true,
-        "outbox_id": "be76e33b-e908-40be-a629-6f9573773893",
-        "message_id": "eb877c6e-dcb7-4128-9382-56cfa7b9ce15",
-        "phone_e164": "+5511937556484",
-        "conversation_id": "c38959c2-0d8d-4456-ac8b-23e1a78ec84b"
+        "outbox_id": "134cdbb6-3b90-4b5f-9f88-757424d237cb",
+        "message_id": "32cf4141-43f0-494a-a386-f2bd6fdc1554",
+        "phone_e164": "+5511962104924",
+        "conversation_id": "73db2e21-ce02-4872-9fbf-7f964cafaea3"
       },
       "completed": true
     },
     {
       "label": "F_PRIVACY-1",
-      "outbox_id": "5dcced55-172d-48d5-ab57-726a772ab213",
+      "outbox_id": "0348f16f-47a4-49fe-a3b0-b45693963d3e",
       "first_claim": {
         "body": "Não posso informar dados de outra pessoa ou atendimento. Posso ajudar somente com um atendimento seu.",
         "claimed": true,
-        "outbox_id": "5dcced55-172d-48d5-ab57-726a772ab213",
-        "message_id": "61804be9-cc50-4159-9879-7fafeb2c7398",
-        "phone_e164": "+5511937591655",
-        "conversation_id": "9503cea4-48cf-4f8d-92a2-0002bc1c5fc1"
+        "outbox_id": "0348f16f-47a4-49fe-a3b0-b45693963d3e",
+        "message_id": "ae9daeb6-f068-439c-a0d8-5f0e5a56cadd",
+        "phone_e164": "+5511962138245",
+        "conversation_id": "d9ea48da-1d1f-4243-9602-541361610489"
       },
       "completed": true
     },
     {
       "label": "F_PRIVACY-2",
-      "outbox_id": "618d2564-5670-45c5-8a04-efa2b70d13e7",
+      "outbox_id": "66b89974-5e4c-4650-8856-94de745fce34",
       "first_claim": {
         "body": "Não posso informar essa data ou prazo porque pertence a outra pessoa ou atendimento. Posso orientar como consultar um atendimento seu.",
         "claimed": true,
-        "outbox_id": "618d2564-5670-45c5-8a04-efa2b70d13e7",
-        "message_id": "743f74a5-807a-4a4c-9c8a-cffd7a17a72c",
-        "phone_e164": "+5511937591655",
-        "conversation_id": "9503cea4-48cf-4f8d-92a2-0002bc1c5fc1"
+        "outbox_id": "66b89974-5e4c-4650-8856-94de745fce34",
+        "message_id": "81c103a4-2c1e-405f-b8de-e0a9b23d7575",
+        "phone_e164": "+5511962138245",
+        "conversation_id": "d9ea48da-1d1f-4243-9602-541361610489"
       },
       "completed": true
     },
     {
       "label": "F_PRIVACY-3",
-      "outbox_id": "a9c28572-b96b-4be0-b63d-12382f674c5c",
+      "outbox_id": "27989c34-0b62-4f8e-906d-e9ddf21f6f68",
       "first_claim": {
         "body": "Entendo que você insiste, mas não posso abrir exceção: dados de outro atendimento continuam protegidos. Posso ajudar somente com um atendimento seu.",
         "claimed": true,
-        "outbox_id": "a9c28572-b96b-4be0-b63d-12382f674c5c",
-        "message_id": "98208508-833f-4564-9ee6-319b4ee1df5c",
-        "phone_e164": "+5511937591655",
-        "conversation_id": "9503cea4-48cf-4f8d-92a2-0002bc1c5fc1"
+        "outbox_id": "27989c34-0b62-4f8e-906d-e9ddf21f6f68",
+        "message_id": "43027a8d-82b5-4849-8e92-85de5b684ed7",
+        "phone_e164": "+5511962138245",
+        "conversation_id": "d9ea48da-1d1f-4243-9602-541361610489"
       },
       "completed": true
     },
     {
       "label": "G_LOCATION-1",
-      "outbox_id": "5909ced4-bcc9-4ae6-9a4a-3beccb8405a6",
+      "outbox_id": "8c3b084c-b408-433d-bb45-b33b2bb80f1a",
       "first_claim": {
         "body": "Entendi que você quer localizar Bruno Sintético. Qual referência você tem, como quadra, setor, rua ou número?",
         "claimed": true,
-        "outbox_id": "5909ced4-bcc9-4ae6-9a4a-3beccb8405a6",
-        "message_id": "93cd0c50-1a4a-4571-add7-18ddd1372d45",
-        "phone_e164": "+5511937608896",
-        "conversation_id": "8b748dd3-9aef-4428-a50a-57d3643b8b34"
+        "outbox_id": "8c3b084c-b408-433d-bb45-b33b2bb80f1a",
+        "message_id": "ce1bef20-a3b2-484e-833e-90021362262f",
+        "phone_e164": "+5511962153236",
+        "conversation_id": "4899e3f1-23a2-492f-bfe8-22532c95dbff"
       },
       "completed": true
     },
     {
       "label": "G_LOCATION-2",
-      "outbox_id": "cab49e92-dec6-4a89-b9e8-aaf8ca16d007",
+      "outbox_id": "f20caa9c-19bb-4756-a44d-6da70fc6d797",
       "first_claim": {
         "body": "A referência setor azul, jazigo 3 já está registrada para Bruno Sintético. Não preciso pedir o nome novamente; a confirmação oficial ainda depende de consulta autorizada.",
         "claimed": true,
-        "outbox_id": "cab49e92-dec6-4a89-b9e8-aaf8ca16d007",
-        "message_id": "b4364ac0-d672-4f55-b367-e709b06b0329",
-        "phone_e164": "+5511937608896",
-        "conversation_id": "8b748dd3-9aef-4428-a50a-57d3643b8b34"
+        "outbox_id": "f20caa9c-19bb-4756-a44d-6da70fc6d797",
+        "message_id": "5a977bb1-b10d-44a4-adf0-5bde19707f35",
+        "phone_e164": "+5511962153236",
+        "conversation_id": "4899e3f1-23a2-492f-bfe8-22532c95dbff"
       },
       "completed": true
     },
     {
       "label": "G_LOCATION-3",
-      "outbox_id": "09444f6b-5c30-417d-a1fb-eaa9f9353f85",
+      "outbox_id": "fbf2e7a6-be31-4e43-b1d8-70b28abf3adb",
       "first_claim": {
         "body": "A referência setor azul, jazigo 3 já está registrada para Bruno Sintético. Não preciso pedir o nome novamente; a confirmação oficial ainda depende de consulta autorizada.",
         "claimed": true,
-        "outbox_id": "09444f6b-5c30-417d-a1fb-eaa9f9353f85",
-        "message_id": "42c507d3-5a21-46d1-9c12-3fb00666271c",
-        "phone_e164": "+5511937608896",
-        "conversation_id": "8b748dd3-9aef-4428-a50a-57d3643b8b34"
+        "outbox_id": "fbf2e7a6-be31-4e43-b1d8-70b28abf3adb",
+        "message_id": "404f8e50-be12-44b5-a68a-a5443a060012",
+        "phone_e164": "+5511962153236",
+        "conversation_id": "4899e3f1-23a2-492f-bfe8-22532c95dbff"
       },
       "completed": true
     },
     {
       "label": "H_PROTOCOL-1",
-      "outbox_id": "a94a04b1-2c2c-480d-a739-ee9898b17591",
+      "outbox_id": "c0818b3d-35ba-43fa-9b0c-75b4c6f00b73",
       "first_claim": {
         "body": "Ainda não tenho um número de protocolo confirmado para informar. Se você já tem uma referência do atendimento, diga qual é; não vou inventar um número.",
         "claimed": true,
-        "outbox_id": "a94a04b1-2c2c-480d-a739-ee9898b17591",
-        "message_id": "4bdbc9f4-89f6-4ec5-9a40-799fcf57f893",
-        "phone_e164": "+5511937638097",
-        "conversation_id": "074b50f3-0031-4af9-bb7c-2f928dbe165f"
+        "outbox_id": "c0818b3d-35ba-43fa-9b0c-75b4c6f00b73",
+        "message_id": "4796fb08-a6be-46de-a4ef-af143bc1fffc",
+        "phone_e164": "+5511962167637",
+        "conversation_id": "81198f2e-57d7-482a-9611-fde43002420a"
       },
       "completed": true
     },
     {
       "label": "I_NO_REQUEST-1",
-      "outbox_id": "e3c51c8b-0413-4ca5-8ab5-b4574661c78c",
+      "outbox_id": "dad7e6d3-10d9-4df1-8a10-f7851e511c32",
       "first_claim": {
         "body": "Tudo bem. Não vou abrir uma solicitação. Se você quer apenas uma informação, diga qual é a sua dúvida e eu respondo dentro do que puder confirmar.",
         "claimed": true,
-        "outbox_id": "e3c51c8b-0413-4ca5-8ab5-b4574661c78c",
-        "message_id": "c49c2f3a-d9e4-470c-b0a9-dcb4822a4c69",
-        "phone_e164": "+5511937645458",
-        "conversation_id": "3dcd74a8-f034-44c7-a305-b788fc5b3947"
+        "outbox_id": "dad7e6d3-10d9-4df1-8a10-f7851e511c32",
+        "message_id": "50f45069-cbec-4896-919f-89eb0fb7d444",
+        "phone_e164": "+5511962172568",
+        "conversation_id": "2dd724c9-3f42-416e-97b3-e3c35f7762ef"
       },
       "completed": true
     },
     {
       "label": "J_CLOSE-1",
-      "outbox_id": "46f9b59d-35af-4272-87a9-05ecd646e68c",
+      "outbox_id": "4f714995-7c4c-475f-a6dc-475ad33d87bf",
       "first_claim": {
         "body": "Entendi. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
         "claimed": true,
-        "outbox_id": "46f9b59d-35af-4272-87a9-05ecd646e68c",
-        "message_id": "301a0cab-30c9-44b6-addc-6255e9600ec2",
-        "phone_e164": "+5511937655429",
-        "conversation_id": "61d8a07c-f0d0-44d6-b84e-f1f5a684f5d4"
+        "outbox_id": "4f714995-7c4c-475f-a6dc-475ad33d87bf",
+        "message_id": "2053b14f-43a8-4dc0-a123-e5e73c7ba41c",
+        "phone_e164": "+5511962180909",
+        "conversation_id": "1723e621-493f-4bb8-8b85-a8ebd474cc88"
       },
       "completed": true
     },
     {
       "label": "J_CLOSE-2",
-      "outbox_id": "35d81049-3c06-4ed3-b74f-f838a4f1e790",
+      "outbox_id": "457f6204-74b6-4be8-9383-2572ed8b7275",
       "first_claim": {
         "body": "Certo. Encerramos este atendimento sem criar uma nova pendência. As informações já registradas permanecem no histórico.",
         "claimed": true,
-        "outbox_id": "35d81049-3c06-4ed3-b74f-f838a4f1e790",
-        "message_id": "861b363c-c586-4ff3-9ec8-3aee79125f1d",
-        "phone_e164": "+5511937655429",
-        "conversation_id": "61d8a07c-f0d0-44d6-b84e-f1f5a684f5d4"
+        "outbox_id": "457f6204-74b6-4be8-9383-2572ed8b7275",
+        "message_id": "187b7e27-b41e-45da-9ed1-b3edde196a7f",
+        "phone_e164": "+5511962180909",
+        "conversation_id": "1723e621-493f-4bb8-8b85-a8ebd474cc88"
       },
       "completed": true
     },
     {
-      "label": "J_CLOSE-3",
-      "outbox_id": "2f59da03-8023-4d3b-b8ed-6b77624185f4",
+      "label": "J_CLOSE-5",
+      "outbox_id": "6cb957fc-c49e-4b7d-92a6-3f4da7b9f80a",
       "first_claim": {
-        "body": "Entendi. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
+        "body": "Retomamos o atendimento de serviços no jazigo. Podemos continuar de onde paramos; Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
         "claimed": true,
-        "outbox_id": "2f59da03-8023-4d3b-b8ed-6b77624185f4",
-        "message_id": "ffe6410b-dd96-4498-ac7a-d219e725bc4b",
-        "phone_e164": "+5511937655429",
-        "conversation_id": "61d8a07c-f0d0-44d6-b84e-f1f5a684f5d4"
+        "outbox_id": "6cb957fc-c49e-4b7d-92a6-3f4da7b9f80a",
+        "message_id": "f70d8280-3427-45e0-a4d6-78d2aa2b1ac6",
+        "phone_e164": "+5511962180909",
+        "conversation_id": "1723e621-493f-4bb8-8b85-a8ebd474cc88"
       },
       "completed": true
     },
     {
-      "label": "J_CLOSE-4",
-      "outbox_id": "2c6f5646-f491-45e3-ad7d-0685d4a6745d",
+      "label": "J_AMBIGUOUS-1",
+      "outbox_id": "d3cc6978-c080-4474-8ee4-057234a075b7",
       "first_claim": {
         "body": "Entendi. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
         "claimed": true,
-        "outbox_id": "2c6f5646-f491-45e3-ad7d-0685d4a6745d",
-        "message_id": "a705bced-ad8c-4ff8-a3e8-93aa2e2beffe",
-        "phone_e164": "+5511937655429",
-        "conversation_id": "61d8a07c-f0d0-44d6-b84e-f1f5a684f5d4"
+        "outbox_id": "d3cc6978-c080-4474-8ee4-057234a075b7",
+        "message_id": "57982a4e-fbda-4821-b79c-a0ed2522ae43",
+        "phone_e164": "+5511962220811",
+        "conversation_id": "cffc6f9c-b665-4f08-bfc4-82232d725de3"
+      },
+      "completed": true
+    },
+    {
+      "label": "J_AMBIGUOUS-2",
+      "outbox_id": "e791fa1b-ecc3-42a8-81a5-e5306066c0fd",
+      "first_claim": {
+        "body": "Certo. Encerramos este atendimento sem criar uma nova pendência. As informações já registradas permanecem no histórico.",
+        "claimed": true,
+        "outbox_id": "e791fa1b-ecc3-42a8-81a5-e5306066c0fd",
+        "message_id": "4aaa7fd9-0f95-4c8d-8fac-458f43973720",
+        "phone_e164": "+5511962220811",
+        "conversation_id": "cffc6f9c-b665-4f08-bfc4-82232d725de3"
       },
       "completed": true
     }
@@ -1165,15 +1397,15 @@
       "stage": "interpretation",
       "runtime_result": {
         "kind": "INTERPRETATION_UNAVAILABLE",
-        "conversation_id": "b54c1521-e469-40e6-ba5f-fe86f1bf13a4",
-        "inbound_message_id": "290af8f3-6aae-40db-af95-dcf368f43617",
+        "conversation_id": "af161468-d5ba-43c3-ada3-15d39809f74f",
+        "inbound_message_id": "04d1b833-a9f9-4c0d-9ee4-fb519aa7c36d",
         "revision": 1,
         "reply_body": null,
         "outbox_id": null,
         "event_kind": null
       },
       "persisted": {
-        "conversation_id": "b54c1521-e469-40e6-ba5f-fe86f1bf13a4",
+        "conversation_id": "af161468-d5ba-43c3-ada3-15d39809f74f",
         "revision": 1,
         "events": 1,
         "outbox": 0,
@@ -1183,7 +1415,7 @@
       }
     },
     {
-      "stage": "binding_materialization_mid_commit",
+      "stage": "post_materialization_failpoint",
       "revision": 0,
       "counts": {
         "receipts": 1,
@@ -1198,9 +1430,9 @@
   ],
   "evidence": [
     {
-      "conversation_id": "ad17b882-b016-4b3d-adde-3c0fbfd4eb9b",
-      "contact_name": "SANA-V4-QUAL-v4q-1789833744982-c599a46a-A_TOPIC",
-      "external_id": "5511937454370",
+      "conversation_id": "2fda051b-26f4-43a3-b303-7bed4e45e840",
+      "contact_name": "SANA-V4-QUAL-v4q-1789836199504-2c055d5c-A_TOPIC",
+      "external_id": "5511962001070",
       "subject": "comercial",
       "stage": "pendencias",
       "automation_mode": "bot",
@@ -1211,7 +1443,7 @@
         "cases": [
           {
             "case_id": "case001",
-            "subject_ref": "Ana Fictícia:351eb4d1-42f1-41ea-b14f-66cecebd88c6",
+            "subject_ref": "Ana Fictícia:1200b36e-8250-4186-a13a-7af77d122e95",
             "subject_kind": "GRAVE",
             "opened_at_seq": 1
           }
@@ -1281,7 +1513,7 @@
         "current_topic": "JAZIGO_SERVICOS",
         "schema_version": "santana-conversation-state/v1",
         "acompanhamentos": [],
-        "conversation_id": "ad17b882-b016-4b3d-adde-3c0fbfd4eb9b",
+        "conversation_id": "2fda051b-26f4-43a3-b303-7bed4e45e840",
         "forbidden_goals": [],
         "pending_actions": [],
         "parked_questions": [],
@@ -1291,36 +1523,40 @@
           "asked_at_seq": 4,
           "question_code": "Q_GRAVE_SERVICE_DESCRIPTION",
           "priority_class": "NEXT_ACTION_DATA"
+        },
+        "session_lifecycle": {
+          "status": "ACTIVE",
+          "changed_at_seq": 0
         }
       },
       "receipts": [
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-A_TOPIC-1"
+          "external_message_id": "v4q-1789836199504-2c055d5c-A_TOPIC-1"
         },
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-A_TOPIC-2"
+          "external_message_id": "v4q-1789836199504-2c055d5c-A_TOPIC-2"
         },
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-A_TOPIC-3"
+          "external_message_id": "v4q-1789836199504-2c055d5c-A_TOPIC-3"
         }
       ],
       "events": [
         {
           "revision": 1,
-          "outbox_id": "5ad55504-141a-450b-bde8-21256db58124",
+          "outbox_id": "0fce737f-9b29-4632-8f41-159f23364feb",
           "event_kind": "NEW_GOAL"
         },
         {
           "revision": 2,
-          "outbox_id": "76c38eba-1f98-40fe-a932-965a4e80e3d3",
+          "outbox_id": "098ed4b4-d168-4a10-aeef-c331e964dc2f",
           "event_kind": "RECLASSIFICATION"
         },
         {
           "revision": 3,
-          "outbox_id": "448ce33c-0f5c-4f92-a899-f497556c2f6e",
+          "outbox_id": "63c1cddc-60de-42dd-93f3-0d20af20627a",
           "event_kind": "RECLASSIFICATION"
         }
       ],
@@ -1328,24 +1564,24 @@
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "5ad55504-141a-450b-bde8-21256db58124"
+          "outbox_id": "0fce737f-9b29-4632-8f41-159f23364feb"
         },
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "76c38eba-1f98-40fe-a932-965a4e80e3d3"
+          "outbox_id": "098ed4b4-d168-4a10-aeef-c331e964dc2f"
         },
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "448ce33c-0f5c-4f92-a899-f497556c2f6e"
+          "outbox_id": "63c1cddc-60de-42dd-93f3-0d20af20627a"
         }
       ]
     },
     {
-      "conversation_id": "81084aa5-ae29-4688-beb8-8f7e0c4df50a",
-      "contact_name": "SANA-V4-QUAL-v4q-1789833744982-c599a46a-B_FOCUS",
-      "external_id": "5511937474751",
+      "conversation_id": "424e0041-211c-4ab9-9807-9088598a340b",
+      "contact_name": "SANA-V4-QUAL-v4q-1789836199504-2c055d5c-B_FOCUS",
+      "external_id": "5511962017921",
       "subject": "comercial",
       "stage": "pendencias",
       "automation_mode": "bot",
@@ -1356,13 +1592,13 @@
         "cases": [
           {
             "case_id": "case001",
-            "subject_ref": "Ana Fictícia:e24ed676-b121-4ff9-b3b2-e1581a62ad5f",
+            "subject_ref": "Ana Fictícia:41e55340-b702-448f-b3f8-e4c966001af4",
             "subject_kind": "GRAVE",
             "opened_at_seq": 1
           },
           {
             "case_id": "case002",
-            "subject_ref": "Bruno Sintético:887f79ed-ad0f-4be1-95a9-3b2334cbd779",
+            "subject_ref": "Bruno Sintético:5c187f83-3cdd-4040-b333-cf373ad1e0ac",
             "subject_kind": "GRAVE",
             "opened_at_seq": 3
           }
@@ -1469,7 +1705,7 @@
         "current_topic": "JAZIGO_SERVICOS",
         "schema_version": "santana-conversation-state/v1",
         "acompanhamentos": [],
-        "conversation_id": "81084aa5-ae29-4688-beb8-8f7e0c4df50a",
+        "conversation_id": "424e0041-211c-4ab9-9807-9088598a340b",
         "forbidden_goals": [],
         "pending_actions": [],
         "parked_questions": [],
@@ -1479,36 +1715,40 @@
           "asked_at_seq": 1,
           "question_code": "Q_GRAVE_SERVICE_DESCRIPTION",
           "priority_class": "NEXT_ACTION_DATA"
+        },
+        "session_lifecycle": {
+          "status": "ACTIVE",
+          "changed_at_seq": 0
         }
       },
       "receipts": [
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-B_FOCUS-1"
+          "external_message_id": "v4q-1789836199504-2c055d5c-B_FOCUS-1"
         },
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-B_FOCUS-2"
+          "external_message_id": "v4q-1789836199504-2c055d5c-B_FOCUS-2"
         },
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-B_FOCUS-3"
+          "external_message_id": "v4q-1789836199504-2c055d5c-B_FOCUS-3"
         }
       ],
       "events": [
         {
           "revision": 1,
-          "outbox_id": "9e7410bf-1edd-491e-ac3a-421b4f111005",
+          "outbox_id": "c1581fd8-587b-4a0b-b050-6f54062bd213",
           "event_kind": "NEW_GOAL"
         },
         {
           "revision": 2,
-          "outbox_id": "71874405-2781-460a-932c-133929297414",
+          "outbox_id": "81ad8896-8e70-4a6e-aab4-fbbc9da485ad",
           "event_kind": "NEW_GOAL"
         },
         {
           "revision": 3,
-          "outbox_id": "f4c729ae-4da4-4ce7-9c88-2df684b7d8eb",
+          "outbox_id": "ec92aea8-63b9-4550-a3eb-2e5b93c14e23",
           "event_kind": "SOCIAL"
         }
       ],
@@ -1516,24 +1756,24 @@
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "9e7410bf-1edd-491e-ac3a-421b4f111005"
+          "outbox_id": "c1581fd8-587b-4a0b-b050-6f54062bd213"
         },
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "71874405-2781-460a-932c-133929297414"
+          "outbox_id": "81ad8896-8e70-4a6e-aab4-fbbc9da485ad"
         },
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "f4c729ae-4da4-4ce7-9c88-2df684b7d8eb"
+          "outbox_id": "ec92aea8-63b9-4550-a3eb-2e5b93c14e23"
         }
       ]
     },
     {
-      "conversation_id": "de9cc673-ee26-467d-bac2-c3de0eef2468",
-      "contact_name": "SANA-V4-QUAL-v4q-1789833744982-c599a46a-C_PAUSE",
-      "external_id": "5511937517702",
+      "conversation_id": "92738afd-58db-4cf8-954b-7e8b71f2009c",
+      "contact_name": "SANA-V4-QUAL-v4q-1789836199504-2c055d5c-C_PAUSE",
+      "external_id": "5511962037662",
       "subject": "comercial",
       "stage": "pendencias",
       "automation_mode": "bot",
@@ -1544,7 +1784,7 @@
         "cases": [
           {
             "case_id": "case001",
-            "subject_ref": "demand:ed23d552-e50c-441e-a178-2607cfcc1a54",
+            "subject_ref": "demand:824c22b5-e330-4197-98f4-bd13a8ce2dd7",
             "subject_kind": "GRAVE",
             "opened_at_seq": 1
           }
@@ -1591,7 +1831,7 @@
         "current_topic": "JAZIGO_SERVICOS",
         "schema_version": "santana-conversation-state/v1",
         "acompanhamentos": [],
-        "conversation_id": "de9cc673-ee26-467d-bac2-c3de0eef2468",
+        "conversation_id": "92738afd-58db-4cf8-954b-7e8b71f2009c",
         "forbidden_goals": [],
         "pending_actions": [],
         "parked_questions": [],
@@ -1601,36 +1841,40 @@
           "asked_at_seq": 3,
           "question_code": "Q_GRAVE_SERVICE_DESCRIPTION",
           "priority_class": "NEXT_ACTION_DATA"
+        },
+        "session_lifecycle": {
+          "status": "ACTIVE",
+          "changed_at_seq": 3
         }
       },
       "receipts": [
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-C_PAUSE-1"
+          "external_message_id": "v4q-1789836199504-2c055d5c-C_PAUSE-1"
         },
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-C_PAUSE-2"
+          "external_message_id": "v4q-1789836199504-2c055d5c-C_PAUSE-2"
         },
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-C_PAUSE-3"
+          "external_message_id": "v4q-1789836199504-2c055d5c-C_PAUSE-3"
         }
       ],
       "events": [
         {
           "revision": 1,
-          "outbox_id": "1952ec2c-75b2-449e-8e3a-9e8459e5c855",
+          "outbox_id": "e1b71ce2-8027-4f3c-b234-375eab022e7f",
           "event_kind": "NEW_GOAL"
         },
         {
           "revision": 2,
-          "outbox_id": "4a9bfc08-397b-4337-b048-839af653954f",
+          "outbox_id": "5c5a7a35-a6e6-4372-b80a-9c51ad710760",
           "event_kind": "SOCIAL"
         },
         {
           "revision": 3,
-          "outbox_id": "91b82a79-fbae-47a3-80dc-1c9ab4b47c16",
+          "outbox_id": "7a4285da-b1a3-4ab0-bf8a-1e4901c3d77a",
           "event_kind": "SOCIAL"
         }
       ],
@@ -1638,24 +1882,24 @@
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "1952ec2c-75b2-449e-8e3a-9e8459e5c855"
+          "outbox_id": "e1b71ce2-8027-4f3c-b234-375eab022e7f"
         },
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "4a9bfc08-397b-4337-b048-839af653954f"
+          "outbox_id": "5c5a7a35-a6e6-4372-b80a-9c51ad710760"
         },
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "91b82a79-fbae-47a3-80dc-1c9ab4b47c16"
+          "outbox_id": "7a4285da-b1a3-4ab0-bf8a-1e4901c3d77a"
         }
       ]
     },
     {
-      "conversation_id": "19891aa4-9d9e-40e0-946e-36310e82105f",
-      "contact_name": "SANA-V4-QUAL-v4q-1789833744982-c599a46a-CONCURRENT",
-      "external_id": "5511937692011",
+      "conversation_id": "88d1ed9c-e909-4454-99ca-389e565a4d98",
+      "contact_name": "SANA-V4-QUAL-v4q-1789836199504-2c055d5c-CONCURRENT",
+      "external_id": "5511962254731",
       "subject": "comercial",
       "stage": "pendencias",
       "automation_mode": "bot",
@@ -1666,7 +1910,7 @@
         "cases": [
           {
             "case_id": "case001",
-            "subject_ref": "demand:d0536ad8-ebf4-4c30-922b-3491e9abbafc",
+            "subject_ref": "demand:328c98da-3432-421d-9495-5d4bc1419602",
             "subject_kind": "GRAVE",
             "opened_at_seq": 1
           }
@@ -1703,7 +1947,7 @@
         "current_topic": "JAZIGO_SERVICOS",
         "schema_version": "santana-conversation-state/v1",
         "acompanhamentos": [],
-        "conversation_id": "19891aa4-9d9e-40e0-946e-36310e82105f",
+        "conversation_id": "88d1ed9c-e909-4454-99ca-389e565a4d98",
         "forbidden_goals": [],
         "pending_actions": [],
         "parked_questions": [],
@@ -1713,18 +1957,22 @@
           "asked_at_seq": 1,
           "question_code": "Q_GRAVE_SERVICE_DESCRIPTION",
           "priority_class": "NEXT_ACTION_DATA"
+        },
+        "session_lifecycle": {
+          "status": "ACTIVE",
+          "changed_at_seq": 0
         }
       },
       "receipts": [
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-concurrent"
+          "external_message_id": "v4q-1789836199504-2c055d5c-concurrent"
         }
       ],
       "events": [
         {
           "revision": 1,
-          "outbox_id": "6c8bdd41-c8d5-4e68-bc08-7fb954b5565d",
+          "outbox_id": "ac5bdab5-64c0-4497-937d-00a9806e9d52",
           "event_kind": "NEW_GOAL"
         }
       ],
@@ -1732,14 +1980,14 @@
         {
           "status": "PENDING",
           "attempts": 0,
-          "outbox_id": "6c8bdd41-c8d5-4e68-bc08-7fb954b5565d"
+          "outbox_id": "ac5bdab5-64c0-4497-937d-00a9806e9d52"
         }
       ]
     },
     {
-      "conversation_id": "23f3a8b8-8d8c-4e4a-8403-ba82b1b4b93a",
-      "contact_name": "SANA-V4-QUAL-v4q-1789833744982-c599a46a-CRASH",
-      "external_id": "5511937698652",
+      "conversation_id": "106e78ea-6f37-4682-890a-6dff087c5cf1",
+      "contact_name": "SANA-V4-QUAL-v4q-1789836199504-2c055d5c-CRASH",
+      "external_id": "5511962260382",
       "subject": "comercial",
       "stage": "pendencias",
       "automation_mode": "bot",
@@ -1750,7 +1998,7 @@
         "cases": [
           {
             "case_id": "case001",
-            "subject_ref": "demand:0ac4fbda-d3c7-4035-81de-d7f226d4e000",
+            "subject_ref": "demand:b34cdcc7-2c47-4f03-853f-73286f4a5825",
             "subject_kind": "GRAVE",
             "opened_at_seq": 1
           }
@@ -1787,7 +2035,7 @@
         "current_topic": "JAZIGO_SERVICOS",
         "schema_version": "santana-conversation-state/v1",
         "acompanhamentos": [],
-        "conversation_id": "23f3a8b8-8d8c-4e4a-8403-ba82b1b4b93a",
+        "conversation_id": "106e78ea-6f37-4682-890a-6dff087c5cf1",
         "forbidden_goals": [],
         "pending_actions": [],
         "parked_questions": [],
@@ -1797,18 +2045,22 @@
           "asked_at_seq": 1,
           "question_code": "Q_GRAVE_SERVICE_DESCRIPTION",
           "priority_class": "NEXT_ACTION_DATA"
+        },
+        "session_lifecycle": {
+          "status": "ACTIVE",
+          "changed_at_seq": 0
         }
       },
       "receipts": [
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-CRASH-1"
+          "external_message_id": "v4q-1789836199504-2c055d5c-CRASH-1"
         }
       ],
       "events": [
         {
           "revision": 1,
-          "outbox_id": "bcc5a4d8-b8e8-4f92-acc1-7a2e2ab0b950",
+          "outbox_id": "b91870b7-5689-4e35-bba7-93b37a36ec72",
           "event_kind": "NEW_GOAL"
         }
       ],
@@ -1816,14 +2068,14 @@
         {
           "status": "SENT",
           "attempts": 2,
-          "outbox_id": "bcc5a4d8-b8e8-4f92-acc1-7a2e2ab0b950"
+          "outbox_id": "b91870b7-5689-4e35-bba7-93b37a36ec72"
         }
       ]
     },
     {
-      "conversation_id": "694e4360-db20-438e-baa9-6174f59dff8a",
-      "contact_name": "SANA-V4-QUAL-v4q-1789833744982-c599a46a-D_HANDOFF",
-      "external_id": "5511937533043",
+      "conversation_id": "f1242c09-562c-4001-a561-a9e4c988bde1",
+      "contact_name": "SANA-V4-QUAL-v4q-1789836199504-2c055d5c-D_HANDOFF",
+      "external_id": "5511962052083",
       "subject": "nao_classificado",
       "stage": "aguardando",
       "automation_mode": "human",
@@ -1863,30 +2115,34 @@
         "current_topic": null,
         "schema_version": "santana-conversation-state/v1",
         "acompanhamentos": [],
-        "conversation_id": "694e4360-db20-438e-baa9-6174f59dff8a",
+        "conversation_id": "f1242c09-562c-4001-a561-a9e4c988bde1",
         "forbidden_goals": [],
         "pending_actions": [],
         "parked_questions": [],
-        "pending_question": null
+        "pending_question": null,
+        "session_lifecycle": {
+          "status": "ACTIVE",
+          "changed_at_seq": 0
+        }
       },
       "receipts": [
         {
           "status": "HUMAN_ACTIVE",
-          "external_message_id": "v4q-1789833744982-c599a46a-D_HANDOFF-1"
+          "external_message_id": "v4q-1789836199504-2c055d5c-D_HANDOFF-1"
         },
         {
           "status": "HUMAN_ACTIVE",
-          "external_message_id": "v4q-1789833744982-c599a46a-D_HANDOFF-2"
+          "external_message_id": "v4q-1789836199504-2c055d5c-D_HANDOFF-2"
         },
         {
           "status": "HUMAN_ACTIVE",
-          "external_message_id": "v4q-1789833744982-c599a46a-D_HANDOFF-3"
+          "external_message_id": "v4q-1789836199504-2c055d5c-D_HANDOFF-3"
         }
       ],
       "events": [
         {
           "revision": 1,
-          "outbox_id": "ce330545-8a1b-45ed-b4e8-f96838541001",
+          "outbox_id": "19d544fc-f6c4-4289-9ba3-69c996265e70",
           "event_kind": "HUMAN_REQUEST"
         },
         {
@@ -1904,14 +2160,14 @@
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "ce330545-8a1b-45ed-b4e8-f96838541001"
+          "outbox_id": "19d544fc-f6c4-4289-9ba3-69c996265e70"
         }
       ]
     },
     {
-      "conversation_id": "c38959c2-0d8d-4456-ac8b-23e1a78ec84b",
-      "contact_name": "SANA-V4-QUAL-v4q-1789833744982-c599a46a-E_DOCUMENTS",
-      "external_id": "5511937556484",
+      "conversation_id": "73db2e21-ce02-4872-9fbf-7f964cafaea3",
+      "contact_name": "SANA-V4-QUAL-v4q-1789836199504-2c055d5c-E_DOCUMENTS",
+      "external_id": "5511962104924",
       "subject": "comercial",
       "stage": "pendencias",
       "automation_mode": "bot",
@@ -1922,7 +2178,7 @@
         "cases": [
           {
             "case_id": "case001",
-            "subject_ref": "meu pai:0fe4fad5-4ffa-432c-a288-39af483d1c67",
+            "subject_ref": "meu pai:f4e3b157-3351-4b71-8e31-ac4c2a1b47f5",
             "subject_kind": "GRAVE",
             "opened_at_seq": 2
           }
@@ -2087,7 +2343,7 @@
         "current_topic": "JAZIGO_SERVICOS",
         "schema_version": "santana-conversation-state/v1",
         "acompanhamentos": [],
-        "conversation_id": "c38959c2-0d8d-4456-ac8b-23e1a78ec84b",
+        "conversation_id": "73db2e21-ce02-4872-9fbf-7f964cafaea3",
         "forbidden_goals": [],
         "pending_actions": [],
         "parked_questions": [],
@@ -2097,63 +2353,67 @@
           "asked_at_seq": 2,
           "question_code": "Q_GRAVE_SERVICE_DESCRIPTION",
           "priority_class": "NEXT_ACTION_DATA"
+        },
+        "session_lifecycle": {
+          "status": "ACTIVE",
+          "changed_at_seq": 0
         }
       },
       "receipts": [
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-E_DOCUMENTS-1"
+          "external_message_id": "v4q-1789836199504-2c055d5c-E_DOCUMENTS-1"
         },
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-E_DOCUMENTS-2"
+          "external_message_id": "v4q-1789836199504-2c055d5c-E_DOCUMENTS-2"
         },
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-E_DOCUMENTS-3"
+          "external_message_id": "v4q-1789836199504-2c055d5c-E_DOCUMENTS-3"
         },
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-E_DOCUMENTS-4"
+          "external_message_id": "v4q-1789836199504-2c055d5c-E_DOCUMENTS-4"
         },
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-E_DOCUMENTS-5"
+          "external_message_id": "v4q-1789836199504-2c055d5c-E_DOCUMENTS-5"
         },
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-E_DOCUMENTS-6"
+          "external_message_id": "v4q-1789836199504-2c055d5c-E_DOCUMENTS-6"
         }
       ],
       "events": [
         {
           "revision": 1,
-          "outbox_id": "452de69b-9620-4601-a1f2-6893a280a8ae",
+          "outbox_id": "e7c66f6b-c9c9-4d19-a0fb-42da386aaee7",
           "event_kind": "COMPLEMENT"
         },
         {
           "revision": 2,
-          "outbox_id": "7d4acbc6-32d1-40f2-89b3-2e9ab45f5db3",
+          "outbox_id": "e9f83acf-0694-4f76-b356-c72e89e7db08",
           "event_kind": "NEW_GOAL"
         },
         {
           "revision": 3,
-          "outbox_id": "a4379bce-2b00-4268-8d59-2826f13b43fb",
+          "outbox_id": "ef5f5e57-ab0c-4b39-8be4-dd27c18359d8",
           "event_kind": "COMPLEMENT"
         },
         {
           "revision": 4,
-          "outbox_id": "53b5edea-1291-4bd1-aff2-e7eb76ed0f6e",
+          "outbox_id": "3e84bfaf-0453-420d-87b6-e2c11ee26368",
           "event_kind": "COMPLEMENT"
         },
         {
           "revision": 5,
-          "outbox_id": "a7990d47-69b7-48b7-a1c0-aa370ede7fe0",
+          "outbox_id": "7709b657-c7a6-4f3c-978b-1d2d69195a5d",
           "event_kind": "CORRECTION"
         },
         {
           "revision": 6,
-          "outbox_id": "be76e33b-e908-40be-a629-6f9573773893",
+          "outbox_id": "134cdbb6-3b90-4b5f-9f88-757424d237cb",
           "event_kind": "COMPLEMENT"
         }
       ],
@@ -2161,39 +2421,39 @@
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "452de69b-9620-4601-a1f2-6893a280a8ae"
+          "outbox_id": "e7c66f6b-c9c9-4d19-a0fb-42da386aaee7"
         },
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "7d4acbc6-32d1-40f2-89b3-2e9ab45f5db3"
+          "outbox_id": "e9f83acf-0694-4f76-b356-c72e89e7db08"
         },
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "a4379bce-2b00-4268-8d59-2826f13b43fb"
+          "outbox_id": "ef5f5e57-ab0c-4b39-8be4-dd27c18359d8"
         },
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "53b5edea-1291-4bd1-aff2-e7eb76ed0f6e"
+          "outbox_id": "3e84bfaf-0453-420d-87b6-e2c11ee26368"
         },
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "a7990d47-69b7-48b7-a1c0-aa370ede7fe0"
+          "outbox_id": "7709b657-c7a6-4f3c-978b-1d2d69195a5d"
         },
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "be76e33b-e908-40be-a629-6f9573773893"
+          "outbox_id": "134cdbb6-3b90-4b5f-9f88-757424d237cb"
         }
       ]
     },
     {
-      "conversation_id": "9503cea4-48cf-4f8d-92a2-0002bc1c5fc1",
-      "contact_name": "SANA-V4-QUAL-v4q-1789833744982-c599a46a-F_PRIVACY",
-      "external_id": "5511937591655",
+      "conversation_id": "d9ea48da-1d1f-4243-9602-541361610489",
+      "contact_name": "SANA-V4-QUAL-v4q-1789836199504-2c055d5c-F_PRIVACY",
+      "external_id": "5511962138245",
       "subject": "nao_classificado",
       "stage": "novos",
       "automation_mode": "bot",
@@ -2236,40 +2496,44 @@
         "current_topic": null,
         "schema_version": "santana-conversation-state/v1",
         "acompanhamentos": [],
-        "conversation_id": "9503cea4-48cf-4f8d-92a2-0002bc1c5fc1",
+        "conversation_id": "d9ea48da-1d1f-4243-9602-541361610489",
         "forbidden_goals": [],
         "pending_actions": [],
         "parked_questions": [],
-        "pending_question": null
+        "pending_question": null,
+        "session_lifecycle": {
+          "status": "ACTIVE",
+          "changed_at_seq": 0
+        }
       },
       "receipts": [
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-F_PRIVACY-1"
+          "external_message_id": "v4q-1789836199504-2c055d5c-F_PRIVACY-1"
         },
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-F_PRIVACY-2"
+          "external_message_id": "v4q-1789836199504-2c055d5c-F_PRIVACY-2"
         },
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-F_PRIVACY-3"
+          "external_message_id": "v4q-1789836199504-2c055d5c-F_PRIVACY-3"
         }
       ],
       "events": [
         {
           "revision": 1,
-          "outbox_id": "5dcced55-172d-48d5-ab57-726a772ab213",
+          "outbox_id": "0348f16f-47a4-49fe-a3b0-b45693963d3e",
           "event_kind": "COMPLEMENT"
         },
         {
           "revision": 2,
-          "outbox_id": "618d2564-5670-45c5-8a04-efa2b70d13e7",
+          "outbox_id": "66b89974-5e4c-4650-8856-94de745fce34",
           "event_kind": null
         },
         {
           "revision": 3,
-          "outbox_id": "a9c28572-b96b-4be0-b63d-12382f674c5c",
+          "outbox_id": "27989c34-0b62-4f8e-906d-e9ddf21f6f68",
           "event_kind": null
         }
       ],
@@ -2277,24 +2541,24 @@
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "5dcced55-172d-48d5-ab57-726a772ab213"
+          "outbox_id": "0348f16f-47a4-49fe-a3b0-b45693963d3e"
         },
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "618d2564-5670-45c5-8a04-efa2b70d13e7"
+          "outbox_id": "66b89974-5e4c-4650-8856-94de745fce34"
         },
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "a9c28572-b96b-4be0-b63d-12382f674c5c"
+          "outbox_id": "27989c34-0b62-4f8e-906d-e9ddf21f6f68"
         }
       ]
     },
     {
-      "conversation_id": "9bd71540-ece9-4c9e-b4ad-103cde519995",
-      "contact_name": "SANA-V4-QUAL-v4q-1789833744982-c599a46a-FAIL_COMMIT",
-      "external_id": "5511937716644",
+      "conversation_id": "69a526fa-510e-4e53-ab6c-43db875eb291",
+      "contact_name": "SANA-V4-QUAL-v4q-1789836199504-2c055d5c-FAIL_COMMIT",
+      "external_id": "5511962285314",
       "subject": "nao_classificado",
       "stage": "novos",
       "automation_mode": "bot",
@@ -2303,16 +2567,16 @@
       "receipts": [
         {
           "status": "RECEIVED",
-          "external_message_id": "v4q-1789833744982-c599a46a-fail-commit"
+          "external_message_id": "v4q-1789836199504-2c055d5c-fail-commit"
         }
       ],
       "events": null,
       "outbox": null
     },
     {
-      "conversation_id": "b54c1521-e469-40e6-ba5f-fe86f1bf13a4",
-      "contact_name": "SANA-V4-QUAL-v4q-1789833744982-c599a46a-FAIL_INTERPRET",
-      "external_id": "5511937711223",
+      "conversation_id": "af161468-d5ba-43c3-ada3-15d39809f74f",
+      "contact_name": "SANA-V4-QUAL-v4q-1789836199504-2c055d5c-FAIL_INTERPRET",
+      "external_id": "5511962276933",
       "subject": "nao_classificado",
       "stage": "novos",
       "automation_mode": "bot",
@@ -2331,16 +2595,20 @@
         "current_topic": null,
         "schema_version": "santana-conversation-state/v1",
         "acompanhamentos": [],
-        "conversation_id": "b54c1521-e469-40e6-ba5f-fe86f1bf13a4",
+        "conversation_id": "af161468-d5ba-43c3-ada3-15d39809f74f",
         "forbidden_goals": [],
         "pending_actions": [],
         "parked_questions": [],
-        "pending_question": null
+        "pending_question": null,
+        "session_lifecycle": {
+          "status": "ACTIVE",
+          "changed_at_seq": 0
+        }
       },
       "receipts": [
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-fail-interpret"
+          "external_message_id": "v4q-1789836199504-2c055d5c-fail-interpret"
         }
       ],
       "events": [
@@ -2353,9 +2621,9 @@
       "outbox": null
     },
     {
-      "conversation_id": "8b748dd3-9aef-4428-a50a-57d3643b8b34",
-      "contact_name": "SANA-V4-QUAL-v4q-1789833744982-c599a46a-G_LOCATION",
-      "external_id": "5511937608896",
+      "conversation_id": "4899e3f1-23a2-492f-bfe8-22532c95dbff",
+      "contact_name": "SANA-V4-QUAL-v4q-1789836199504-2c055d5c-G_LOCATION",
+      "external_id": "5511962153236",
       "subject": "comercial",
       "stage": "pendencias",
       "automation_mode": "bot",
@@ -2366,7 +2634,7 @@
         "cases": [
           {
             "case_id": "case001",
-            "subject_ref": "Bruno Sintético:8df1ba17-0731-4e0c-880e-0e343f644c80",
+            "subject_ref": "Bruno Sintético:de0ff5d6-9565-4d08-bdbe-cf3d553bef89",
             "subject_kind": "GRAVE",
             "opened_at_seq": 1
           }
@@ -2470,7 +2738,7 @@
         "current_topic": "JAZIGO_SERVICOS",
         "schema_version": "santana-conversation-state/v1",
         "acompanhamentos": [],
-        "conversation_id": "8b748dd3-9aef-4428-a50a-57d3643b8b34",
+        "conversation_id": "4899e3f1-23a2-492f-bfe8-22532c95dbff",
         "forbidden_goals": [],
         "pending_actions": [],
         "parked_questions": [],
@@ -2480,36 +2748,40 @@
           "asked_at_seq": 1,
           "question_code": "Q_GRAVE_SERVICE_DESCRIPTION",
           "priority_class": "NEXT_ACTION_DATA"
+        },
+        "session_lifecycle": {
+          "status": "ACTIVE",
+          "changed_at_seq": 0
         }
       },
       "receipts": [
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-G_LOCATION-1"
+          "external_message_id": "v4q-1789836199504-2c055d5c-G_LOCATION-1"
         },
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-G_LOCATION-2"
+          "external_message_id": "v4q-1789836199504-2c055d5c-G_LOCATION-2"
         },
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-G_LOCATION-3"
+          "external_message_id": "v4q-1789836199504-2c055d5c-G_LOCATION-3"
         }
       ],
       "events": [
         {
           "revision": 1,
-          "outbox_id": "5909ced4-bcc9-4ae6-9a4a-3beccb8405a6",
+          "outbox_id": "8c3b084c-b408-433d-bb45-b33b2bb80f1a",
           "event_kind": "NEW_GOAL"
         },
         {
           "revision": 2,
-          "outbox_id": "cab49e92-dec6-4a89-b9e8-aaf8ca16d007",
+          "outbox_id": "f20caa9c-19bb-4756-a44d-6da70fc6d797",
           "event_kind": "COMPLEMENT"
         },
         {
           "revision": 3,
-          "outbox_id": "09444f6b-5c30-417d-a1fb-eaa9f9353f85",
+          "outbox_id": "fbf2e7a6-be31-4e43-b1d8-70b28abf3adb",
           "event_kind": "COMPLEMENT"
         }
       ],
@@ -2517,24 +2789,24 @@
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "5909ced4-bcc9-4ae6-9a4a-3beccb8405a6"
+          "outbox_id": "8c3b084c-b408-433d-bb45-b33b2bb80f1a"
         },
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "cab49e92-dec6-4a89-b9e8-aaf8ca16d007"
+          "outbox_id": "f20caa9c-19bb-4756-a44d-6da70fc6d797"
         },
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "09444f6b-5c30-417d-a1fb-eaa9f9353f85"
+          "outbox_id": "fbf2e7a6-be31-4e43-b1d8-70b28abf3adb"
         }
       ]
     },
     {
-      "conversation_id": "074b50f3-0031-4af9-bb7c-2f928dbe165f",
-      "contact_name": "SANA-V4-QUAL-v4q-1789833744982-c599a46a-H_PROTOCOL",
-      "external_id": "5511937638097",
+      "conversation_id": "81198f2e-57d7-482a-9611-fde43002420a",
+      "contact_name": "SANA-V4-QUAL-v4q-1789836199504-2c055d5c-H_PROTOCOL",
+      "external_id": "5511962167637",
       "subject": "nao_classificado",
       "stage": "novos",
       "automation_mode": "bot",
@@ -2577,22 +2849,26 @@
         "current_topic": null,
         "schema_version": "santana-conversation-state/v1",
         "acompanhamentos": [],
-        "conversation_id": "074b50f3-0031-4af9-bb7c-2f928dbe165f",
+        "conversation_id": "81198f2e-57d7-482a-9611-fde43002420a",
         "forbidden_goals": [],
         "pending_actions": [],
         "parked_questions": [],
-        "pending_question": null
+        "pending_question": null,
+        "session_lifecycle": {
+          "status": "ACTIVE",
+          "changed_at_seq": 0
+        }
       },
       "receipts": [
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-H_PROTOCOL-1"
+          "external_message_id": "v4q-1789836199504-2c055d5c-H_PROTOCOL-1"
         }
       ],
       "events": [
         {
           "revision": 1,
-          "outbox_id": "a94a04b1-2c2c-480d-a739-ee9898b17591",
+          "outbox_id": "c0818b3d-35ba-43fa-9b0c-75b4c6f00b73",
           "event_kind": "COMPLEMENT"
         }
       ],
@@ -2600,14 +2876,14 @@
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "a94a04b1-2c2c-480d-a739-ee9898b17591"
+          "outbox_id": "c0818b3d-35ba-43fa-9b0c-75b4c6f00b73"
         }
       ]
     },
     {
-      "conversation_id": "3dcd74a8-f034-44c7-a305-b788fc5b3947",
-      "contact_name": "SANA-V4-QUAL-v4q-1789833744982-c599a46a-I_NO_REQUEST",
-      "external_id": "5511937645458",
+      "conversation_id": "2dd724c9-3f42-416e-97b3-e3c35f7762ef",
+      "contact_name": "SANA-V4-QUAL-v4q-1789836199504-2c055d5c-I_NO_REQUEST",
+      "external_id": "5511962172568",
       "subject": "nao_classificado",
       "stage": "novos",
       "automation_mode": "bot",
@@ -2632,22 +2908,26 @@
         "current_topic": null,
         "schema_version": "santana-conversation-state/v1",
         "acompanhamentos": [],
-        "conversation_id": "3dcd74a8-f034-44c7-a305-b788fc5b3947",
+        "conversation_id": "2dd724c9-3f42-416e-97b3-e3c35f7762ef",
         "forbidden_goals": [],
         "pending_actions": [],
         "parked_questions": [],
-        "pending_question": null
+        "pending_question": null,
+        "session_lifecycle": {
+          "status": "ACTIVE",
+          "changed_at_seq": 0
+        }
       },
       "receipts": [
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-I_NO_REQUEST-1"
+          "external_message_id": "v4q-1789836199504-2c055d5c-I_NO_REQUEST-1"
         }
       ],
       "events": [
         {
           "revision": 1,
-          "outbox_id": "e3c51c8b-0413-4ca5-8ab5-b4574661c78c",
+          "outbox_id": "dad7e6d3-10d9-4df1-8a10-f7851e511c32",
           "event_kind": "SOCIAL"
         }
       ],
@@ -2655,25 +2935,135 @@
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "e3c51c8b-0413-4ca5-8ab5-b4574661c78c"
+          "outbox_id": "dad7e6d3-10d9-4df1-8a10-f7851e511c32"
         }
       ]
     },
     {
-      "conversation_id": "61d8a07c-f0d0-44d6-b84e-f1f5a684f5d4",
-      "contact_name": "SANA-V4-QUAL-v4q-1789833744982-c599a46a-J_CLOSE",
-      "external_id": "5511937655429",
+      "conversation_id": "cffc6f9c-b665-4f08-bfc4-82232d725de3",
+      "contact_name": "SANA-V4-QUAL-v4q-1789836199504-2c055d5c-J_AMBIGUOUS",
+      "external_id": "5511962220811",
       "subject": "comercial",
       "stage": "pendencias",
       "automation_mode": "bot",
-      "revision": 4,
+      "revision": 3,
+      "state": {
+        "seq": 2,
+        "acoes": [],
+        "cases": [
+          {
+            "case_id": "case001",
+            "subject_ref": "demand:08b3c0ff-4b7f-44c0-a4e5-82ecccafb26f",
+            "subject_kind": "GRAVE",
+            "opened_at_seq": 1
+          }
+        ],
+        "facts": [],
+        "goals": [
+          {
+            "status": "ACTIVE",
+            "case_id": "case001",
+            "goal_id": "g001",
+            "goal_code": "GOAL_JAZIGO_SERVICOS",
+            "overlay_of": null,
+            "stack_index": 0,
+            "closed_at_seq": null,
+            "informational": false,
+            "opened_at_seq": 1,
+            "status_reason": null,
+            "parent_goal_id": null,
+            "return_to_parent": false,
+            "created_by_relation": null
+          }
+        ],
+        "handoff": null,
+        "event_log": [
+          {
+            "seq": 1,
+            "note": null,
+            "event_kind": "NEW_GOAL"
+          },
+          {
+            "seq": 2,
+            "note": "CLOSE",
+            "event_kind": "SOCIAL"
+          }
+        ],
+        "documentos": [],
+        "origin_topic": null,
+        "solicitacoes": [],
+        "current_topic": "JAZIGO_SERVICOS",
+        "schema_version": "santana-conversation-state/v1",
+        "acompanhamentos": [],
+        "conversation_id": "cffc6f9c-b665-4f08-bfc4-82232d725de3",
+        "forbidden_goals": [],
+        "pending_actions": [],
+        "parked_questions": [],
+        "pending_question": null,
+        "session_lifecycle": {
+          "status": "CLOSED",
+          "changed_at_seq": 2
+        }
+      },
+      "receipts": [
+        {
+          "status": "COMMITTED",
+          "external_message_id": "v4q-1789836199504-2c055d5c-J_AMBIGUOUS-1"
+        },
+        {
+          "status": "COMMITTED",
+          "external_message_id": "v4q-1789836199504-2c055d5c-J_AMBIGUOUS-2"
+        },
+        {
+          "status": "COMMITTED",
+          "external_message_id": "v4q-1789836199504-2c055d5c-J_AMBIGUOUS-3"
+        }
+      ],
+      "events": [
+        {
+          "revision": 1,
+          "outbox_id": "d3cc6978-c080-4474-8ee4-057234a075b7",
+          "event_kind": "NEW_GOAL"
+        },
+        {
+          "revision": 2,
+          "outbox_id": "e791fa1b-ecc3-42a8-81a5-e5306066c0fd",
+          "event_kind": "SOCIAL"
+        },
+        {
+          "revision": 3,
+          "outbox_id": null,
+          "event_kind": null
+        }
+      ],
+      "outbox": [
+        {
+          "status": "SENT",
+          "attempts": 1,
+          "outbox_id": "d3cc6978-c080-4474-8ee4-057234a075b7"
+        },
+        {
+          "status": "SENT",
+          "attempts": 1,
+          "outbox_id": "e791fa1b-ecc3-42a8-81a5-e5306066c0fd"
+        }
+      ]
+    },
+    {
+      "conversation_id": "1723e621-493f-4bb8-8b85-a8ebd474cc88",
+      "contact_name": "SANA-V4-QUAL-v4q-1789836199504-2c055d5c-J_CLOSE",
+      "external_id": "5511962180909",
+      "subject": "comercial",
+      "stage": "pendencias",
+      "automation_mode": "bot",
+      "revision": 5,
       "state": {
         "seq": 3,
         "acoes": [],
         "cases": [
           {
             "case_id": "case001",
-            "subject_ref": "demand:13ea2105-b371-4195-bb05-d4c42d05365f",
+            "subject_ref": "demand:229061f4-fc84-4a1f-abae-c206d8e029d9",
             "subject_kind": "GRAVE",
             "opened_at_seq": 1
           }
@@ -2710,17 +3100,17 @@
           },
           {
             "seq": 3,
-            "note": null,
-            "event_kind": "RECLASSIFICATION"
+            "note": "RESUME_CASE",
+            "event_kind": "SOCIAL"
           }
         ],
         "documentos": [],
-        "origin_topic": "JAZIGO_SERVICOS",
+        "origin_topic": null,
         "solicitacoes": [],
         "current_topic": "JAZIGO_SERVICOS",
         "schema_version": "santana-conversation-state/v1",
         "acompanhamentos": [],
-        "conversation_id": "61d8a07c-f0d0-44d6-b84e-f1f5a684f5d4",
+        "conversation_id": "1723e621-493f-4bb8-8b85-a8ebd474cc88",
         "forbidden_goals": [],
         "pending_actions": [],
         "parked_questions": [],
@@ -2730,75 +3120,253 @@
           "asked_at_seq": 3,
           "question_code": "Q_GRAVE_SERVICE_DESCRIPTION",
           "priority_class": "NEXT_ACTION_DATA"
+        },
+        "session_lifecycle": {
+          "status": "ACTIVE",
+          "changed_at_seq": 3
         }
       },
       "receipts": [
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-J_CLOSE-1"
+          "external_message_id": "v4q-1789836199504-2c055d5c-J_CLOSE-1"
         },
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-J_CLOSE-2"
+          "external_message_id": "v4q-1789836199504-2c055d5c-J_CLOSE-2"
         },
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-J_CLOSE-3"
+          "external_message_id": "v4q-1789836199504-2c055d5c-J_CLOSE-3"
         },
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-J_CLOSE-4"
+          "external_message_id": "v4q-1789836199504-2c055d5c-J_CLOSE-4"
+        },
+        {
+          "status": "COMMITTED",
+          "external_message_id": "v4q-1789836199504-2c055d5c-J_CLOSE-5"
         }
       ],
       "events": [
         {
           "revision": 1,
-          "outbox_id": "46f9b59d-35af-4272-87a9-05ecd646e68c",
+          "outbox_id": "4f714995-7c4c-475f-a6dc-475ad33d87bf",
           "event_kind": "NEW_GOAL"
         },
         {
           "revision": 2,
-          "outbox_id": "35d81049-3c06-4ed3-b74f-f838a4f1e790",
+          "outbox_id": "457f6204-74b6-4be8-9383-2572ed8b7275",
           "event_kind": "SOCIAL"
         },
         {
           "revision": 3,
-          "outbox_id": "2f59da03-8023-4d3b-b8ed-6b77624185f4",
+          "outbox_id": null,
           "event_kind": null
         },
         {
           "revision": 4,
-          "outbox_id": "2c6f5646-f491-45e3-ad7d-0685d4a6745d",
-          "event_kind": "RECLASSIFICATION"
+          "outbox_id": null,
+          "event_kind": null
+        },
+        {
+          "revision": 5,
+          "outbox_id": "6cb957fc-c49e-4b7d-92a6-3f4da7b9f80a",
+          "event_kind": "SOCIAL"
         }
       ],
       "outbox": [
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "46f9b59d-35af-4272-87a9-05ecd646e68c"
+          "outbox_id": "4f714995-7c4c-475f-a6dc-475ad33d87bf"
         },
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "35d81049-3c06-4ed3-b74f-f838a4f1e790"
+          "outbox_id": "457f6204-74b6-4be8-9383-2572ed8b7275"
         },
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "2f59da03-8023-4d3b-b8ed-6b77624185f4"
-        },
-        {
-          "status": "SENT",
-          "attempts": 1,
-          "outbox_id": "2c6f5646-f491-45e3-ad7d-0685d4a6745d"
+          "outbox_id": "6cb957fc-c49e-4b7d-92a6-3f4da7b9f80a"
         }
       ]
     },
     {
-      "conversation_id": "07442168-8cf4-437d-a21f-097144bfe28a",
-      "contact_name": "SANA-V4-QUAL-v4q-1789833744982-c599a46a-REPLAY",
-      "external_id": "5511937676850",
+      "conversation_id": "e653ac88-d2d9-4988-83f9-274ad95d364b",
+      "contact_name": "SANA-V4-QUAL-v4q-1789836199504-2c055d5c-K_OPERATOR_RESUME",
+      "external_id": "5511962075230",
+      "subject": "comercial",
+      "stage": "pendencias",
+      "automation_mode": "bot",
+      "revision": 5,
+      "state": {
+        "seq": 4,
+        "acoes": [],
+        "cases": [
+          {
+            "case_id": "case001",
+            "subject_ref": "demand:dbd8a162-1cd6-41ca-a4a4-953f0adf523c",
+            "subject_kind": "GRAVE",
+            "opened_at_seq": 1
+          }
+        ],
+        "facts": [],
+        "goals": [
+          {
+            "status": "ACTIVE",
+            "case_id": "case001",
+            "goal_id": "g001",
+            "goal_code": "GOAL_JAZIGO_SERVICOS",
+            "overlay_of": null,
+            "stack_index": 0,
+            "closed_at_seq": null,
+            "informational": false,
+            "opened_at_seq": 1,
+            "status_reason": null,
+            "parent_goal_id": null,
+            "return_to_parent": false,
+            "created_by_relation": null
+          }
+        ],
+        "handoff": null,
+        "event_log": [
+          {
+            "seq": 1,
+            "note": null,
+            "event_kind": "NEW_GOAL"
+          },
+          {
+            "seq": 2,
+            "note": null,
+            "event_kind": "HUMAN_REQUEST"
+          },
+          {
+            "seq": 3,
+            "note": "RESUME_CASE",
+            "event_kind": "SOCIAL"
+          },
+          {
+            "seq": 4,
+            "note": null,
+            "event_kind": "SOCIAL"
+          }
+        ],
+        "documentos": [],
+        "origin_topic": null,
+        "solicitacoes": [
+          {
+            "estado": "ABERTO",
+            "reason": "runtime-goal:g001",
+            "assunto": {
+              "label": "Jazigo, Lapide e Zeladoria",
+              "rule_id": "OFFICIAL_GOAL_LABEL",
+              "fell_back": false
+            },
+            "case_id": "case001",
+            "goal_id": "g001",
+            "summary": "Jazigo, Lapide e Zeladoria. Contexto registrado no atendimento. Solicitação para análise da equipe.",
+            "category": "ENCAMINHAMENTO_ADMINISTRACAO",
+            "forwarding": {
+              "executor": "HUMAN",
+              "destinatario": "Administração"
+            },
+            "topic_code": "JAZIGO_SERVICOS",
+            "opened_at_seq": 2,
+            "solicitacao_id": "018e05e8-77db-5479-a7d1-62060246a336",
+            "collected_fact_ids": [],
+            "overlay_of_goal_id": null,
+            "pending_action_refs": [],
+            "pending_question_ref": null
+          }
+        ],
+        "current_topic": "JAZIGO_SERVICOS",
+        "schema_version": "santana-conversation-state/v1",
+        "acompanhamentos": [],
+        "conversation_id": "e653ac88-d2d9-4988-83f9-274ad95d364b",
+        "forbidden_goals": [],
+        "pending_actions": [],
+        "parked_questions": [],
+        "pending_question": {
+          "goal_id": "g001",
+          "fact_code": "grave_service_description",
+          "asked_at_seq": 3,
+          "question_code": "Q_GRAVE_SERVICE_DESCRIPTION",
+          "priority_class": "NEXT_ACTION_DATA"
+        },
+        "session_lifecycle": {
+          "status": "ACTIVE",
+          "changed_at_seq": 3
+        }
+      },
+      "receipts": [
+        {
+          "status": "COMMITTED",
+          "external_message_id": "v4q-1789836199504-2c055d5c-K_OPERATOR_RESUME-1"
+        },
+        {
+          "status": "HUMAN_ACTIVE",
+          "external_message_id": "v4q-1789836199504-2c055d5c-K_OPERATOR_RESUME-2"
+        },
+        {
+          "status": "HUMAN_ACTIVE",
+          "external_message_id": "v4q-1789836199504-2c055d5c-K_OPERATOR_RESUME-3"
+        },
+        {
+          "status": "COMMITTED",
+          "external_message_id": "v4q-1789836199504-2c055d5c-K_OPERATOR_RESUME-4"
+        }
+      ],
+      "events": [
+        {
+          "revision": 1,
+          "outbox_id": "b42d0db1-ea4c-4b7e-9e8e-1c2bdf154405",
+          "event_kind": "NEW_GOAL"
+        },
+        {
+          "revision": 2,
+          "outbox_id": "f719c749-be21-4307-9626-828b26bfbd66",
+          "event_kind": "HUMAN_REQUEST"
+        },
+        {
+          "revision": 3,
+          "outbox_id": null,
+          "event_kind": null
+        },
+        {
+          "revision": 5,
+          "outbox_id": "0b420622-3228-4d2f-a3df-4b53d19ba58b",
+          "event_kind": "SOCIAL"
+        }
+      ],
+      "outbox": [
+        {
+          "status": "SENT",
+          "attempts": 1,
+          "outbox_id": "b42d0db1-ea4c-4b7e-9e8e-1c2bdf154405"
+        },
+        {
+          "status": "SENT",
+          "attempts": 1,
+          "outbox_id": "f719c749-be21-4307-9626-828b26bfbd66"
+        },
+        {
+          "status": "PENDING",
+          "attempts": 0,
+          "outbox_id": "ce9f32fc-b203-432c-a365-b00ae92d6a8e"
+        },
+        {
+          "status": "PENDING",
+          "attempts": 0,
+          "outbox_id": "0b420622-3228-4d2f-a3df-4b53d19ba58b"
+        }
+      ]
+    },
+    {
+      "conversation_id": "6af8d870-783b-4558-b0f2-8c59d74079b7",
+      "contact_name": "SANA-V4-QUAL-v4q-1789836199504-2c055d5c-REPLAY",
+      "external_id": "5511962235910",
       "subject": "comercial",
       "stage": "pendencias",
       "automation_mode": "bot",
@@ -2809,7 +3377,7 @@
         "cases": [
           {
             "case_id": "case001",
-            "subject_ref": "demand:4263e926-434a-49d4-841a-fa674c9333b6",
+            "subject_ref": "demand:80011680-d261-44fd-8803-e5a06e69e954",
             "subject_kind": "GRAVE",
             "opened_at_seq": 1
           }
@@ -2846,7 +3414,7 @@
         "current_topic": "JAZIGO_SERVICOS",
         "schema_version": "santana-conversation-state/v1",
         "acompanhamentos": [],
-        "conversation_id": "07442168-8cf4-437d-a21f-097144bfe28a",
+        "conversation_id": "6af8d870-783b-4558-b0f2-8c59d74079b7",
         "forbidden_goals": [],
         "pending_actions": [],
         "parked_questions": [],
@@ -2856,18 +3424,22 @@
           "asked_at_seq": 1,
           "question_code": "Q_GRAVE_SERVICE_DESCRIPTION",
           "priority_class": "NEXT_ACTION_DATA"
+        },
+        "session_lifecycle": {
+          "status": "ACTIVE",
+          "changed_at_seq": 0
         }
       },
       "receipts": [
         {
           "status": "COMMITTED",
-          "external_message_id": "v4q-1789833744982-c599a46a-replay-once"
+          "external_message_id": "v4q-1789836199504-2c055d5c-replay-once"
         }
       ],
       "events": [
         {
           "revision": 1,
-          "outbox_id": "676b12c8-5941-42fd-b392-989e488aeb09",
+          "outbox_id": "b9a5071a-c9de-41ef-af7d-d6238a162a3b",
           "event_kind": "NEW_GOAL"
         }
       ],
@@ -2875,13 +3447,299 @@
         {
           "status": "SENT",
           "attempts": 1,
-          "outbox_id": "676b12c8-5941-42fd-b392-989e488aeb09"
+          "outbox_id": "b9a5071a-c9de-41ef-af7d-d6238a162a3b"
         }
       ]
     }
   ],
-  "operator_resume_surface": "MISSING_IN_LAB",
+  "operator_resume_surface": "PASS",
+  "operator_observations": [
+    {
+      "snapshot": {
+        "state": {
+          "seq": 2,
+          "acoes": [],
+          "cases": [
+            {
+              "case_id": "case001",
+              "subject_ref": "demand:dbd8a162-1cd6-41ca-a4a4-953f0adf523c",
+              "subject_kind": "GRAVE",
+              "opened_at_seq": 1
+            }
+          ],
+          "facts": [],
+          "goals": [
+            {
+              "status": "ACTIVE",
+              "case_id": "case001",
+              "goal_id": "g001",
+              "goal_code": "GOAL_JAZIGO_SERVICOS",
+              "overlay_of": null,
+              "stack_index": 0,
+              "closed_at_seq": null,
+              "informational": false,
+              "opened_at_seq": 1,
+              "status_reason": null,
+              "parent_goal_id": null,
+              "return_to_parent": false,
+              "created_by_relation": null
+            }
+          ],
+          "handoff": {
+            "case_id": "case001",
+            "priority": "normal",
+            "goal_code": "GOAL_JAZIGO_SERVICOS",
+            "goal_status": "ACTIVE",
+            "current_step": "GOAL_JAZIGO_SERVICOS:ACTIVE",
+            "pending_facts": [
+              "grave_service_description"
+            ],
+            "confirmed_facts": [],
+            "current_question": null,
+            "requested_at_seq": 2,
+            "essential_context": {
+              "goal_stack": [
+                "GOAL_JAZIGO_SERVICOS:ACTIVE"
+              ],
+              "open_overlays": [],
+              "pending_actions": []
+            }
+          },
+          "event_log": [
+            {
+              "seq": 1,
+              "note": null,
+              "event_kind": "NEW_GOAL"
+            },
+            {
+              "seq": 2,
+              "note": null,
+              "event_kind": "HUMAN_REQUEST"
+            }
+          ],
+          "documentos": [],
+          "origin_topic": null,
+          "solicitacoes": [
+            {
+              "estado": "ABERTO",
+              "reason": "runtime-goal:g001",
+              "assunto": {
+                "label": "Jazigo, Lapide e Zeladoria",
+                "rule_id": "OFFICIAL_GOAL_LABEL",
+                "fell_back": false
+              },
+              "case_id": "case001",
+              "goal_id": "g001",
+              "summary": "Jazigo, Lapide e Zeladoria. Contexto registrado no atendimento. Solicitação para análise da equipe.",
+              "category": "ENCAMINHAMENTO_ADMINISTRACAO",
+              "forwarding": {
+                "executor": "HUMAN",
+                "destinatario": "Administração"
+              },
+              "topic_code": "JAZIGO_SERVICOS",
+              "opened_at_seq": 2,
+              "solicitacao_id": "018e05e8-77db-5479-a7d1-62060246a336",
+              "collected_fact_ids": [],
+              "overlay_of_goal_id": null,
+              "pending_action_refs": [],
+              "pending_question_ref": null
+            }
+          ],
+          "current_topic": "JAZIGO_SERVICOS",
+          "schema_version": "santana-conversation-state/v1",
+          "acompanhamentos": [],
+          "conversation_id": "e653ac88-d2d9-4988-83f9-274ad95d364b",
+          "forbidden_goals": [],
+          "pending_actions": [],
+          "parked_questions": [],
+          "pending_question": null,
+          "session_lifecycle": {
+            "status": "ACTIVE",
+            "changed_at_seq": 0
+          }
+        },
+        "requests": [
+          {
+            "id": "018e05e8-77db-5479-a7d1-62060246a336",
+            "status": "pending_review",
+            "goal_id": "g001",
+            "subject": "obito_jazigo",
+            "summary": "Jazigo, Lapide e Zeladoria. Contexto registrado no atendimento. Solicitação para análise da equipe.",
+            "protocol": "SAN-20260919-000006",
+            "created_at": "2026-09-19T16:43:28.223156+00:00",
+            "updated_at": "2026-09-19T16:43:28.726717+00:00"
+          }
+        ],
+        "revision": 3,
+        "phone_e164": "+5511962075230",
+        "catalog_hash": "4eb8fb58a8c5531ad401fec93f87f6b22cf93b9ef1811d4e15274778ad4f82dd",
+        "automation_mode": "human",
+        "control_version": "2026-09-19T16:43:28.726717+00:00",
+        "conversation_id": "e653ac88-d2d9-4988-83f9-274ad95d364b"
+      },
+      "command": {
+        "command_id": "1d7209b4-4527-409f-b3d7-c3edc8d61dcc",
+        "conversation_id": "e653ac88-d2d9-4988-83f9-274ad95d364b",
+        "expected_revision": 3,
+        "type": "RESUME",
+        "note": "Retomada autorizada para qualificação LAB",
+        "expected_control_version": "2026-09-19T16:43:28.726717+00:00"
+      },
+      "replay_before": {
+        "replayed": false
+      },
+      "commit": {
+        "replayed": false,
+        "requests": [
+          {
+            "id": "018e05e8-77db-5479-a7d1-62060246a336",
+            "status": "pending_review",
+            "goal_id": "g001",
+            "subject": "obito_jazigo",
+            "summary": "Jazigo, Lapide e Zeladoria. Contexto registrado no atendimento. Solicitação para análise da equipe.",
+            "protocol": "SAN-20260919-000006",
+            "created_at": "2026-09-19T16:43:28.223156+00:00",
+            "updated_at": "2026-09-19T16:43:29.66732+00:00"
+          }
+        ],
+        "revision": 4,
+        "outbox_id": "ce9f32fc-b203-432c-a365-b00ae92d6a8e",
+        "reply_body": "A equipe atualizou a verificação do atendimento. Entendi. Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo."
+      },
+      "replay_after": {
+        "replayed": true,
+        "requests": [
+          {
+            "id": "018e05e8-77db-5479-a7d1-62060246a336",
+            "status": "pending_review",
+            "goal_id": "g001",
+            "subject": "obito_jazigo",
+            "summary": "Jazigo, Lapide e Zeladoria. Contexto registrado no atendimento. Solicitação para análise da equipe.",
+            "protocol": "SAN-20260919-000006",
+            "created_at": "2026-09-19T16:43:28.223156+00:00",
+            "updated_at": "2026-09-19T16:43:29.66732+00:00"
+          }
+        ],
+        "revision": 4,
+        "outbox_id": "ce9f32fc-b203-432c-a365-b00ae92d6a8e"
+      },
+      "post_resume": {
+        "kind": "COMMITTED",
+        "conversation_id": "e653ac88-d2d9-4988-83f9-274ad95d364b",
+        "inbound_message_id": "08702c9e-d50a-4b99-a997-194baf0688ab",
+        "revision": 5,
+        "reply_body": "Retomamos o atendimento de serviços no jazigo. Podemos continuar de onde paramos; Pode descrever o que aconteceu com o jazigo, a lapide ou a zeladoria? Se souber, informe tambem a quadra e o numero do jazigo.",
+        "outbox_id": "0b420622-3228-4d2f-a3df-4b53d19ba58b",
+        "event_kind": "SOCIAL"
+      },
+      "persisted": {
+        "automation_mode": "bot",
+        "revision": 5,
+        "state": {
+          "seq": 4,
+          "acoes": [],
+          "cases": [
+            {
+              "case_id": "case001",
+              "subject_ref": "demand:dbd8a162-1cd6-41ca-a4a4-953f0adf523c",
+              "subject_kind": "GRAVE",
+              "opened_at_seq": 1
+            }
+          ],
+          "facts": [],
+          "goals": [
+            {
+              "status": "ACTIVE",
+              "case_id": "case001",
+              "goal_id": "g001",
+              "goal_code": "GOAL_JAZIGO_SERVICOS",
+              "overlay_of": null,
+              "stack_index": 0,
+              "closed_at_seq": null,
+              "informational": false,
+              "opened_at_seq": 1,
+              "status_reason": null,
+              "parent_goal_id": null,
+              "return_to_parent": false,
+              "created_by_relation": null
+            }
+          ],
+          "handoff": null,
+          "event_log": [
+            {
+              "seq": 1,
+              "note": null,
+              "event_kind": "NEW_GOAL"
+            },
+            {
+              "seq": 2,
+              "note": null,
+              "event_kind": "HUMAN_REQUEST"
+            },
+            {
+              "seq": 3,
+              "note": "RESUME_CASE",
+              "event_kind": "SOCIAL"
+            },
+            {
+              "seq": 4,
+              "note": null,
+              "event_kind": "SOCIAL"
+            }
+          ],
+          "documentos": [],
+          "origin_topic": null,
+          "solicitacoes": [
+            {
+              "estado": "ABERTO",
+              "reason": "runtime-goal:g001",
+              "assunto": {
+                "label": "Jazigo, Lapide e Zeladoria",
+                "rule_id": "OFFICIAL_GOAL_LABEL",
+                "fell_back": false
+              },
+              "case_id": "case001",
+              "goal_id": "g001",
+              "summary": "Jazigo, Lapide e Zeladoria. Contexto registrado no atendimento. Solicitação para análise da equipe.",
+              "category": "ENCAMINHAMENTO_ADMINISTRACAO",
+              "forwarding": {
+                "executor": "HUMAN",
+                "destinatario": "Administração"
+              },
+              "topic_code": "JAZIGO_SERVICOS",
+              "opened_at_seq": 2,
+              "solicitacao_id": "018e05e8-77db-5479-a7d1-62060246a336",
+              "collected_fact_ids": [],
+              "overlay_of_goal_id": null,
+              "pending_action_refs": [],
+              "pending_question_ref": null
+            }
+          ],
+          "current_topic": "JAZIGO_SERVICOS",
+          "schema_version": "santana-conversation-state/v1",
+          "acompanhamentos": [],
+          "conversation_id": "e653ac88-d2d9-4988-83f9-274ad95d364b",
+          "forbidden_goals": [],
+          "pending_actions": [],
+          "parked_questions": [],
+          "pending_question": {
+            "goal_id": "g001",
+            "fact_code": "grave_service_description",
+            "asked_at_seq": 3,
+            "question_code": "Q_GRAVE_SERVICE_DESCRIPTION",
+            "priority_class": "NEXT_ACTION_DATA"
+          },
+          "session_lifecycle": {
+            "status": "ACTIVE",
+            "changed_at_seq": 3
+          }
+        },
+        "operator_events": 1,
+        "outbox": 4
+      }
+    }
+  ],
   "production_changes": "NONE",
   "whatsapp_messages_sent": 0,
-  "generated_at": "2026-09-19T16:02:53.800Z"
+  "generated_at": "2026-09-19T16:43:51.177Z"
 }
