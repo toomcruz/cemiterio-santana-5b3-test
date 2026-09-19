@@ -198,6 +198,27 @@ function orderedEntries(): LedgerEntry[] {
 function canReplayContext(target: LedgerEntry): boolean {
   return orderedEntries().filter((entry) => entry.conversation_id === target.conversation_id && entry.turn_id < target.turn_id).every((entry) => ["PRIMARY_VALID", "PRIMARY_INVALID_REJECTED"].includes(entry.status) && Boolean(entry.raw_call?.interpretation));
 }
+
+// Quota backoff is a ledger-wide provider gate. A scheduled wake during the
+// backoff window must checkpoint and exit without selecting a pending item;
+// otherwise a fresh PENDING turn could bypass the 429 cooldown.
+const persistedProviderWaitMs = msUntil(ledger.next_eligible_at);
+if (persistedProviderWaitMs > 0) {
+  const invocationId = `scheduler-run-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+  const startedAt = nowIso();
+  const beforeCounts = countStatuses(ledger.entries);
+  ledger.status = "WAITING_PROVIDER";
+  ledger.last_run = { invocation_id: invocationId, started_at: startedAt, before: beforeCounts, provider_calls: 0 };
+  ledger.updated_at = startedAt;
+  await writeJsonAtomic(LEDGER_FILE, ledger);
+  const finishedAt = nowIso();
+  ledger.last_run = { ...ledger.last_run, finished_at: finishedAt, after: beforeCounts, provider_calls: 0, ledger_progressed: false, result: { status: "WAITING_PROVIDER", provider_category: ledger.provider_category ?? null } };
+  ledger.updated_at = finishedAt;
+  await writeJsonAtomic(LEDGER_FILE, ledger);
+  console.log(JSON.stringify({ status: "WAITING_PROVIDER", invocation_id: invocationId, max_provider_calls_per_run: MAX_PROVIDER_CALLS_PER_RUN, new_calls: 0, before: beforeCounts, result: { provider_category: ledger.provider_category ?? null, next_eligible_at: ledger.next_eligible_at }, after: beforeCounts, ledger_progressed: false, counts: beforeCounts, next_eligible_at: ledger.next_eligible_at }));
+  Deno.exit(0);
+}
+
 const ordered = orderedEntries();
 const eligibleBlocked = ordered.find((entry) => entry.status === "PROVIDER_BLOCKED" && msUntil(entry.next_eligible_at) <= 0 && canReplayContext(entry));
 const firstPending = ordered.find((entry) => entry.status === "PENDING");
