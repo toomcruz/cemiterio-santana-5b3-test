@@ -578,7 +578,53 @@
       "priority_class": "NEXT_ACTION_DATA",
       "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION"],
       "ai_extractable": true,
+      "repeatable": true,
       "human_rule_note": "Declaração do munícipe não prova recebimento, conferência ou validação do arquivo."
+    },
+    {
+      "fact_code": "document_subject_hint",
+      "display_name": "Pessoa mencionada na declaração de documento",
+      "scope": "CONVERSATION",
+      "value_type": "TEXT",
+      "priority_class": "NEXT_ACTION_DATA",
+      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION"],
+      "ai_extractable": true,
+      "repeatable": true,
+      "human_rule_note": "A menção liga a declaração à pessoa mencionada, mas não cria recebimento ou validação do documento."
+    },
+    {
+      "fact_code": "grave_location_intent",
+      "display_name": "Intenção de localizar jazigo",
+      "scope": "CASE",
+      "value_type": "ENUM",
+      "allowed_values": ["REQUESTED"],
+      "priority_class": "FLOW_BRANCH",
+      "allowed_sources": ["USER_EXPLICIT", "USER_CORRECTION"],
+      "ai_extractable": true,
+      "human_rule_note": "Distingue localização de jazigo de manutenção; uma referência informada não confirma a localização oficial."
+    },
+    {
+      "fact_code": "protocol_request",
+      "display_name": "Pedido de protocolo",
+      "scope": "CONVERSATION",
+      "value_type": "ENUM",
+      "allowed_values": ["REQUESTED"],
+      "priority_class": "NEXT_ACTION_DATA",
+      "allowed_sources": ["USER_EXPLICIT"],
+      "ai_extractable": true,
+      "repeatable": true,
+      "human_rule_note": "O pedido não cria nem confirma protocolo; somente uma operação persistida pode fornecer um número real."
+    },
+    {
+      "fact_code": "privacy_boundary",
+      "display_name": "Limite de privacidade de terceiro",
+      "scope": "CONVERSATION",
+      "value_type": "ENUM",
+      "allowed_values": ["THIRD_PARTY_DATA_REFUSED"],
+      "priority_class": "BLOCKING_UNCERTAINTY",
+      "allowed_sources": ["USER_EXPLICIT"],
+      "ai_extractable": true,
+      "human_rule_note": "Preserva o contexto de recusa de dados de outro atendimento durante a insistência."
     },
     {
       "fact_code": "multiple_subjects_declaration",

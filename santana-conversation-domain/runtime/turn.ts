@@ -85,6 +85,10 @@ export async function planTurn(
     route,
   });
   if (input.automation_mode !== "BOT_ACTIVE") return unchanged("HUMAN_ACTIVE");
+  // HUMAN_REQUEST transfers ownership to the human queue. A later citizen
+  // message cannot silently reactivate automation; only an authorized
+  // operator/runtime resume path may clear state.handoff.
+  if (input.state.handoff) return unchanged("HUMAN_ACTIVE");
   if (
     input.state.goals.some((goal) => ["ACTIVE", "SUSPENDED", "WAITING"].includes(goal.status)) &&
     isConversationRestart(input.text)

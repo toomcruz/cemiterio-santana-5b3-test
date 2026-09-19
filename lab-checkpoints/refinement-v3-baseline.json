@@ -1,0 +1,85 @@
+{
+  "phase": "SANA_CONVERSATIONAL_REFINEMENT_V3",
+  "base_commit": "bfc6c8335a6c72a401573ec2673f4d77a3dd9b3b",
+  "base_label": "V2 candidate frozen before V3",
+  "branch": "sana-conversational-refinement-v3",
+  "cycle": 1,
+  "cycle_0_baseline": {
+    "v2_directed": "65 passed, 0 failed",
+    "official_suite": "351 passed, 0 failed, 1 ignored",
+    "gemini_calls": 0
+  },
+  "cycle_1": {
+    "changes_before_edit": [
+      {"problem": "localizacao de jazigo confundida com manutencao", "layer": "INTERPRETATION_REPLY", "checkpoint": "cycle-1-location", "test": "location intent variants"},
+      {"problem": "pedido de protocolo cai em clarificacao", "layer": "INTERPRETATION_REPLY", "checkpoint": "cycle-1-protocol", "test": "protocol no-fake-number"},
+      {"problem": "privacidade se perde sob insistencia", "layer": "STATE_REPLY", "checkpoint": "cycle-1-privacy", "test": "privacy persistence"},
+      {"problem": "documento sem reconhecimento de sujeito", "layer": "INTERPRETATION_REPLY", "checkpoint": "cycle-1-documents", "test": "document subject evidence"},
+      {"problem": "automacao continua depois de HUMAN_REQUEST", "layer": "LIFECYCLE", "checkpoint": "cycle-1-handoff", "test": "post-handoff silence"},
+      {"problem": "clarificacao generica em incerteza e fora de competencia", "layer": "REPLY", "checkpoint": "cycle-1-contextual-replies", "test": "contextual wording"}
+    ],
+    "directed_regressions": "56 passed, 0 failed",
+    "v2_regressions": "65 passed, 0 failed",
+    "official_suite": "407 passed, 0 failed, 1 ignored",
+    "novel_scenarios": "35 passed, 0 failed",
+    "targeted_compatibility_regressions": "68 passed, 0 failed",
+    "internal_command_scan": "0 exposed replies",
+    "p0_p1": "0 new failures"
+  },
+  "production_changes": false,
+  "whatsapp_messages_sent": 0,
+  "gemini": {"development_calls": 0, "status": "not_run", "cost": 0},
+  "human_review_v3": {
+    "status": "PENDING_HUMAN_REVIEW",
+    "cases": 16,
+    "affected_v2": 11,
+    "approved_v2_sample": 5,
+    "json": "lab-checkpoints/SANA-CONVERSATIONAL-REFINEMENT-V3-HUMAN-REVIEW.json",
+    "markdown": "lab-checkpoints/SANA-CONVERSATIONAL-REFINEMENT-V3-HUMAN-REVIEW.md"
+  },
+  "human_source_of_truth": {
+    "package": "/data/.openclaw/workspace/exports/sana-simulation-lab/SANA-CONVERSATIONAL-REFINEMENT-V2-HUMAN-REVIEW.md",
+    "approved": ["sim-07", "sim-19", "sim-40", "sim-101", "sim-102", "sim-105", "sim-34", "sim-24", "sim-49", "sim-09"],
+    "review": ["sim-18", "sim-30", "sim-46", "sim-103", "sim-106", "sim-109"],
+    "rejected": ["sim-22", "sim-104", "sim-107", "sim-108", "sim-16"],
+    "expectations_are_frozen": true
+  },
+  "invariants": [
+    "case_isolation",
+    "FOCUS_CASE",
+    "CLOSE",
+    "PAUSE_CASE",
+    "RESUME_CASE",
+    "correction_supersession",
+    "fact_boundary",
+    "authority_limits",
+    "privacy",
+    "no_invented_documents",
+    "complaint_recognition",
+    "multiple_subjects",
+    "explicit_no_request",
+    "handoff_receipt",
+    "receipts_idempotency",
+    "atomicity",
+    "no_cross_case",
+    "no_internal_commands_in_citizen_reply"
+  ],
+  "scope": [
+    "grave_location_intent",
+    "protocol_request",
+    "document_subject_case_binding",
+    "human_request_lifecycle",
+    "privacy_persistence",
+    "subject_named_return",
+    "natural_topic_change",
+    "other_cemetery_context",
+    "uncertain_contextual_help",
+    "plaque_next_question"
+  ],
+  "non_regression_policy": {
+    "approved_v2_cases_must_remain_technically_green": true,
+    "human_expectations_must_not_be_changed": true,
+    "max_refinement_cycles": 3,
+    "production_touch": "forbidden"
+  }
+}

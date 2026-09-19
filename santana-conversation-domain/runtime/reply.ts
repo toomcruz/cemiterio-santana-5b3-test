@@ -214,7 +214,7 @@ function pendingQuestionRepair(
     if (state.pending_question.fact_code === "burial_reference") {
       return "Tudo bem. Informe apenas o que souber: o nome do falecido ou alguma referência do local, como quadra, rua, terreno ou número. Se não souber esses dados, pode me dizer isso e eu sigo pela próxima opção segura.";
     }
-    return `Tudo bem. Você pode informar apenas o que souber. ${question} Se não tiver essa informação, diga isso claramente e eu apresentarei a próxima opção segura.`;
+    return `Tudo bem. Você pode informar apenas o que souber. ${question} Se não tiver essa informação, pode me dizer isso e eu apresentarei a próxima opção segura.`;
   }
   return `Não consegui relacionar essa mensagem à informação que estávamos reunindo. ${question} Se não souber, pode me dizer isso; se o assunto for outro, diga qual é.`;
 }
@@ -222,15 +222,17 @@ function pendingQuestionRepair(
 function documentDeclarationReply(state: ConversationState, interpretation: Interpretation): string | null {
   const fact = interpretation.facts.find((item) => item.fact_code === "document_declaration");
   if (!fact) return null;
+  const subject = interpretation.facts.find((item) => item.fact_code === "document_subject_hint")?.value;
+  const subjectText = typeof subject === "string" && subject.trim() ? ` sobre ${subject.trim()}` : "";
   switch (fact.value) {
     case "WILL_SEND":
-      return "Certo. Quando você enviar o documento, eu registro a declaração e ele ainda precisará ser conferido; enviar não significa que já foi recebido ou validado.";
+      return `Certo. Registrei que você vai enviar o documento${subjectText}. Quando ele chegar, ainda precisará ser conferido; a intenção de enviar não significa recebimento ou validação.`;
     case "SENT_WRONG":
-      return "Entendi que o arquivo enviado estava errado. Não vou tratá-lo como válido; quando puder, envie a versão correta para uma nova conferência.";
+      return `Entendi que o arquivo${subjectText} enviado estava errado. Não vou tratá-lo como válido; quando puder, envie a versão correta para uma nova conferência.`;
     case "SENT":
-      return "Entendi que você já enviou o documento. Vou considerar isso como uma declaração sua; o arquivo ainda precisa estar disponível para confirmação de recebimento e conferência.";
+      return `Entendi que você já enviou o documento${subjectText}. Registrei essa declaração, mas o arquivo ainda precisa estar disponível para confirmação de recebimento e conferência.`;
     case "WILL_CORRECT":
-      return "Certo. Quando você enviar a versão correta, ela será conferida separadamente. O arquivo anterior não será tratado como validado.";
+      return `Certo. Quando você enviar a versão correta${subjectText}, ela será conferida separadamente. O arquivo anterior não será tratado como validado.`;
     default:
       return null;
   }
@@ -249,11 +251,17 @@ function contextualDirectReply(
   }
   const documentReply = documentDeclarationReply(state, interpretation);
   if (documentReply) return documentReply;
-  if (/\b(?:outra pessoa|outro atendimento|outra conversa|prazo da outra pessoa|data da outra pessoa)\b/.test(text)) {
+  const privacyActive = state.facts.some((fact) => fact.status === "ACTIVE" && fact.fact_code === "privacy_boundary");
+  if (privacyActive && /\b(?:data|prazo|insisto|s[oó] me diga|s[oó] quero|s[oó] falar)\b/.test(text)) {
+    return "Entendo que você quer uma resposta objetiva, mas continuo sem poder informar dados de outra pessoa ou atendimento. Posso ajudar a consultar apenas um atendimento que seja seu.";
+  }
+  if (/\b(?:outra pessoa|outro atendimento|outra conversa|prazo da outra pessoa|data da outra pessoa|atendimento de outra pessoa|outra familia|outra família)\b/.test(text)) {
     return "Não posso informar dados de outro atendimento ou de outra pessoa. Posso ajudar com o seu próprio atendimento se você me passar o assunto ou a referência que possui.";
   }
-  if (state.handoff && /\b(?:data|prazo|insisto|s[oó] me diga)\b/.test(text)) {
-    return "Não posso informar a data ou o prazo de outro atendimento. A equipe pode verificar apenas o andamento do atendimento que pertence a você.";
+  const protocolFact = interpretation.facts.some((fact) => fact.fact_code === "protocol_request") ||
+    state.facts.some((fact) => fact.status === "ACTIVE" && fact.fact_code === "protocol_request");
+  if (protocolFact) {
+    return "Ainda não tenho um número de protocolo confirmado para informar. Se você já tem uma referência do atendimento, diga qual é; não vou inventar um número.";
   }
   if (/\b(?:duas horas|duas hora|garanta|garantir esse prazo|prazo)\b/.test(text) &&
     /\b(?:disseram|me falaram|sai|sair|confirmar|confirme|garanta|garantir)\b/.test(text)) {
@@ -271,6 +279,12 @@ function contextualDirectReply(
     fact.status === "ACTIVE" && fact.fact_code === "transport_destination" && fact.value === "OUTRO_CEMITERIO"
   );
   if (otherCemeteryFact || /\b(?:outro cemiterio|outro cemitério)\b/.test(text)) {
+    if (/\b(?:urgente|urgencia|urgência|agora)\b/.test(text)) {
+      return "Entendo que é urgente. Ainda assim, não consigo executar esse assunto por aqui nem prometer prazo; procure a administração do outro cemitério para verificar a urgência diretamente.";
+    }
+    if (/\b(?:conseguem fazer|fazer por mim|voc[eê]s fazem|resolver por mim)\b/.test(text)) {
+      return "Não consigo executar um serviço de outro cemitério. Posso orientar sobre o Santana; para esse caso, fale com a administração responsável pelo outro local.";
+    }
     return "Esse assunto é de outro cemitério, e eu não consigo executar o serviço por aqui. Posso orientar apenas sobre o Cemitério Santana; para o outro local, procure a administração responsável.";
   }
   if (/\b(?:tres|3)\s+(?:jazigos|falecidos|pessoas|casos)\b/.test(text)) {
@@ -284,6 +298,12 @@ function contextualDirectReply(
     !interpretation.facts.some((fact) => ["grave_reference", "concession_reference", "burial_reference"].includes(fact.fact_code))) {
     return "Certo, desconsiderei a referência anterior. Qual é a quadra, rua, terreno ou número correto?";
   }
+  if (eventKind === "UNCERTAIN" && /\b(?:nao sei dizer|nao sei|nao lembro|nao tenho certeza)\b/.test(text)) {
+    if (question) {
+      return `Tudo bem. Você pode informar apenas o que souber. ${question} Se não tiver essa informação, pode me dizer isso e eu apresentarei a próxima opção segura.`;
+    }
+    return "Tudo bem. Você pode me dizer ao menos se precisa localizar um jazigo, acompanhar um atendimento, enviar um documento ou falar com uma pessoa da equipe? Se preferir, também posso registrar o pedido de atendimento humano, sem afirmar que ele já foi encaminhado.";
+  }
   const subject = interpretation.case_reference.subject_hint?.trim();
   const nameOnly = subject && !isGreeting(text) && /^[A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+){0,2}$/u.test(subject) &&
     !/\b(?:jazigo|falecido|falecida|documento|pedido|assunto)\b/.test(text);
@@ -293,13 +313,25 @@ function contextualDirectReply(
   if (interpretation.facts.some((fact) => fact.fact_code === "transport_destination" && fact.value === "JAZIGO_FAMILIA")) {
     return "Entendi que o assunto é o jazigo da família. Você quer localizá-lo, tratar de um serviço ou tirar uma dúvida?";
   }
+  const locationRequested = interpretation.facts.some((fact) => fact.fact_code === "grave_location_intent") ||
+    state.facts.some((fact) => fact.status === "ACTIVE" && fact.fact_code === "grave_location_intent");
+  if (locationRequested) {
+    const reference = state.facts.find((fact) => fact.status === "ACTIVE" && fact.fact_code === "grave_reference")?.value;
+    if (reference) return `Certo, registrei a referência ${reference} para orientar a localização do jazigo. Isso ainda não confirma a localização oficial; você tem o nome completo da pessoa sepultada ou outro identificador?`;
+    return "Entendi que você quer localizar o jazigo, não abrir um pedido de manutenção. Qual é o nome completo da pessoa sepultada ou a referência que você tem, como quadra, setor, rua ou número?";
+  }
+  if (interpretation.facts.some((fact) => fact.fact_code === "commercial_item" && fact.value === "LAPIDE") &&
+    question && !/\b(?:documento|arquivo)\b/i.test(question)) {
+    return "Certo, vamos falar da placa ou lápide. Você quer orientação, orçamento ou já existe um pedido?";
+  }
   if (eventKind === "HUMAN_REQUEST" && !state.handoff) {
     return "Entendi que você quer falar com uma pessoa. Ainda não tenho um encaminhamento confirmado neste atendimento; posso registrar o pedido quando houver um atendimento aberto.";
   }
   if (/^(?:obrigado|obrigada|valeu|agradeco|agradeço)$/.test(text) && !contextGoal(state)) {
     return "De nada. Se precisar de outra informação, pode me dizer qual é a sua dúvida.";
   }
-  if (question && interpretation.facts.length > 0 && eventKind === "CORRECTION") {
+  if (question && interpretation.facts.length > 0 &&
+    (eventKind === "CORRECTION" || /\b(?:corrigindo|correta|correto|errada|errado)\b/.test(text))) {
     return `Certo, atualizei a informação indicada. ${question}`;
   }
   return null;
@@ -341,12 +373,12 @@ function transitionReply(
     const label = reference && !/^(?:demand|request|case|message)$/i.test(reference)
       ? reference
       : GOAL_LABELS[nextGoal.goal_code] ?? "atendimento";
-    return `Retomamos o atendimento de ${label}. ${followup ?? "Podemos continuar de onde paramos; o que você precisa resolver agora?"}`;
+    return `Certo, voltamos ao atendimento de ${label}. ${followup ?? "Podemos continuar de onde paramos; o que você precisa resolver agora?"}`;
   }
 
   if (nextGoal && interpretation?.case_reference.subject_hint && isConversationReturn(interpretation.text_normalized)) {
     const label = interpretation.case_reference.subject_hint;
-    return `Seguimos no atendimento de ${label}. ${followup ?? "O que você precisa resolver agora?"}`;
+    return `Certo, voltamos ao atendimento de ${label}. ${followup ?? "O que você precisa resolver agora?"}`;
   }
 
   if (eventKind === "RECLASSIFICATION" && previousGoal && nextGoal && previousGoal.goal_code !== nextGoal.goal_code) {
@@ -354,10 +386,13 @@ function transitionReply(
     const to = GOAL_LABELS[nextGoal.goal_code] ?? "novo assunto";
     const commercialItem = next.facts.find((fact) => fact.status === "ACTIVE" && fact.fact_code === "commercial_item") ??
       interpretation?.facts.find((fact) => fact.fact_code === "commercial_item");
-    const itemText = commercialItem?.value === "LAPIDE" ? " a placa ou lápide" : "";
-    return `Entendi a mudança: agora vamos tratar de ${to}${itemText}. O atendimento de ${from} foi preservado, e este assunto seguirá no mesmo histórico.${
-      followup ? ` ${followup}` : ""
-    }`;
+    const naturalTo = commercialItem?.value === "LAPIDE" ? "a placa ou lápide" : to;
+    const nextQuestion = followup ?? (commercialItem?.value === "LAPIDE"
+      ? "Você quer orientação, orçamento ou já existe um pedido?"
+      : "O que você precisa resolver sobre esse assunto?");
+    return naturalTo === "a placa ou lápide"
+      ? `Certo, vamos falar da placa ou lápide agora. O assunto anterior de ${from} ficou preservado. ${nextQuestion}`
+      : `Certo, agora vamos tratar de ${naturalTo}. O atendimento de ${from} foi preservado. ${nextQuestion}`;
   }
 
   // CORRECTION/CHANGE_OF_MIND records facts in the current goal. A provider

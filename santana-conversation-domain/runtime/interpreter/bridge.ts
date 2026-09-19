@@ -107,6 +107,7 @@ export function toConversationEvents(interpretation: Interpretation, state?: Con
     ["CLOSE", "PAUSE_CASE"].includes(state.event_log.at(-1)?.note ?? "") &&
     isConversationReturn(interpretation.text_normalized);
   const currentCaseRef = state?.cases.find((item) => item.case_id === currentCaseId)?.subject_ref;
+  const privacyBoundary = interpretation.facts.some((fact) => fact.fact_code === "privacy_boundary");
   // A linguistic hint ("minha tia") is not a unique person identifier. A
   // NEW demand must never silently reuse an older case bearing that hint.
   const caseRef = interpretation.case_reference.kind === "NEW"
@@ -161,8 +162,8 @@ export function toConversationEvents(interpretation: Interpretation, state?: Con
   events.push({
     kind,
     facts,
-    ...((closeConversation || pauseConversation || resumeConversation || focusTarget)
-      ? { note: closeConversation ? "CLOSE" : pauseConversation ? "PAUSE_CASE" : resumeConversation ? "RESUME_CASE" : "FOCUS_CASE" }
+    ...((closeConversation || pauseConversation || resumeConversation || focusTarget || privacyBoundary)
+      ? { note: closeConversation ? "CLOSE" : pauseConversation ? "PAUSE_CASE" : resumeConversation ? "RESUME_CASE" : focusTarget ? "FOCUS_CASE" : "PRIVACY_BOUNDARY" }
       : {}),
     ...(focusTarget ? { focus_case_id: focusTarget.goal_id } : {}),
     ...(p0Handoff ? { handoff_priority: "P0" as const } : {}),

@@ -154,6 +154,30 @@ function graveReference(text: string): string | null {
   return match?.[0]?.trim() || null;
 }
 
+export function isGraveLocationRequest(text: string): boolean {
+  const value = normalize(text);
+  return /\b(?:localizar|encontrar|achar|saber onde fica|onde fica|ver onde fica)\b.*\bjazigo\b/.test(value) ||
+    /\b(?:jazigo|sepultura)\b.*\b(?:localizar|encontrar|achar|onde fica)\b/.test(value);
+}
+
+function isProtocolRequest(text: string): boolean {
+  const value = normalize(text);
+  return /\b(?:quero|preciso|gostaria de|me passa|me informe|qual e o|qual o)\s+(?:o\s+)?(?:numero do\s+|do\s+|da\s+)?protocolo\b/.test(value) ||
+    /^protocolo\b/.test(value);
+}
+
+function documentSubjectHint(text: string): string | null {
+  const match = text.match(/\b(?:documento|arquivo)\s+(?:da|do|de)\s+(.+?)(?=\s+(?:foi|est[aá]|vai|ser[aá]|estava|era)\b|[.,;!?]|$)/i);
+  if (match?.[1]?.trim()) return match[1].trim();
+  const correction = text.match(/\b(?:o|a)\s+da\s+(.+?)\s+(?:estava|era)\s+errad/i);
+  return correction?.[1]?.trim() ?? null;
+}
+
+function isThirdPartyPrivacyRequest(text: string): boolean {
+  const value = normalize(text);
+  return /\b(?:outra pessoa|outro atendimento|outra conversa|prazo da outra pessoa|data da outra pessoa|atendimento de outra pessoa|processo de outra familia|outra familia)\b/.test(value);
+}
+
 function referenceAfter(text: string, anchor: RegExp): string | null {
   const clause = text.match(anchor)?.[1]?.trim();
   return clause ? graveReference(clause) : null;
@@ -226,11 +250,14 @@ export function interpret(input: InterpreterInput): Interpretation {
   const noRequest = /\b(?:nao|nunca)\s+(?:quero|vou|preciso|gostaria de)?\s*(?:abrir|criar|fazer|iniciar)\s+(?:um\s+)?(?:pedido|solicitacao|atendimento)\b/.test(text) ||
     /\bnao quero abrir\s+(?:pedido|solicitacao|atendimento)\b/.test(text);
   const multipleSubjectsMarker = /\b(?:tres|3|varios|varias|mais de um|mais de uma)\s+(?:jazigos|falecidos|pessoas|casos)\b/.test(text);
+  const shortHumanRequest = /^(?:humano|atendente|pessoa|chama algu[eé]m|me passa para algu[eé]m|quero falar com algu[eé]m)$/.test(text);
   const humanHandoffMarker = !conversationClose && !conversationPause ? ((input.context.has_open_goal && isConversationClose(input.text) ? input.text : null) ??
     firstMatch(text, lexicon.human_handoff_markers) ??
     (/(?:^|\b)(?:humano|atendente|atendimento humano|pessoa|chama algu[eé]m|falar com algu[eé]m)\b/.test(text) &&
       !/\b(?:outra pessoa|prazo da outra pessoa|data da outra pessoa|outro atendimento)\b/.test(text) &&
       !/\b(?:nao|nunca|sem)\s+(?:humano|atendente|pessoa)\b/.test(text)
+      ? input.text
+      : shortHumanRequest
       ? input.text
       : cancellation && input.context.has_open_goal
       ? input.text
@@ -245,12 +272,18 @@ export function interpret(input: InterpreterInput): Interpretation {
       : (/\b(?:ja|já)\s+(?:mandei|enviei|foi enviado|foi mandado)\b.*\b(?:errad[oa]|incorreto|arquivo errado)\b/.test(text) ||
           /\b(?:documento|arquivo)\b.*\b(?:foi enviado|foi mandado)\b.*\b(?:errad[oa]|incorreto)\b/.test(text))
       ? "SENT_WRONG"
+      : /\b(?:o|a)\s+da\s+.+\s+(?:estava|era)\s+errad[oa]\b/.test(text)
+      ? "SENT_WRONG"
       : (/\b(?:ja|já)\s+(?:mandei|enviei|foi enviado|foi mandado)\b/.test(text) ||
           /\b(?:documento|arquivo)\b.*\b(?:foi enviado|foi mandado)\b/.test(text))
       ? "SENT"
-      : /\b(?:vou|irei|pretendo)\s+(?:corrigir|reenviar|mandar outro|enviar outro)\b/.test(text)
+      : /\b(?:vou|irei|pretendo)\s+(?:corrigir|reenviar|mandar outro|enviar outro)\b/.test(text) ||
+        /\b(?:vou|irei|pretendo)\s+(?:mandar|enviar)\s+outro\b/.test(text)
       ? "WILL_CORRECT"
       : null;
+  const documentSubject = documentSubjectHint(input.text);
+  const protocolRequest = isProtocolRequest(input.text);
+  const privacyRequest = isThirdPartyPrivacyRequest(input.text);
   let newSubjectMarker = (requestsNewNamedAttendance(input.text) ? input.text : null) ??
     firstMatch(text, lexicon.new_subject_markers) ??
     (/\b(?:tambem|outr[oa]|mais um|mais uma)\b/.test(text) &&
@@ -277,6 +310,51 @@ export function interpret(input: InterpreterInput): Interpretation {
       fact_code: "document_declaration",
       value: documentDeclaration,
       source: correctionMarker ? "USER_CORRECTION" : "USER_EXPLICIT",
+      confidence: "HIGH",
+      evidence: input.text,
+      requires_confirmation: false,
+    });
+  }
+  if (documentSubject) {
+    seen.add("document_subject_hint");
+    facts.push({
+      fact_code: "document_subject_hint",
+      value: documentSubject,
+      source: correctionMarker ? "USER_CORRECTION" : "USER_EXPLICIT",
+      confidence: "HIGH",
+      evidence: input.text,
+      requires_confirmation: false,
+    });
+  }
+  if (isGraveLocationRequest(input.text) || (input.context.open_goal_code === "GOAL_JAZIGO_SERVICOS" &&
+      input.context.known_facts?.some((fact) => fact.fact_code === "grave_location_intent"))) {
+    seen.add("grave_location_intent");
+    facts.push({
+      fact_code: "grave_location_intent",
+      value: "REQUESTED",
+      source: correctionMarker ? "USER_CORRECTION" : "USER_EXPLICIT",
+      confidence: "HIGH",
+      evidence: input.text,
+      requires_confirmation: false,
+    });
+  }
+  if (protocolRequest) {
+    seen.add("protocol_request");
+    facts.push({
+      fact_code: "protocol_request",
+      value: "REQUESTED",
+      source: "USER_EXPLICIT",
+      confidence: "HIGH",
+      evidence: input.text,
+      requires_confirmation: false,
+    });
+  }
+  if (privacyRequest) {
+    seen.add("privacy_boundary");
+    facts.push({
+      fact_code: "privacy_boundary",
+      value: "THIRD_PARTY_DATA_REFUSED",
+      source: "USER_EXPLICIT",
       confidence: "HIGH",
       evidence: input.text,
       requires_confirmation: false,
@@ -742,6 +820,23 @@ export function interpret(input: InterpreterInput): Interpretation {
           selected_event: "RECLASSIFICATION" as const,
           suppressed_events: [],
           reason: "mudança explícita de assunto no mesmo atendimento",
+        },
+      }
+      : {}),
+    ...((isGraveLocationRequest(input.text) && !explicitTopicChange && !returnsToGraveCase)
+      ? {
+        official_mapping: {
+          journeys: ["JAZIGO"],
+          subintents: ["LOCALIZAR_JAZIGO"],
+          transverse_states: [],
+          intent_changed: false,
+          complexity: "LOW",
+          risk_level: "LOW",
+          confidence: "HIGH",
+          evidence_turn_ids: [input.message_id],
+          selected_event: primaryKind,
+          suppressed_events: [],
+          reason: "pedido explícito de localização, separado de manutenção",
         },
       }
       : {}),

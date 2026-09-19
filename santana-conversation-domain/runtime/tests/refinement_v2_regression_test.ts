@@ -17,7 +17,12 @@ async function runCase(testCase: Case): Promise<{ state: ConversationState; plan
       state,
       automation_mode: "BOT_ACTIVE",
     }, interpreter);
-    assert(plan.reply_draft?.trim(), `${testCase.id} turn ${index + 1} must have a visible reply`);
+    if (!plan.reply_draft?.trim()) {
+      assert(
+        plan.outcome === "HUMAN_ACTIVE" && state.handoff !== null,
+        `${testCase.id} turn ${index + 1} may be silent only after human ownership`,
+      );
+    }
     assert(
       !/NÃO SEI|NAO SEI|NOVO ATENDIMENTO DE|FINALIZAR|harness|shadow|reducer|fonte controlada/i.test(plan.reply_draft!),
       `${testCase.id} exposed an internal command or implementation term: ${plan.reply_draft}`,

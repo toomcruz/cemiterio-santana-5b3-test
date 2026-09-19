@@ -113,7 +113,9 @@
         "grave_service_description"
       ],
       "optional_facts": [
-        "grave_reference"
+        "grave_reference",
+        "grave_location_intent",
+        "deceased_name"
       ]
     },
     {
