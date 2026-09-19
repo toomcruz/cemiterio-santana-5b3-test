@@ -419,6 +419,18 @@ try {
         try {
           const inbound: RuntimeInbound = { external_message_id: `${ledger.run_id}-${invocationId}-${conversation.id}-${turn}-${credentialSlot}`, phone_e164: phone, contact_name: `${ledger.contact_prefix}-${conversation.id}`, body: conversation.turns[turn - 1]!, message_type: "text", metadata: { lab_only: true, qualification_run_id: ledger.run_id, matrix_id: conversation.id, turn, credential_slot: credentialSlot, provider_attempt_message_id: `${ledger.run_id}-${invocationId}-${conversation.id}-${turn}-${credentialSlot}` } };
           const result = await processOfficialTurn(inbound, new SupabaseRuntimeStore(rest), interpreter, { automatic_replies_allowed: true });
+          // planTurn fail-closed catches provider exceptions and returns an
+          // unavailable interpretation. The interpreter has already persisted
+          // the raw 429 and marked the ledger item blocked, so inspect the
+          // ledger status here instead of treating that runtime result as a
+          // successful turn. This is the hand-off point for A -> B failover.
+          if (entry.status === "PROVIDER_BLOCKED") {
+            paused = true;
+            pauseCategory = entry.provider_category;
+            pauseMetadata = entry.provider_metadata;
+            if (credentialSlot === "A" && slots.includes("B") && providerCalls < MAX_PROVIDER_CALLS_PER_RUN) continue;
+            break;
+          }
           conversationId ??= result.conversation_id; entry.runtime = { conversation_id: result.conversation_id, kind: result.kind, revision: result.revision, event_kind: result.event_kind, inbound_message_id: result.inbound_message_id, reply_body_present: result.reply_body !== null, outbox_id: result.outbox_id, credential_slot: credentialSlot, credential_fingerprint: CREDENTIALS[credentialSlot].fingerprint }; await deliver(rest, result.outbox_id, `${conversation.id}-${turn}`, ledger.run_id); entry.updated_at = nowIso(); ledger.updated_at = nowIso(); ledger.status = "RUNNING"; paused = false; pauseCategory = undefined; pauseMetadata = undefined; await writeLedgerAtomic("runtime-result"); runtimeSucceeded = true; processedRuntime++; break;
         } catch (error) {
           if (error instanceof QuotaPause) { paused = true; pauseCategory = error.category; pauseMetadata = error.metadata; if (credentialSlot === "A" && providerCalls < MAX_PROVIDER_CALLS_PER_RUN) continue; break; }
