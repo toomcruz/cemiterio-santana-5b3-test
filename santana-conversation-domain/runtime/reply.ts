@@ -9,6 +9,7 @@ import { isConversationClose, isConversationReturn, isGreeting } from "./interpr
 import { activeFact, contextGoal, type ConversationState, type GoalRecord } from "../engine/engine.ts";
 import { questionForFact } from "../engine/catalog.ts";
 import type { Interpretation } from "./interpreter/types.ts";
+import { proceduralDirectReply } from "./procedure_knowledge.ts";
 
 export type ReplyOutcome = "PROPOSED" | "CLARIFICATION" | "HUMAN_ACTIVE" | "INTERPRETATION_UNAVAILABLE";
 
@@ -353,6 +354,22 @@ export function draftReply(input: {
     questionDraft,
   );
   if (transition) return transition;
+  // Explanatory context never supersedes a control, complaint, correction,
+  // case change, attachment boundary or an actual human handoff.
+  if (
+    !input.next_state.handoff && input.outcome === "PROPOSED" &&
+    !["HUMAN_REQUEST", "SOCIAL", "COMPLAINT", "CORRECTION", "CHANGE_OF_MIND", "RECLASSIFICATION"].includes(
+      eventKind ?? "",
+    ) &&
+    !input.interpretation?.ambiguities.some((item) => item.blocking)
+  ) {
+    const procedural = proceduralDirectReply({
+      text: input.interpretation?.text_normalized ?? "",
+      activeGoalCode: contextGoal(input.next_state)?.goal_code ?? null,
+      pendingQuestion: questionDraft,
+    });
+    if (procedural) return procedural;
+  }
   const exhumationPurpose = input.interpretation?.facts.find((fact) => fact.fact_code === "exhumation_purpose");
   if (questionDraft && exhumationPurpose?.value === "OSSUARIO") {
     return `Entendi, você quer colocar os restos no ossuário. ${questionDraft}`;

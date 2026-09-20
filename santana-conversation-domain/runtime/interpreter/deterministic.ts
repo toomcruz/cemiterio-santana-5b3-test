@@ -20,6 +20,7 @@ import {
   requestsNewNamedAttendance,
 } from "./conversation_controls.ts";
 import { lexiconV1 } from "../generated_assets.ts";
+import { procedureRouteHint } from "../procedure_knowledge.ts";
 
 interface GoalPattern {
   goal_code: string;
@@ -254,6 +255,14 @@ export function interpret(input: InterpreterInput): Interpretation {
     }
   }
   for (const pattern of lexicon.fact_patterns) {
+    // Owning a family grave during bereavement is not a stated transport
+    // destination. Keep that distinction without manufacturing a new fact.
+    if (
+      pattern.fact_code === "transport_destination" &&
+      /\b(temos|tenho|possuo|possuimos)\b.*\bjazigo\b/.test(text) &&
+      !/\b(levar|transportar|transferir|transladar|colocar|destino)\b/.test(text) &&
+      input.context.open_goal_code !== "GOAL_TRANSPORTE"
+    ) continue;
     // Purpose words such as "ossuario" also exist in other services. They are
     // an exhumation answer only when that question is pending or the same
     // message explicitly opens an exhumation goal.
@@ -307,6 +316,21 @@ export function interpret(input: InterpreterInput): Interpretation {
     if (goal === null) {
       goal = { goal_code: pattern.goal_code, confidence: pattern.confidence, evidence };
       subjectKind = pattern.subject_kind as CaseReference["subject_kind"];
+    }
+  }
+
+  // The historical n8n flow contained operational names that are broader
+  // than the compact V1 lexicon. Map those names to existing goals only; this
+  // never creates a rule, price, document requirement or protected decision.
+  if (goal === null && (!input.context.has_open_goal || newSubjectMarker)) {
+    const procedural = procedureRouteHint(input.text);
+    if (procedural) {
+      goal = {
+        goal_code: procedural.goal_code,
+        confidence: procedural.confidence,
+        evidence: procedural.evidence,
+      };
+      subjectKind = procedural.subject_kind as CaseReference["subject_kind"];
     }
   }
 
