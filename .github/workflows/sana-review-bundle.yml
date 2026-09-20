@@ -18,21 +18,19 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.1.4
-      - name: Archive tracked source and pinned test runtime only
+          ref: cfd3a7f708fa89d52d38ec9a4e7bda6dfcb78bf7
+      - name: Archive pinned tracked canary lineage only
         shell: bash
         run: |
           set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = cfd3a7f708fa89d52d38ec9a4e7bda6dfcb78bf7
           mkdir -p "$RUNNER_TEMP/sana-review"
-          git archive --format=tar HEAD | gzip > "$RUNNER_TEMP/sana-review/source.tar.gz"
-          cp "$(command -v deno)" "$RUNNER_TEMP/sana-review/deno"
+          git archive --format=tar HEAD | gzip > "$RUNNER_TEMP/sana-review/production-lineage.tar.gz"
           git rev-parse HEAD > "$RUNNER_TEMP/sana-review/SOURCE_SHA"
-          sha256sum "$RUNNER_TEMP/sana-review/deno" "$RUNNER_TEMP/sana-review/source.tar.gz" > "$RUNNER_TEMP/sana-review/CHECKSUMS"
+          sha256sum "$RUNNER_TEMP/sana-review/production-lineage.tar.gz" > "$RUNNER_TEMP/sana-review/CHECKSUMS"
       - uses: actions/upload-artifact@v4
         with:
-          name: sana-offline-review
+          name: sana-production-lineage
           path: ${{ runner.temp }}/sana-review/
           retention-days: 1
           if-no-files-found: error
