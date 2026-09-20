@@ -1,0 +1,38 @@
+name: Sana offline review bundle
+
+on:
+  push:
+    branches:
+      - feat/sana-procedural-context-v1
+    paths:
+      - .github/workflows/sana-review-bundle.yml
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.1.4
+      - name: Archive tracked source and pinned test runtime only
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p "$RUNNER_TEMP/sana-review"
+          git archive --format=tar HEAD | gzip > "$RUNNER_TEMP/sana-review/source.tar.gz"
+          cp "$(command -v deno)" "$RUNNER_TEMP/sana-review/deno"
+          git rev-parse HEAD > "$RUNNER_TEMP/sana-review/SOURCE_SHA"
+          sha256sum "$RUNNER_TEMP/sana-review/deno" "$RUNNER_TEMP/sana-review/source.tar.gz" > "$RUNNER_TEMP/sana-review/CHECKSUMS"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sana-offline-review
+          path: ${{ runner.temp }}/sana-review/
+          retention-days: 1
+          if-no-files-found: error
