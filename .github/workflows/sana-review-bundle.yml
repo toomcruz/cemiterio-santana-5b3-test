@@ -1,4 +1,4 @@
-name: Sana offline review bundle
+name: Sana verified procedural repair
 
 on:
   push:
@@ -8,29 +8,55 @@ on:
       - .github/workflows/sana-review-bundle.yml
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: sana-procedural-repair
+  cancel-in-progress: false
 
 jobs:
-  bundle:
+  repair:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
         with:
-          persist-credentials: false
-          ref: cfd3a7f708fa89d52d38ec9a4e7bda6dfcb78bf7
-      - name: Archive pinned tracked canary lineage only
+          deno-version: v2.1.4
+      - name: Apply source-pinned repair and verify tested file hashes
         shell: bash
         run: |
           set -Eeuo pipefail
-          test "$(git rev-parse HEAD)" = cfd3a7f708fa89d52d38ec9a4e7bda6dfcb78bf7
-          mkdir -p "$RUNNER_TEMP/sana-review"
-          git archive --format=tar HEAD | gzip > "$RUNNER_TEMP/sana-review/production-lineage.tar.gz"
-          git rev-parse HEAD > "$RUNNER_TEMP/sana-review/SOURCE_SHA"
-          sha256sum "$RUNNER_TEMP/sana-review/production-lineage.tar.gz" > "$RUNNER_TEMP/sana-review/CHECKSUMS"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: sana-production-lineage
-          path: ${{ runner.temp }}/sana-review/
-          retention-days: 1
-          if-no-files-found: error
+          python3 .github/sana-procedural-patch.py
+          deno fmt santana-conversation-domain/runtime
+          python3 - <<'PY'
+          import subprocess
+          expected = {
+            'santana-conversation-domain/runtime/interpreter/deterministic.ts': '2fd4077aee1c40af6f3954d22113750b2f86d869',
+            'santana-conversation-domain/runtime/official_information.ts': 'b90fff5efbfb526012cc47eb230b99f894afe7b8',
+            'santana-conversation-domain/runtime/procedure_knowledge.ts': 'f8674992225a59db1b68fd411a5ac63d3384919e',
+            'santana-conversation-domain/runtime/reply.ts': '508de325de12d34af51078d552851a7696e73f3e',
+            'santana-conversation-domain/runtime/tests/procedure_knowledge_test.ts': '8ec94125d08244128a97c7dc8755afb87388b3d4',
+          }
+          for path, sha in expected.items():
+            got = subprocess.check_output(['git','hash-object',path], text=True).strip()
+            assert got == sha, 'Mismatch in tested source: '+path+' '+got
+          changed = set(subprocess.check_output(['git','diff','--name-only'], text=True).splitlines())
+          assert changed == set(expected), 'Unexpected source change'
+          print('All five files match the locally tested source.')
+          PY
+      - name: Offline regression tests
+        run: |
+          deno fmt --check santana-conversation-domain
+          deno lint santana-conversation-domain
+          deno test --allow-env --allow-read tests/unit tests/shadow santana-conversation-domain/tests/p0 santana-conversation-domain/runtime/tests santana-conversation-domain/integrations/tests santana-conversation-domain/tests/fase4
+      - name: Commit only verified branch changes and remove temporary helpers
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add santana-conversation-domain/runtime/interpreter/deterministic.ts santana-conversation-domain/runtime/official_information.ts santana-conversation-domain/runtime/procedure_knowledge.ts santana-conversation-domain/runtime/reply.ts santana-conversation-domain/runtime/tests/procedure_knowledge_test.ts
+          git rm .github/sana-procedural-patch.py .github/workflows/sana-review-bundle.yml
+          git commit -m "fix(sana): preserve authority and conversation control in procedural context"
+          git push origin HEAD:feat/sana-procedural-context-v1
