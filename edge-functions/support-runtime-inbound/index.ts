@@ -219,7 +219,13 @@ Deno.serve(async (request) => {
       const ingressKey = Deno.env.get("SUPPORT_RUNTIME_INGRESS_KEY")?.trim() ?? "";
       if (!ingressKey) throw new HttpProblem(503, "CANARY_INGRESS_UNCONFIGURED", "Private canary ingress is not configured");
       const result = await invokePrivateCanary(inbound, ingressKey);
-      return json({ ...result, routed_by: "support-runtime-inbound" });
+      const delivery = await deliver(rest, text(result.outbox_id) || null);
+      return json({
+        ...result,
+        delivery,
+        external_delivery: delivery === "sent",
+        routed_by: "support-runtime-inbound",
+      });
     }
     const route = await selectCanaryRoute(
       inbound.phone_e164,
