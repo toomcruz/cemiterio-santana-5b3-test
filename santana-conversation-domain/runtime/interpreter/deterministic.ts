@@ -20,6 +20,7 @@ import {
   requestsNewNamedAttendance,
 } from "./conversation_controls.ts";
 import { lexiconV1 } from "../generated_assets.ts";
+import { procedureRouteHint } from "../procedure_knowledge.ts";
 
 interface GoalPattern {
   goal_code: string;
@@ -307,6 +308,21 @@ export function interpret(input: InterpreterInput): Interpretation {
     if (goal === null) {
       goal = { goal_code: pattern.goal_code, confidence: pattern.confidence, evidence };
       subjectKind = pattern.subject_kind as CaseReference["subject_kind"];
+    }
+  }
+
+  // The historical n8n flow contained operational names that are broader
+  // than the compact V1 lexicon. Map those names to existing goals only; this
+  // never creates a rule, price, document requirement or protected decision.
+  if (goal === null) {
+    const procedural = procedureRouteHint(input.text);
+    if (procedural) {
+      goal = {
+        goal_code: procedural.goal_code,
+        confidence: procedural.confidence,
+        evidence: procedural.evidence,
+      };
+      subjectKind = procedural.subject_kind as CaseReference["subject_kind"];
     }
   }
 
