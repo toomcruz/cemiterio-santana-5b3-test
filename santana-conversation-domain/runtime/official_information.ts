@@ -11,6 +11,7 @@ import type { Contexto } from "../../santana-authority-gateway/consulta.ts";
 import { camposParaCanned, type RespostaAutoritativa } from "../../santana-authority-gateway/resposta.ts";
 import { activeFact, contextGoal, type ConversationState } from "../engine/engine.ts";
 import { authorityDomainSources, authoritySource } from "./generated_authority_assets.ts";
+import { PROCEDURAL_SOURCE, proceduralDirectReply } from "./procedure_knowledge.ts";
 
 export interface OfficialInformationReply {
   text: string;
@@ -21,6 +22,7 @@ export interface OfficialInformationReply {
   preserves_goal: true;
   /** This is a requirement, not a claim that an operational task was created. */
   administration_required: boolean;
+  contextual_source?: typeof PROCEDURAL_SOURCE;
 }
 
 export interface OfficialInformationInput {
@@ -72,7 +74,10 @@ function informationType(text: string): string | null {
   if (/\b(jazigo|sepultura) (?:da |de )?familia\b/.test(text)) return "JAZIGO_DESTINO";
   if (/\b(ossuario|ossuarios)\b/.test(text)) return "OSSUARIO";
   if (/\b(transporte|transportar|translado|traslado)\b/.test(text)) return "TRANSPORTE";
-  if (/\b(procedimento|procedimentos|regras|como funciona|como fazer|como faco|preciso saber)\b/.test(text)) {
+  if (
+    /\b(procedimento|procedimentos|regras|como funciona|como fazer|como faco|preciso saber|o que e|me explique|explique)\b/
+      .test(text)
+  ) {
     return "PROCEDIMENTO_ADMINISTRATIVO";
   }
   return null;
@@ -153,17 +158,26 @@ export async function officialInformationReply(
   const topic = explicitTopic(text, type) ?? input.state.current_topic ??
     goal?.goal_code.replace(/^GOAL_(?:INFO_)?/, "") ?? "OUTROS_ASSUNTOS";
   const base = { topic, information_type: type, preserves_goal: true as const };
+  // A summary enriches NOT_AVAILABLE explanations only. It never turns an
+  // unreviewed document into an approved answer or overrides NEEDS_CONTEXT,
+  // CONFLICT, a signed rule, a price, a timetable or a contact.
+  const contextual =
+    ["DOCUMENTOS", "PROCEDIMENTO_ADMINISTRATIVO", "TRANSPORTE", "OSSUARIO", "JAZIGO_DESTINO"].includes(type)
+      ? proceduralDirectReply({ text: input.text, activeGoalCode: goal?.goal_code })
+      : null;
+  const unavailableContext = () => ({
+    ...base,
+    text: contextual ? `${unavailable(type)}\n\n${contextual}` : unavailable(type),
+    status: "NOT_AVAILABLE" as const,
+    authority: null,
+    administration_required: true,
+    ...(contextual ? { contextual_source: PROCEDURAL_SOURCE } : {}),
+  });
   const isExhumationInformation = topic === "EXUMACAO" ||
     (topic === "OSSUARIO" && type === "OSSUARIO") ||
     (topic === "TRANSPORTE" && ["TRANSPORTE", "JAZIGO_DESTINO", "RESTOS_JA_EXUMADOS"].includes(type));
   if (!isExhumationInformation) {
-    return {
-      ...base,
-      text: unavailable(type),
-      status: "NOT_AVAILABLE",
-      authority: null,
-      administration_required: true,
-    };
+    return unavailableContext();
   }
 
   const reference = exigirDataCivil(input.referenceDate ?? todayInSaoPaulo(), "official information reference");
@@ -205,6 +219,9 @@ export async function officialInformationReply(
       ? "O valor depende da modalidade da sepultura de origem. Essa modalidade e a vigência da tabela precisam ser confirmadas pela Administração antes de informar a tarifa. O destino dos restos, como o ossuário, não determina esse valor."
       : "Essa informação depende de detalhes do caso que ainda precisam ser confirmados pela Administração.";
     return { ...base, text: explanation, status: "NEEDS_CONTEXT", authority, administration_required: true };
+  }
+  if (authority.status === "NOT_AVAILABLE" && contextual) {
+    return { ...unavailableContext(), authority };
   }
   return {
     ...base,

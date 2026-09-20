@@ -28,7 +28,7 @@ Deno.test("historical procedure names route into existing safe goals", () => {
     ["Meu pai faleceu hoje e temos jazigo da família", "OBITO_RECENTE_COM_JAZIGO", "GOAL_OUTROS_ASSUNTOS"],
     ["Preciso remarcar a exumação", "REMARCACAO_EXUMACAO", "GOAL_EXUMACAO"],
     ["Quero falar com a ouvidoria", "OUVIDORIA", "GOAL_OUTROS_ASSUNTOS"],
-    ["Como funciona o translado?", "TRANSLADO_PARA_SANTANA", "GOAL_TRANSPORTE"],
+    ["Como funciona o translado para Santana?", "TRANSLADO_PARA_SANTANA", "GOAL_TRANSPORTE"],
     ["Quero colocar cinzas no jazigo", "CINZAS_EM_JAZIGO", "GOAL_COMERCIAL"],
   ] as const;
   for (const [text, procedure, goal] of cases) {
@@ -68,14 +68,16 @@ Deno.test("procedure context answers documents and preserves the pending flow", 
   assert(!answer?.includes("aprovação confirmada"));
 });
 
-Deno.test("volatile values are never presented without a current-verification warning", () => {
-  const price = proceduralDirectReply({ text: "Quanto custa a exumação em quadra geral?" });
-  assert(price?.includes("R$ 351,67"));
-  assert(price?.includes("precisa ser confirmado na fonte oficial vigente"));
-
-  const deadline = proceduralDirectReply({ text: "Qual o prazo do processo de concessão?" });
-  assert(deadline?.includes("180 dias"));
-  assert(deadline?.includes("precisa ser confirmado na fonte oficial vigente"));
+Deno.test("historical values never bypass official authority with a disclaimer", () => {
+  for (
+    const text of [
+      "Quanto custa a exumação em quadra geral?",
+      "Qual o prazo do processo de concessão?",
+      "Qual o horário do recadastro?",
+      "Qual o telefone da ouvidoria?",
+      "Qual o endereço da agência?",
+    ]
+  ) assertEquals(proceduralDirectReply({ text }), null);
 });
 
 Deno.test("concession payment is never confused with process approval", () => {
@@ -149,8 +151,8 @@ Deno.test("the full operational source categories are represented", () => {
       "taxa de concessão",
       "administração provisória",
       "cinzas em jazigo",
-      "translado",
-      "óbito recente",
+      "translado para Santana",
+      "óbito recente com jazigo",
       "manutenção do jazigo",
       "serviço funerário",
       "remarcação de exumação",

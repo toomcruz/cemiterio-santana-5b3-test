@@ -293,16 +293,6 @@ export function draftReply(input: {
 }): string | null {
   if (input.outcome === "HUMAN_ACTIVE" || input.outcome === "INTERPRETATION_UNAVAILABLE") return null;
 
-  // Business procedure knowledge is resolved deterministically after the
-  // language interpretation and before generic drafting. This restores the
-  // old flowchart context without turning the LLM into a rule authority.
-  const procedural = proceduralDirectReply({
-    text: input.interpretation?.text_normalized ?? "",
-    activeGoalCode: contextGoal(input.next_state)?.goal_code ?? null,
-    pendingQuestion: input.question_draft,
-  });
-  if (procedural) return procedural;
-
   if (isBereavementStatement(input.interpretation) && !contextGoal(input.next_state)) {
     return "Sinto muito pela sua perda. Para eu direcionar o atendimento corretamente, conte o que você precisa fazer agora — por exemplo, exumação, ossuário, concessão, recadastro ou uma situação no jazigo.";
   }
@@ -364,6 +354,22 @@ export function draftReply(input: {
     questionDraft,
   );
   if (transition) return transition;
+  // Explanatory context never supersedes a control, complaint, correction,
+  // case change, attachment boundary or an actual human handoff.
+  if (
+    !input.next_state.handoff && input.outcome === "PROPOSED" &&
+    !["HUMAN_REQUEST", "SOCIAL", "COMPLAINT", "CORRECTION", "CHANGE_OF_MIND", "RECLASSIFICATION"].includes(
+      eventKind ?? "",
+    ) &&
+    !input.interpretation?.ambiguities.some((item) => item.blocking)
+  ) {
+    const procedural = proceduralDirectReply({
+      text: input.interpretation?.text_normalized ?? "",
+      activeGoalCode: contextGoal(input.next_state)?.goal_code ?? null,
+      pendingQuestion: questionDraft,
+    });
+    if (procedural) return procedural;
+  }
   const exhumationPurpose = input.interpretation?.facts.find((fact) => fact.fact_code === "exhumation_purpose");
   if (questionDraft && exhumationPurpose?.value === "OSSUARIO") {
     return `Entendi, você quer colocar os restos no ossuário. ${questionDraft}`;

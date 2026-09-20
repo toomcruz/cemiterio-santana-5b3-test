@@ -1,4 +1,4 @@
-export const PROCEDURAL_CONTEXT_VERSION = "santana-procedures/1.0.0";
+export const PROCEDURAL_CONTEXT_VERSION = "santana-procedures/1.0.1";
 
 export type ProcedureGoalCode =
   | "GOAL_TRANSPORTE"
@@ -43,8 +43,13 @@ export type ProcedureDefinition = {
   recorded: RecordedInfo[];
 };
 
-const VERIFY_NOTICE =
-  "Esse dado vem do material operacional anterior e precisa ser confirmado na fonte oficial vigente antes de ser tratado como atual.";
+// Historical source values stay in the inventory for review. They are NOT a
+// second authoritative price/document/calendar service.
+export const PROCEDURAL_SOURCE = {
+  id: "PROCEDIMENTOS_CEMITERIO_SANTANA_FLUXOGRAMA_E_RESUMOS.md",
+  version: PROCEDURAL_CONTEXT_VERSION,
+  authority: "CONTEXT_ONLY",
+} as const;
 
 export function normalizeProcedureText(value: string): string {
   return value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -538,26 +543,50 @@ export const PROCEDURES: readonly ProcedureDefinition[] = [
   },
 ];
 
-function aliasScore(text: string, alias: string): number {
-  const normalizedAlias = P(alias);
-  if (!normalizedAlias || !text.includes(normalizedAlias)) return 0;
-  return normalizedAlias.split(" ").length * 10 + normalizedAlias.length;
+function containsPhrase(text: string, phrase: string): boolean {
+  return ` ${text} `.includes(` ${P(phrase)} `);
 }
 
+/** A location alone is not a service. Negative and multiple requests need the
+ * normal interpreter; string matching is never sufficient to change a case. */
 export function findProcedure(text: string): ProcedureDefinition | null {
-  const normalized = P(text);
-  let best: ProcedureDefinition | null = null;
-  let bestScore = 0;
+  const value = P(text);
+  if (/\b(nao|nem|exceto|menos)\b/.test(value)) return null;
+  // The source summary and the legacy commercial policy classify damaged
+  // or stolen fixtures differently. Do not settle that conflict by alias.
+  if (
+    /\b(roub\w*|furt\w*|arromb\w*|viol\w*|danific\w*|vandal\w*)\b/.test(value) &&
+    /\b(portao|porta|grade|lapide|placa)\b/.test(value)
+  ) return null;
+  const matches: Array<{ procedure: ProcedureDefinition; score: number }> = [];
   for (const procedure of PROCEDURES) {
-    for (const alias of procedure.aliases) {
-      const score = aliasScore(normalized, alias);
-      if (score > bestScore) {
-        bestScore = score;
-        best = procedure;
-      }
-    }
+    if (procedure.code === "EXUMACAO_QUADRA_GERAL" && !/\b(exumacao|exumar)\b/.test(value)) continue;
+    if (procedure.code === "OBITO_RECENTE_COM_JAZIGO" && !/\b(jazigo|concessao)\b/.test(value)) continue;
+    // The source describes incoming transport. Generic/outgoing transport
+    // cannot silently borrow that workflow.
+    if (
+      procedure.code === "TRANSLADO_PARA_SANTANA" &&
+      (!/\b(?:para|pra|p|no) (?:o cemiterio )?santana\b/.test(value) ||
+        /\b(?:sair|saindo|retirar|retirada|de santana para)\b/.test(value))
+    ) continue;
+    const score = Math.max(
+      0,
+      ...procedure.aliases.filter((alias) => containsPhrase(value, alias))
+        .map((alias) => P(alias).length),
+    );
+    if (score) matches.push({ procedure, score });
   }
-  return best;
+  matches.sort((a, b) => b.score - a.score);
+  const best = matches[0];
+  if (!best) return null;
+  // Avoid a broad service-name hit obscuring an incident or a second request.
+  if (
+    matches.some((item) => item.procedure.code === "VIOLACAO_FURTO_DANO") &&
+    matches.some((item) => item.procedure.code === "JAZIGO_LAPIDE_MANUTENCAO")
+  ) return null;
+  if (/\b(tambem|alem disso|e depois|e ainda)\b/.test(value) && matches.length > 1) return null;
+  if (matches[1]?.score === best.score) return null;
+  return best.procedure;
 }
 
 export function procedureRouteHint(text: string): {
@@ -579,7 +608,10 @@ export function procedureRouteHintsForPrompt(): Array<{
 }> {
   return PROCEDURES.map((procedure) => ({
     procedure: procedure.code,
-    aliases: [...procedure.aliases],
+    aliases: procedure.aliases.filter((alias) =>
+      !(procedure.code === "EXUMACAO_QUADRA_GERAL" && alias === "quadra geral") &&
+      !(procedure.code === "TRANSLADO_PARA_SANTANA" && ["translado", "traslado"].includes(alias))
+    ),
     goal_code: procedure.route.goal_code,
   }));
 }
@@ -588,150 +620,108 @@ function askKind(
   text: string,
 ): "documents" | "steps" | "deadline" | "price" | "contact" | "address" | "general" | null {
   const value = P(text);
-  if (/\b(quais|que) documentos?\b|\bdocumentacao necessaria\b|\bdocumentos necessarios\b/.test(value)) {
-    return "documents";
-  }
-  if (
-    /\bcomo funciona\b|\bcomo fazer\b|\bcomo faco\b|\bquais as etapas\b|\bqual o procedimento\b|\bfluxo\b/.test(value)
-  ) return "steps";
-  if (/\bqual (?:e )?o prazo\b|\bquanto tempo\b|\bdemora\b|\bem quantos dias\b/.test(value)) return "deadline";
-  if (/\bquanto custa\b|\bqual (?:e )?o valor\b|\bpreco\b|\bvalor da\b|\bvalor do\b/.test(value)) return "price";
-  if (/\btelefone\b|\bwhatsapp\b|\be ?mail\b|\bcontato\b|\bcanal\b/.test(value)) return "contact";
-  if (/\bendereco\b|\bonde fica\b|\bcomo chegar\b/.test(value)) return "address";
-  if (/\bo que (?:e|eh)\b|\bme explique\b|\bexplica\b/.test(value)) return "general";
+  if (/\b(preco|precos|valor|valores|custo|custos|custa|custam|tarifa)\b/.test(value)) return "price";
+  if (/\b(prazo|prazos|quanto tempo|demora|quantos dias|horario|horarios)\b/.test(value)) return "deadline";
+  if (/\b(telefone|whatsapp|e mail|email|contato|canal)\b/.test(value)) return "contact";
+  if (/\b(endereco|onde fica|como chegar)\b/.test(value)) return "address";
+  if (/\b(documento|documentos|documentacao|papeis)\b/.test(value)) return "documents";
+  if (/\b(como funciona|como fazer|como faco|quais as etapas|qual o procedimento|fluxo)\b/.test(value)) return "steps";
+  if (/\b(o que e|o que eh|me explique|explica|explique)\b/.test(value)) return "general";
   return null;
 }
 
-function relatedProcedureFromGoal(goalCode: string | null | undefined): ProcedureDefinition | null {
-  const code = goalCode === "GOAL_RECADASTRO"
-    ? "RECADASTRO"
-    : goalCode === "GOAL_CONCESSAO"
-    ? "CONCESSAO_PROCESSO"
-    : goalCode === "GOAL_TRANSPORTE"
-    ? "TRANSLADO_PARA_SANTANA"
-    : goalCode === "GOAL_JAZIGO_SERVICOS"
-    ? "JAZIGO_LAPIDE_MANUTENCAO"
-    : goalCode === "GOAL_INFO_OSSUARIO"
-    ? "OSSUARIO_RENOVACAO"
-    : null;
-  return code ? PROCEDURES.find((procedure) => procedure.code === code) ?? null : null;
+function hasQuestion(text: string): boolean {
+  const value = P(text);
+  return /\?|\b(qual|quais|quanto|como|quando|onde|quem|por que|o que|me explique|explique|quero saber|gostaria de saber)\b/
+    .test(text) ||
+    /^(?:documentos|documentacao)(?: necessarios| necessaria)?(?: para .+)?$/.test(value);
 }
 
-function verifiedRecorded(procedure: ProcedureDefinition, predicate: (item: RecordedInfo) => boolean): string | null {
-  const items = procedure.recorded.filter(predicate);
-  if (!items.length) return null;
-  return `${items.map((item) => `${item.label}: ${item.value}`).join("; ")}. ${VERIFY_NOTICE}`;
+function pendingFollowup(question: string | null | undefined): string {
+  return question?.trim() ? `\n\nPara continuarmos o seu atendimento atual: ${question.trim()}` : "";
 }
 
-function pendingFollowup(pendingQuestion: string | null | undefined): string {
-  const question = pendingQuestion?.trim();
-  return question ? `\n\nPara continuarmos o seu atendimento atual: ${question}` : "";
-}
-
-function exhumationDocumentsWithoutLocation(): string {
-  return "Os documentos mudam conforme o tipo de sepultamento. Em Quadra Geral, o material registra certidão de óbito, documento de identificação, comprovante de endereço e telefone; em Jazigo de Família, entram também documentos ligados à concessão e, quando aplicável, carta de concessão ou administração temporária válida. Antes de fechar a lista, preciso saber: o sepultamento é em Quadra Geral ou Jazigo de Família?";
-}
-
-function addressReply(): string {
-  return `O material operacional registra o Cemitério Santana na Rua Nova dos Portugueses, 141, Chora Menino, São Paulo/SP, CEP 02462-080. ${VERIFY_NOTICE}`;
-}
-
+/** Explanatory scope only. No tariffs, deadlines, contacts, document checklist,
+ * permissions or confirmed status can be produced from historical references.
+ * The official information resolver remains the authority for those answers. */
 export function proceduralDirectReply(input: {
   text: string;
   activeGoalCode?: string | null;
   pendingQuestion?: string | null;
 }): string | null {
-  const normalized = P(input.text);
+  const value = P(input.text);
+  // Defense in depth: semantic controls, contradictions, media and corrections
+  // must keep their existing response even when accompanied by a question.
+  if (
+    /\b(cancel\w*|desist\w*|corrig\w*|correcao|na verdade|mudei|nao quero|nao e|atendente|humano|finalizar|encerrar|outro atendimento|novo atendimento|outra pessoa|outro falecido)\b/
+      .test(value)
+  ) return null;
   const kind = askKind(input.text);
+  if (["price", "deadline", "contact", "address"].includes(kind ?? "")) return null;
 
   if (
-    /\b(paguei|pagamento|pagar)\b.*\b(taxa|concessao)\b/.test(normalized) &&
-    /\b(aprovad|aberto|abriu|processo)\b/.test(normalized)
+    /\b(paguei|pagamento|pagar)\b.*\b(taxa|concessao)\b/.test(value) &&
+    /\b(aprovad\w*|aberto|abriu|processo)\b/.test(value) && hasQuestion(input.text)
   ) {
     return "O pagamento da taxa de concessão não significa, por si só, que o processo de concessão foi aberto ou aprovado. São etapas diferentes; a situação do processo precisa ser verificada separadamente." +
       pendingFollowup(input.pendingQuestion);
   }
   if (
-    /\b(ja comprei|ja contratei|comprei)\b.*\b(lapide|placa)\b|\b(lapide|placa)\b.*\b(instalacao|instalaram|chegou|andamento|status)\b/
-      .test(normalized)
+    /\b(?:ja comprei|ja contratei|comprei)\b.*\b(lapide|placa)\b/.test(value) &&
+    /\b(chegou|instalacao|instalaram|andamento|status)\b/.test(value) && hasQuestion(input.text)
   ) {
-    return `Se a lápide já foi comprada ou contratada, isso é acompanhamento de serviço, não um novo orçamento. Para localizar o pedido, registre a data da compra e o local onde ela foi realizada, quando aplicável. ${VERIFY_NOTICE}` +
+    return "Como a lápide já foi comprada, sua dúvida é de acompanhamento de serviço, não um novo orçamento. A data da compra e o local onde ela foi realizada ajudam a equipe a localizar o pedido. A instalação ainda precisa ser conferida; não tenho confirmação de conclusão." +
       pendingFollowup(input.pendingQuestion);
   }
   if (
-    /\b(faleceu agora|faleceu hoje|acabou de falecer|obito recente)\b/.test(normalized) &&
-    /\b(jazigo|concessao|familia)\b/.test(normalized)
+    /\b(faleceu agora|faleceu hoje|acabou de falecer|obito recente)\b/.test(value) &&
+    /\b(jazigo|concessao)\b/.test(value)
   ) {
-    return "Óbito recente com jazigo é tratado como situação de máxima prioridade no material operacional. O fluxo é identificar o falecido e o jazigo, conferir a documentação e a situação da concessão e então encaminhar o agendamento/sepultamento. Prioridade não significa horário automaticamente confirmado. Informe o nome do falecido e a referência do jazigo que você possui.";
+    return "Sinto muito pela sua perda. Como há um jazigo da família, o encaminhamento envolve identificar o nome do falecido e o jazigo e conferir a documentação e a concessão. Essa situação pede máxima prioridade à equipe, mas não significa horário automaticamente confirmado." +
+      pendingFollowup(input.pendingQuestion);
   }
   if (
-    /\b(remarcar|reagendar|remarcacao)\b.*\bexumacao\b|\bexumacao\b.*\b(remarcar|reagendar|nova data)\b/.test(
-      normalized,
-    )
+    /\b(remarcar|reagendar|remarcacao)\b.*\bexumacao\b|\bexumacao\b.*\b(remarcar|reagendar|nova data)\b/.test(value)
   ) {
-    return "Na remarcação, primeiro é registrada a impossibilidade da exumação prevista, depois se verifica a disponibilidade e somente então se confirma uma nova data. A nova data não deve ser informada como agendada antes da confirmação efetiva." +
+    return "Para remarcar a exumação, a equipe precisa identificar o agendamento anterior e verificar a disponibilidade; somente então se confirma uma nova data. A data de preferência não deve ser informada como agendada antes da confirmação efetiva." +
       pendingFollowup(input.pendingQuestion);
   }
-
-  if (kind === "address") return addressReply() + pendingFollowup(input.pendingQuestion);
-  if (!kind) return null;
-
-  const explicitProcedure = findProcedure(input.text);
-  const mentionsExhumation = /\bexumacao\b/.test(normalized);
-  const mentionsOssuary = /\bossuario\b/.test(normalized);
-  if (kind === "documents" && (input.activeGoalCode === "GOAL_EXUMACAO" || mentionsExhumation) && !explicitProcedure) {
-    return exhumationDocumentsWithoutLocation() + pendingFollowup(input.pendingQuestion);
-  }
-  if (kind === "price" && mentionsExhumation && !explicitProcedure) {
-    return `O valor depende do tipo de sepultamento. No material anterior, consta Exumação em Quadra Geral: R$ 351,67; Exumação em Jazigo de Família: R$ 729,65. ${VERIFY_NOTICE}` +
-      pendingFollowup(input.pendingQuestion);
-  }
-  if ((kind === "price" || kind === "deadline" || kind === "steps") && mentionsOssuary && !explicitProcedure) {
-    if (kind === "price") {
-      return `O material anterior separa renovação/aquisição de ossuário. Consta modalidade de 5 anos por R$ 386,65 e modalidade por prazo indeterminado por R$ 2.955,70. ${VERIFY_NOTICE}` +
-        pendingFollowup(input.pendingQuestion);
-    }
-    if (kind === "deadline") {
-      return `Para renovação, o material registra análise de até 5 dias úteis; em recebimento de restos de origem externa também há referência a 14 dias em algumas situações. ${VERIFY_NOTICE}` +
-        pendingFollowup(input.pendingQuestion);
-    }
-    return "Ossuário pode envolver renovação da permanência ou aquisição/contratação. Na aquisição, o fluxo considera origem dos restos, modalidade, documentação, pagamento e recebimento; na renovação, identifica-se o ossuário, confere-se os dados e formaliza-se a renovação." +
-      pendingFollowup(input.pendingQuestion);
-  }
-  const procedure = explicitProcedure ?? relatedProcedureFromGoal(input.activeGoalCode);
-  if (!procedure) return null;
-
+  if (!kind || !hasQuestion(input.text)) return null;
+  const explicit = findProcedure(input.text);
+  // Goal-only context cannot distinguish fee/process/provisional administration,
+  // renewal/acquisition, grave location or transport direction.
+  const procedure = explicit ??
+    (input.activeGoalCode === "GOAL_RECADASTRO" ? PROCEDURES.find((item) => item.code === "RECADASTRO") ?? null : null);
   if (kind === "documents") {
-    if (!procedure.documents.length) {
-      return `Para ${procedure.label}, o material não traz uma lista única de documentos para todos os casos. ${procedure.summary} A documentação deve ser definida conforme a situação concreta.` +
+    if (procedure || input.activeGoalCode === "GOAL_EXUMACAO" || /\bexumacao\b/.test(value)) {
+      const scope = procedure?.label ?? "exumação";
+      const context = scope.toLowerCase().includes("exumação")
+        ? "Quadra Geral e Jazigo de Família têm conferências diferentes; no jazigo familiar também é preciso verificar a situação da concessão."
+        : procedure?.summary ?? "É necessário identificar primeiro o procedimento e a situação do local.";
+      return `A documentação para ${scope} depende da situação específica. ${context} A lista aplicável e eventuais autorizações precisam ser confirmadas pela Administração antes de serem tratadas como obrigatórias.` +
         pendingFollowup(input.pendingQuestion);
     }
-    return `Para ${procedure.label}, o material registra: ${
-      procedure.documents.join("; ")
-    }. A lista pode variar conforme a situação específica e a análise administrativa.` +
-      pendingFollowup(input.pendingQuestion);
+    return null;
   }
-  if (kind === "steps") {
-    return `${procedure.label}: ${procedure.summary} O fluxo é: ${procedure.steps.join(" → ")}.` +
-      pendingFollowup(input.pendingQuestion);
+  if (!procedure) {
+    if (/\bexumacao\b/.test(value) || input.activeGoalCode === "GOAL_EXUMACAO") {
+      return "A exumação é a retirada dos restos mortais. O procedimento envolve solicitação, conferência documental e análise, termo quando aplicável, agendamento e definição da destinação dos restos. Quadra Geral e Jazigo de Família seguem conferências diferentes. Os requisitos do seu caso e o agendamento ainda precisam ser confirmados pela equipe." +
+        pendingFollowup(input.pendingQuestion);
+    }
+    if (/\b(traslado|translado|transporte)\b/.test(value)) {
+      return "O translado envolve transferir os restos mortais de um local para outro. É preciso distinguir a origem e o destino antes de aplicar o fluxo e a documentação; não devo presumir que os restos virão para Santana." +
+        pendingFollowup(input.pendingQuestion);
+    }
+    if (/\bconcessao\b/.test(value) || input.activeGoalCode === "GOAL_CONCESSAO") {
+      return "Processo de concessão, geração da taxa e administração provisória são procedimentos diferentes. O pagamento da taxa não abre nem aprova automaticamente o processo. Qual deles corresponde à sua dúvida?";
+    }
+    if (/\bossuario\b/.test(value) || input.activeGoalCode === "GOAL_INFO_OSSUARIO") {
+      return "O ossuário é destinado à guarda dos restos mortais. É preciso distinguir renovação de um espaço já contratado, aquisição e recebimento de restos de outro local. Sobre qual dessas situações é a sua dúvida?";
+    }
+    return null;
   }
-  if (kind === "deadline") {
-    return (verifiedRecorded(procedure, (item) => /prazo|periodo|antecedencia|retorno|horario/i.test(item.label)) ??
-      `O material não registra um prazo único para ${procedure.label}; o tempo depende das etapas e da análise aplicável. ${VERIFY_NOTICE}`) +
-      pendingFollowup(input.pendingQuestion);
-  }
-  if (kind === "price") {
-    return (verifiedRecorded(procedure, (item) => /valor|modalidade|pacote/i.test(item.label)) ??
-      `O material não registra um valor único para ${procedure.label}. ${VERIFY_NOTICE}`) +
-      pendingFollowup(input.pendingQuestion);
-  }
-  if (kind === "contact") {
-    return (verifiedRecorded(procedure, (item) => /whatsapp|e-mail|central|canal|agencia/i.test(item.label)) ??
-      `O material não registra um canal exclusivo para ${procedure.label}. ${VERIFY_NOTICE}`) +
-      pendingFollowup(input.pendingQuestion);
-  }
-  return `${procedure.label}: ${procedure.summary}${
-    procedure.stableRules.length ? ` ${procedure.stableRules.join(" ")}` : ""
-  }` +
+  return `${procedure.label}: ${procedure.summary} As etapas gerais são: ${
+    procedure.steps.join(" → ")
+  }. Os requisitos aplicáveis ao caso e qualquer confirmação de execução dependem da equipe.` +
     pendingFollowup(input.pendingQuestion);
 }

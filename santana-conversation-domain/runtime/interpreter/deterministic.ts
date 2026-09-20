@@ -255,6 +255,14 @@ export function interpret(input: InterpreterInput): Interpretation {
     }
   }
   for (const pattern of lexicon.fact_patterns) {
+    // Owning a family grave during bereavement is not a stated transport
+    // destination. Keep that distinction without manufacturing a new fact.
+    if (
+      pattern.fact_code === "transport_destination" &&
+      /\b(temos|tenho|possuo|possuimos)\b.*\bjazigo\b/.test(text) &&
+      !/\b(levar|transportar|transferir|transladar|colocar|destino)\b/.test(text) &&
+      input.context.open_goal_code !== "GOAL_TRANSPORTE"
+    ) continue;
     // Purpose words such as "ossuario" also exist in other services. They are
     // an exhumation answer only when that question is pending or the same
     // message explicitly opens an exhumation goal.
@@ -314,7 +322,7 @@ export function interpret(input: InterpreterInput): Interpretation {
   // The historical n8n flow contained operational names that are broader
   // than the compact V1 lexicon. Map those names to existing goals only; this
   // never creates a rule, price, document requirement or protected decision.
-  if (goal === null) {
+  if (goal === null && (!input.context.has_open_goal || newSubjectMarker)) {
     const procedural = procedureRouteHint(input.text);
     if (procedural) {
       goal = {
