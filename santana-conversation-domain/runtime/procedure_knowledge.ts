@@ -166,7 +166,7 @@ export const PROCEDURES: readonly ProcedureDefinition[] = [
   },
   {
     code: "TRANSLADO_PARA_SANTANA", label: "Translado para o Cemitério Santana",
-    aliases: ["translado para santana", "traslado para santana", "trazer restos para santana", "trazer para o cemiterio santana", "transferir restos para santana"],
+    aliases: ["translado", "traslado", "translado para santana", "traslado para santana", "trazer restos para santana", "trazer para o cemiterio santana", "transferir restos para santana"],
     route: { goal_code: "GOAL_TRANSPORTE", subject_kind: "DECEASED" },
     summary: "Transferência de restos mortais provenientes de outro local para o Cemitério Santana.",
     steps: ["solicitação", "identificação da origem", "identificação do destino", "documentação", "memorandos/autorizações", "análise", "agendamento", "translado", "recebimento em Santana", "destinação final"],
@@ -364,11 +364,6 @@ export function proceduralDirectReply(input: {
     return `Se a lápide já foi comprada ou contratada, isso é acompanhamento de serviço, não um novo orçamento. Para localizar o pedido, registre a data da compra e o local onde ela foi realizada, quando aplicável. ${VERIFY_NOTICE}` +
       pendingFollowup(input.pendingQuestion);
   }
-  if (/\b(violacao|violado|furto|roubo|arromb|vandal|sumiu|desapareceu|dano)\b/.test(normalized) &&
-    /\b(jazigo|tumulo|sepultura|lapide|objeto)\b/.test(normalized)) {
-    return "Isso deve ser tratado como uma ocorrência específica, com registro do relato e encaminhamento para análise humana/administrativa; não como um simples pedido comercial de manutenção. Se puder, informe a referência do jazigo e preserve fotos ou outras informações disponíveis." +
-      pendingFollowup(input.pendingQuestion);
-  }
   if (/\b(faleceu agora|faleceu hoje|acabou de falecer|obito recente)\b/.test(normalized) &&
     /\b(jazigo|concessao|familia)\b/.test(normalized)) {
     return "Óbito recente com jazigo é tratado como situação de máxima prioridade no material operacional. O fluxo é identificar o falecido e o jazigo, conferir a documentação e a situação da concessão e então encaminhar o agendamento/sepultamento. Prioridade não significa horário automaticamente confirmado. Informe o nome do falecido e a referência do jazigo que você possui.";
@@ -382,8 +377,26 @@ export function proceduralDirectReply(input: {
   if (!kind) return null;
 
   const explicitProcedure = findProcedure(input.text);
-  if (kind === "documents" && input.activeGoalCode === "GOAL_EXUMACAO" && !explicitProcedure) {
+  const mentionsExhumation = /\bexumacao\b/.test(normalized);
+  const mentionsOssuary = /\bossuario\b/.test(normalized);
+  if (kind === "documents" && (input.activeGoalCode === "GOAL_EXUMACAO" || mentionsExhumation) && !explicitProcedure) {
     return exhumationDocumentsWithoutLocation() + pendingFollowup(input.pendingQuestion);
+  }
+  if (kind === "price" && mentionsExhumation && !explicitProcedure) {
+    return `O valor depende do tipo de sepultamento. No material anterior, consta Exumação em Quadra Geral: R$ 351,67; Exumação em Jazigo de Família: R$ 729,65. ${VERIFY_NOTICE}` +
+      pendingFollowup(input.pendingQuestion);
+  }
+  if ((kind === "price" || kind === "deadline" || kind === "steps") && mentionsOssuary && !explicitProcedure) {
+    if (kind === "price") {
+      return `O material anterior separa renovação/aquisição de ossuário. Consta modalidade de 5 anos por R$ 386,65 e modalidade por prazo indeterminado por R$ 2.955,70. ${VERIFY_NOTICE}` +
+        pendingFollowup(input.pendingQuestion);
+    }
+    if (kind === "deadline") {
+      return `Para renovação, o material registra análise de até 5 dias úteis; em recebimento de restos de origem externa também há referência a 14 dias em algumas situações. ${VERIFY_NOTICE}` +
+        pendingFollowup(input.pendingQuestion);
+    }
+    return "Ossuário pode envolver renovação da permanência ou aquisição/contratação. Na aquisição, o fluxo considera origem dos restos, modalidade, documentação, pagamento e recebimento; na renovação, identifica-se o ossuário, confere-se os dados e formaliza-se a renovação." +
+      pendingFollowup(input.pendingQuestion);
   }
   const procedure = explicitProcedure ?? relatedProcedureFromGoal(input.activeGoalCode);
   if (!procedure) return null;
