@@ -122,33 +122,42 @@ Deno.test("procedure prompt exposes routing aliases but not historical prices or
 
 Deno.test("all procedural routes stay inside the existing closed goal catalog", () => {
   const allowed = new Set([
-    "GOAL_TRANSPORTE", "GOAL_EXUMACAO", "GOAL_RECADASTRO", "GOAL_CONCESSAO",
-    "GOAL_COMERCIAL", "GOAL_JAZIGO_SERVICOS", "GOAL_RECLAMACAO",
-    "GOAL_INFO_OSSUARIO", "GOAL_INFO_HORARIO", "GOAL_OUTROS_ASSUNTOS",
+    "GOAL_TRANSPORTE",
+    "GOAL_EXUMACAO",
+    "GOAL_RECADASTRO",
+    "GOAL_CONCESSAO",
+    "GOAL_COMERCIAL",
+    "GOAL_JAZIGO_SERVICOS",
+    "GOAL_RECLAMACAO",
+    "GOAL_INFO_OSSUARIO",
+    "GOAL_INFO_HORARIO",
+    "GOAL_OUTROS_ASSUNTOS",
   ]);
   for (const route of procedureRouteHintsForPrompt()) assert(allowed.has(route.goal_code));
   assertEquals(procedureRouteHintsForPrompt().length, 16);
 });
 
 Deno.test("the full operational source categories are represented", () => {
-  for (const query of [
-    "recadastro",
-    "exumação em quadra geral",
-    "exumação jazigo de família",
-    "renovação de ossuário",
-    "adquirir ossuário",
-    "processo de concessão",
-    "taxa de concessão",
-    "administração provisória",
-    "cinzas em jazigo",
-    "translado",
-    "óbito recente",
-    "manutenção do jazigo",
-    "serviço funerário",
-    "remarcação de exumação",
-    "jazigo violado",
-    "ouvidoria",
-  ]) {
+  for (
+    const query of [
+      "recadastro",
+      "exumação em quadra geral",
+      "exumação jazigo de família",
+      "renovação de ossuário",
+      "adquirir ossuário",
+      "processo de concessão",
+      "taxa de concessão",
+      "administração provisória",
+      "cinzas em jazigo",
+      "translado",
+      "óbito recente",
+      "manutenção do jazigo",
+      "serviço funerário",
+      "remarcação de exumação",
+      "jazigo violado",
+      "ouvidoria",
+    ]
+  ) {
     assert(findProcedure(query), "procedimento sem representação: " + query);
   }
 });
