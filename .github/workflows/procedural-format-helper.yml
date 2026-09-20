@@ -6,26 +6,37 @@ on:
       - feat/sana-procedural-context-v1
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   format:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: feat/sana-procedural-context-v1
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.1.4
-      - name: Format procedural integration
+      - name: Format and commit procedural integration
+        shell: bash
         run: |
+          set -Eeuo pipefail
           deno fmt santana-conversation-domain/runtime/procedure_knowledge.ts \
             santana-conversation-domain/runtime/tests/procedure_knowledge_test.ts \
             santana-conversation-domain/runtime/adapter/prompt.ts \
             santana-conversation-domain/runtime/interpreter/deterministic.ts \
             santana-conversation-domain/runtime/reply.ts
-          git diff --binary > /tmp/procedural-format.patch
-      - uses: actions/upload-artifact@v4
-        with:
-          name: procedural-format-patch
-          path: /tmp/procedural-format.patch
-          if-no-files-found: error
+          if git diff --quiet; then
+            echo "Already formatted."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add santana-conversation-domain/runtime/procedure_knowledge.ts \
+            santana-conversation-domain/runtime/tests/procedure_knowledge_test.ts \
+            santana-conversation-domain/runtime/adapter/prompt.ts \
+            santana-conversation-domain/runtime/interpreter/deterministic.ts \
+            santana-conversation-domain/runtime/reply.ts
+          git commit -m "chore: format Sana procedural context"
+          git push origin HEAD:feat/sana-procedural-context-v1
