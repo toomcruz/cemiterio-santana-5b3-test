@@ -9,6 +9,7 @@ import { isConversationClose, isConversationReturn, isGreeting } from "./interpr
 import { activeFact, contextGoal, type ConversationState, type GoalRecord } from "../engine/engine.ts";
 import { questionForFact } from "../engine/catalog.ts";
 import type { Interpretation } from "./interpreter/types.ts";
+import { proceduralDirectReply } from "./procedure_knowledge.ts";
 
 export type ReplyOutcome = "PROPOSED" | "CLARIFICATION" | "HUMAN_ACTIVE" | "INTERPRETATION_UNAVAILABLE";
 
@@ -291,6 +292,16 @@ export function draftReply(input: {
   previous_state?: ConversationState;
 }): string | null {
   if (input.outcome === "HUMAN_ACTIVE" || input.outcome === "INTERPRETATION_UNAVAILABLE") return null;
+
+  // Business procedure knowledge is resolved deterministically after the
+  // language interpretation and before generic drafting. This restores the
+  // old flowchart context without turning the LLM into a rule authority.
+  const procedural = proceduralDirectReply({
+    text: input.interpretation?.text_normalized ?? "",
+    activeGoalCode: contextGoal(input.next_state)?.goal_code ?? null,
+    pendingQuestion: input.question_draft,
+  });
+  if (procedural) return procedural;
 
   if (isBereavementStatement(input.interpretation) && !contextGoal(input.next_state)) {
     return "Sinto muito pela sua perda. Para eu direcionar o atendimento corretamente, conte o que você precisa fazer agora — por exemplo, exumação, ossuário, concessão, recadastro ou uma situação no jazigo.";
