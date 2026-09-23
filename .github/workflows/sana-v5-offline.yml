@@ -1,0 +1,26 @@
+name: Sana V5 offline preview
+on:
+  pull_request:
+    paths:
+      - 'experiments/sana-conversational-v5/**'
+      - '.github/workflows/sana-v5-offline.yml'
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Contracts and mocked-provider tests (no credentials)
+        run: node --experimental-strip-types --test experiments/sana-conversational-v5/core.test.mjs
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.1.4
+      - name: Typecheck including real canonical imports
+        run: deno check experiments/sana-conversational-v5/official-adapter.ts experiments/sana-conversational-v5/official-adapter.test.ts experiments/sana-conversational-v5/multi-turn.test.ts
+      - name: Integration and multi-turn simulation with canonical reducer (no network permission)
+        run: deno test --allow-read experiments/sana-conversational-v5/official-adapter.test.ts experiments/sana-conversational-v5/multi-turn.test.ts
