@@ -10,7 +10,7 @@ const base = () => ({
 const message = (text = 'Vou jaja tá?') => ({id:'in-fixture',conversationId:'conversation-fixture',sessionId:'session-fixture',role:'user',text});
 const input = (body, state=base()) => ({mode:'simulation',state,message:message(body),history:[],correlationId:'correlation-fixture',referenceDate:'2026-09-23',automaticRepliesAllowed:true});
 const pause = () => ({action:'PAUSE',interpretation:null,questions:[],askFollowup:false});
-const ack = (text='Tudo bem. Quando voltar, continuamos daqui.') => ({parts:[{kind:'ack',text,sourceIds:[]}]});
+const ack = (text='Tudo bem, sem pressa.') => ({parts:[{kind:'ack',text,sourceIds:[]}]});
 const knowledge = (status='AVAILABLE') => ({id:'authority:DOCUMENTOS',version:'fixture-not-official',kind:'DOCUMENTOS',status,text: status==='AVAILABLE'?'Orientação fictícia para teste.':'A orientação aplicável ainda precisa ser confirmada.'});
 const bridge = (changes={}) => ({
   snapshot: (s) => structuredClone(s), interpretationPrompt: () => 'canonical-fixture',
@@ -65,6 +65,7 @@ test('nonliteral knowledge query is rejected',()=>assert.throws(()=>parsePlan(an
 test('pause cannot hide a proposed fact update',()=>assert.throws(()=>parsePlan({...pause(),interpretation:{facts:[]}},'hello'),/INVALID_PAUSE/));
 test('unknown planner fields such as private reasoning are rejected',()=>assert.throws(()=>parsePlan({...pause(),reasoning:'private'},'hello'),/INVALID_FIELDS/));
 test('continue needs a canonical interpretation',()=>assert.throws(()=>parsePlan({...pause(),action:'CONTINUE'},'hello'),/MISSING_INTERPRETATION/));
+test('clarification requires a focused follow-up',()=>assert.throws(()=>parsePlan({action:'CLARIFY',interpretation:null,questions:[],askFollowup:false},'hello'),/CLARIFY_REQUIRES_FOLLOWUP/));
 test('mixed answer applies facts BEFORE looking up knowledge and writing',async()=>{
   const original=base(), events=[];
   const d={bridge:bridge({
@@ -101,6 +102,10 @@ test('writer must cover each available requested source',()=>assert.throws(()=>r
 test('writer cannot repeat a question already removed by the reducer',()=>{
   assert.throws(()=>renderDraft({parts:[{kind:'question',text:'Ele tinha companheira?',sourceIds:[]}]},{...pause(),action:'CONTINUE',askFollowup:true},{...base(),pending:null},[]),/UNPERMITTED_QUESTION/);
 });
+test('clarification can ask about current ambiguity without reducer pending state',()=>{
+  const plan={action:'CLARIFY',interpretation:null,questions:[],askFollowup:true};
+  assert.equal(renderDraft({parts:[{kind:'question',text:'Você fala do jazigo da família?',sourceIds:[]}]},plan,{...base(),pending:null},[]),'Você fala do jazigo da família?');
+});
 test('pause rejects question hidden inside acknowledgement',()=>assert.throws(()=>renderDraft(ack('Ele tinha companheira?'),pause(),base(),[]),/PAUSE_REPEATS_QUESTION/));
 test('same knowledge ID with different text fails closed',()=>assert.throws(()=>uniqueKnowledge([knowledge(),{...knowledge(),text:'different'}]),/KNOWLEDGE_ID_CONFLICT/));
 test('same knowledge entry is deduplicated',()=>assert.equal(uniqueKnowledge([knowledge(),knowledge()]).length,1));
@@ -110,7 +115,7 @@ test('canonical interpretation rejection does not advance state',async()=>{
 });
 test('writer failure on pause uses noninterrogative fallback',async()=>{
   const r=await runPreview(input(),deps(pause(),new Error('provider raw secret should not leak')));
-  assert.equal(r.status,'FALLBACK');assert.equal(r.telemetry.reason,'DEPENDENCY_FAILURE');assert.doesNotMatch(JSON.stringify(r),/provider raw secret/);
+  assert.equal(r.status,'FALLBACK');assert.equal(r.text,'Tudo bem, sem pressa.');assert.equal(r.telemetry.reason,'DEPENDENCY_FAILURE');assert.doesNotMatch(JSON.stringify(r),/provider raw secret/);
 });
 test('global deadline cancels even a provider ignoring AbortSignal',async()=>{
   const d={bridge:bridge(),model:{name:'hanging',generate:()=>new Promise(()=>{})}};

@@ -3,8 +3,8 @@
 **Estado: implementação para revisão; não habilitada em produção.**
 
 Base do núcleo: `toomcruz/cemiterio-santana-5b3-test@5fcba023a4fc461d91e0412fa041ed0669171680`.
-Painel observado: `toomcruz/atendimento-cemiterio-santana@7d6a33d51b76473a869688b8850a280fcaa1889c`.
-A equivalência desse núcleo com todos os arquivos do bundle canário V4/v11 publicado NÃO é pressuposta.
+Painel de produção observado em 2026-09-23: `toomcruz/atendimento-cemiterio-santana@7d6a33d51b76473a869688b8850a280fcaa1889c`.
+A equivalência desse núcleo com todos os arquivos do bundle publicado NÃO é pressuposta; a comparação da função canário está registrada abaixo.
 Não há alteração no painel, reducer, schema, migrações, Edge Functions, webhook, fila ou transporte.
 Nenhum entrypoint produtivo importa este diretório.
 
@@ -31,8 +31,11 @@ O módulo não recebe cliente Supabase, credenciais W-API, store de produção o
 - `core.ts`: contratos, contexto limitado e isolado por sessão/caso, plano validado, composição e telemetria.
 - `official-adapter.ts`: reutiliza parser, reducer e Authority Gateway do núcleo oficial.
 - `gemini.ts`: adaptador HTTP sem leitura de ambiente; credencial/modelo/fetch são injetados pelo chamador.
-- `core.test.mjs`: 37 testes offline, com planner/writer e bridge controlados em memória.
+- `core.test.mjs`: 39 testes offline, com modelo e bridge controlados em memória.
 - `official-adapter.test.ts`: 6 testes Deno com os módulos REAIS do repositório e modelo simulado.
+- `multi-turn.test.ts`: 3 testes Deno de conversas com estado encadeado, reducer real, modelo simulado e conteúdo fictício sinalizado.
+- Execução local desta etapa: 39 testes Node + 9 testes Deno = 48 aprovados; todos sem Gemini real.
+- `MULTITURN-EVIDENCE.md`: entradas, estado anterior/posterior, decisão, rascunho e resultado dos critérios simulados.
 - `tsconfig.json`: checagem local de core/provider; NÃO inclui o adaptador canônico.
 - `.github/workflows/sana-v5-offline.yml`: checagem completa do adaptador e testes no checkout real, sem chaves.
 
@@ -53,12 +56,23 @@ tsc --project experiments/sana-conversational-v5/tsconfig.json
 No checkout completo, com Deno 2.1.4 (versão já utilizada pelo CI do projeto):
 
 ```sh
-deno check experiments/sana-conversational-v5/official-adapter.ts experiments/sana-conversational-v5/official-adapter.test.ts
-deno test --allow-read experiments/sana-conversational-v5/official-adapter.test.ts
+deno check experiments/sana-conversational-v5/official-adapter.ts experiments/sana-conversational-v5/official-adapter.test.ts experiments/sana-conversational-v5/multi-turn.test.ts
+deno test --allow-read experiments/sana-conversational-v5/official-adapter.test.ts experiments/sana-conversational-v5/multi-turn.test.ts
 ```
 
 O teste não recebe `--allow-net` nem chaves. O adaptador Gemini é testado com `fetch` falso.
-Nenhuma chamada Gemini real foi usada na validação local desta entrega.
+Nenhuma chamada Gemini real foi usada nesta etapa.
+
+## Baseline e limite de comparação
+
+Snapshot confirmado em 2026-09-23:
+
+- Código V5 anterior às alterações desta etapa: branch `sana-conversational-v5`, commit `6d7ac874206a75d2f9c4fa01d7e9b3dc1be13b31`.
+- Reducer/catálogo importado pela V5: base da branch, commit `5fcba023a4fc461d91e0412fa041ed0669171680`.
+- Painel de produção observado: commit `7d6a33d51b76473a869688b8850a280fcaa1889c`.
+- Função publicada observada: Supabase `support-runtime-canary-v4`, versão 19, release `sana-consolidation-20260921-v11-e2e`.
+
+O bundle da função contém módulos de domínio que diferem dos mesmos caminhos na base do núcleo e não importa esta V5. Os testes desta branch medem somente a implementação V5 isolada sobre seu commit-base; **não medem melhoria em relação ao atendimento publicado**.
 
 ## Conhecimento: não contornar ausência de autoridade
 
@@ -74,14 +88,21 @@ não uma troca automática de fonte feita por esta implementação. A vertical i
 
 ## O que os testes provam — e o que NÃO provam
 
-Os testes locais provam ordenação (fatos antes de consulta/redação), isolamento, limites, exclusão
+Os testes offline provam ordenação (fatos antes de consulta/redação), isolamento, limites, exclusão
  de outro caso/sessão, referência válida de fontes, deduplicação de parágrafos, cancelamento,
- rejeição estrutural e inexistência de persistência/transporte neste módulo.
+ rejeição estrutural e inexistência de persistência/transporte neste módulo. A suíte multi-turno encadeia
+ o estado retornado pelo reducer real em memória e registra entrada, estado anterior/posterior,
+ decisão e rascunho. Respostas do modelo são programadas; o conteúdo para testar composição está
+ marcado como fictício e não altera o catálogo oficial.
 
 **Eles NÃO provam a qualidade de interpretação/redação do Gemini real.** O planner e o writer
-são simulados nos testes. A avaliação semântica de conversas inteiras com o modelo configurado
+continuam simulados nos testes. A avaliação semântica de conversas inteiras com o modelo configurado
 permanece pendente. `renderDraft` valida estrutura e referências, não implicação semântica:
 texto com uma citação válida ainda pode estar incorreto. Por isso nenhum rascunho é publicável.
+
+Não inferir qualidade, latência de Gemini ou custo real a partir dos testes simulados. Comparar uma
+e duas chamadas, com qualidade, latência e custo observados, fica para etapa futura autorizada com
+modelo real.
 
 O adaptador reutiliza as restrições atuais do núcleo. Ele não corrige automaticamente todo erro
  de classificação dentro do reducer/bridge e não reescreve dados históricos. A reconciliação da

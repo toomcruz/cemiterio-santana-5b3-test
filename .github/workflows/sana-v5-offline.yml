@@ -21,6 +21,6 @@ jobs:
         with:
           deno-version: v2.1.4
       - name: Typecheck including real canonical imports
-        run: deno check experiments/sana-conversational-v5/official-adapter.ts experiments/sana-conversational-v5/official-adapter.test.ts
-      - name: Integration with the canonical reducer and authority (no network permission)
-        run: deno test --allow-read experiments/sana-conversational-v5/official-adapter.test.ts
+        run: deno check experiments/sana-conversational-v5/official-adapter.ts experiments/sana-conversational-v5/official-adapter.test.ts experiments/sana-conversational-v5/multi-turn.test.ts
+      - name: Integration and multi-turn simulation with canonical reducer (no network permission)
+        run: deno test --allow-read experiments/sana-conversational-v5/official-adapter.test.ts experiments/sana-conversational-v5/multi-turn.test.ts
