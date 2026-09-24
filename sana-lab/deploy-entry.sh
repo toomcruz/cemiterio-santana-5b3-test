@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 umask 077
 test "$(id -u)" = 0 || { echo 'ROOT_REQUIRED' >&2; exit 2; }
-[[ $# == 2 && ( $1 == deploy || $1 == rollback-test ) && $2 =~ ^[0-9a-f]{40}$ ]] || {
+[[ $# == 2 && ( $1 == deploy || $1 == rollback-test || $1 == diagnose ) && $2 =~ ^[0-9a-f]{40}$ ]] || {
   echo 'INVALID_DEPLOY_REQUEST' >&2; exit 2;
 }
 checkout=/docker/sana-lab-bridge-src

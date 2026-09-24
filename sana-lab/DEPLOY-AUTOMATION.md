@@ -44,3 +44,25 @@ Ao concluir, grava `/var/lib/sana-lab-deploy/active.txt` com commit, imagem, ima
 - Recuperação manual excepcional: como administrador da VPS, usar o mesmo script do checkout limpo `bash sana-lab/deploy-functional-gate.sh <SHA_ATUAL> deploy` para avançar. Se a bridge não partir, preservar `/lab-state` e o secret e examinar `docker inspect sana-lab-bridge`; para voltar a um backup parado, interromper o novo container, renomear o backup `sana-lab-bridge-before-...` para `sana-lab-bridge` e iniciá-lo, depois conferir imagem, hashes, rede e HTTP 401. Não apagar backup nem volume LAB durante o diagnóstico.
 
 **Gate operacional:** código, testes locais e workflow publicado não comprovam SSH configurado, execução real do Actions ou rollback na VPS. Exigir IDs de runs, imagem/commit/hash ativos e rollback controlado real antes de `DEPLOY_AUTOMATION=PASS`. Isto tampouco homologa operações oficiais ou atendimento completo.
+
+## Diagnóstico restrito antes do rollback
+
+O forced command aceita apenas `deploy <SHA>`, `rollback-test <SHA>` e `diagnose <SHA>`, com SHA completo da HEAD da branch LAB. Não há shell arbitrário, comando Docker remoto parametrizável nem leitura de credenciais. Em falha **depois** da troca, o script root-owned invoca `diagnose-container.py` enquanto o container novo ainda existe, confere sua imagem e label OCI contra o SHA esperado, salva `/var/lib/sana-lab-deploy/diagnostics/<SHA>.txt` (0600) e só então remove o novo container e confirma o rollback. `diagnose <SHA>` lê apenas esse relatório sanitizado; se ausente, falha. Se a coleta também falhar, o rollback continua e `DIAGNOSTIC_CAPTURE_FAILED` fica registrado.
+
+O relatório contém State.Status, ExitCode, State.Error **classificado**, RestartCount, OOMKilled, StartedAt, FinishedAt, Health, comandos restritos a nomes de executáveis conhecidos, user, read_only, destinos/tipos/permissões dos mounts, nome da rede e indicação de portas públicas. Nenhum source do host, valor de env ou linha de log bruta sai no relatório. Até 100 linhas finais são convertidas em classes de erro, permissões e caminhos de código permitidos; os demais valores são `REDACTED`. Quando o deploy falha, o Actions invoca automaticamente `diagnose <SHA>` e registra o relatório já sanitizado. O modo `workflow_dispatch: diagnose` exige o SHA atual da branch (somente quando o workflow estiver disponível na branch padrão).
+
+**Mudança do procedimento privilegiado:** `ssh-dispatch.sh`, `deploy-entry.sh` e `deploy-functional-gate.sh` instalados na VPS são cópias root-owned. O entrypoint compara o hash da cópia instalada do último script com o SHA do candidato. Portanto, esta ampliação exige **uma única reinstalação revisada dos wrappers existentes**, usando o mesmo `bootstrap-deploy-access.sh` e a chave **pública existente**. Um push sozinho falha em `DEPLOY_SCRIPT_UPDATE_NEEDS_BOOTSTRAP` antes de parar a bridge. Após revisar o commit publicado, o administrador executa, na VPS:
+
+```bash
+cd /docker/sana-lab-bridge-src
+git fetch origin sana-lab-exumacao-f0-f2
+git switch sana-lab-exumacao-f0-f2
+git merge --ff-only FETCH_HEAD
+test -z "$(git status --porcelain)"
+git rev-parse HEAD
+bash sana-lab/bootstrap-deploy-access.sh /caminho/da/chave-publica-existente.pub
+```
+
+Não alterar sudoers para comandos livres, não transportar chave privada nem token. A reinstalação dos wrappers é excepcional; deploys normais continuam inteiramente pelo Actions. Depois dela, um push normal (ou o mesmo SHA via workflow_dispatch se disponível) aciona nova tentativa com diagnóstico antes do rollback.
+
+**Comparação CI × VPS:** o smoke do CI usa `--network none`, token sintético e diretórios temporários do runner. O deploy na VPS usa a rede privada `n8n-ntga_default`, mount persistente `/lab-state` e secret existente; ambos usam `--read-only`, `--user 1000:1000` e a mesma imagem. CI PASS não comprova acesso real aos mounts, formato do secret, permissões da VPS ou estabilidade do processo; classificar causa só após o relatório da falha real. Não executar C01–C15 enquanto a imagem nova reiniciar.

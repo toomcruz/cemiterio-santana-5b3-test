@@ -89,6 +89,35 @@ class DeployTest(unittest.TestCase):
         self.assertIn("ROLLBACK_CONFIRMED=YES", result.stdout)
         self.assertEqual(self.state()["containers"]["sana-lab-bridge"]["id"], OLD_ID)
 
+    def test_restarting_new_container_is_diagnosed_before_rollback_without_secrets(self):
+        result = self.run_deploy(SANA_DEPLOY_TEST_RESTART="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("ROLLBACK_CONFIRMED=YES", result.stdout)
+        self.assertEqual(self.state()["containers"]["sana-lab-bridge"]["id"], OLD_ID)
+        self.assertEqual(self.state()["events"], ["logs-before-remove", "remove-new"])
+        report = self.root / "records/diagnostics" / f"{COMMIT}.txt"
+        self.assertTrue(report.is_file())
+        self.assertEqual(report.stat().st_mode & 0o777, 0o600)
+        self.assertIn("CONTAINER_STATUS=restarting", result.stdout)
+        self.assertIn("CONTAINER_EXIT_CODE=1", result.stdout)
+        self.assertIn("CONTAINER_RESTART_COUNT=3", result.stdout)
+        self.assertIn("CONTAINER_OOM_KILLED=false", result.stdout)
+        self.assertIn("PUBLIC_PORTS=NO", result.stdout)
+        self.assertIn("APP_PATH=/app/sana-lab/start.ts:32", result.stdout)
+        for forbidden in ("synthetic-secret-value", "Authorization", "/unsafe/private/",
+                          "token=", "Bearer"):
+            self.assertNotIn(forbidden, result.stdout + result.stderr + report.read_text())
+        diagnosis = self.run_deploy("diagnose")
+        self.assertEqual(diagnosis.returncode, 0, diagnosis.stderr)
+        self.assertEqual(diagnosis.stdout, report.read_text())
+        self.assertEqual(self.state()["events"], ["logs-before-remove", "remove-new"])
+
+    def test_diagnose_unknown_sha_fails_closed(self):
+        result = self.run_deploy("diagnose")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("LAB_DIAGNOSTIC_UNAVAILABLE", result.stderr)
+        self.assertEqual(self.state()["containers"], self.old_state["containers"])
+
     def test_stale_commit_does_not_touch_bridge(self):
         result = self.run_deploy(SANA_DEPLOY_TEST_SHA="2" * 40)
         self.assertNotEqual(result.returncode, 0)
@@ -99,7 +128,9 @@ class DeployTest(unittest.TestCase):
         sudo = self.root / "bin/sudo"
         sudo.write_text('#!/usr/bin/env bash\nprintf "%s\\n" "$*"\n', encoding="utf-8")
         sudo.chmod(0o700)
-        for attempt in ["", "deploy HEAD", f"deploy {COMMIT}; id", f"rollback-test {COMMIT} extra"]:
+        for attempt in ["", "deploy HEAD", f"deploy {COMMIT}; id",
+                        f"rollback-test {COMMIT} extra", f"diagnose {COMMIT}; cat /etc/shadow",
+                        f"diagnose {COMMIT} extra"]:
             rejected = subprocess.run(["bash", str(DISPATCH)], cwd=ROOT,
                                       env={**self.env, "SSH_ORIGINAL_COMMAND": attempt},
                                       capture_output=True, text=True, check=False)
@@ -109,6 +140,11 @@ class DeployTest(unittest.TestCase):
                                   capture_output=True, text=True, check=False)
         self.assertEqual(accepted.returncode, 0, accepted.stderr)
         self.assertEqual(accepted.stdout.strip(), f"-n /usr/local/sbin/sana-lab-deploy-entry deploy {COMMIT}")
+        diagnostic = subprocess.run(["bash", str(DISPATCH)], cwd=ROOT,
+                                    env={**self.env, "SSH_ORIGINAL_COMMAND": f"diagnose {COMMIT}"},
+                                    capture_output=True, text=True, check=False)
+        self.assertEqual(diagnostic.returncode, 0, diagnostic.stderr)
+        self.assertEqual(diagnostic.stdout.strip(), f"-n /usr/local/sbin/sana-lab-deploy-entry diagnose {COMMIT}")
 
 
 if __name__ == "__main__":

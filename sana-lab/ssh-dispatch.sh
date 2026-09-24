@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 umask 077
 command_text=${SSH_ORIGINAL_COMMAND:-}
-if [[ ! $command_text =~ ^(deploy|rollback-test)[[:space:]]([0-9a-f]{40})$ ]]; then
+if [[ ! $command_text =~ ^(deploy|rollback-test|diagnose)[[:space:]]([0-9a-f]{40})$ ]]; then
   echo 'LAB_DEPLOY_COMMAND_REJECTED' >&2
   exit 2
 fi

@@ -18,10 +18,10 @@ on:
         required: true
         type: string
       mode:
-        description: Deploy normal ou prova controlada de rollback LAB
+        description: Deploy, rollback controlado ou consulta de diagnóstico sanitizado
         required: true
         type: choice
-        options: [deploy, rollback-test]
+        options: [deploy, rollback-test, diagnose]
         default: deploy
 
 permissions:
@@ -60,7 +60,7 @@ jobs:
           elif [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
             mode="$REQUESTED_MODE"
           fi
-          [[ "$mode" == deploy || "$mode" == rollback-test ]]
+          [[ "$mode" == deploy || "$mode" == rollback-test || "$mode" == diagnose ]]
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
       - uses: denoland/setup-deno@v2
         with:
@@ -93,7 +93,7 @@ jobs:
             -e SANA_LAB_STATE_DIR=/lab-state -e SANA_LAB_BIND_HOST=0.0.0.0 \
             -e SANA_LAB_PORT=8765 -e SANA_LAB_TOKEN_FILE=/run/secrets/sana_lab_token \
             "$image" >/dev/null
-          trap 'docker logs --tail 35 sana-lab-smoke 2>&1 || true; docker rm -f sana-lab-smoke >/dev/null 2>&1 || true' EXIT
+          trap 'docker rm -f sana-lab-smoke >/dev/null 2>&1 || true' EXIT
           ready=0
           for attempt in {1..20}; do
             if docker exec sana-lab-smoke deno eval \
@@ -127,12 +127,12 @@ jobs:
         run: |
           set -Eeuo pipefail
           [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$MODE" == deploy || "$MODE" == rollback-test ]]
+          [[ "$MODE" == deploy || "$MODE" == rollback-test || "$MODE" == diagnose ]]
           [[ "$DEPLOY_HOST" =~ ^[A-Za-z0-9][A-Za-z0-9.-]+$ ]]
           test "$DEPLOY_USER" = sana-lab-deploy
           test -n "$SSH_KEY" || { echo 'SANA_LAB_DEPLOY_SSH_KEY_MISSING' >&2; exit 2; }
           test -n "$SSH_KNOWN_HOSTS" || { echo 'SANA_LAB_SSH_KNOWN_HOSTS_MISSING' >&2; exit 2; }
-      - name: Implantar apenas bridge privada e confirmar resultado
+      - name: Implantar apenas bridge privada ou consultar diagnóstico restrito
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -146,10 +146,25 @@ jobs:
           ssh-keygen -F "$DEPLOY_HOST" -f "$known" >/dev/null || {
             echo 'PINNED_HOST_KEY_MISSING' >&2; exit 2;
           }
-          ssh -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+          ssh_options=(-o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             -o "UserKnownHostsFile=$known" -o ConnectTimeout=15 \
-            -o ServerAliveInterval=10 -o ServerAliveCountMax=3 -i "$key" \
-            "$DEPLOY_USER@$DEPLOY_HOST" "$MODE $TARGET_SHA" | tee "$log"
+            -o ServerAliveInterval=10 -o ServerAliveCountMax=3 -i "$key")
+          if ! ssh "${ssh_options[@]}" \
+            "$DEPLOY_USER@$DEPLOY_HOST" "$MODE $TARGET_SHA" >"$log" 2>&1; then
+            # The original command can print Docker errors; show only fixed
+            # control markers, then request the stored sanitized record.
+            grep -E '^(DEPLOY_FAILED_STAGE=|ROLLBACK_CONFIRMED=|DEPLOY_SCRIPT_UPDATE_NEEDS_BOOTSTRAP|LAB_DEPLOY_COMMAND_REJECTED|DIAGNOSTIC_CAPTURE_FAILED)' "$log" || true
+            if [[ "$MODE" == deploy ]]; then
+              ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "diagnose $TARGET_SHA" ||
+                echo 'LAB_DIAGNOSTIC_QUERY_UNAVAILABLE'
+            fi
+            exit 1
+          fi
+          if [[ "$MODE" == diagnose ]]; then
+            cat "$log"
+            exit 0
+          fi
+          grep -E '^(DEPLOY_OK|ROLLBACK_CONFIRMED=|LAB_PROBE_OK)' "$log" || true
           if [[ "$MODE" == deploy ]]; then
             grep -Fq "DEPLOY_OK COMMIT=$TARGET_SHA " "$log"
           else

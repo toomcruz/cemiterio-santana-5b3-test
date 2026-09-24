@@ -3,15 +3,25 @@
 set -Eeuo pipefail
 umask 077
 
-expected_sha=${1:?Usage: deploy-functional-gate.sh COMMIT_SHA [deploy|rollback-test]}
+expected_sha=${1:?Usage: deploy-functional-gate.sh COMMIT_SHA [deploy|rollback-test|diagnose]}
 mode=${2:-deploy}
 [[ $expected_sha =~ ^[0-9a-f]{40}$ ]] || { echo 'INVALID_COMMIT_SHA' >&2; exit 2; }
-[[ $mode == deploy || $mode == rollback-test ]] || { echo 'INVALID_DEPLOY_MODE' >&2; exit 2; }
+[[ $mode == deploy || $mode == rollback-test || $mode == diagnose ]] || { echo 'INVALID_DEPLOY_MODE' >&2; exit 2; }
 branch=sana-lab-exumacao-f0-f2
 network=n8n-ntga_default
 container=sana-lab-bridge
 record_dir=${SANA_LAB_DEPLOY_RECORD_DIR:-/var/lib/sana-lab-deploy}
 stage=CHECKOUT
+
+# A diagnostic request can read only the already sanitized, root-owned record
+# for this exact commit. It cannot inspect other containers or invoke a shell.
+if [[ $mode == diagnose ]]; then
+  report="$record_dir/diagnostics/$expected_sha.txt"
+  [[ -f $report && ! -L $report ]] || { echo 'LAB_DIAGNOSTIC_UNAVAILABLE' >&2; exit 2; }
+  test "$(stat -c '%u' "$report")" = 0 || { echo 'LAB_DIAGNOSTIC_UNTRUSTED' >&2; exit 2; }
+  cat "$report"
+  exit 0
+fi
 
 # Reject a stale run before changing the runtime.
 git fetch --no-tags origin "$branch"
@@ -96,6 +106,11 @@ rollback_on_exit() {
   echo "DEPLOY_FAILED_STAGE=$stage EXIT_CODE=$status" >&2
   if (( stopped == 0 )); then exit "$status"; fi
   if (( renamed == 1 )); then
+    # Collect only the new image, before stopping/removing it. The helper reads
+    # explicitly selected inspect fields and never prints raw Docker logs.
+    if [[ $stage != RENAME_OLD ]]; then
+      capture_failed_container || echo 'DIAGNOSTIC_CAPTURE_FAILED' >&2
+    fi
     docker stop "$container" >/dev/null 2>&1 || true
     docker rm "$container" >/dev/null 2>&1 || true
     docker rename "$backup" "$container" || rollback_ok=0
@@ -110,6 +125,20 @@ rollback_on_exit() {
   echo "ROLLBACK_CONFIRMED=YES COMMIT=$old_commit IMAGE=$old_image IMAGE_ID=$old_id"
   if [[ $mode == rollback-test && $status == 76 ]]; then exit 0; fi
   exit "$status"
+}
+
+capture_failed_container() {
+  mkdir -p "$record_dir/diagnostics"
+  local report tmp
+  report="$record_dir/diagnostics/$expected_sha.txt"
+  tmp=$(mktemp "$record_dir/diagnostics/.capture.XXXXXX") || return 1
+  if python3 sana-lab/diagnose-container.py "$container" "$expected_sha" "$image" "$stage" >"$tmp"; then
+    mv -f "$tmp" "$report" || return 1
+    cat "$report"
+  else
+    rm -f "$tmp"
+    return 1
+  fi
 }
 trap rollback_on_exit EXIT
 trap 'exit 130' INT

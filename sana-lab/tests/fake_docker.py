@@ -50,6 +50,19 @@ if args[0] == "inspect":
         "{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}": "test-network-id",
         "{{json .HostConfig.PortBindings}}": "null",
         "{{.HostConfig.ReadonlyRootfs}}": "true",
+        "{{.State.Status}}": "restarting" if container.get("restarting") else ("running" if container["running"] else "exited"),
+        "{{.State.ExitCode}}": "1" if container.get("restarting") else "0",
+        "{{.RestartCount}}": "3" if container.get("restarting") else "0",
+        "{{.State.OOMKilled}}": "false",
+        "{{.State.Error}}": "Permission denied Authorization: Bearer synthetic-secret-value" if container.get("restarting") else "",
+        "{{.State.FinishedAt}}": "2026-09-24T00:00:03Z",
+        "{{.State.StartedAt}}": "2026-09-24T00:00:02Z",
+        "{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}": "none",
+        "{{json .Config.Cmd}}": '["run","/app/sana-lab/start.ts","Bearer synthetic-secret-value"]',
+        "{{json .Config.Entrypoint}}": '["deno"]',
+        "{{.Config.User}}": "1000:1000",
+        "{{range .Mounts}}{{.Destination}}:{{.Type}}:{{.RW}};{{end}}": "/lab-state:bind:true;/run/secrets/sana_lab_token:bind:false;",
+        "{{range $k,$v := .NetworkSettings.Networks}}{{$k}};{{end}}": "n8n-ntga_default;",
     }
     if fmt in fields:
         result(fields[fmt])
@@ -63,9 +76,15 @@ if args[0] == "inspect":
         if "/run/secrets/sana_lab_token" in fmt:
             result("false" if ".RW" in fmt else state["secret_mount"])
     fail()
+if args[0] == "logs":
+    state.setdefault("events", []).append("logs-before-remove")
+    result('error: Uncaught NotCapable: Requires read access to "/app/sana-lab/start.ts:32"\n'
+           'at /app/sana-lab/start.ts:32:1\n'
+           'Authorization: Bearer synthetic-secret-value\n'
+           'secret source: /unsafe/private/secret token=synthetic-secret-value')
 if args[0] == "exec":
     container = state["containers"].get(args[1])
-    if not container or not container["running"]:
+    if not container or not container["running"] or container.get("restarting"):
         fail()
     if args[2] == "sha256sum":
         key = "engine" if args[3].endswith("engine.ts") else "recadastro"
@@ -96,11 +115,13 @@ if args[0] == "run":
         "running": True, "image": image_name, "id": image["id"], "commit": image["commit"],
         "engine": os.environ["SANA_DEPLOY_TEST_ENGINE_HASH"],
         "recadastro": os.environ["SANA_DEPLOY_TEST_RECADASTRO_HASH"],
+        "restarting": os.getenv("SANA_DEPLOY_TEST_RESTART") == "1",
     }
     result("test-container-id")
 if args[0] == "rm":
     if args[1] not in state["containers"]:
         fail()
+    state.setdefault("events", []).append("remove-new")
     del state["containers"][args[1]]
     result()
 if args[0] == "start":
