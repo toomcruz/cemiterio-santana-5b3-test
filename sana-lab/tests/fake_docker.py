@@ -78,8 +78,10 @@ if args[0] == "inspect":
     fail()
 if args[0] == "logs":
     state.setdefault("events", []).append("logs-before-remove")
-    result('error: Uncaught NotCapable: Requires read access to "/app/sana-lab/start.ts:32"\n'
-           'at /app/sana-lab/start.ts:32:1\n'
+    result('error: Uncaught (in promise) NotCapable: Requires read access to "/app/santana-authority/catalogo/exumacao.v1.json", run again with --allow-read\n'
+           '    at file:///app/santana-authority-gateway/catalogo/carregar.ts:128:19\n'
+           'PermissionDenied: Requires env access to "SANA_LAB_TOKEN=synthetic-secret-value"\n'
+           'PermissionDenied: Requires read access to "/run/secrets/sana_lab_token"\n'
            'Authorization: Bearer synthetic-secret-value\n'
            'secret source: /unsafe/private/secret token=synthetic-secret-value')
 if args[0] == "exec":

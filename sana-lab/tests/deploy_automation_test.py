@@ -103,7 +103,14 @@ class DeployTest(unittest.TestCase):
         self.assertIn("CONTAINER_RESTART_COUNT=3", result.stdout)
         self.assertIn("CONTAINER_OOM_KILLED=false", result.stdout)
         self.assertIn("PUBLIC_PORTS=NO", result.stdout)
-        self.assertIn("APP_PATH=/app/sana-lab/start.ts:32", result.stdout)
+        self.assertIn("ERROR_TYPE=NotCapable", result.stdout)
+        self.assertIn("DENIED_OPERATION=read", result.stdout)
+        self.assertIn("DENIED_PATH=/app/santana-authority/catalogo/exumacao.v1.json", result.stdout)
+        self.assertIn("DENO_MESSAGE=Requires read access to /app/santana-authority/catalogo/exumacao.v1.json", result.stdout)
+        self.assertIn("STACK_FRAME=/app/santana-authority-gateway/catalogo/carregar.ts:128:19", result.stdout)
+        self.assertIn("DENIED_OPERATION=env", result.stdout)
+        self.assertIn("DENIED_RESOURCE=<sensitive-resource>", result.stdout)
+        self.assertIn("DENIED_PATH=/run/secrets/<redacted>", result.stdout)
         for forbidden in ("synthetic-secret-value", "Authorization", "/unsafe/private/",
                           "token=", "Bearer"):
             self.assertNotIn(forbidden, result.stdout + result.stderr + report.read_text())

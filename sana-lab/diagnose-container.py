@@ -112,12 +112,81 @@ error_types = re.compile(
     r"\b(NotCapable|PermissionDenied|TypeError|SyntaxError|ReferenceError|"
     r"ModuleNotFound|InvalidData|NotFound|EACCES|ENOENT|OOM|Error)\b"
 )
-paths = re.compile(r"/app/(?:[A-Za-z0-9_./-]+)\.tsx?(?::[0-9]{1,6}){0,2}")
+source_frame = re.compile(
+    r"(?:at\s+(?:[^\s(]+\s+\()?)(file://)?(/[^\s():]+(?:/[^\s():]+)*\.tsx?)(?::([0-9]{1,6}))?(?::([0-9]{1,6}))?"
+)
+access = re.compile(
+    r"Requires\s+(read|write|env|net)\s+access\s+to\s+(.+?)(?:,\s*run again|$)",
+    re.IGNORECASE,
+)
+syscall = re.compile(
+    r"\b(open|read|readfile|write|writefile|mkdir|rename|remove|connect|fetch|resolve)\b",
+    re.IGNORECASE,
+)
+os_denial = re.compile(r"permission denied(?:\s+\(os error\s+([0-9]+)\))?", re.IGNORECASE)
+
+
+def safe_resource(value):
+    value = value.strip().strip("'\"").rstrip(".,;")
+    value = re.sub(r"(?i)^file://", "", value)
+    if not value:
+        return "UNKNOWN"
+    if re.search(r"(?i)(token|secret|credential|password|api[_-]?key|\.env)", value):
+        if value.startswith("/run/secrets/"):
+            return "/run/secrets/<redacted>"
+        return "<sensitive-resource>"
+    if value.startswith("/lab-state/"):
+        return "/lab-state/<file>"
+    # Preserve safe absolute paths, including files outside the Docker allowlist.
+    # Long opaque path components are treated as identifiers and masked.
+    parts = value.split("/")
+    safe_parts = [part if len(part) <= 80 and not re.fullmatch(r"[A-Za-z0-9_-]{32,}", part)
+                  else "<redacted>" for part in parts]
+    return "/".join(safe_parts)[:512]
+
+
+def sanitized_error_fields(line):
+    fields = []
+    found_type = error_types.search(line)
+    if found_type:
+        fields.append(f"ERROR_TYPE={found_type.group(1)}")
+
+    access_match = access.search(line)
+    operation = access_match.group(1).lower() if access_match else None
+    resource = access_match.group(2) if access_match else None
+    call = syscall.search(line)
+    if not operation and call:
+        name = call.group(1).lower()
+        operation = ("read" if name in {"read", "readfile"} else
+                     "write" if name in {"write", "writefile", "mkdir", "rename", "remove"} else
+                     "net" if name in {"connect", "fetch", "resolve"} else name)
+    if operation:
+        fields.append(f"DENIED_OPERATION={operation}")
+    if resource:
+        resource = safe_resource(resource)
+        label = "DENIED_PATH" if resource.startswith("/") else "DENIED_RESOURCE"
+        fields.append(f"{label}={resource}")
+
+    if denial := os_denial.search(line):
+        message = "Permission denied"
+        if denial.group(1):
+            message += f" (os error {denial.group(1)})"
+        fields.append(f"DENO_MESSAGE={message}")
+    elif access_match and resource:
+        fields.append(f"DENO_MESSAGE=Requires {operation} access to {resource}")
+
+    frame = source_frame.search(line)
+    if frame:
+        file_path = safe_resource(frame.group(2))
+        location = ":".join(part for part in (frame.group(3), frame.group(4)) if part)
+        fields.append(f"STACK_FRAME={file_path}{':' + location if location else ''}")
+    return fields
 
 
 def sanitize_log(line):
-    """Output only fixed markers and code paths, never a quoted/logged value."""
+    """Preserve safe Deno diagnostics while masking secrets and file contents."""
     markers = []
+    markers.extend(sanitized_error_fields(line))
     error = error_types.search(line)
     if error:
         markers.append(f"ERROR={error.group(1)}")
@@ -136,19 +205,6 @@ def sanitize_log(line):
     ):
         if needle in lower:
             markers.append(key)
-    known_files = {"start.ts", "engine.ts", "bridge.ts", "recadastro.ts",
-                   "concessao_titularidade.ts"}
-    app_paths = []
-    for match in paths.finditer(line):
-        candidate = match.group()
-        filename = candidate.split("/")[-1].split(":")[0]
-        app_paths.append(candidate if filename in known_files else "OTHER_REDACTED")
-    if app_paths:
-        markers.append("APP_PATH=" + ",".join(app_paths[:2]))
-    if "/lab-state" in line:
-        markers.append("LAB_STATE_PATH")
-    if "/run/secrets/sana_lab_token" in line:
-        markers.append("LAB_SECRET_PATH")
     return " ".join(markers) if markers else "REDACTED"
 
 
