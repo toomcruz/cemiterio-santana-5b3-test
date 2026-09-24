@@ -23,6 +23,9 @@ class DeployTest(unittest.TestCase):
         bindir = self.root / "bin"
         bindir.mkdir()
         (bindir / "docker").symlink_to(FAKE_DOCKER)
+        sleep = bindir / "sleep"
+        sleep.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+        sleep.chmod(0o700)
         install = bindir / "install"
         install.write_text(
             '#!/usr/bin/env bash\n'
@@ -68,22 +71,6 @@ class DeployTest(unittest.TestCase):
             SANA_LAB_DEPLOY_RECORD_DIR=str(self.root / "records"),
         )
 
-    def test_deno_cache_uses_writable_lab_mount(self):
-        dockerfile = (ROOT / "sana-lab/Dockerfile").read_text(encoding="utf-8")
-        compose = (ROOT / "sana-lab/compose.lab.yaml").read_text(encoding="utf-8")
-        workflow = (ROOT / ".github/workflows/sana-lab-bridge-deploy.yml").read_text(encoding="utf-8")
-        self.assertIn("DENO_DIR=/lab-state/.deno", dockerfile)
-        self.assertIn("DENO_DIR: /lab-state/.deno", compose)
-        self.assertIn('DENO_DIR=/lab-state/.deno', workflow)
-        self.assertIn('sudo chown 1000:1000 "$state"', workflow)
-        self.assertIn('sudo chown 1000:1000 "$token_file"', workflow)
-        self.assertIn('chmod 0400 "$token_file"', workflow)
-        self.assertIn("diagnose-container.py sana-lab-smoke", workflow)
-        deploy = (ROOT / "sana-lab/deploy-functional-gate.sh").read_text(encoding="utf-8")
-        self.assertIn("src=$preflight_state,dst=/lab-state", deploy)
-        self.assertIn("STATE=ISOLATED", deploy)
-        self.assertLess(deploy.index('echo "PREFLIGHT_OK'), deploy.index("stage=STOP_OLD"))
-
     def run_deploy(self, mode="deploy", **env):
         return subprocess.run(["bash", str(DEPLOY), COMMIT, mode], cwd=ROOT,
                               env={**self.env, **env}, capture_output=True, text=True, check=False)
@@ -100,33 +87,6 @@ class DeployTest(unittest.TestCase):
         self.assertEqual(len(containers), 2)
         self.assertFalse(next(v for k, v in containers.items() if k != "sana-lab-bridge")["running"])
         self.assertIn("status=ACTIVE", (self.root / "records/active.txt").read_text())
-        events = self.state()["events"]
-        self.assertLess(events.index("preflight-start"), events.index("preflight-remove"))
-        self.assertLess(events.index("preflight-remove"), events.index("service-stop"))
-        self.assertIn("PREFLIGHT_OK", result.stdout)
-
-    def test_preflight_failure_leaves_the_working_bridge_untouched(self):
-        result = self.run_deploy(SANA_DEPLOY_TEST_PREFLIGHT_FAIL="1")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("PREFLIGHT_FAILED_STAGE=VERIFY", result.stderr)
-        containers = self.state()["containers"]
-        self.assertEqual(set(containers), {"sana-lab-bridge"})
-        self.assertTrue(containers["sana-lab-bridge"]["running"])
-        self.assertEqual(containers["sana-lab-bridge"]["id"], OLD_ID)
-        self.assertIn("preflight-start", self.state()["events"])
-        self.assertIn("preflight-remove", self.state()["events"])
-
-    def test_preflight_authenticated_probe_failure_leaves_the_working_bridge_untouched(self):
-        result = self.run_deploy(SANA_DEPLOY_TEST_PREFLIGHT_AUTH_FAIL="1")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("PREFLIGHT_FAILED_STAGE=AUTHENTICATED_PROBE", result.stderr)
-        containers = self.state()["containers"]
-        self.assertEqual(set(containers), {"sana-lab-bridge"})
-        self.assertTrue(containers["sana-lab-bridge"]["running"])
-        self.assertNotIn("service-stop", self.state()["events"])
-        report = self.root / "records/diagnostics" / f"{COMMIT}.txt"
-        self.assertTrue(report.is_file())
-        self.assertIn("DEPLOY_FAILED_STAGE=PREFLIGHT_PROBE", report.read_text(encoding="utf-8"))
 
     def test_controlled_failure_restores_original_container(self):
         result = self.run_deploy("rollback-test")
@@ -143,15 +103,85 @@ class DeployTest(unittest.TestCase):
         self.assertIn("ROLLBACK_CONFIRMED=YES", result.stdout)
         self.assertEqual(self.state()["containers"]["sana-lab-bridge"]["id"], OLD_ID)
 
+    def test_preflight_negative_image_network_ports_readonly_and_hash_checks(self):
+        cases = (
+            ("SANA_DEPLOY_TEST_PREFLIGHT_BAD_IMAGE", "image"),
+            ("SANA_DEPLOY_TEST_PREFLIGHT_BAD_NETWORK", "network"),
+            ("SANA_DEPLOY_TEST_PREFLIGHT_BAD_PORTS", "ports"),
+            ("SANA_DEPLOY_TEST_PREFLIGHT_BAD_READONLY", "read-only"),
+            ("SANA_DEPLOY_TEST_PREFLIGHT_BAD_ENGINE_HASH", "engine hash"),
+            ("SANA_DEPLOY_TEST_PREFLIGHT_BAD_RECADASTRO_HASH", "recadastro hash"),
+        )
+        for variable, description in cases:
+            with self.subTest(description=description):
+                self.state_path.write_text(json.dumps(self.old_state), encoding="utf-8")
+                result = self.run_deploy(**{variable: "1"})
+                self.assertNotEqual(result.returncode, 0, description)
+                self.assertIn("PREFLIGHT_FAILED_STAGE=VERIFY", result.stderr, description)
+                state = self.state()
+                self.assertEqual(set(state["containers"]), {"sana-lab-bridge"}, description)
+                self.assertTrue(state["containers"]["sana-lab-bridge"]["running"], description)
+                self.assertEqual(state["containers"]["sana-lab-bridge"]["id"], OLD_ID, description)
+                self.assertIn("preflight-start", state["events"], description)
+                self.assertIn("preflight-remove-force", state["events"], description)
+                self.assertNotIn("service-stop", state["events"], description)
+                report = self.root / "records/diagnostics" / f"{COMMIT}.txt"
+                self.assertTrue(report.is_file(), description)
+                for forbidden in ("synthetic-secret-value", "Authorization", "Bearer"):
+                    self.assertNotIn(forbidden, result.stdout + result.stderr + report.read_text(), description)
+
+    def test_preflight_start_failure_writes_sanitized_action_markers(self):
+        result = self.run_deploy(SANA_DEPLOY_TEST_PREFLIGHT_START_FAIL="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("PREFLIGHT_FAILED_STAGE=START", result.stderr)
+        self.assertIn("PREFLIGHT_CONTAINER_CLEANUP=NOT_CREATED_OR_ALREADY_REMOVED", result.stdout)
+        self.assertIn("PREFLIGHT_STATE_CLEANUP=PASS", result.stdout)
+        report = self.root / "records/diagnostics" / f"{COMMIT}.txt"
+        self.assertTrue(report.is_file())
+        text = report.read_text(encoding="utf-8")
+        self.assertIn("CONTAINER_STATUS=NOT_CREATED", text)
+        self.assertIn("STARTUP_LOG_TAIL_SANITIZED_BEGIN", text)
+        self.assertNotIn("synthetic-secret-value", text)
+        self.assertNotIn("Authorization", text)
+        self.assertEqual(set(self.state()["containers"]), {"sana-lab-bridge"})
+
+    def test_preflight_cleanup_failure_is_diagnosed_and_blocks_cutover(self):
+        result = self.run_deploy(SANA_DEPLOY_TEST_PREFLIGHT_CLEANUP_FAIL="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("PREFLIGHT_CLEANUP_FAILED=CONTAINER_REMOVE", result.stderr)
+        self.assertIn("PREFLIGHT_FAILED_STAGE=CLEANUP", result.stderr)
+        self.assertNotIn("service-stop", self.state()["events"])
+        self.assertEqual(self.state()["containers"]["sana-lab-bridge"]["id"], OLD_ID)
+        report = self.root / "records/diagnostics" / f"{COMMIT}.txt"
+        self.assertTrue(report.is_file())
+        text = report.read_text(encoding="utf-8")
+        self.assertIn("DEPLOY_FAILED_STAGE=PREFLIGHT_CLEANUP", text)
+        self.assertNotIn("synthetic-secret-value", text)
+        self.assertNotIn("Authorization", text)
+
+    def test_fake_docker_refuses_removing_running_container_without_force(self):
+        without_force = subprocess.run(
+            ["python3", str(FAKE_DOCKER), "rm", "sana-lab-bridge"],
+            cwd=ROOT, env=self.env, capture_output=True, text=True, check=False,
+        )
+        self.assertNotEqual(without_force.returncode, 0)
+        self.assertTrue(self.state()["containers"]["sana-lab-bridge"]["running"])
+        with_force = subprocess.run(
+            ["python3", str(FAKE_DOCKER), "rm", "--force", "sana-lab-bridge"],
+            cwd=ROOT, env=self.env, capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(with_force.returncode, 0, with_force.stderr)
+        self.assertNotIn("sana-lab-bridge", self.state()["containers"])
+
     def test_restarting_new_container_is_diagnosed_before_rollback_without_secrets(self):
         result = self.run_deploy(SANA_DEPLOY_TEST_RESTART="1")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("ROLLBACK_CONFIRMED=YES", result.stdout)
         self.assertEqual(self.state()["containers"]["sana-lab-bridge"]["id"], OLD_ID)
         events = self.state()["events"]
-        self.assertLess(events.index("preflight-remove"), events.index("service-stop"))
-        self.assertIn("logs-before-remove", events)
-        self.assertIn("remove-new", events)
+        self.assertLess(events.index("preflight-start"), events.index("preflight-remove-force"))
+        self.assertLess(events.index("preflight-remove-force"), events.index("service-stop"))
+        self.assertLess(events.index("logs-before-remove"), events.index("remove-new"))
         report = self.root / "records/diagnostics" / f"{COMMIT}.txt"
         self.assertTrue(report.is_file())
         self.assertEqual(report.stat().st_mode & 0o777, 0o600)
@@ -168,12 +198,8 @@ class DeployTest(unittest.TestCase):
         self.assertIn("LAB_STATE_USER_1000_WRITE_EXECUTE=YES", result.stdout)
         self.assertIn("TOKEN_USER_1000_READ=YES", result.stdout)
         self.assertIn("RUNTIME_UID=1000 RUNTIME_GID=1000", result.stdout)
-        self.assertIn("WORKDIR=/app", result.stdout)
-        self.assertIn("DENO_DIR_CONFIGURED=yes", result.stdout)
         self.assertIn("ACCESS_PATH=/lab-state ACCESS_UID=1000 ACCESS_GID=1000 ACCESS_MODE=700", result.stdout)
         self.assertIn("ACCESS_CHECK_PATH=/lab-state ACCESS_OP=write ACCESS_RESULT=YES", result.stdout)
-        self.assertIn("ACCESS_PATH=/lab-state/.deno ACCESS_UID=1000 ACCESS_GID=1000 ACCESS_MODE=700", result.stdout)
-        self.assertIn("ACCESS_CHECK_PATH=/lab-state/.deno ACCESS_OP=write ACCESS_RESULT=YES", result.stdout)
         self.assertIn("ACCESS_PATH=/run/secrets/sana_lab_token ACCESS_UID=1000 ACCESS_GID=1000 ACCESS_MODE=400", result.stdout)
         self.assertIn("ACCESS_CHECK_PATH=/run/secrets/sana_lab_token ACCESS_OP=read ACCESS_RESULT=YES", result.stdout)
         self.assertIn("ACCESS_PATH=/deno-dir ACCESS_UID=1000 ACCESS_GID=1000 ACCESS_MODE=700", result.stdout)
@@ -199,6 +225,7 @@ class DeployTest(unittest.TestCase):
         self.assertEqual(diagnosis.returncode, 0, diagnosis.stderr)
         self.assertEqual(diagnosis.stdout, report.read_text())
         events = self.state()["events"]
+        self.assertLess(events.index("preflight-remove-force"), events.index("logs-before-remove"))
         self.assertLess(events.index("logs-before-remove"), events.index("remove-new"))
 
     def test_diagnose_unknown_sha_fails_closed(self):

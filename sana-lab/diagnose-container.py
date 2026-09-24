@@ -17,6 +17,12 @@ allowed_name = name in {"sana-lab-bridge", "sana-lab-smoke"} or re.fullmatch(
 )
 if not re.fullmatch(r"[0-9a-f]{40}", expected_sha) or not allowed_name:
     raise SystemExit(2)
+allowed_stages = {
+    "START_NEW", "VERIFY_NEW", "VERIFY_ISOLATED", "PREFLIGHT_START", "PREFLIGHT_VERIFY",
+    "PREFLIGHT_PROBE", "PREFLIGHT_UNAUTHENTICATED_PROBE", "PREFLIGHT_AUTHENTICATED_PROBE",
+    "PREFLIGHT_CLEANUP", "SYNTHETIC_FAILURE", "RECORD_ACTIVE",
+}
+safe_stage = stage if stage in allowed_stages else "UNEXPECTED"
 
 
 def docker(*args):
@@ -34,7 +40,12 @@ try:
 except (subprocess.SubprocessError, OSError):
     print(f"DIAGNOSTIC_SHA={expected_sha}")
     print(f"FAILED_IMAGE={expected_image}")
+    print(f"DEPLOY_FAILED_STAGE={safe_stage}")
+    print("CONTAINER_STATUS=NOT_CREATED")
     print("CONTAINER_STATE=NOT_CREATED")
+    print("STARTUP_LOG_TAIL_SANITIZED_BEGIN")
+    print("LOGS_UNAVAILABLE_CONTAINER_NOT_CREATED")
+    print("STARTUP_LOG_TAIL_SANITIZED_END")
     raise SystemExit(0)
 
 # Never interrogate another image (including the old backup renamed on failure).
@@ -405,7 +416,7 @@ def sanitize_log(line):
 
 print(f"DIAGNOSTIC_SHA={expected_sha}")
 print(f"FAILED_IMAGE={expected_image}")
-print(f"DEPLOY_FAILED_STAGE={enum(stage, {'START_NEW', 'VERIFY_NEW', 'VERIFY_ISOLATED', 'PREFLIGHT_START', 'PREFLIGHT_VERIFY', 'PREFLIGHT_PROBE', 'SYNTHETIC_FAILURE', 'RECORD_ACTIVE'})}")
+print(f"DEPLOY_FAILED_STAGE={enum(stage, {'START_NEW', 'VERIFY_NEW', 'VERIFY_ISOLATED', 'PREFLIGHT_START', 'PREFLIGHT_VERIFY', 'PREFLIGHT_PROBE', 'PREFLIGHT_UNAUTHENTICATED_PROBE', 'PREFLIGHT_AUTHENTICATED_PROBE', 'PREFLIGHT_CLEANUP', 'SYNTHETIC_FAILURE', 'RECORD_ACTIVE'})}")
 try:
     values = {key: docker("inspect", name, "--format", fmt)
               for key, fmt in formats.items()}

@@ -45,11 +45,11 @@ if args[0] == "inspect":
     fields = {
         "{{.State.Running}}": str(container["running"]).lower(),
         "{{.Image}}": container["id"],
-        "{{.Config.Image}}": container["image"],
-        "{{len .NetworkSettings.Networks}}": "1",
-        "{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}": "test-network-id",
-        "{{json .HostConfig.PortBindings}}": "null",
-        "{{.HostConfig.ReadonlyRootfs}}": "true",
+        "{{.Config.Image}}": container.get("inspect_image", container["image"]),
+        "{{len .NetworkSettings.Networks}}": str(container.get("network_count", 1)),
+        "{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}": container.get("network_id", "test-network-id"),
+        "{{json .HostConfig.PortBindings}}": container.get("port_bindings", "null"),
+        "{{.HostConfig.ReadonlyRootfs}}": str(container.get("readonly", True)).lower(),
         "{{.State.Status}}": "restarting" if container.get("restarting") else ("running" if container["running"] else "exited"),
         "{{.State.ExitCode}}": "1" if container.get("restarting") else "0",
         "{{.RestartCount}}": "3" if container.get("restarting") else "0",
@@ -132,20 +132,19 @@ if args[0] == "exec":
                    (container.get("preflight") and os.getenv("SANA_DEPLOY_TEST_PREFLIGHT_FAIL") == "1")) else result()
     if args[2:4] == ["deno", "run"]:
         fail() if ((os.getenv("SANA_DEPLOY_TEST_AUTH_FAIL") == "1" and not container.get("preflight")) or
-                   (os.getenv("SANA_DEPLOY_TEST_PREFLIGHT_AUTH_FAIL") == "1" and container.get("preflight"))) else result("LAB_PROBE_OK HTTP=200")
+                   (container.get("preflight") and os.getenv("SANA_DEPLOY_TEST_PREFLIGHT_AUTH_FAIL") == "1")) else result("LAB_PROBE_OK HTTP=200")
     fail()
 if args[0] == "stop":
     container = state["containers"].get(args[1])
     if not container:
         fail()
     container["running"] = False
-    state.setdefault("events", []).append("service-stop")
+    state.setdefault("events", []).append("service-stop" if args[1] == "sana-lab-bridge" else "preflight-stop")
     result()
 if args[0] == "rename":
     if args[1] not in state["containers"] or args[2] in state["containers"]:
         fail()
     state["containers"][args[2]] = state["containers"].pop(args[1])
-    state.setdefault("events", []).append("service-rename")
     result()
 if args[0] == "run" and "--entrypoint" in args:
     result("RUNTIME_UID=1000 RUNTIME_GID=1000\n"
@@ -153,10 +152,6 @@ if args[0] == "run" and "--entrypoint" in args:
            "ACCESS_CHECK_PATH=/lab-state ACCESS_OP=read ACCESS_RESULT=YES\n"
            "ACCESS_CHECK_PATH=/lab-state ACCESS_OP=write ACCESS_RESULT=YES\n"
            "ACCESS_CHECK_PATH=/lab-state ACCESS_OP=exec ACCESS_RESULT=YES\n"
-           "ACCESS_PATH=/lab-state/.deno ACCESS_UID=1000 ACCESS_GID=1000 ACCESS_MODE=700\n"
-           "ACCESS_CHECK_PATH=/lab-state/.deno ACCESS_OP=read ACCESS_RESULT=YES\n"
-           "ACCESS_CHECK_PATH=/lab-state/.deno ACCESS_OP=write ACCESS_RESULT=YES\n"
-           "ACCESS_CHECK_PATH=/lab-state/.deno ACCESS_OP=exec ACCESS_RESULT=YES\n"
            "ACCESS_PATH=/run/secrets/sana_lab_token ACCESS_UID=1000 ACCESS_GID=1000 ACCESS_MODE=400\n"
            "ACCESS_CHECK_PATH=/run/secrets/sana_lab_token ACCESS_OP=read ACCESS_RESULT=YES\n"
            "ACCESS_CHECK_PATH=/run/secrets/sana_lab_token ACCESS_OP=write ACCESS_RESULT=NO\n"
@@ -169,27 +164,51 @@ if args[0] == "run":
     name = args[args.index("--name") + 1]
     if name in state["containers"]:
         fail()
+    if name.startswith("sana-lab-preflight-") and os.getenv("SANA_DEPLOY_TEST_PREFLIGHT_START_FAIL") == "1":
+        state.setdefault("events", []).append("preflight-start-failed")
+        with open(path, "w", encoding="utf-8") as file:
+            json.dump(state, file)
+        fail()
     image_name = args[-1]
     image = state["images"][image_name]
     mounts = [part for part in args if part.startswith("type=bind,")]
     state_mount = next((part.split("src=", 1)[1].split(",", 1)[0] for part in mounts if "dst=/lab-state" in part), state["state_mount"])
     secret_mount = next((part.split("src=", 1)[1].split(",", 1)[0] for part in mounts if "dst=/run/secrets/sana_lab_token" in part), state["secret_mount"])
     is_preflight = name.startswith("sana-lab-preflight-")
+    bad = lambda flag: is_preflight and os.getenv(flag) == "1"
     state["containers"][name] = {
         "running": True, "image": image_name, "id": image["id"], "commit": image["commit"],
         "engine": os.environ["SANA_DEPLOY_TEST_ENGINE_HASH"],
         "recadastro": os.environ["SANA_DEPLOY_TEST_RECADASTRO_HASH"],
         "restarting": os.getenv("SANA_DEPLOY_TEST_RESTART") == "1" and not is_preflight,
-        "preflight": is_preflight, "state_mount": state_mount, "secret_mount": secret_mount,
+        "preflight": is_preflight,
+        "state_mount": state_mount,
+        "secret_mount": secret_mount,
+        "inspect_image": "sana-lab-bridge:wrong" if bad("SANA_DEPLOY_TEST_PREFLIGHT_BAD_IMAGE") else image_name,
+        "network_count": 2 if bad("SANA_DEPLOY_TEST_PREFLIGHT_BAD_NETWORK") else 1,
+        "network_id": "wrong-network-id" if bad("SANA_DEPLOY_TEST_PREFLIGHT_BAD_NETWORK") else "test-network-id",
+        "port_bindings": '{"8765/tcp":[{"HostPort":"8765"}]}' if bad("SANA_DEPLOY_TEST_PREFLIGHT_BAD_PORTS") else "null",
+        "readonly": not bad("SANA_DEPLOY_TEST_PREFLIGHT_BAD_READONLY"),
     }
+    if bad("SANA_DEPLOY_TEST_PREFLIGHT_BAD_ENGINE_HASH"):
+        state["containers"][name]["engine"] = "0" * 64
+    if bad("SANA_DEPLOY_TEST_PREFLIGHT_BAD_RECADASTRO_HASH"):
+        state["containers"][name]["recadastro"] = "0" * 64
     if is_preflight:
         state.setdefault("events", []).append("preflight-start")
     result("test-container-id")
 if args[0] == "rm":
     target = args[-1]
-    if target not in state["containers"]:
+    container = state["containers"].get(target)
+    if not container:
         fail()
-    state.setdefault("events", []).append("preflight-remove" if state["containers"][target].get("preflight") else "remove-new")
+    force = "-f" in args[1:-1] or "--force" in args[1:-1]
+    if container.get("running") and not force:
+        fail()
+    if container.get("preflight") and os.getenv("SANA_DEPLOY_TEST_PREFLIGHT_CLEANUP_FAIL") == "1":
+        fail()
+    event = "preflight-remove" if container.get("preflight") else "remove-new"
+    state.setdefault("events", []).append(event + ("-force" if force else ""))
     del state["containers"][target]
     result()
 if args[0] == "start":

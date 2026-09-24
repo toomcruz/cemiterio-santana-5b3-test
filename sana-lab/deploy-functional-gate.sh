@@ -39,15 +39,15 @@ network_id=$(docker network inspect "$network" --format '{{.ID}}')
 
 check_container() {
   local name=$1 expected_id=$2 expected_engine=$3 expected_recadastro=$4 ports
-  test "$(docker inspect "$name" --format '{{.State.Running}}')" = true
-  test "$(docker inspect "$name" --format '{{.Image}}')" = "$expected_id"
-  test "$(docker inspect "$name" --format '{{len .NetworkSettings.Networks}}')" = 1
-  test "$(docker inspect "$name" --format '{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}')" = "$network_id"
-  ports=$(docker inspect "$name" --format '{{json .HostConfig.PortBindings}}')
-  [[ $ports == null || $ports == '{}' ]]
-  test "$(docker inspect "$name" --format '{{.HostConfig.ReadonlyRootfs}}')" = true
-  test "$(container_hash "$name" /app/sana-lab/engine.ts)" = "$expected_engine"
-  test "$(container_hash "$name" /app/sana-lab/recadastro.ts)" = "$expected_recadastro"
+  test "$(docker inspect "$name" --format '{{.State.Running}}')" = true || return 1
+  test "$(docker inspect "$name" --format '{{.Image}}')" = "$expected_id" || return 1
+  test "$(docker inspect "$name" --format '{{len .NetworkSettings.Networks}}')" = 1 || return 1
+  test "$(docker inspect "$name" --format '{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}')" = "$network_id" || return 1
+  ports=$(docker inspect "$name" --format '{{json .HostConfig.PortBindings}}') || return 1
+  [[ $ports == null || $ports == '{}' ]] || return 1
+  test "$(docker inspect "$name" --format '{{.HostConfig.ReadonlyRootfs}}')" = true || return 1
+  test "$(container_hash "$name" /app/sana-lab/engine.ts)" = "$expected_engine" || return 1
+  test "$(container_hash "$name" /app/sana-lab/recadastro.ts)" = "$expected_recadastro" || return 1
   # Deno 2.1.4 eval does not accept --allow-net; no credential is involved here.
   docker exec "$name" deno eval \
     'const r = await fetch("http://127.0.0.1:8765/lab/v1/turn", {method:"POST"}); if (r.status !== 401) throw Error("LAB_PROBE_NOT_401");' >/dev/null
@@ -128,11 +128,13 @@ rollback_on_exit() {
 }
 
 capture_failed_container() {
-  mkdir -p "$record_dir/diagnostics"
   local target=${1:-$container} failed_stage=${2:-$stage} report tmp
+  mkdir -p "$record_dir/diagnostics" || return 1
+  chmod 0700 "$record_dir/diagnostics" || return 1
   report="$record_dir/diagnostics/$expected_sha.txt"
   tmp=$(mktemp "$record_dir/diagnostics/.capture.XXXXXX") || return 1
   if python3 sana-lab/diagnose-container.py "$target" "$expected_sha" "$image" "$failed_stage" >"$tmp"; then
+    chmod 0600 "$tmp" || { rm -f "$tmp"; return 1; }
     mv -f "$tmp" "$report" || return 1
     cat "$report"
   else
@@ -156,31 +158,96 @@ if docker container inspect "$preflight" >/dev/null 2>&1; then
   echo 'PREFLIGHT_CONTAINER_NAME_COLLISION' >&2
   exit 2
 fi
-preflight_live=0
-preflight_cleanup() {
-  if (( preflight_live == 1 )); then docker rm -f "$preflight" >/dev/null 2>&1 || true; fi
+preflight_attempted=0
+preflight_cleanup_attempted=0
+preflight_cleanup_done=0
+write_fallback_diagnostic() {
+  local failure_stage=$1 failure_code=$2 report tmp
+  mkdir -p "$record_dir/diagnostics" || return 1
+  chmod 0700 "$record_dir/diagnostics" || return 1
+  report="$record_dir/diagnostics/$expected_sha.txt"
+  tmp=$(mktemp "$record_dir/diagnostics/.capture.XXXXXX") || return 1
+  {
+    printf 'DIAGNOSTIC_SHA=%s\nFAILED_IMAGE=%s\nDEPLOY_FAILED_STAGE=%s\nDIAGNOSTIC_CAPTURE=%s\n' \
+      "$expected_sha" "$image" "$failure_stage" "$failure_code"
+    printf 'CONTAINER_STATUS=UNAVAILABLE\nSTARTUP_LOG_TAIL_SANITIZED_BEGIN\nDIAGNOSTIC_UNAVAILABLE\nSTARTUP_LOG_TAIL_SANITIZED_END\n'
+  } >"$tmp"
+  chmod 0600 "$tmp" || { rm -f "$tmp"; return 1; }
+  mv -f "$tmp" "$report" || { rm -f "$tmp"; return 1; }
+  cat "$report"
 }
-trap preflight_cleanup EXIT
+cleanup_preflight() {
+  local cleanup_failed=0
+  preflight_cleanup_attempted=1
+  stage=PREFLIGHT_CLEANUP
+  if docker container inspect "$preflight" >/dev/null 2>&1; then
+    if docker rm -f "$preflight" >/dev/null 2>&1; then
+      echo 'PREFLIGHT_CONTAINER_CLEANUP=PASS'
+    else
+      capture_failed_container "$preflight" "$stage" || {
+        echo 'DIAGNOSTIC_CAPTURE_FAILED' >&2
+        write_fallback_diagnostic "$stage" CLEANUP_DIAGNOSTIC_UNAVAILABLE || true
+      }
+      echo 'PREFLIGHT_CLEANUP_FAILED=CONTAINER_REMOVE' >&2
+      cleanup_failed=1
+    fi
+  else
+    echo 'PREFLIGHT_CONTAINER_CLEANUP=NOT_CREATED_OR_ALREADY_REMOVED'
+  fi
+  if (( cleanup_failed == 0 )) && [[ -d $preflight_root && ! -L $preflight_root && $preflight_root == "$record_dir"/preflight.* ]]; then
+    if find "$preflight_root" -xdev -depth -mindepth 1 -delete >/dev/null 2>&1 && rmdir "$preflight_root" 2>/dev/null; then
+      echo 'PREFLIGHT_STATE_CLEANUP=PASS'
+    else
+      echo 'PREFLIGHT_STATE_CLEANUP_FAILED=YES' >&2
+      write_fallback_diagnostic "$stage" STATE_CLEANUP_FAILED || true
+      cleanup_failed=1
+    fi
+  elif (( cleanup_failed == 0 )); then
+    echo 'PREFLIGHT_STATE_CLEANUP_FAILED=PATH_GUARD' >&2
+    write_fallback_diagnostic "$stage" STATE_CLEANUP_PATH_GUARD || true
+    cleanup_failed=1
+  else
+    echo 'PREFLIGHT_STATE_PRESERVED_FOR_DIAGNOSTIC=YES' >&2
+  fi
+  (( cleanup_failed == 0 )) && preflight_cleanup_done=1
+  return "$cleanup_failed"
+}
+preflight_exit_cleanup() {
+  local status=$?
+  trap - EXIT
+  if (( preflight_attempted == 1 && preflight_cleanup_attempted == 0 )); then
+    cleanup_preflight || status=1
+  fi
+  exit "$status"
+}
+trap preflight_exit_cleanup EXIT
 stage=PREFLIGHT_START
-docker run -d --name "$preflight" --hostname "$preflight" \
+preflight_attempted=1
+if ! docker run -d --name "$preflight" --hostname "$preflight" \
   --network "$network" --read-only --user 1000:1000 --security-opt no-new-privileges \
   --restart no --expose 8765 \
   --mount "type=bind,src=$preflight_state,dst=/lab-state" \
   --mount "type=bind,src=$secret_mount,dst=/run/secrets/sana_lab_token,readonly" \
   -e DENO_DIR=/lab-state/.deno -e SANA_LAB_STATE_DIR=/lab-state -e SANA_LAB_BIND_HOST=0.0.0.0 \
   -e SANA_LAB_PORT=8765 -e SANA_LAB_TOKEN_FILE=/run/secrets/sana_lab_token \
-  "$image" >/dev/null
-preflight_live=1
+  "$image" >/dev/null 2>&1; then
+  capture_failed_container "$preflight" "$stage" || {
+    echo 'DIAGNOSTIC_CAPTURE_FAILED' >&2
+    write_fallback_diagnostic "$stage" START_DIAGNOSTIC_UNAVAILABLE || true
+  }
+  echo 'PREFLIGHT_FAILED_STAGE=START' >&2
+  exit 1
+fi
 stage=PREFLIGHT_VERIFY
-test "$(docker inspect "$preflight" --format '{{.Config.Image}}')" = "$image"
-test "$(docker inspect "$preflight" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')" = "$expected_sha"
-test "$(docker inspect "$preflight" --format '{{range .Mounts}}{{if eq .Destination "/lab-state"}}{{.Source}}{{end}}{{end}}')" = "$preflight_state"
-test "$(docker inspect "$preflight" --format '{{range .Mounts}}{{if eq .Destination "/run/secrets/sana_lab_token"}}{{.Source}}{{end}}{{end}}')" = "$secret_mount"
-test "$(docker inspect "$preflight" --format '{{range .Mounts}}{{if eq .Destination "/run/secrets/sana_lab_token"}}{{.RW}}{{end}}{{end}}')" = false
-test "$(docker inspect "$preflight" --format '{{range .Config.Env}}{{if eq . "DENO_DIR=/lab-state/.deno"}}yes{{end}}{{end}}')" = yes
 preflight_ready=0
 for attempt in {1..20}; do
-  if check_container "$preflight" "$new_id" "$engine_hash" "$recadastro_hash"; then
+  if [[ $(docker inspect "$preflight" --format '{{.Config.Image}}' 2>/dev/null || true) == "$image" ]] &&
+     [[ $(docker inspect "$preflight" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' 2>/dev/null || true) == "$expected_sha" ]] &&
+     [[ $(docker inspect "$preflight" --format '{{range .Mounts}}{{if eq .Destination "/lab-state"}}{{.Source}}{{end}}{{end}}' 2>/dev/null || true) == "$preflight_state" ]] &&
+     [[ $(docker inspect "$preflight" --format '{{range .Mounts}}{{if eq .Destination "/run/secrets/sana_lab_token"}}{{.Source}}{{end}}{{end}}' 2>/dev/null || true) == "$secret_mount" ]] &&
+     [[ $(docker inspect "$preflight" --format '{{range .Mounts}}{{if eq .Destination "/run/secrets/sana_lab_token"}}{{.RW}}{{end}}{{end}}' 2>/dev/null || true) == false ]] &&
+     [[ $(docker inspect "$preflight" --format '{{range .Config.Env}}{{if eq . "DENO_DIR=/lab-state/.deno"}}yes{{end}}{{end}}' 2>/dev/null || true) == yes ]] &&
+     check_container "$preflight" "$new_id" "$engine_hash" "$recadastro_hash"; then
     preflight_ready=1
     break
   fi
@@ -188,21 +255,48 @@ for attempt in {1..20}; do
   sleep 0.5
 done
 if (( preflight_ready != 1 )); then
-  capture_failed_container "$preflight" "$stage" || echo 'DIAGNOSTIC_CAPTURE_FAILED' >&2
+  capture_failed_container "$preflight" "$stage" || {
+    echo 'DIAGNOSTIC_CAPTURE_FAILED' >&2
+    write_fallback_diagnostic "$stage" VERIFY_DIAGNOSTIC_UNAVAILABLE || true
+  }
   echo 'PREFLIGHT_FAILED_STAGE=VERIFY' >&2
   exit 1
 fi
-stage=PREFLIGHT_PROBE
+stage=PREFLIGHT_UNAUTHENTICATED_PROBE
+preflight_ready=0
+for attempt in {1..20}; do
+  if docker exec "$preflight" deno eval \
+    'const r = await fetch("http://127.0.0.1:8765/lab/v1/turn", {method:"POST"}); if (r.status !== 401) throw Error("LAB_PROBE_NOT_401");' >/dev/null 2>&1; then
+    preflight_ready=1
+    break
+  fi
+  if (( attempt < 20 )); then sleep 0.5; fi
+done
+if (( preflight_ready != 1 )); then
+  capture_failed_container "$preflight" "$stage" || {
+    echo 'DIAGNOSTIC_CAPTURE_FAILED' >&2
+    write_fallback_diagnostic "$stage" UNAUTHENTICATED_PROBE_DIAGNOSTIC_UNAVAILABLE || true
+  }
+  echo 'PREFLIGHT_FAILED_STAGE=UNAUTHENTICATED_PROBE' >&2
+  exit 1
+fi
+stage=PREFLIGHT_AUTHENTICATED_PROBE
 if ! docker exec "$preflight" deno run --allow-read=/run/secrets/sana_lab_token --allow-net=127.0.0.1:8765 \
-  /app/sana-lab/deploy-probe.ts "$expected_sha" >/dev/null; then
-  capture_failed_container "$preflight" "$stage" || echo 'DIAGNOSTIC_CAPTURE_FAILED' >&2
+  /app/sana-lab/deploy-probe.ts "$expected_sha" >/dev/null 2>&1; then
+  capture_failed_container "$preflight" "$stage" || {
+    echo 'DIAGNOSTIC_CAPTURE_FAILED' >&2
+    write_fallback_diagnostic "$stage" AUTHENTICATED_PROBE_DIAGNOSTIC_UNAVAILABLE || true
+  }
   echo 'PREFLIGHT_FAILED_STAGE=AUTHENTICATED_PROBE' >&2
   exit 1
 fi
-docker rm "$preflight" >/dev/null
-preflight_live=0
+stage=PREFLIGHT_CLEANUP
+if ! cleanup_preflight; then
+  echo 'PREFLIGHT_FAILED_STAGE=CLEANUP' >&2
+  exit 1
+fi
 trap - EXIT
-echo "PREFLIGHT_OK COMMIT=$expected_sha IMAGE=$image NETWORK=$network STATE=ISOLATED AUTH=PASS PUBLIC_PORTS=NO"
+echo "PREFLIGHT_OK COMMIT=$expected_sha IMAGE=$image NETWORK=$network STATE=ISOLATED AUTH=PASS PUBLIC_PORTS=NO CLEANUP=PASS"
 
 trap rollback_on_exit EXIT
 trap 'exit 130' INT

@@ -4,36 +4,40 @@ Escopo: `sana-lab-bridge` na rede existente `n8n-ntga_default`, usando o checkou
 
 ## Fluxo normal
 
-Um `push` na branch `sana-lab-exumacao-f0-f2` que altere código/imagem ou o workflow de deploy aciona `.github/workflows/sana-lab-bridge-deploy.yml`. O job de validação fixa `github.sha`, verifica tipos e testes Deno, scripts Bash e transições locais de deploy/rollback. O job seguinte, serializado, usa SSH com host key fixada para invocar exclusivamente `deploy <SHA>` na VPS. A VPS obtém o HEAD da branch, exige igualdade exata e constrói `sana-lab-bridge:<12 primeiros caracteres do SHA>` com label OCI de revisão. Antes de parar a bridge ativa, inicia a imagem candidata numa bridge temporária ligada somente à rede Docker privada existente, com UID 1000, root filesystem somente leitura, secret existente montado somente leitura e `/lab-state` sintético e exclusivo. O probe exige HTTP 401 sem autenticação e HTTP 200 autenticado com contrato, engine canônico, módulo e estado esperados. Se o preflight falhar, a bridge ativa não é tocada e um diagnóstico sanitizado é gravado. Somente após preflight aprovado a troca da bridge começa. O deploy confere rede única, zero portas públicas, mounts, container rodando, hashes `engine.ts`/`recadastro.ts`, HTTP 401 sem token e HTTP 200 autenticado. O container antigo permanece parado para rollback.
+Um `push` na branch `sana-lab-exumacao-f0-f2` que altere código/imagem ou o workflow de deploy aciona `.github/workflows/sana-lab-bridge-deploy.yml`. O job de validação fixa `github.sha`, verifica tipos e testes Deno, scripts Bash e transições locais de deploy/rollback. O job seguinte, serializado, usa SSH com host key fixada para invocar exclusivamente `deploy <SHA>` na VPS. A VPS obtém o HEAD da branch, exige igualdade exata, confere o container atual, constrói `sana-lab-bridge:<12 primeiros caracteres do SHA>` com label OCI de revisão e troca só a bridge. Confere rede única, zero portas públicas, mounts, container rodando, hashes `engine.ts`/`recadastro.ts`, HTTP 401 sem token e HTTP 200 autenticado com caso sintético LAB. O probe autenticado lê o secret **apenas dentro do container**, imprime somente status/contrato e não cria operação de negócio. O container antigo permanece parado para rollback.
 
 Ao concluir, grava `/var/lib/sana-lab-deploy/active.txt` com commit, imagem, image ID e hashes sem segredo. O log do Actions traz `DEPLOY_OK COMMIT=... IMAGE=... IMAGE_ID=...` e a confirmação do probe. Se uma verificação falhar depois de interromper a bridge anterior, o script repõe o container anterior, confere imagem, hashes, rede, ausência de porta e 401, grava `ROLLED_BACK` e emite `ROLLBACK_CONFIRMED=YES`; falha na recuperação emite `ROLLBACK_CONFIRMED=NO` e status de erro. A injeção `rollback-test` ocorre após o probe e deve terminar com a imagem anterior ativa.
 
-## Preparação única, fora do chat
+## Instalação administrativa revisada (uma vez por mudança dos wrappers)
 
-1. Gerar **um par de chaves SSH exclusivo para este deploy**, numa estação de administração confiável. A chave pública é instalada uma única vez na VPS; a privada vai para GitHub Actions como secret, sem transitar pelo chat nem ser copiada para a VPS. Verificar a chave pública/host key por canal administrativo independente; não confiar apenas em `ssh-keyscan`.
-2. Em GitHub → Settings → Environments, criar `sana-lab` e restringir à branch `sana-lab-exumacao-f0-f2`. Proteger essa branch com revisão de mudanças e limitar quem pode alterá-la: o deploy executa código dessa branch como root **apenas na VPS LAB**. Configurar os nomes abaixo como secrets/variables do environment (ou secrets do repositório se o plano não disponibilizar environment secrets):
+O pacote administrativo desta revisão é `install-reviewed-deploy-scripts.sh` mais os três fontes que ele instala, todos retirados do commit integral selecionado no checkout confiável. Ele **não executa nem chama `bootstrap-deploy-access.sh`**, não cria usuário, não altera `authorized_keys`, sudoers, SSH, permissões da chave, firewall ou bridge. Ele falha se o estado administrativo existente não passar no preflight.
 
-   | Tipo | Nome | Conteúdo esperado |
-   |---|---|---|
-   | Secret | `SANA_LAB_DEPLOY_SSH_KEY` | Chave privada exclusiva de deploy SSH |
-   | Secret | `SANA_LAB_SSH_KNOWN_HOSTS` | Entrada `known_hosts` verificada para o host SSH existente |
-   | Variable | `SANA_LAB_DEPLOY_HOST` | Nome DNS do SSH já usado pela VPS |
-   | Variable | `SANA_LAB_DEPLOY_USER` | `sana-lab-deploy` |
+A intervenção deve ocorrer por administrador na VPS, após revisão independente do SHA e do fingerprint público correspondente à chave já configurada como `SANA_LAB_DEPLOY_SSH_KEY` no GitHub Environment `sana-lab`. Selecionar a chave por arquivo público explícito e fingerprint explícito — nunca pela primeira chave encontrada. O fingerprint é público; não imprimir nem transferir a chave privada.
 
-   **Não criar `SANA_LAB_TOKEN` no GitHub.** O token Bearer existente permanece apenas no secret montado no container e na credencial n8n já existente.
-3. Na VPS, como administrador, atualizar o checkout da branch LAB, conferir o SHA completo do release e instalar os dois wrappers root-owned e a chave **pública** via:
+```bash
+cd /docker/sana-lab-bridge-src
+git status --porcelain
+git rev-parse HEAD
+ssh-keygen -lf /caminho/explícito/sana-lab-deploy.pub -E sha256
+sudo bash sana-lab/install-reviewed-deploy-scripts.sh \
+  <SHA_COMPLETO_REVISADO> \
+  /caminho/explícito/sana-lab-deploy.pub \
+  <FINGERPRINT_SHA256_CONFIRMADO_DA_CHAVE_DO_GITHUB>
+```
 
-   ```bash
-   cd /docker/sana-lab-bridge-src
-   git fetch origin sana-lab-exumacao-f0-f2
-   git switch sana-lab-exumacao-f0-f2
-   git merge --ff-only FETCH_HEAD
-   git status --porcelain
-   git rev-parse HEAD
-   bash sana-lab/bootstrap-deploy-access.sh /caminho/privado/sana-lab-deploy.pub
-   ```
+O procedimento exige branch `sana-lab-exumacao-f0-f2`, checkout limpo e HEAD igual ao SHA; verifica `sana-lab-deploy` com senha bloqueada `NP`, ausência do grupo `docker`, arquivo `authorized_keys` com exatamente uma ocorrência da chave escolhida e forced command `restrict,command=.../sana-lab-ssh-dispatch`, `visudo -c` e uma única regra sudo para `/usr/local/sbin/sana-lab-deploy-entry`. O script só lê e confere essas políticas, sem reescrevê-las.
 
-   `git status --porcelain` deve estar vazio; o SHA deve coincidir com o commit publicado. O bootstrap cria a conta `sana-lab-deploy` com marcador de senha inválido `NP` (permite chave pública, sem senha utilizável), instala **somente** a chave pública com `restrict` e forced command, e autoriza no sudo exclusivamente `/usr/local/sbin/sana-lab-deploy-entry`. Instala também uma cópia root-owned do script de deploy; o entrypoint rejeita releases que alterem esse script até uma nova revisão/bootstrap explícita. Ele não abre firewall, não cria serviço público nem executa deploy por si. A conta não entra no grupo `docker`.
+Antes da instalação, cria backup root-only em `/var/backups/sana-lab-admin/<UTC>-<SHA12>` dos arquivos administrativos atuais e manifesto de hashes. Instala como `root:root`, modo `0755`, somente estes arquivos:
+
+| Fonte revisada no commit | Destino root-owned na VPS |
+|---|---|
+| `sana-lab/deploy-entry.sh` | `/usr/local/sbin/sana-lab-deploy-entry` |
+| `sana-lab/ssh-dispatch.sh` | `/usr/local/libexec/sana-lab-ssh-dispatch` |
+| `sana-lab/deploy-functional-gate.sh` | `/usr/local/sbin/sana-lab-deploy-functional-gate` |
+
+Depois compara hashes instalados com os blobs do SHA revisado, modos/ownership, `authorized_keys`, sudoers e um snapshot sanitizado da bridge (container/image, estado, rede, portas, mounts e hashes do engine). Se qualquer validação posterior falhar, restaura os três scripts do backup e confirma a reversão. A bridge, seu `/lab-state` e seu secret são somente verificados, não alterados. O marcador `ADMIN_INSTALL=PASS` comprova apenas a instalação/verificação administrativa; não comprova correção de `Permission denied`, deploy da nova imagem ou progressão conversacional.
+
+**Arquivos administrativos que podem ser modificados:** somente os três destinos da tabela, mais a criação do diretório/backup e manifesto sob `/var/backups/sana-lab-admin`. `authorized_keys`, sudoers, conta, homes, Docker, bridge, mount, secret e firewall não são modificados. Não executar o bootstrap antigo.
 
 ## Acionamento, evidência e limites
 
@@ -51,18 +55,6 @@ O forced command aceita apenas `deploy <SHA>`, `rollback-test <SHA>` e `diagnose
 
 O relatório contém State.Status, ExitCode, State.Error **classificado**, RestartCount, OOMKilled, StartedAt, FinishedAt, Health, comando/entrypoint em allowlist, user, read_only, destinos/tipos/permissões dos mounts, UID/GID/modo e verificação dos bits POSIX de leitura/escrita/execução para UID/GID 1000, nome da rede e indicação de portas públicas. O helper apenas consulta `stat` nos source dos mounts; não imprime esses caminhos, não abre arquivos nem lê conteúdo de estado ou secret. A verificação dos bits POSIX não considera ACLs. Nenhum valor de env ou linha de log bruta sai no relatório. Até 100 linhas finais preservam tipo de erro, operação exigida, recurso/caminho seguro, mensagem Deno normalizada e stack frame de código. Caminhos de segredo, valores de credenciais, Authorization/Bearer e conteúdo de arquivos são mascarados. Quando o deploy falha, o Actions invoca automaticamente `diagnose <SHA>` e registra o relatório já sanitizado. O modo `workflow_dispatch: diagnose` exige o SHA atual da branch (somente quando o workflow estiver disponível na branch padrão).
 
-**Mudança do procedimento privilegiado:** `ssh-dispatch.sh`, `deploy-entry.sh` e `deploy-functional-gate.sh` instalados na VPS são cópias root-owned. O entrypoint compara o hash da cópia instalada do último script com o SHA do candidato. Portanto, esta ampliação exige **uma única reinstalação revisada dos wrappers existentes**, usando o mesmo `bootstrap-deploy-access.sh` e a chave **pública existente**. Um push sozinho falha em `DEPLOY_SCRIPT_UPDATE_NEEDS_BOOTSTRAP` antes de parar a bridge. Após revisar o commit publicado, o administrador executa, na VPS:
-
-```bash
-cd /docker/sana-lab-bridge-src
-git fetch origin sana-lab-exumacao-f0-f2
-git switch sana-lab-exumacao-f0-f2
-git merge --ff-only FETCH_HEAD
-test -z "$(git status --porcelain)"
-git rev-parse HEAD
-bash sana-lab/bootstrap-deploy-access.sh /caminho/da/chave-publica-existente.pub
-```
-
-Não alterar sudoers para comandos livres, não transportar chave privada nem token. A reinstalação dos wrappers é excepcional; deploys normais continuam inteiramente pelo Actions. Depois dela, um push normal (ou o mesmo SHA via workflow_dispatch se disponível) aciona nova tentativa com diagnóstico antes do rollback.
+**Mudança do procedimento privilegiado:** `ssh-dispatch.sh`, `deploy-entry.sh` e `deploy-functional-gate.sh` instalados na VPS são cópias root-owned. O entrypoint compara o hash da cópia instalada com o SHA do candidato. Um push isolado pode parar em `DEPLOY_SCRIPT_UPDATE_NEEDS_BOOTSTRAP` antes de tocar a bridge. Para esta atualização, use exclusivamente o procedimento administrativo revisado acima; não execute o bootstrap antigo. Depois que o administrador confirmar `ADMIN_INSTALL=PASS`, reexecute o run de deploy/validação do SHA aprovado (preferencialmente o run existente, se compatível) e exija evidência do job `validate` e do job `deploy` em separado. Deploys normais seguintes continuam pelo Actions.
 
 **Comparação CI × VPS:** o smoke do CI usa `--network none`, token sintético e diretórios temporários do runner. O deploy na VPS usa a rede privada `n8n-ntga_default`, mount persistente `/lab-state` e secret existente; ambos usam `--read-only`, `--user 1000:1000` e a mesma imagem. CI PASS não comprova acesso real aos mounts, formato do secret, permissões da VPS ou estabilidade do processo; classificar causa só após o relatório da falha real. Não executar C01–C15 enquanto a imagem nova reiniciar.
