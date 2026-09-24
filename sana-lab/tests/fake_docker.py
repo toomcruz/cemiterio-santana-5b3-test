@@ -131,6 +131,16 @@ if args[0] == "rename":
         fail()
     state["containers"][args[2]] = state["containers"].pop(args[1])
     result()
+if args[0] == "run" and "--entrypoint" in args:
+    result("RUNTIME_UID=1000 RUNTIME_GID=1000\n"
+           "ACCESS_PATH=/lab-state ACCESS_UID=1000 ACCESS_GID=1000 ACCESS_MODE=700\n"
+           "ACCESS_CHECK_PATH=/lab-state ACCESS_OP=read ACCESS_RESULT=YES\n"
+           "ACCESS_CHECK_PATH=/lab-state ACCESS_OP=write ACCESS_RESULT=YES\n"
+           "ACCESS_CHECK_PATH=/lab-state ACCESS_OP=exec ACCESS_RESULT=YES\n"
+           "ACCESS_PATH=/deno-dir ACCESS_UID=1000 ACCESS_GID=1000 ACCESS_MODE=700\n"
+           "ACCESS_CHECK_PATH=/deno-dir ACCESS_OP=read ACCESS_RESULT=YES\n"
+           "ACCESS_CHECK_PATH=/deno-dir ACCESS_OP=write ACCESS_RESULT=NO\n"
+           "ACCESS_CHECK_PATH=/deno-dir ACCESS_OP=exec ACCESS_RESULT=YES")
 if args[0] == "run":
     name = args[args.index("--name") + 1]
     if name in state["containers"]:

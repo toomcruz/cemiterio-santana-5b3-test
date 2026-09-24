@@ -187,7 +187,7 @@ def mount_metadata():
 
 
 def in_container_access():
-    """Check metadata/access bits as the configured user; never read contents."""
+    """Check the LAB mount in an isolated probe using the configured user; never read contents."""
     script = (
         "printf 'RUNTIME_UID=%s RUNTIME_GID=%s\\n' \"$(id -u)\" \"$(id -g)\"; "
         "for p in /lab-state /run/secrets/sana_lab_token /deno-dir; do "
@@ -200,9 +200,21 @@ def in_container_access():
         "done; else printf 'ACCESS_PATH=%s ACCESS_RESULT=MISSING\\n' \"$p\"; fi; done"
     )
     try:
-        result = subprocess.run(["docker", "exec", name, "/bin/sh", "-c", script],
-                                capture_output=True, text=True, timeout=5, check=False)
-    except (subprocess.SubprocessError, OSError):
+        raw = docker("inspect", name, "--format", "{{json .Mounts}}")
+        entries = json.loads(raw)
+        source = next((item.get("Source") for item in entries
+                       if isinstance(item, dict) and item.get("Destination") == "/lab-state"), None)
+        if not isinstance(source, str) or not re.fullmatch(r"/[A-Za-z0-9._/-]{1,240}", source):
+            return "CONTAINER_ACCESS_CHECK=UNAVAILABLE"
+        if not os.path.isdir(source):
+            return "CONTAINER_ACCESS_CHECK=UNAVAILABLE"
+        result = subprocess.run(
+            ["docker", "run", "--rm", "--network", "none", "--read-only", "--user", "1000:1000",
+             "--mount", f"type=bind,src={source},dst=/lab-state", "--entrypoint", "/bin/sh",
+             expected_image, "-c", script],
+            capture_output=True, text=True, timeout=8, check=False,
+        )
+    except (subprocess.SubprocessError, OSError, ValueError, TypeError):
         return "CONTAINER_ACCESS_CHECK=UNAVAILABLE"
     if result.returncode:
         return "CONTAINER_ACCESS_CHECK=UNAVAILABLE"
