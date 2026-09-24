@@ -1,5 +1,6 @@
 import { consultar } from "../santana-authority-gateway/gateway.ts";
 import { SCHEMA_VERSION, validateInput, type CaseState, type Fact, type Input, type Result } from "./contracts.ts";
+import { recadastro } from "./recadastro.ts";
 
 export interface Store { read(id: string): CaseState | undefined; commit(next: CaseState, expectedRevision: number): void }
 export class MemoryStore implements Store {
@@ -30,6 +31,13 @@ export async function handle(input: Input, store: Store, today = "2026-09-24"): 
   const base = { schema_version: SCHEMA_VERSION, case_id: input.case_id, correlation_id: input.correlation_id };
   if (current.processed_ids.includes(input.inbound_message_id)) return { ...base, action: "DUPLICATE", response: "", next_state: current, sources: [], authority: [] };
   const s: CaseState = structuredClone(current);
+  for (const linkedId of input.linked_case_ids ?? []) {
+    const linked = store.read(linkedId);
+    if (!linked) throw Error("LINK_CASE_NOT_FOUND");
+    if (linked.conversation_id !== input.conversation_id) throw Error("LINK_CASE_CONVERSATION_MISMATCH");
+    s.linked_case_ids ??= [];
+    if (!s.linked_case_ids.includes(linkedId)) s.linked_case_ids.push(linkedId);
+  }
   const message = normalize(input.current_message);
   let action: Result["action"] = "ANSWER";
   let response = "";
@@ -43,9 +51,16 @@ export async function handle(input: Input, store: Store, today = "2026-09-24"): 
     human = exception("PEDIDO_HUMANO", "Pedido explícito de atendente", input.current_message);
     response = "Você pediu atendimento humano. O pedido ficou registrado nesta simulação; nenhum encaminhamento real foi feito.";
     s.phase = "WAITING_TEAM";
+  } else if (s.family !== "INDEFINIDO" && family !== s.family) {
+    throw Error("FAMILY_CONFLICT");
+  } else if (family === "RECADASTRO") {
+    s.family = "RECADASTRO";
+    const result = recadastro(input, s, message);
+    action = result.action; response = result.response; sources = result.sources;
+    authority.push(...result.authority); operation = result.operation; human = result.exception;
   } else if (family !== "EXUMACAO") {
     action = "UNSUPPORTED";
-    response = family === "RECADASTRO" ? "Recadastro ainda não está implementado neste LAB." : "Preciso esclarecer qual serviço você procura.";
+    response = "Preciso esclarecer qual serviço você procura.";
   } else {
     s.family = "EXUMACAO";
     for (const [k, v] of Object.entries(input.case_facts ?? {})) {

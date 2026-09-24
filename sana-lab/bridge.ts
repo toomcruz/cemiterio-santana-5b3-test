@@ -1,6 +1,8 @@
 import { adaptN8nTurn } from "./adapter.ts";
 import { handle, type Store } from "./engine.ts";
 import { FileStore } from "./file_store.ts";
+import { enabledModule, MODULES } from "./modules.ts";
+import type { Fact } from "./contracts.ts";
 
 export const BRIDGE_VERSION = "sana-lab-bridge/1" as const;
 export type BridgeRequest = {
@@ -14,6 +16,8 @@ export type BridgeRequest = {
   layer1_result: Record<string, unknown>;
   previous_revision?: number;
   document_references?: string[];
+  case_facts?: Record<string, Fact>;
+  linked_case_ids?: string[];
 };
 
 function valid(x: unknown): x is BridgeRequest {
@@ -24,7 +28,14 @@ function valid(x: unknown): x is BridgeRequest {
       .every(k => typeof o[k] === "string" && (o[k] as string).trim().length > 0) &&
     o.layer1_result !== null && typeof o.layer1_result === "object" && !Array.isArray(o.layer1_result) &&
     (o.previous_revision === undefined || (Number.isSafeInteger(o.previous_revision) && (o.previous_revision as number) >= 0)) &&
-    (o.document_references === undefined || (Array.isArray(o.document_references) && o.document_references.every(y => typeof y === "string" && y.length < 256)));
+    (o.document_references === undefined || (Array.isArray(o.document_references) && o.document_references.every(y => typeof y === "string" && y.length < 256))) &&
+    (o.case_facts === undefined || (typeof o.case_facts === "object" && o.case_facts !== null && !Array.isArray(o.case_facts) &&
+      Object.entries(o.case_facts).every(([key, v]) => key.length < 64 && !!v && typeof v === "object" &&
+        typeof (v as Fact).value === "string" && (v as Fact).value.length < 256 &&
+        ["CITIZEN", "SYSTEM"].includes((v as Fact).origin) &&
+        ((v as Fact).origin !== "SYSTEM" || !!(v as Fact).evidence)))) &&
+    (o.linked_case_ids === undefined || (Array.isArray(o.linked_case_ids) && o.linked_case_ids.length <= 8 &&
+      o.linked_case_ids.every(y => typeof y === "string" && y.length > 0 && y.length < 128 && y !== o.case_id)));
 }
 function json(status: number, body: Record<string, unknown>) {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
@@ -56,22 +67,25 @@ export function createBridgeHandler(store: Store, token: string) {
       const input = adaptN8nTurn({
         conversation_id: raw.conversation_id, episode_id: raw.episode_id, case_id: raw.case_id,
         correlation_id: raw.correlation_id, inbound_message_id: raw.event_id, message: raw.message,
-        legacy_output: raw.layer1_result, document_references: raw.document_references,
+        legacy_output: raw.layer1_result, document_references: raw.document_references, case_facts: raw.case_facts,
+        linked_case_ids: raw.linked_case_ids,
       }, store);
       const result = await handle(input, store);
       const state = result.next_state;
+      const catalogSource = enabledModule(state.family) ? MODULES[state.family].catalog_source : null;
       return json(200, {
         contract_version: BRIDGE_VERSION, case_id: raw.case_id, previous_revision: previous?.revision ?? 0,
         new_revision: state.revision, module: state.family, decision: result.action,
         authority_status: result.authority, state, response: result.response,
         operations: result.operation ? [result.operation] : [], duplicate: result.action === "DUPLICATE",
+        ...(result.exception && { exception: result.exception }),
         evidence: { correlation_id: raw.correlation_id, event_id: raw.event_id, source_ids: result.sources,
-          engine_called: true, canonical_engine_path: "sana-lab/engine.ts", catalog_source: "santana-authority/catalogo/exumacao.v1.json" },
+          engine_called: true, canonical_engine_path: "sana-lab/engine.ts", catalog_source: catalogSource },
       });
     } catch (error) {
       const code = error instanceof Error ? error.message : "UNKNOWN_ERROR";
       if (["REVISION_CONFLICT", "STALE_STATE"].includes(code)) return json(409, { error: "REVISION_CONFLICT" });
-      if (["CASE_MISMATCH", "INVALID_LEGACY_TRIAGE", "LAB_ONLY", "INVALID_FAMILY", "INVALID_OBJECTIVE"].includes(code) || code.startsWith("INVALID_")) return json(422, { error: "INVALID_TURN" });
+      if (["CASE_MISMATCH", "FAMILY_CONFLICT", "LINK_CASE_NOT_FOUND", "LINK_CASE_CONVERSATION_MISMATCH", "INVALID_LEGACY_TRIAGE", "LAB_ONLY", "INVALID_FAMILY", "INVALID_OBJECTIVE"].includes(code) || code.startsWith("INVALID_")) return json(422, { error: "INVALID_TURN" });
       return json(503, { error: "LAB_ENGINE_UNAVAILABLE" });
     }
   };

@@ -8,6 +8,7 @@ export type Input = {
   correlation_id: string; inbound_message_id: string; channel: "SIMULATOR";
   current_message: string; current_state?: CaseState;
   case_facts?: Record<string, Fact>; document_references?: string[];
+  linked_case_ids?: string[];
   interpretation: { family: Family; objective: Objective; turn: string; reference?: string; aspects?: string[]; explicit_human?: boolean };
 };
 export type CaseState = {
@@ -15,6 +16,7 @@ export type CaseState = {
   revision: number; family: Family; phase: "ACTIVE" | "WAITING_CITIZEN" | "WAITING_TEAM" | "RESOLVED_GRACE";
   facts: Record<string, Fact>; documents: Record<string, "DECLARED" | "RECEIVED_UNVERIFIED" | "VERIFIED">;
   demand_queue: Family[]; questions: string[]; processed_ids: string[];
+  linked_case_ids?: string[];
   history: Array<{ inbound_message_id: string; field: string; previous?: string; current: string; origin: "CITIZEN" }>;
   last_response: string; last_step: string; operation_ids: string[];
 };
@@ -34,6 +36,7 @@ export function validateInput(v: Input): void {
   if (!["EXUMACAO", "RECADASTRO", "INDEFINIDO"].includes(v.interpretation?.family)) throw Error("INVALID_FAMILY");
   if (!["INFORMACAO", "INICIAR_SERVICO", "ACOMPANHAMENTO", "ALTERACAO_CANCELAMENTO", "INDEFINIDO"].includes(v.interpretation.objective)) throw Error("INVALID_OBJECTIVE");
   if (v.current_state && (v.current_state.case_id !== v.case_id || v.current_state.conversation_id !== v.conversation_id)) throw Error("CASE_MISMATCH");
+  if (v.linked_case_ids && (!Array.isArray(v.linked_case_ids) || v.linked_case_ids.some(x => typeof x !== "string" || !x.trim() || x === v.case_id))) throw Error("INVALID_CASE_LINK");
 }
 export function adaptLegacy(output: Record<string, unknown>) {
   const family = output.familia;

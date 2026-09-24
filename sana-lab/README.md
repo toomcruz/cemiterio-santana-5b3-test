@@ -1,5 +1,7 @@
 # SANA LAB — Exumação, Fases 0–2 (protótipo local)
 
+> **Atualização de 24/09/2026:** este texto abaixo preserva o checkpoint histórico das Fases 0–2. O estado atual da branch inclui a bridge privada para Exumação (Gate 3 demonstrado), `module-map.v1.json` com 13 módulos, e a vertical Recadastro implementada e testada **localmente**. Recadastro depende de implantação da nova imagem LAB antes de qualquer evidência n8n; consultar `RECADASTRO-AUTHORITY.md` e `DEPLOY-RECADASTRO.md`. Os demais 11 irmãos permanecem PLANNED. O contrato mantém `sana-lab/1` e `sana-lab-bridge/1` com campos opcionais para fatos declarados e vínculo explícito de casos. Nenhum atendimento oficial de Recadastro foi homologado.
+
 **Base:** `toomcruz/cemiterio-santana-5b3-test` `5fcba023a4fc461d91e0412fa041ed0669171680`.
 **Escopo:** execução local Deno, sem rede, Gemini, Supabase, n8n runtime ou WhatsApp. O canário `qxEGiuRNYEOT8smE` não é modificado. Nenhuma credencial entra no protótipo.
 
