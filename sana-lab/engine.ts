@@ -1,6 +1,7 @@
 import { consultar } from "../santana-authority-gateway/gateway.ts";
 import { SCHEMA_VERSION, validateInput, type CaseState, type Fact, type Input, type Result } from "./contracts.ts";
 import { recadastro } from "./recadastro.ts";
+import { concessaoTitularidade } from "./concessao_titularidade.ts";
 
 export interface Store { read(id: string): CaseState | undefined; commit(next: CaseState, expectedRevision: number): void }
 export class MemoryStore implements Store {
@@ -47,6 +48,7 @@ export async function handle(input: Input, store: Store, today = "2026-09-24"): 
   let human: Result["exception"];
   const family = input.interpretation.family === "INDEFINIDO" ? s.family : input.interpretation.family;
   if (input.interpretation.explicit_human || /(?:quero|preciso|prefiro|falar com|chame).{0,30}(?:atendente|pessoa|humano)/.test(message)) {
+    if (s.family === "INDEFINIDO" && family !== "INDEFINIDO") s.family = family;
     action = "EXCEPTION";
     human = exception("PEDIDO_HUMANO", "Pedido explícito de atendente", input.current_message);
     response = "Você pediu atendimento humano. O pedido ficou registrado nesta simulação; nenhum encaminhamento real foi feito.";
@@ -56,6 +58,11 @@ export async function handle(input: Input, store: Store, today = "2026-09-24"): 
   } else if (family === "RECADASTRO") {
     s.family = "RECADASTRO";
     const result = recadastro(input, s, message);
+    action = result.action; response = result.response; sources = result.sources;
+    authority.push(...result.authority); operation = result.operation; human = result.exception;
+  } else if (family === "CONCESSAO_TITULARIDADE") {
+    s.family = "CONCESSAO_TITULARIDADE";
+    const result = concessaoTitularidade(input, s, message);
     action = result.action; response = result.response; sources = result.sources;
     authority.push(...result.authority); operation = result.operation; human = result.exception;
   } else if (family !== "EXUMACAO") {

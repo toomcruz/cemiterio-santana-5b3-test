@@ -1,5 +1,5 @@
 export const SCHEMA_VERSION = "sana-lab/1" as const;
-export type Family = "EXUMACAO" | "RECADASTRO" | "INDEFINIDO";
+export type Family = "EXUMACAO" | "RECADASTRO" | "CONCESSAO_TITULARIDADE" | "INDEFINIDO";
 export type Objective = "INFORMACAO" | "INICIAR_SERVICO" | "ACOMPANHAMENTO" | "ALTERACAO_CANCELAMENTO" | "INDEFINIDO";
 export type Fact = { value: string; origin: "CITIZEN" | "SYSTEM"; evidence?: string };
 export type Input = {
@@ -33,7 +33,7 @@ export function validateInput(v: Input): void {
   for (const k of ["conversation_id", "episode_id", "case_id", "correlation_id", "inbound_message_id", "current_message"] as const) {
     if (typeof v[k] !== "string" || !v[k].trim()) throw Error(`INVALID_${k}`);
   }
-  if (!["EXUMACAO", "RECADASTRO", "INDEFINIDO"].includes(v.interpretation?.family)) throw Error("INVALID_FAMILY");
+  if (!["EXUMACAO", "RECADASTRO", "CONCESSAO_TITULARIDADE", "INDEFINIDO"].includes(v.interpretation?.family)) throw Error("INVALID_FAMILY");
   if (!["INFORMACAO", "INICIAR_SERVICO", "ACOMPANHAMENTO", "ALTERACAO_CANCELAMENTO", "INDEFINIDO"].includes(v.interpretation.objective)) throw Error("INVALID_OBJECTIVE");
   if (v.current_state && (v.current_state.case_id !== v.case_id || v.current_state.conversation_id !== v.conversation_id)) throw Error("CASE_MISMATCH");
   if (v.linked_case_ids && (!Array.isArray(v.linked_case_ids) || v.linked_case_ids.some(x => typeof x !== "string" || !x.trim() || x === v.case_id))) throw Error("INVALID_CASE_LINK");
@@ -41,7 +41,7 @@ export function validateInput(v: Input): void {
 export function adaptLegacy(output: Record<string, unknown>) {
   const family = output.familia;
   const objective = output.objetivo;
-  if (!["EXUMACAO", "RECADASTRO", "INDEFINIDO"].includes(String(family)) ||
+  if (!["EXUMACAO", "RECADASTRO", "CONCESSAO_TITULARIDADE", "INDEFINIDO"].includes(String(family)) ||
       !["INFORMACAO", "INICIAR_SERVICO", "ACOMPANHAMENTO", "ALTERACAO_CANCELAMENTO", "INDEFINIDO"].includes(String(objective))) throw Error("INVALID_LEGACY_TRIAGE");
   return { family: family as Family, objective: objective as Objective, turn: String(output.tipo_turno ?? "DEMANDA"),
     reference: String(output.referencia ?? ""), aspects: Array.isArray(output.aspectos) ? output.aspectos.filter((x): x is string => typeof x === "string") : [],
