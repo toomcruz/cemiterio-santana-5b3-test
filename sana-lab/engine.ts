@@ -109,9 +109,9 @@ export async function handle(input: Input, store: Store, today = "2026-09-24"): 
       response = s.operation_ids.length ? `Há um registro simulado ${s.operation_ids.at(-1)} neste caso. Isso não indica aprovação nem agendamento.` : "Não encontrei operação simulada neste caso. Você tem alguma referência para identificar a solicitação?";
       action = s.operation_ids.length ? "ANSWER" : "ASK";
     } else if (/(?:terminar atendimento|encerrar conversa|obrigad)/.test(message)) {
-      if (s.operation_ids.length) {
-        response = "Posso encerrar a conversa, mas o rascunho simulado permanece pendente. Documentos, autorização e operação real ainda não foram confirmados.";
-        s.phase = "WAITING_CITIZEN";
+      if (s.operation_ids.length || s.phase === "WAITING_CITIZEN" || s.phase === "WAITING_TEAM") {
+        response = "Posso encerrar a conversa, mas a solicitação permanece pendente. Documentos, autorização e operação real ainda não foram confirmados.";
+        if (s.phase !== "WAITING_TEAM") s.phase = "WAITING_CITIZEN";
       } else {
         response = "Concluí esta conversa informativa na simulação. Nenhum serviço físico ou pedido administrativo foi confirmado.";
         s.phase = "RESOLVED_GRACE";

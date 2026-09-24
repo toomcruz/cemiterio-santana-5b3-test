@@ -63,7 +63,10 @@ Deno.test("informação, documento não verificado, correção e encerramento", 
   assertEquals(r.next_state.documents["arquivo-sintetico"], "RECEIVED_UNVERIFIED");
   const corrected = await handle(make("c", "3", "Na verdade é minha mãe", "INICIAR_SERVICO", "minha mãe"), store);
   assertEquals(corrected.next_state.facts.reference?.value, "minha mãe");
-  assertEquals((await handle(make("c", "4", "Obrigado, encerrar conversa"), store)).next_state.phase, "RESOLVED_GRACE");
+  assertEquals((await handle(make("c", "4", "Obrigado, encerrar conversa"), store)).next_state.phase, "WAITING_CITIZEN");
+  const informational = new MemoryStore();
+  await handle(make("informational", "1", "Como funciona exumação?", "INFORMACAO"), informational);
+  assertEquals((await handle(make("informational", "2", "Obrigado, encerrar conversa"), informational)).next_state.phase, "RESOLVED_GRACE");
 });
 Deno.test("exceções fundamentadas; sem transferência real", async () => {
   const s = new MemoryStore();
