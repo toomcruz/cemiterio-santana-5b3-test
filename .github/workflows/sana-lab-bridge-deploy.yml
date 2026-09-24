@@ -86,8 +86,8 @@ jobs:
           mkdir -m 0700 "$state"
           sudo chown 1000:1000 "$state"
           printf 'synthetic-ci-only-token-0123456789-abcdef\n' > "$token_file"
-          sudo chown 1000:1000 "$token_file"
           chmod 0400 "$token_file"
+          sudo chown 1000:1000 "$token_file"
           docker build --label "org.opencontainers.image.revision=$GITHUB_SHA" -f sana-lab/Dockerfile -t "$image" .
           docker run -d --name sana-lab-smoke --network none --read-only --user 1000:1000 \
             --security-opt no-new-privileges \
