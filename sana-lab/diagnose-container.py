@@ -12,7 +12,7 @@ import subprocess
 import sys
 
 name, expected_sha, expected_image, stage = sys.argv[1:]
-if not re.fullmatch(r"[0-9a-f]{40}", expected_sha) or name != "sana-lab-bridge":
+if not re.fullmatch(r"[0-9a-f]{40}", expected_sha) or name not in {"sana-lab-bridge", "sana-lab-smoke"}:
     raise SystemExit(2)
 
 
@@ -61,6 +61,9 @@ formats = {
     "CAP_DROP": "{{json .HostConfig.CapDrop}}",
     "CAP_ADD": "{{json .HostConfig.CapAdd}}",
     "PORT_BINDINGS": "{{json .HostConfig.PortBindings}}",
+    # Report only this one approved cache setting; never dump the environment.
+    "DENO_DIR_CONFIGURED": '{{range .Config.Env}}{{if eq . "DENO_DIR=/lab-state/.deno"}}yes{{end}}{{end}}',
+    "WORKDIR": "{{.Config.WorkingDir}}",
 }
 
 
@@ -195,7 +198,7 @@ def in_container_access():
     """Check the LAB mount in an isolated probe using the configured user; never read contents."""
     script = (
         "printf 'RUNTIME_UID=%s RUNTIME_GID=%s\\n' \"$(id -u)\" \"$(id -g)\"; "
-        "for p in /lab-state /run/secrets/sana_lab_token /deno-dir; do "
+        "for p in /lab-state /lab-state/.deno /run/secrets/sana_lab_token /deno-dir; do "
         "if [ -e \"$p\" ]; then "
         "stat -c 'ACCESS_PATH=%n ACCESS_UID=%u ACCESS_GID=%g ACCESS_MODE=%a' \"$p\"; "
         "for op in read write exec; do "
@@ -231,9 +234,9 @@ def in_container_access():
     output = []
     patterns = (
         r"RUNTIME_UID=[0-9]{1,10} RUNTIME_GID=[0-9]{1,10}",
-        r"ACCESS_PATH=(?:/lab-state|/run/secrets/sana_lab_token|/deno-dir) ACCESS_UID=[0-9]{1,10} ACCESS_GID=[0-9]{1,10} ACCESS_MODE=[0-7]{3,4}",
-        r"ACCESS_CHECK_PATH=(?:/lab-state|/run/secrets/sana_lab_token|/deno-dir) ACCESS_OP=(?:read|write|exec) ACCESS_RESULT=(?:YES|NO)",
-        r"ACCESS_PATH=(?:/lab-state|/run/secrets/sana_lab_token|/deno-dir) ACCESS_RESULT=MISSING",
+        r"ACCESS_PATH=(?:/lab-state|/lab-state/\.deno|/run/secrets/sana_lab_token|/deno-dir) ACCESS_UID=[0-9]{1,10} ACCESS_GID=[0-9]{1,10} ACCESS_MODE=[0-7]{3,4}",
+        r"ACCESS_CHECK_PATH=(?:/lab-state|/lab-state/\.deno|/run/secrets/sana_lab_token|/deno-dir) ACCESS_OP=(?:read|write|exec) ACCESS_RESULT=(?:YES|NO)",
+        r"ACCESS_PATH=(?:/lab-state|/lab-state/\.deno|/run/secrets/sana_lab_token|/deno-dir) ACCESS_RESULT=MISSING",
     )
     for line in result.stdout.splitlines():
         if any(re.fullmatch(pattern, line) for pattern in patterns):
@@ -399,7 +402,7 @@ def sanitize_log(line):
 
 print(f"DIAGNOSTIC_SHA={expected_sha}")
 print(f"FAILED_IMAGE={expected_image}")
-print(f"DEPLOY_FAILED_STAGE={enum(stage, {'START_NEW', 'VERIFY_NEW', 'SYNTHETIC_FAILURE', 'RECORD_ACTIVE'})}")
+print(f"DEPLOY_FAILED_STAGE={enum(stage, {'START_NEW', 'VERIFY_NEW', 'VERIFY_ISOLATED', 'SYNTHETIC_FAILURE', 'RECORD_ACTIVE'})}")
 try:
     values = {key: docker("inspect", name, "--format", fmt)
               for key, fmt in formats.items()}
@@ -418,6 +421,8 @@ print(f"CONTAINER_HEALTH={enum(values['CONTAINER_HEALTH'], {'none', 'starting', 
 print(f"CMD={executable(values['CMD'])}")
 print(f"ENTRYPOINT={executable(values['ENTRYPOINT'])}")
 print(f"USER={enum(values['USER'], {'1000:1000', '1000', 'deno'})}")
+print(f"WORKDIR={enum(values['WORKDIR'], {'/app', ''})}")
+print(f"DENO_DIR_CONFIGURED={enum(values['DENO_DIR_CONFIGURED'], {'yes', ''})}")
 print(f"READ_ONLY={enum(values['READ_ONLY'], {'true', 'false'})}")
 print(f"MOUNTS={mounts(values['MOUNTS'])}")
 print(mount_metadata())

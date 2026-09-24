@@ -66,6 +66,10 @@ class DeployTest(unittest.TestCase):
         self.assertIn("DENO_DIR=/lab-state/.deno", dockerfile)
         self.assertIn("DENO_DIR: /lab-state/.deno", compose)
         self.assertIn('DENO_DIR=/lab-state/.deno', workflow)
+        self.assertIn('sudo chown 1000:1000 "$state"', workflow)
+        self.assertIn('sudo chown 1000:1000 "$token_file"', workflow)
+        self.assertIn('chmod 0400 "$token_file"', workflow)
+        self.assertIn("diagnose-container.py sana-lab-smoke", workflow)
 
     def run_deploy(self, mode="deploy", **env):
         return subprocess.run(["bash", str(DEPLOY), COMMIT, mode], cwd=ROOT,
@@ -121,8 +125,12 @@ class DeployTest(unittest.TestCase):
         self.assertIn("LAB_STATE_USER_1000_WRITE_EXECUTE=YES", result.stdout)
         self.assertIn("TOKEN_USER_1000_READ=YES", result.stdout)
         self.assertIn("RUNTIME_UID=1000 RUNTIME_GID=1000", result.stdout)
+        self.assertIn("WORKDIR=/app", result.stdout)
+        self.assertIn("DENO_DIR_CONFIGURED=yes", result.stdout)
         self.assertIn("ACCESS_PATH=/lab-state ACCESS_UID=1000 ACCESS_GID=1000 ACCESS_MODE=700", result.stdout)
         self.assertIn("ACCESS_CHECK_PATH=/lab-state ACCESS_OP=write ACCESS_RESULT=YES", result.stdout)
+        self.assertIn("ACCESS_PATH=/lab-state/.deno ACCESS_UID=1000 ACCESS_GID=1000 ACCESS_MODE=700", result.stdout)
+        self.assertIn("ACCESS_CHECK_PATH=/lab-state/.deno ACCESS_OP=write ACCESS_RESULT=YES", result.stdout)
         self.assertIn("ACCESS_PATH=/run/secrets/sana_lab_token ACCESS_UID=1000 ACCESS_GID=1000 ACCESS_MODE=400", result.stdout)
         self.assertIn("ACCESS_CHECK_PATH=/run/secrets/sana_lab_token ACCESS_OP=read ACCESS_RESULT=YES", result.stdout)
         self.assertIn("ACCESS_PATH=/deno-dir ACCESS_UID=1000 ACCESS_GID=1000 ACCESS_MODE=700", result.stdout)

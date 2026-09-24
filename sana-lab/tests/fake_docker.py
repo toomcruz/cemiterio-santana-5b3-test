@@ -61,6 +61,7 @@ if args[0] == "inspect":
         "{{json .Config.Cmd}}": '["run","--allow-read=/app/santana-authority,/app/santana-conversation-domain,/app/conformidade,/lab-state,/run/secrets/sana_lab_token","--allow-write=/lab-state","--allow-net=0.0.0.0:8765","--allow-env=SANA_LAB_TOKEN_FILE,SANTANA_REPO_ROOT","sana-lab/start.ts","Bearer synthetic-secret-value"]',
         "{{json .Config.Entrypoint}}": '["/tini","--","docker-entrypoint.sh"]',
         "{{.Config.User}}": "1000:1000",
+        "{{.Config.WorkingDir}}": "/app",
         "{{range .Mounts}}{{.Destination}}:{{.Type}}:{{.RW}};{{end}}": "/lab-state:bind:true;/run/secrets/sana_lab_token:bind:false;",
         "{{range $k,$v := .NetworkSettings.Networks}}{{$k}};{{end}}": "n8n-ntga_default;",
         "{{.HostConfig.NetworkMode}}": "n8n-ntga_default",
@@ -109,6 +110,10 @@ if args[0] == "exec":
                "ACCESS_CHECK_PATH=/lab-state ACCESS_OP=read ACCESS_RESULT=YES\n"
                "ACCESS_CHECK_PATH=/lab-state ACCESS_OP=write ACCESS_RESULT=YES\n"
                "ACCESS_CHECK_PATH=/lab-state ACCESS_OP=exec ACCESS_RESULT=YES\n"
+               "ACCESS_PATH=/lab-state/.deno ACCESS_UID=1000 ACCESS_GID=1000 ACCESS_MODE=700\n"
+               "ACCESS_CHECK_PATH=/lab-state/.deno ACCESS_OP=read ACCESS_RESULT=YES\n"
+               "ACCESS_CHECK_PATH=/lab-state/.deno ACCESS_OP=write ACCESS_RESULT=YES\n"
+               "ACCESS_CHECK_PATH=/lab-state/.deno ACCESS_OP=exec ACCESS_RESULT=YES\n"
                "ACCESS_PATH=/run/secrets/sana_lab_token ACCESS_UID=1000 ACCESS_GID=1000 ACCESS_MODE=400\n"
                "ACCESS_CHECK_PATH=/run/secrets/sana_lab_token ACCESS_OP=read ACCESS_RESULT=YES\n"
                "ACCESS_CHECK_PATH=/run/secrets/sana_lab_token ACCESS_OP=write ACCESS_RESULT=NO\n"
@@ -144,6 +149,10 @@ if args[0] == "run" and "--entrypoint" in args:
            "ACCESS_CHECK_PATH=/lab-state ACCESS_OP=read ACCESS_RESULT=YES\n"
            "ACCESS_CHECK_PATH=/lab-state ACCESS_OP=write ACCESS_RESULT=YES\n"
            "ACCESS_CHECK_PATH=/lab-state ACCESS_OP=exec ACCESS_RESULT=YES\n"
+           "ACCESS_PATH=/lab-state/.deno ACCESS_UID=1000 ACCESS_GID=1000 ACCESS_MODE=700\n"
+           "ACCESS_CHECK_PATH=/lab-state/.deno ACCESS_OP=read ACCESS_RESULT=YES\n"
+           "ACCESS_CHECK_PATH=/lab-state/.deno ACCESS_OP=write ACCESS_RESULT=YES\n"
+           "ACCESS_CHECK_PATH=/lab-state/.deno ACCESS_OP=exec ACCESS_RESULT=YES\n"
            "ACCESS_PATH=/run/secrets/sana_lab_token ACCESS_UID=1000 ACCESS_GID=1000 ACCESS_MODE=400\n"
            "ACCESS_CHECK_PATH=/run/secrets/sana_lab_token ACCESS_OP=read ACCESS_RESULT=YES\n"
            "ACCESS_CHECK_PATH=/run/secrets/sana_lab_token ACCESS_OP=write ACCESS_RESULT=NO\n"

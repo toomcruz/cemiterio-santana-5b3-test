@@ -83,15 +83,17 @@ jobs:
           image="sana-lab-smoke:${GITHUB_SHA:0:12}"
           state="$RUNNER_TEMP/sana-lab-smoke-state"
           token_file="$RUNNER_TEMP/sana-lab-smoke-token"
-          mkdir -m 0777 "$state"
+          mkdir -m 0700 "$state"
+          sudo chown 1000:1000 "$state"
           printf 'synthetic-ci-only-token-0123456789-abcdef\n' > "$token_file"
-          chmod 0644 "$token_file"
-          docker build -f sana-lab/Dockerfile -t "$image" .
+          sudo chown 1000:1000 "$token_file"
+          chmod 0400 "$token_file"
+          docker build --label "org.opencontainers.image.revision=$GITHUB_SHA" -f sana-lab/Dockerfile -t "$image" .
           docker run -d --name sana-lab-smoke --network none --read-only --user 1000:1000 \
             --security-opt no-new-privileges \
             --mount "type=bind,src=$state,dst=/lab-state" \
             --mount "type=bind,src=$token_file,dst=/run/secrets/sana_lab_token,readonly" \
-            -e SANA_LAB_STATE_DIR=/lab-state -e SANA_LAB_BIND_HOST=0.0.0.0 \
+            -e DENO_DIR=/lab-state/.deno -e SANA_LAB_STATE_DIR=/lab-state -e SANA_LAB_BIND_HOST=0.0.0.0 \
             -e SANA_LAB_PORT=8765 -e SANA_LAB_TOKEN_FILE=/run/secrets/sana_lab_token \
             "$image" >/dev/null
           trap 'docker rm -f sana-lab-smoke >/dev/null 2>&1 || true' EXIT
@@ -105,7 +107,11 @@ jobs:
             if (( attempt == 20 )); then break; fi
             sleep 0.5
           done
-          test "$ready" = 1 || { echo 'LAB_DOCKER_SMOKE_FAILED' >&2; exit 2; }
+          if (( ready != 1 )); then
+            echo 'LAB_DOCKER_SMOKE_FAILED' >&2
+            python3 sana-lab/diagnose-container.py sana-lab-smoke "$GITHUB_SHA" "$image" VERIFY_ISOLATED || true
+            exit 2
+          fi
           docker exec sana-lab-smoke deno run --allow-read=/run/secrets/sana_lab_token --allow-net=127.0.0.1:8765 \
             /app/sana-lab/deploy-probe.ts "$GITHUB_SHA"
           echo 'LAB_DOCKER_SMOKE_OK HTTP=401 PUBLIC_PORTS=NO'
