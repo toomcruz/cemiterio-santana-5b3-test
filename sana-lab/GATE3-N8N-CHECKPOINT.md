@@ -17,6 +17,6 @@ Testes simulados do validador n8n (não são prova da bridge/engine):
 - `10306` caso divergente → erro LAB_BRIDGE_INVALID_CASE_ID;
 - `10307` campos ausentes → erro LAB_BRIDGE_INVALID_REVISION.
 
-Timeout não foi demonstrado no executor n8n; o nó tem limite configurado de 5 s, sem retry/fallback. Nenhum cenário A–F foi comprovado através do engine pelo n8n. `GATE = BLOCKED`.
+Teste com nó HTTP desabilitado: execução manual `10308` terminou em erro `LAB_BRIDGE_HTTP_UNKNOWN`, sem chamar a bridge.\n\nTimeout não foi demonstrado no executor n8n; o nó tem limite configurado de 5 s, sem retry/fallback. Nenhum cenário A–F foi comprovado através do engine pelo n8n. `GATE = BLOCKED`.
 
 Retomada: (1) rotacionar token LAB e corrigir Header Auth; (2) reabilitar apenas nó HTTP LAB; (3) executar um evento sintético NOVO e confirmar 200 + evidência do engine; (4) executar A–F com IDs e revisões; (5) falhas restantes, inclusive timeout; (6) conferir canário sem alteração. Não iniciar Recadastro ou Gemini.
