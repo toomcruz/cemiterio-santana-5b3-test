@@ -38,6 +38,7 @@ jobs:
     timeout-minutes: 12
     outputs:
       target_sha: ${{ steps.commit.outputs.target_sha }}
+      mode: ${{ steps.commit.outputs.mode }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -47,11 +48,20 @@ jobs:
         shell: bash
         env:
           REQUESTED_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.commit_sha || github.sha }}
+          REQUESTED_MODE: ${{ inputs.mode }}
         run: |
           set -Eeuo pipefail
           [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$REQUESTED_SHA"
           echo "target_sha=$REQUESTED_SHA" >> "$GITHUB_OUTPUT"
+          mode=deploy
+          if [[ "$GITHUB_EVENT_NAME" == push && $(git log -1 --format=%s) == '[sana-lab-rollback-test]' ]]; then
+            mode=rollback-test
+          elif [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            mode="$REQUESTED_MODE"
+          fi
+          [[ "$mode" == deploy || "$mode" == rollback-test ]]
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.1.4
@@ -75,7 +85,7 @@ jobs:
     environment: sana-lab
     env:
       TARGET_SHA: ${{ needs.validate.outputs.target_sha }}
-      MODE: ${{ inputs.mode || 'deploy' }}
+      MODE: ${{ needs.validate.outputs.mode }}
       DEPLOY_HOST: ${{ vars.SANA_LAB_DEPLOY_HOST }}
       DEPLOY_USER: ${{ vars.SANA_LAB_DEPLOY_USER }}
       SSH_KEY: ${{ secrets.SANA_LAB_DEPLOY_SSH_KEY }}
@@ -113,5 +123,8 @@ jobs:
             grep -Fq "DEPLOY_OK COMMIT=$TARGET_SHA " "$log"
           else
             grep -Fq 'ROLLBACK_CONFIRMED=YES ' "$log"
-            ! grep -Fq 'DEPLOY_OK ' "$log"
+            if grep -Fq 'DEPLOY_OK ' "$log"; then
+              echo 'UNEXPECTED_DEPLOY_DURING_ROLLBACK_TEST' >&2
+              exit 1
+            fi
           fi
