@@ -128,12 +128,14 @@ jobs:
           ssh_options=(-o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             -o "UserKnownHostsFile=$known" -o ConnectTimeout=15 \
             -o ServerAliveInterval=10 -o ServerAliveCountMax=3 -i "$key")
+          # shellcheck disable=SC2029 # Send the two validated fields to the forced-command parser on the server.
           if ! ssh "${ssh_options[@]}" \
             "$DEPLOY_USER@$DEPLOY_HOST" "$MODE $TARGET_SHA" >"$log" 2>&1; then
             # The original command can print Docker errors; show only fixed
             # control markers, then request the stored sanitized record.
             grep -E '^(DEPLOY_FAILED_STAGE=|PREFLIGHT_[A-Z0-9_]+=|ROLLBACK_CONFIRMED=|DEPLOY_SCRIPT_UPDATE_NEEDS_BOOTSTRAP|LAB_DEPLOY_COMMAND_REJECTED|DIAGNOSTIC_CAPTURE_FAILED|STARTUP_DIAGNOSTIC)' "$log" || true
             if [[ "$MODE" == deploy ]]; then
+              # shellcheck disable=SC2029 # The forced command accepts only diagnose plus the validated full SHA.
               ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "diagnose $TARGET_SHA" ||
                 echo 'LAB_DIAGNOSTIC_QUERY_UNAVAILABLE'
             fi
