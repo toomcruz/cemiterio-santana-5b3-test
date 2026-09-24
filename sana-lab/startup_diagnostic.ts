@@ -1,6 +1,7 @@
 /** Render only permission/startup facts safe for the private LAB container log. */
 const permission = /Requires\s+(read|write|env|net)\s+access\s+to\s+("[^"\r\n]{1,512}"|'[^'\r\n]{1,512}'|[^\s,;]{1,512})/i;
 const framePattern = /(?:file:\/\/)?(\/[^\s():)]+\.(?:tsx?|mjs|js|json)):(\d{1,6})(?::(\d{1,6}))?/;
+const runtimeFramePattern = /\bat\s+(?:async\s+)?([A-Za-z_$][A-Za-z0-9_.$]*)\s+\(ext:(deno_(?:fs|net|io)\/[A-Za-z0-9_./-]+\.js):(\d{1,6})(?::(\d{1,6}))?\)/;
 const quotedPath = /["'](\/[^"'\r\n]{1,512})["']/;
 const syscall = /\b(open|read|readfile|write|writefile|mkdir|rename|remove|connect|fetch|resolve)\b/i;
 
@@ -27,19 +28,23 @@ export function sanitizeStartupError(error: Error): string {
   const systemCallMatch = syscall.exec(error.message);
   const systemCall = systemCallMatch?.[1]?.toLowerCase();
   const permissionOperation = match?.[1]?.toLowerCase();
+  const stackRuntimeCall = error.stack?.split("\n").map((line) => runtimeFramePattern.exec(line)?.[1]?.toLowerCase()).find(Boolean);
   const operation = permissionOperation ??
     (systemCall && ["write", "writefile", "mkdir", "rename", "remove"].includes(systemCall) ? "write" :
       systemCall && ["read", "readfile"].includes(systemCall) ? "read" :
-        systemCall && ["connect", "fetch", "resolve"].includes(systemCall) ? "net" : "unknown");
+        systemCall && ["connect", "fetch", "resolve", "bind", "listen", "accept"].includes(systemCall) ? "net" :
+          stackRuntimeCall && ["bind", "listen", "accept", "connect"].includes(stackRuntimeCall) ? "net" :
+            stackRuntimeCall && ["open", "read", "readfile", "stat", "lstat"].includes(stackRuntimeCall) ? "read" :
+              stackRuntimeCall && ["write", "writefile", "mkdir", "rename", "remove", "chmod"].includes(stackRuntimeCall) ? "write" : "unknown");
   const path = quotedPath.exec(error.message)?.[1];
   const rawResource = match?.[2] ?? path;
   const resource = rawResource ? safeResource(rawResource) : undefined;
   const frame = error.stack?.split("\n").map((line) => {
     const found = framePattern.exec(line);
-    if (!found) return undefined;
-    const framePath = found[1], lineNumber = found[2];
-    if (!framePath || !lineNumber) return undefined;
-    return safeResource(framePath) + ":" + lineNumber + (found[3] ? ":" + found[3] : "");
+    if (found?.[1] && found[2]) return safeResource(found[1]) + ":" + found[2] + (found[3] ? ":" + found[3] : "");
+    const runtime = runtimeFramePattern.exec(line);
+    if (!runtime?.[1] || !runtime[2] || !runtime[3]) return undefined;
+    return "ext:" + runtime[2] + ":" + runtime[3] + (runtime[4] ? ":" + runtime[4] : "");
   }).find(Boolean);
   const osError = /permission denied\s+\(os error\s+(\d{1,3})\)/i.exec(error.message)?.[1];
   const message = match

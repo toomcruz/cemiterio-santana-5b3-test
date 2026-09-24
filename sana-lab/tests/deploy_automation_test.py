@@ -125,6 +125,7 @@ class DeployTest(unittest.TestCase):
         self.assertIn("DENIED_PATH=/app/santana-authority/catalogo/exumacao.v1.json", result.stdout)
         self.assertIn("DENO_MESSAGE=Requires read access to /app/santana-authority/catalogo/exumacao.v1.json", result.stdout)
         self.assertIn("STACK_FRAME=/app/santana-authority-gateway/catalogo/carregar.ts:128:19", result.stdout)
+        self.assertIn("DENIED_OPERATION=net STACK_FRAME=ext:deno_net/01_net.js:900:4", result.stdout)
         self.assertIn("DENIED_OPERATION=env", result.stdout)
         self.assertIn("DENIED_RESOURCE=<sensitive-resource>", result.stdout)
         self.assertIn("DENIED_PATH=/run/secrets/<redacted>", result.stdout)

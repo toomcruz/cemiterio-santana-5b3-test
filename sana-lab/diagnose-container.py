@@ -248,13 +248,16 @@ error_types = re.compile(
 source_frame = re.compile(
     r"(?:at\s+.*?\()?(?:file://)?(?P<path>/[^\s():)]+\.(?:tsx?|mjs|js|json))(?::(?P<line>[0-9]{1,6}))(?::(?P<column>[0-9]{1,6}))?"
 )
+runtime_frame = re.compile(
+    r"\bat\s+(?:async\s+)?(?P<function>[A-Za-z_$][A-Za-z0-9_.$]*)\s+\(ext:(?P<path>deno_(?:fs|net|io)/[A-Za-z0-9_./-]+\.js):(?P<line>[0-9]{1,6})(?::(?P<column>[0-9]{1,6}))?\)"
+)
 absolute_path = re.compile(r"(?:(?:file://)?/[A-Za-z0-9._~!$&()+,;=@%-]+(?:/[A-Za-z0-9._~!$&()+,;=@%-]+)*)")
 access = re.compile(
     r"Requires\s+(read|write|env|net)\s+access\s+to\s+(.+?)(?:,\s*run again|$)",
     re.IGNORECASE,
 )
 syscall = re.compile(
-    r"\b(open|read|readfile|write|writefile|mkdir|rename|remove|connect|fetch|resolve)\b",
+    r"\b(open|read|readfile|write|writefile|mkdir|rename|remove|connect|fetch|resolve|bind|listen|accept|exec|spawn)\b",
     re.IGNORECASE,
 )
 os_denial = re.compile(r"permission denied(?:\s+\(os error\s+([0-9]+)\))?", re.IGNORECASE)
@@ -293,7 +296,13 @@ def sanitized_error_fields(line):
         name = call.group(1).lower()
         operation = ("read" if name in {"read", "readfile"} else
                      "write" if name in {"write", "writefile", "mkdir", "rename", "remove"} else
-                     "net" if name in {"connect", "fetch", "resolve"} else name)
+                     "net" if name in {"connect", "fetch", "resolve", "bind", "listen", "accept"} else name)
+    runtime = runtime_frame.search(line)
+    if not operation and runtime:
+        name = runtime.group("function").lower()
+        operation = ("read" if name in {"open", "read", "readfile", "stat", "lstat"} else
+                     "write" if name in {"write", "writefile", "mkdir", "rename", "remove", "chmod"} else
+                     "net" if name in {"bind", "listen", "accept", "connect"} else None)
     if os_denial.search(line) and not operation:
         operation = "unknown"
     if operation:
@@ -321,7 +330,10 @@ def sanitized_error_fields(line):
         fields.append(f"DENO_MESSAGE=Requires {operation} access to {resource}")
 
     frame = source_frame.search(line)
-    if frame:
+    if runtime:
+        location = ":".join(part for part in (runtime.group("line"), runtime.group("column")) if part)
+        fields.append(f"STACK_FRAME=ext:{runtime.group('path')}:{location}")
+    elif frame:
         file_path = safe_resource(frame.group("path"))
         location = ":".join(part for part in (frame.group("line"), frame.group("column")) if part)
         fields.append(f"STACK_FRAME={file_path}{':' + location if location else ''}")
@@ -353,6 +365,11 @@ def sanitize_log(line):
             if frame:
                 location = ":".join(part for part in (frame.group("line"), frame.group("column")) if part)
                 output.append("STACK_FRAME=" + safe_resource(frame.group("path")) + (":" + location if location else ""))
+            else:
+                frame = re.fullmatch(r"ext:(deno_(?:fs|net|io)/[A-Za-z0-9_./-]+\.js):([0-9]{1,6}):([0-9]{1,6})?", fields["STACK_FRAME"])
+                if frame:
+                    location = ":".join(part for part in (frame.group(2), frame.group(3)) if part)
+                    output.append("STACK_FRAME=ext:" + frame.group(1) + ":" + location)
         message = fields.get("DENO_MESSAGE", "")
         if re.fullmatch(r"Requires (read|write|env|net) access|Permission denied \(os error [0-9]{1,3}\)|NotCapable|PermissionDenied|NotFound|TypeError|SyntaxError|ReferenceError|Error", message):
             output.append("DENO_MESSAGE=" + message)
@@ -421,7 +438,7 @@ for key in ("CAP_DROP", "CAP_ADD"):
         capabilities = json.loads(values[key])
     except (ValueError, TypeError):
         capabilities = None
-    print(f"{key}=" + ("NONE" if capabilities == [] else "CUSTOM_REDACTED"))
+    print(f"{key}=" + ("NONE" if capabilities in ([], None) else "CUSTOM_REDACTED"))
 print(f"PUBLIC_PORTS={'NO' if values['PORT_BINDINGS'] in ('null', '{}') else 'YES'}")
 print("STARTUP_LOG_TAIL_SANITIZED_BEGIN")
 try:
