@@ -99,15 +99,23 @@ export async function handle(input: Input, store: Store, today = "2026-09-24"): 
       for (const ref of input.document_references ?? []) s.documents[ref] = "RECEIVED_UNVERIFIED";
       const docs = await consultar("DOCUMENTOS", {}, today);
       sources = [docs.release_id, ...(docs.source_id ? [docs.source_id] : [])];
-      action = "ASK"; response = "Registrei as referências dos arquivos nesta simulação, sem conferir o conteúdo. A lista de documentos depende do destino e de quem assina. Qual é o destino pretendido dos restos?";
+      action = "ASK"; response = "Registrei as referências dos arquivos nesta simulação, sem conferir o conteúdo. A lista de documentos depende do destino e de quem assina. " +
+        (!s.facts.destination ? "Qual é o destino pretendido dos restos?" :
+          !s.facts.signatory ? "Quem será o responsável pela assinatura da autorização?" :
+          "A conferência dos documentos e da autorização ainda está pendente. Você quer acompanhar o rascunho?");
       authority.push({ topic: "DOCUMENTOS", status: "UNKNOWN", reason: "Referências recebidas sem verificação; lista aplicável não determinada" });
       s.phase = "WAITING_CITIZEN";
     } else if (input.interpretation.objective === "ACOMPANHAMENTO") {
       response = s.operation_ids.length ? `Há um registro simulado ${s.operation_ids.at(-1)} neste caso. Isso não indica aprovação nem agendamento.` : "Não encontrei operação simulada neste caso. Você tem alguma referência para identificar a solicitação?";
       action = s.operation_ids.length ? "ANSWER" : "ASK";
     } else if (/(?:terminar atendimento|encerrar conversa|obrigad)/.test(message)) {
-      response = "Concluí esta conversa informativa na simulação. Nenhum serviço físico ou pedido administrativo foi confirmado.";
-      s.phase = "RESOLVED_GRACE";
+      if (s.operation_ids.length) {
+        response = "Posso encerrar a conversa, mas o rascunho simulado permanece pendente. Documentos, autorização e operação real ainda não foram confirmados.";
+        s.phase = "WAITING_CITIZEN";
+      } else {
+        response = "Concluí esta conversa informativa na simulação. Nenhum serviço físico ou pedido administrativo foi confirmado.";
+        s.phase = "RESOLVED_GRACE";
+      }
     } else if (destination && s.operation_ids.length) {
       response = `Registrei ${destination === "OSSUARIO" ? "ossuário" : "outro cemitério"} como destino declarado no mesmo caso de exumação. A viabilidade e as condições ainda precisam de fonte aplicável; não abri outra demanda.`;
       action = "ANSWER";
@@ -125,7 +133,7 @@ export async function handle(input: Input, store: Store, today = "2026-09-24"): 
         operation = { id, kind: "REGISTER_DRAFT_REQUEST", simulated: true, confirmed_by_readback: false };
         action = "SIMULATED_OPERATION";
         response = `Registrei um rascunho simulado ${id}. A abertura real, documentos, autorização e data ainda dependem de verificação.`;
-        s.phase = "RESOLVED_GRACE";
+        s.phase = "WAITING_CITIZEN";
       } else response = "O rascunho simulado deste caso já existe; não criei outro.";
     } else { action = "ASK"; response = "Você quer iniciar uma exumação, acompanhar um pedido ou tirar uma dúvida?"; }
   }

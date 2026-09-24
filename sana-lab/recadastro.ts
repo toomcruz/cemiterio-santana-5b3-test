@@ -45,6 +45,11 @@ export function recadastro(input: Input, state: CaseState, message: string): Out
       exception: { kind: "DECISAO_ADMINISTRATIVA", reason: "Conflito declarado sobre titularidade", evidence: input.current_message,
         next_owner: "Equipe do cemitério (simulação; nenhuma tarefa real criada)" } };
   }
+  if (/\bregulariz\w*\b.{0,60}\b(?:jazigo|sepultura)\b/.test(message)) {
+    authority.push({ topic: "INTENCAO_REGULARIZACAO", status: "UNKNOWN", reason: "Regularizar jazigo pode envolver cadastro, concessão ou outra pendência; a intenção ainda não foi esclarecida" });
+    state.phase = "WAITING_CITIZEN";
+    return { action: "ASK", response: "Você quer atualizar dados cadastrais, tratar da concessão ou de outra regularização do jazigo?", sources, authority };
+  }
   if (correction) {
     state.phase = "WAITING_CITIZEN";
     return { action: "ASK", response: ref ? `Corrigi a referência declarada neste caso. ${promptFor("recadastro_holder_document")} No LAB use apenas uma referência sintética, que ainda dependerá de conferência.` : "Qual dado declarado devo corrigir? Informe apenas a referência ou o tipo de atualização, sem enviar números pessoais aqui.", sources, authority };

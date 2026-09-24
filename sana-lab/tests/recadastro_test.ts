@@ -72,6 +72,30 @@ Deno.test("R08 new case isolated; R09 ambiguity does not select a module; R10 tw
   eq(ambiguous.action, "UNSUPPORTED"); eq(ambiguous.next_state.family, "INDEFINIDO");
 });
 
+Deno.test("R09 regularizar jazigo em Recadastro ativo esclarece sem perder contexto nem abrir outra demanda", async () => {
+  const store = new MemoryStore();
+  const start = await handle(make("r09-active", "r09-start", "Quero recadastrar", "INICIAR_SERVICO", "Q7"), store);
+  const ambiguousInput = make("r09-active", "r09-ambiguous", "Quero regularizar meu jazigo", "INDEFINIDO", "", "INDEFINIDO");
+  const ambiguous = await handle(ambiguousInput, store);
+  eq(ambiguous.action, "ASK");
+  yes(ambiguous.response.includes("dados cadastrais"));
+  yes(ambiguous.response.includes("concessão"));
+  yes(ambiguous.response.includes("outra regularização"));
+  eq(ambiguous.next_state.family, "RECADASTRO");
+  eq(ambiguous.next_state.phase, "WAITING_CITIZEN");
+  eq(ambiguous.next_state.facts.concession_reference?.value, "Q7");
+  eq(ambiguous.next_state.operation_ids.length, 1);
+  eq(ambiguous.next_state.revision, start.next_state.revision + 1);
+  eq(ambiguous.authority.at(-1)?.status, "UNKNOWN");
+  eq(ambiguous.exception, undefined);
+  const replay = await handle(ambiguousInput, store);
+  eq(replay.action, "DUPLICATE");
+  eq(replay.next_state.revision, ambiguous.next_state.revision);
+  const resume = await handle(make("r09-active", "r09-resume", "Quero atualizar meu contato", "INDEFINIDO", "", "INDEFINIDO"), store);
+  eq(resume.next_state.family, "RECADASTRO");
+  eq(resume.next_state.facts.concession_reference?.value, "Q7");
+});
+
 Deno.test("R11 transfer boundary; R12 explicit attendant and actual rights conflict are justified exceptions", async () => {
   const store = new MemoryStore();
   const transfer = await handle(make("transfer", "r11", "Quero transferir titularidade", "INDEFINIDO"), store);
