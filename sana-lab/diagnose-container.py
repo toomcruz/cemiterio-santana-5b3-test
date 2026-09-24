@@ -113,8 +113,9 @@ error_types = re.compile(
     r"ModuleNotFound|InvalidData|NotFound|EACCES|ENOENT|OOM|Error)\b"
 )
 source_frame = re.compile(
-    r"(?:at\s+(?:[^\s(]+\s+\()?)(file://)?(/[^\s():]+(?:/[^\s():]+)*\.tsx?)(?::([0-9]{1,6}))?(?::([0-9]{1,6}))?"
+    r"(?:at\s+.*?\()?(?:file://)?(?P<path>/[^\s():)]+\.(?:tsx?|mjs|js|json))(?::(?P<line>[0-9]{1,6}))(?::(?P<column>[0-9]{1,6}))?"
 )
+absolute_path = re.compile(r"(?:(?:file://)?/[A-Za-z0-9._~!$&()+,;=@%-]+(?:/[A-Za-z0-9._~!$&()+,;=@%-]+)*)")
 access = re.compile(
     r"Requires\s+(read|write|env|net)\s+access\s+to\s+(.+?)(?:,\s*run again|$)",
     re.IGNORECASE,
@@ -160,25 +161,36 @@ def sanitized_error_fields(line):
         operation = ("read" if name in {"read", "readfile"} else
                      "write" if name in {"write", "writefile", "mkdir", "rename", "remove"} else
                      "net" if name in {"connect", "fetch", "resolve"} else name)
+    if os_denial.search(line) and not operation:
+        operation = "unknown"
     if operation:
         fields.append(f"DENIED_OPERATION={operation}")
     if resource:
         resource = safe_resource(resource)
         label = "DENIED_PATH" if resource.startswith("/") else "DENIED_RESOURCE"
         fields.append(f"{label}={resource}")
+    elif os_denial.search(line):
+        path = absolute_path.search(line)
+        if path:
+            resource = safe_resource(path.group())
+            fields.append(f"DENIED_PATH={resource}")
 
     if denial := os_denial.search(line):
         message = "Permission denied"
         if denial.group(1):
             message += f" (os error {denial.group(1)})"
+        if operation:
+            message += f"; operation={operation}"
+        if resource:
+            message += f"; resource={resource}"
         fields.append(f"DENO_MESSAGE={message}")
     elif access_match and resource:
         fields.append(f"DENO_MESSAGE=Requires {operation} access to {resource}")
 
     frame = source_frame.search(line)
     if frame:
-        file_path = safe_resource(frame.group(2))
-        location = ":".join(part for part in (frame.group(3), frame.group(4)) if part)
+        file_path = safe_resource(frame.group("path"))
+        location = ":".join(part for part in (frame.group("line"), frame.group("column")) if part)
         fields.append(f"STACK_FRAME={file_path}{':' + location if location else ''}")
     return fields
 

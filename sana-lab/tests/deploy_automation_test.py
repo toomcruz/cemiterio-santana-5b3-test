@@ -111,6 +111,9 @@ class DeployTest(unittest.TestCase):
         self.assertIn("DENIED_OPERATION=env", result.stdout)
         self.assertIn("DENIED_RESOURCE=<sensitive-resource>", result.stdout)
         self.assertIn("DENIED_PATH=/run/secrets/<redacted>", result.stdout)
+        self.assertIn("DENIED_OPERATION=write", result.stdout)
+        self.assertIn("DENIED_PATH=/lab-state/<file>", result.stdout)
+        self.assertIn("STACK_FRAME=/app/sana-lab/file_store.ts:22:17", result.stdout)
         for forbidden in ("synthetic-secret-value", "Authorization", "/unsafe/private/",
                           "token=", "Bearer"):
             self.assertNotIn(forbidden, result.stdout + result.stderr + report.read_text())
