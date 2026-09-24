@@ -78,12 +78,15 @@ export function createBridgeHandler(store: Store, token: string) {
 }
 
 if (import.meta.main) {
-  const token = Deno.env.get("SANA_LAB_TOKEN") ?? "";
+  const tokenFile = Deno.env.get("SANA_LAB_TOKEN_FILE") ?? "";
+  const token = tokenFile ? Deno.readTextFileSync(tokenFile).trim() : (Deno.env.get("SANA_LAB_TOKEN") ?? "");
   const root = Deno.env.get("SANA_LAB_STATE_DIR") ?? "";
   if (!root || !root.startsWith("/")) throw Error("LAB_STATE_DIR_ABSOLUTE_REQUIRED");
   const port = Number(Deno.env.get("SANA_LAB_PORT") ?? "8765");
   if (!Number.isSafeInteger(port) || port < 1024 || port > 65535) throw Error("LAB_PORT_INVALID");
+  const host = Deno.env.get("SANA_LAB_BIND_HOST") ?? "127.0.0.1";
+  if (!["127.0.0.1", "0.0.0.0"].includes(host)) throw Error("LAB_BIND_HOST_INVALID");
   const handler = createBridgeHandler(new FileStore(root), token);
-  // Loopback only: exposure to n8n requires an explicitly configured private authenticated route.
-  Deno.serve({ hostname: "127.0.0.1", port }, handler);
+  // 0.0.0.0 is allowed only inside a container with no published host port.
+  Deno.serve({ hostname: host, port }, handler);
 }
