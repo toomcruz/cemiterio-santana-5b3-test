@@ -129,10 +129,10 @@ rollback_on_exit() {
 
 capture_failed_container() {
   mkdir -p "$record_dir/diagnostics"
-  local report tmp
+  local target=${1:-$container} failed_stage=${2:-$stage} report tmp
   report="$record_dir/diagnostics/$expected_sha.txt"
   tmp=$(mktemp "$record_dir/diagnostics/.capture.XXXXXX") || return 1
-  if python3 sana-lab/diagnose-container.py "$container" "$expected_sha" "$image" "$stage" >"$tmp"; then
+  if python3 sana-lab/diagnose-container.py "$target" "$expected_sha" "$image" "$failed_stage" >"$tmp"; then
     mv -f "$tmp" "$report" || return 1
     cat "$report"
   else
@@ -140,6 +140,70 @@ capture_failed_container() {
     return 1
   fi
 }
+
+# Reproduce the candidate on the VPS's actual private Docker network before
+# stopping the working bridge. Only this unique LAB state is writable; the
+# existing token mount stays read-only and no host port is published.
+short_sha=${expected_sha:0:12}
+preflight_id=$(date -u +%Y%m%d%H%M%S)-$$
+preflight="sana-lab-preflight-$short_sha-$preflight_id"
+mkdir -p "$record_dir"
+preflight_root=$(mktemp -d "$record_dir/preflight.XXXXXX")
+chmod 0700 "$preflight_root"
+preflight_state="$preflight_root/state"
+install -d -o 1000 -g 1000 -m 0700 "$preflight_state"
+if docker container inspect "$preflight" >/dev/null 2>&1; then
+  echo 'PREFLIGHT_CONTAINER_NAME_COLLISION' >&2
+  exit 2
+fi
+preflight_live=0
+preflight_cleanup() {
+  if (( preflight_live == 1 )); then docker rm -f "$preflight" >/dev/null 2>&1 || true; fi
+}
+trap preflight_cleanup EXIT
+stage=PREFLIGHT_START
+docker run -d --name "$preflight" --hostname "$preflight" \
+  --network "$network" --read-only --user 1000:1000 --security-opt no-new-privileges \
+  --restart no --expose 8765 \
+  --mount "type=bind,src=$preflight_state,dst=/lab-state" \
+  --mount "type=bind,src=$secret_mount,dst=/run/secrets/sana_lab_token,readonly" \
+  -e DENO_DIR=/lab-state/.deno -e SANA_LAB_STATE_DIR=/lab-state -e SANA_LAB_BIND_HOST=0.0.0.0 \
+  -e SANA_LAB_PORT=8765 -e SANA_LAB_TOKEN_FILE=/run/secrets/sana_lab_token \
+  "$image" >/dev/null
+preflight_live=1
+stage=PREFLIGHT_VERIFY
+test "$(docker inspect "$preflight" --format '{{.Config.Image}}')" = "$image"
+test "$(docker inspect "$preflight" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')" = "$expected_sha"
+test "$(docker inspect "$preflight" --format '{{range .Mounts}}{{if eq .Destination "/lab-state"}}{{.Source}}{{end}}{{end}}')" = "$preflight_state"
+test "$(docker inspect "$preflight" --format '{{range .Mounts}}{{if eq .Destination "/run/secrets/sana_lab_token"}}{{.Source}}{{end}}{{end}}')" = "$secret_mount"
+test "$(docker inspect "$preflight" --format '{{range .Mounts}}{{if eq .Destination "/run/secrets/sana_lab_token"}}{{.RW}}{{end}}{{end}}')" = false
+test "$(docker inspect "$preflight" --format '{{range .Config.Env}}{{if eq . "DENO_DIR=/lab-state/.deno"}}yes{{end}}{{end}}')" = yes
+preflight_ready=0
+for attempt in {1..20}; do
+  if check_container "$preflight" "$new_id" "$engine_hash" "$recadastro_hash"; then
+    preflight_ready=1
+    break
+  fi
+  if (( attempt == 20 )); then break; fi
+  sleep 0.5
+done
+if (( preflight_ready != 1 )); then
+  capture_failed_container "$preflight" "$stage" || echo 'DIAGNOSTIC_CAPTURE_FAILED' >&2
+  echo 'PREFLIGHT_FAILED_STAGE=VERIFY' >&2
+  exit 1
+fi
+stage=PREFLIGHT_PROBE
+if ! docker exec "$preflight" deno run --allow-read=/run/secrets/sana_lab_token --allow-net=127.0.0.1:8765 \
+  /app/sana-lab/deploy-probe.ts "$expected_sha" >/dev/null; then
+  capture_failed_container "$preflight" "$stage" || echo 'DIAGNOSTIC_CAPTURE_FAILED' >&2
+  echo 'PREFLIGHT_FAILED_STAGE=AUTHENTICATED_PROBE' >&2
+  exit 1
+fi
+docker rm "$preflight" >/dev/null
+preflight_live=0
+trap - EXIT
+echo "PREFLIGHT_OK COMMIT=$expected_sha IMAGE=$image NETWORK=$network STATE=ISOLATED AUTH=PASS PUBLIC_PORTS=NO"
+
 trap rollback_on_exit EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
@@ -157,7 +221,7 @@ docker run -d --name "$container" --hostname "$container" \
   --restart unless-stopped --expose 8765 \
   --mount "type=bind,src=$state_mount,dst=/lab-state" \
   --mount "type=bind,src=$secret_mount,dst=/run/secrets/sana_lab_token,readonly" \
-  -e SANA_LAB_STATE_DIR=/lab-state -e SANA_LAB_BIND_HOST=0.0.0.0 \
+  -e DENO_DIR=/lab-state/.deno -e SANA_LAB_STATE_DIR=/lab-state -e SANA_LAB_BIND_HOST=0.0.0.0 \
   -e SANA_LAB_PORT=8765 -e SANA_LAB_TOKEN_FILE=/run/secrets/sana_lab_token \
   "$image" >/dev/null
 

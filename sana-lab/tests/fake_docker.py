@@ -78,14 +78,14 @@ if args[0] == "inspect":
         result("yes")
     if fmt == "{{json .Mounts}}":
         result(json.dumps([
-            {"Destination": "/lab-state", "Source": state["state_mount"]},
-            {"Destination": "/run/secrets/sana_lab_token", "Source": state["secret_mount"]},
+            {"Destination": "/lab-state", "Source": container.get("state_mount", state["state_mount"])},
+            {"Destination": "/run/secrets/sana_lab_token", "Source": container.get("secret_mount", state["secret_mount"])},
         ]))
     if ".Mounts" in fmt:
         if "/lab-state" in fmt:
-            result("true" if ".RW" in fmt else state["state_mount"])
+            result("true" if ".RW" in fmt else container.get("state_mount", state["state_mount"]))
         if "/run/secrets/sana_lab_token" in fmt:
-            result("false" if ".RW" in fmt else state["secret_mount"])
+            result("false" if ".RW" in fmt else container.get("secret_mount", state["secret_mount"]))
     fail()
 if args[0] == "logs":
     state.setdefault("events", []).append("logs-before-remove")
@@ -128,20 +128,24 @@ if args[0] == "exec":
         key = "engine" if args[3].endswith("engine.ts") else "recadastro"
         result(f"{container[key]}  {args[3]}")
     if args[2:4] == ["deno", "eval"]:
-        fail() if os.getenv("SANA_DEPLOY_TEST_401_FAIL") == "1" and container["id"].startswith("sha256:new") else result()
+        fail() if ((os.getenv("SANA_DEPLOY_TEST_401_FAIL") == "1" and container["id"].startswith("sha256:new")) or
+                   (container.get("preflight") and os.getenv("SANA_DEPLOY_TEST_PREFLIGHT_FAIL") == "1")) else result()
     if args[2:4] == ["deno", "run"]:
-        fail() if os.getenv("SANA_DEPLOY_TEST_AUTH_FAIL") == "1" else result("LAB_PROBE_OK HTTP=200")
+        fail() if ((os.getenv("SANA_DEPLOY_TEST_AUTH_FAIL") == "1" and not container.get("preflight")) or
+                   (os.getenv("SANA_DEPLOY_TEST_PREFLIGHT_AUTH_FAIL") == "1" and container.get("preflight"))) else result("LAB_PROBE_OK HTTP=200")
     fail()
 if args[0] == "stop":
     container = state["containers"].get(args[1])
     if not container:
         fail()
     container["running"] = False
+    state.setdefault("events", []).append("service-stop")
     result()
 if args[0] == "rename":
     if args[1] not in state["containers"] or args[2] in state["containers"]:
         fail()
     state["containers"][args[2]] = state["containers"].pop(args[1])
+    state.setdefault("events", []).append("service-rename")
     result()
 if args[0] == "run" and "--entrypoint" in args:
     result("RUNTIME_UID=1000 RUNTIME_GID=1000\n"
@@ -167,18 +171,26 @@ if args[0] == "run":
         fail()
     image_name = args[-1]
     image = state["images"][image_name]
+    mounts = [part for part in args if part.startswith("type=bind,")]
+    state_mount = next((part.split("src=", 1)[1].split(",", 1)[0] for part in mounts if "dst=/lab-state" in part), state["state_mount"])
+    secret_mount = next((part.split("src=", 1)[1].split(",", 1)[0] for part in mounts if "dst=/run/secrets/sana_lab_token" in part), state["secret_mount"])
+    is_preflight = name.startswith("sana-lab-preflight-")
     state["containers"][name] = {
         "running": True, "image": image_name, "id": image["id"], "commit": image["commit"],
         "engine": os.environ["SANA_DEPLOY_TEST_ENGINE_HASH"],
         "recadastro": os.environ["SANA_DEPLOY_TEST_RECADASTRO_HASH"],
-        "restarting": os.getenv("SANA_DEPLOY_TEST_RESTART") == "1",
+        "restarting": os.getenv("SANA_DEPLOY_TEST_RESTART") == "1" and not is_preflight,
+        "preflight": is_preflight, "state_mount": state_mount, "secret_mount": secret_mount,
     }
+    if is_preflight:
+        state.setdefault("events", []).append("preflight-start")
     result("test-container-id")
 if args[0] == "rm":
-    if args[1] not in state["containers"]:
+    target = args[-1]
+    if target not in state["containers"]:
         fail()
-    state.setdefault("events", []).append("remove-new")
-    del state["containers"][args[1]]
+    state.setdefault("events", []).append("preflight-remove" if state["containers"][target].get("preflight") else "remove-new")
+    del state["containers"][target]
     result()
 if args[0] == "start":
     container = state["containers"].get(args[1])

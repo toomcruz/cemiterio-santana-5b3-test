@@ -12,7 +12,10 @@ import subprocess
 import sys
 
 name, expected_sha, expected_image, stage = sys.argv[1:]
-if not re.fullmatch(r"[0-9a-f]{40}", expected_sha) or name not in {"sana-lab-bridge", "sana-lab-smoke"}:
+allowed_name = name in {"sana-lab-bridge", "sana-lab-smoke"} or re.fullmatch(
+    r"sana-lab-preflight-[0-9a-f]{12}-[0-9]{14}-[0-9]{1,10}", name
+)
+if not re.fullmatch(r"[0-9a-f]{40}", expected_sha) or not allowed_name:
     raise SystemExit(2)
 
 
@@ -402,7 +405,7 @@ def sanitize_log(line):
 
 print(f"DIAGNOSTIC_SHA={expected_sha}")
 print(f"FAILED_IMAGE={expected_image}")
-print(f"DEPLOY_FAILED_STAGE={enum(stage, {'START_NEW', 'VERIFY_NEW', 'VERIFY_ISOLATED', 'SYNTHETIC_FAILURE', 'RECORD_ACTIVE'})}")
+print(f"DEPLOY_FAILED_STAGE={enum(stage, {'START_NEW', 'VERIFY_NEW', 'VERIFY_ISOLATED', 'PREFLIGHT_START', 'PREFLIGHT_VERIFY', 'PREFLIGHT_PROBE', 'SYNTHETIC_FAILURE', 'RECORD_ACTIVE'})}")
 try:
     values = {key: docker("inspect", name, "--format", fmt)
               for key, fmt in formats.items()}
