@@ -114,6 +114,7 @@ class DeployTest(unittest.TestCase):
         self.assertIn("DENIED_OPERATION=write", result.stdout)
         self.assertIn("DENIED_PATH=/lab-state/<file>", result.stdout)
         self.assertIn("STACK_FRAME=/app/sana-lab/file_store.ts:22:17", result.stdout)
+        self.assertIn("STARTUP_DIAGNOSTIC ERROR_TYPE=PermissionDenied DENIED_OPERATION=read DENIED_PATH=/app/santana-authority/catalogo/exumacao.v1.json STACK_FRAME=/app/santana-authority-gateway/catalogo/carregar.ts:128:19 DENO_MESSAGE=Requires read access", result.stdout)
         for forbidden in ("synthetic-secret-value", "Authorization", "/unsafe/private/",
                           "token=", "Bearer"):
             self.assertNotIn(forbidden, result.stdout + result.stderr + report.read_text())

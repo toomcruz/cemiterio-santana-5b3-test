@@ -84,6 +84,7 @@ if args[0] == "logs":
            'PermissionDenied: Requires read access to "/run/secrets/sana_lab_token"\n'
            "PermissionDenied: Permission denied (os error 13): rename '/lab-state/private-case.json.tmp' -> '/lab-state/private-case.json'\\n"
            '    at async Object.commit (file:///app/sana-lab/file_store.ts:22:17)\n'
+           'SANA_LAB_STARTUP_DIAGNOSTIC ERROR_TYPE=PermissionDenied DENIED_OPERATION=read DENIED_RESOURCE=/app/santana-authority/catalogo/exumacao.v1.json STACK_FRAME=/app/santana-authority-gateway/catalogo/carregar.ts:128:19 DENO_MESSAGE=Requires read access\n'
            'Authorization: Bearer synthetic-secret-value\n'
            'secret source: /unsafe/private/secret token=synthetic-secret-value')
 if args[0] == "exec":

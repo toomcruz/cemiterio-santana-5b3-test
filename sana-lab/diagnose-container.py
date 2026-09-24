@@ -197,6 +197,33 @@ def sanitized_error_fields(line):
 
 def sanitize_log(line):
     """Preserve safe Deno diagnostics while masking secrets and file contents."""
+    if "SANA_LAB_STARTUP_DIAGNOSTIC " in line:
+        record = line.split("SANA_LAB_STARTUP_DIAGNOSTIC ", 1)[1]
+        fields = {
+            key: (re.search(r"\b" + key + r"=([^\s]+)", record).group(1)
+                  if re.search(r"\b" + key + r"=([^\s]+)", record) else "")
+            for key in ("ERROR_TYPE", "DENIED_OPERATION", "DENIED_RESOURCE", "STACK_FRAME")
+        }
+        message = re.search(r"\bDENO_MESSAGE=(.*)$", record)
+        fields["DENO_MESSAGE"] = message.group(1).strip() if message else ""
+        output = ["STARTUP_DIAGNOSTIC"]
+        if fields.get("ERROR_TYPE") in {"NotCapable", "PermissionDenied", "NotFound", "TypeError", "SyntaxError", "ReferenceError", "Error"}:
+            output.append("ERROR_TYPE=" + fields["ERROR_TYPE"])
+        if fields.get("DENIED_OPERATION") in {"read", "write", "env", "net", "unknown"}:
+            output.append("DENIED_OPERATION=" + fields["DENIED_OPERATION"])
+        if fields.get("DENIED_RESOURCE"):
+            resource = safe_resource(fields["DENIED_RESOURCE"])
+            label = "DENIED_PATH" if resource.startswith("/") else "DENIED_RESOURCE"
+            output.append(label + "=" + resource)
+        if fields.get("STACK_FRAME"):
+            frame = source_frame.search(fields["STACK_FRAME"])
+            if frame:
+                location = ":".join(part for part in (frame.group("line"), frame.group("column")) if part)
+                output.append("STACK_FRAME=" + safe_resource(frame.group("path")) + (":" + location if location else ""))
+        message = fields.get("DENO_MESSAGE", "")
+        if re.fullmatch(r"Requires (read|write|env|net) access|Permission denied \(os error [0-9]{1,3}\)|NotCapable|PermissionDenied|NotFound|TypeError|SyntaxError|ReferenceError|Error", message):
+            output.append("DENO_MESSAGE=" + message)
+        return " ".join(output)
     markers = []
     markers.extend(sanitized_error_fields(line))
     error = error_types.search(line)
