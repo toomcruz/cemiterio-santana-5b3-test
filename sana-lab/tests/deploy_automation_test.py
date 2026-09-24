@@ -103,6 +103,8 @@ class DeployTest(unittest.TestCase):
         self.assertIn("CONTAINER_RESTART_COUNT=3", result.stdout)
         self.assertIn("CONTAINER_OOM_KILLED=false", result.stdout)
         self.assertIn("PUBLIC_PORTS=NO", result.stdout)
+        self.assertIn("ENTRYPOINT=/tini,--,/usr/local/bin/deno", result.stdout)
+        self.assertIn("CMD=run,READ=/app/santana-authority,/app/santana-conversation-domain,/app/conformidade,/lab-state,/run/secrets/<redacted>,WRITE=/lab-state,NET=0.0.0.0:8765,ENV=SANA_LAB_TOKEN_FILE,SANTANA_REPO_ROOT,APP_SCRIPT=sana-lab/start.ts,ARG_REDACTED", result.stdout)
         self.assertIn("ERROR_TYPE=NotCapable", result.stdout)
         self.assertIn("DENIED_OPERATION=read", result.stdout)
         self.assertIn("DENIED_PATH=/app/santana-authority/catalogo/exumacao.v1.json", result.stdout)

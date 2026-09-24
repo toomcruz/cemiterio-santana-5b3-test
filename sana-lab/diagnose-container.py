@@ -86,10 +86,38 @@ def executable(value):
         return "INVALID"
     if not isinstance(items, list):
         return "NONE" if items is None else "REDACTED"
-    allowed = {"deno", "run", "serve", "task", "/app/sana-lab/bridge.ts",
-               "/app/sana-lab/start.ts"}
-    return ",".join(item if isinstance(item, str) and item in allowed else "ARG_REDACTED"
-                    for item in items[:12])
+    binaries = {"deno", "/usr/bin/deno", "/usr/local/bin/deno", "/tini",
+                "/usr/bin/tini", "--", "run", "serve", "task"}
+    scripts = {"sana-lab/start.ts", "sana-lab/bridge.ts",
+               "/app/sana-lab/start.ts", "/app/sana-lab/bridge.ts"}
+    allowed_paths = {"/app/santana-authority", "/app/santana-conversation-domain",
+                     "/app/conformidade", "/lab-state", "/run/secrets/sana_lab_token"}
+    allowed_env = {"SANA_LAB_STATE_DIR", "SANA_LAB_BIND_HOST", "SANA_LAB_PORT",
+                   "SANA_LAB_TOKEN_FILE", "SANTANA_CATALOGO_OFICIAL",
+                   "SANTANA_REPO_ROOT", "SANTANA_PERFIL_EXUMACAO"}
+    output = []
+    for item in items[:12]:
+        if not isinstance(item, str):
+            output.append("ARG_REDACTED")
+        elif item in binaries:
+            output.append(item)
+        elif item in scripts:
+            output.append("APP_SCRIPT=" + item.split("/")[-2] + "/" + item.split("/")[-1])
+        elif item.startswith("--allow-read=") or item.startswith("--allow-write="):
+            capability, grants = item.split("=", 1)
+            safe = [safe_resource(path) if path in allowed_paths else "OTHER_REDACTED"
+                    for path in grants.split(",")]
+            output.append(capability.removeprefix("--allow-").upper() + "=" + ",".join(safe))
+        elif item.startswith("--allow-net="):
+            target = item.split("=", 1)[1]
+            output.append("NET=" + (target if target in {"0.0.0.0:8765", "127.0.0.1:8765"} else "TARGET_REDACTED"))
+        elif item.startswith("--allow-env="):
+            grants = item.split("=", 1)[1].split(",")
+            safe = [name if name in allowed_env else "ENV_NAME_REDACTED" for name in grants]
+            output.append("ENV=" + ",".join(safe))
+        else:
+            output.append("ARG_REDACTED")
+    return ",".join(output)
 
 
 def mounts(value):
