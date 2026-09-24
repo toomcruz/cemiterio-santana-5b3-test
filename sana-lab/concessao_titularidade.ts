@@ -15,13 +15,15 @@ const goal = goals.goals.find(x => x.goal_code === "GOAL_CONCESSAO");
 const modalityFact = facts.facts.find(x => x.fact_code === "concession_purpose");
 const allowedModalities = modalityFact?.allowed_values ?? [];
 const recadastroFact = facts.facts.find(x => x.fact_code === "recadastro_status");
-if (!goal || goal.topic_code !== "CONCESSAO" ||
-  !["concession_purpose", "recadastro_status", "concession_reference", "requester_document"]
-    .every(x => goal.required_facts.includes(x)) ||
-  JSON.stringify(allowedModalities) !== JSON.stringify(["NOVA", "TRANSFERENCIA", "RENOVACAO"]) ||
-  !recadastroFact || !recadastroFact.authoritative_values?.includes("OK") ||
-  !relations.relations.some(x => x.relation_code === "REL_CONCESSAO_REQUIRES_RECADASTRO" && x.to_goal === "GOAL_RECADASTRO")) {
-  throw Error("CONCESSAO_DOMAIN_SOURCE_DRIFT");
+function assertSources(): void {
+  if (!goal || goal.topic_code !== "CONCESSAO" ||
+    !["concession_purpose", "recadastro_status", "concession_reference", "requester_document"]
+      .every(x => goal.required_facts.includes(x)) ||
+    JSON.stringify(allowedModalities) !== JSON.stringify(["NOVA", "TRANSFERENCIA", "RENOVACAO"]) ||
+    !recadastroFact || !recadastroFact.authoritative_values?.includes("OK") ||
+    !relations.relations.some(x => x.relation_code === "REL_CONCESSAO_REQUIRES_RECADASTRO" && x.to_goal === "GOAL_RECADASTRO")) {
+    throw Error("CONCESSAO_DOMAIN_SOURCE_DRIFT");
+  }
 }
 const question = (code: string): string => questions.questions.find(x => x.fact_code === code)?.text ??
   (() => { throw Error("CONCESSAO_QUESTION_MISSING"); })();
@@ -56,6 +58,7 @@ function nextQuestion(state: CaseState): string {
 
 /** Rules live here; bridge and n8n only validate/transport the common contract. */
 export function concessaoTitularidade(input: Input, state: CaseState, message: string): Outcome {
+  assertSources();
   const authority: Result["authority"] = [];
   const correction = /(?:corrig|na verdade|retific)/.test(message);
   const ambiguous = /\bregulariz\w*\b.{0,60}\b(?:jazigo|sepultura)\b/.test(message);
