@@ -202,15 +202,19 @@ def in_container_access():
     try:
         raw = docker("inspect", name, "--format", "{{json .Mounts}}")
         entries = json.loads(raw)
-        source = next((item.get("Source") for item in entries
-                       if isinstance(item, dict) and item.get("Destination") == "/lab-state"), None)
-        if not isinstance(source, str) or not re.fullmatch(r"/[A-Za-z0-9._/-]{1,240}", source):
+        sources = {item.get("Destination"): item.get("Source") for item in entries if isinstance(item, dict)}
+        state_source = sources.get("/lab-state")
+        token_source = sources.get("/run/secrets/sana_lab_token")
+        safe_host_path = lambda path: isinstance(path, str) and bool(re.fullmatch(r"/[A-Za-z0-9._/-]{1,240}", path))
+        if not safe_host_path(state_source) or not os.path.isdir(state_source):
             return "CONTAINER_ACCESS_CHECK=UNAVAILABLE"
-        if not os.path.isdir(source):
+        if not safe_host_path(token_source) or not os.path.isfile(token_source):
             return "CONTAINER_ACCESS_CHECK=UNAVAILABLE"
         result = subprocess.run(
             ["docker", "run", "--rm", "--network", "none", "--read-only", "--user", "1000:1000",
-             "--mount", f"type=bind,src={source},dst=/lab-state", "--entrypoint", "/bin/sh",
+             "--mount", f"type=bind,src={state_source},dst=/lab-state",
+             "--mount", f"type=bind,src={token_source},dst=/run/secrets/sana_lab_token,readonly",
+             "--entrypoint", "/bin/sh",
              expected_image, "-c", script],
             capture_output=True, text=True, timeout=8, check=False,
         )

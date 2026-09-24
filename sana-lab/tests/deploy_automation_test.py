@@ -110,6 +110,8 @@ class DeployTest(unittest.TestCase):
         self.assertIn("RUNTIME_UID=1000 RUNTIME_GID=1000", result.stdout)
         self.assertIn("ACCESS_PATH=/lab-state ACCESS_UID=1000 ACCESS_GID=1000 ACCESS_MODE=700", result.stdout)
         self.assertIn("ACCESS_CHECK_PATH=/lab-state ACCESS_OP=write ACCESS_RESULT=YES", result.stdout)
+        self.assertIn("ACCESS_PATH=/run/secrets/sana_lab_token ACCESS_UID=1000 ACCESS_GID=1000 ACCESS_MODE=400", result.stdout)
+        self.assertIn("ACCESS_CHECK_PATH=/run/secrets/sana_lab_token ACCESS_OP=read ACCESS_RESULT=YES", result.stdout)
         self.assertIn("ACCESS_PATH=/deno-dir ACCESS_UID=1000 ACCESS_GID=1000 ACCESS_MODE=700", result.stdout)
         self.assertIn("ENTRYPOINT=/tini,--,docker-entrypoint.sh", result.stdout)
         self.assertIn("CMD=run,READ=/app/santana-authority,/app/santana-conversation-domain,/app/conformidade,/lab-state,/run/secrets/<redacted>,WRITE=/lab-state,NET=0.0.0.0:8765,ENV=SANA_LAB_TOKEN_FILE,SANTANA_REPO_ROOT,APP_SCRIPT=sana-lab/start.ts,ARG_REDACTED", result.stdout)
