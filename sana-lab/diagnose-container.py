@@ -86,8 +86,9 @@ def executable(value):
         return "INVALID"
     if not isinstance(items, list):
         return "NONE" if items is None else "REDACTED"
-    binaries = {"deno", "/usr/bin/deno", "/usr/local/bin/deno", "/tini",
-                "/usr/bin/tini", "--", "run", "serve", "task"}
+    binaries = {"deno", "/deno", "/usr/bin/deno", "/usr/local/bin/deno", "/bin/deno",
+                "tini", "/tini", "/usr/bin/tini", "--", "run", "serve", "task"}
+    safe_basenames = {"deno", "tini", "sh", "bash", "docker-entrypoint.sh", "entrypoint.sh"}
     scripts = {"sana-lab/start.ts", "sana-lab/bridge.ts",
                "/app/sana-lab/start.ts", "/app/sana-lab/bridge.ts"}
     allowed_paths = {"/app/santana-authority", "/app/santana-conversation-domain",
@@ -101,6 +102,8 @@ def executable(value):
             output.append("ARG_REDACTED")
         elif item in binaries:
             output.append(item)
+        elif item.startswith("/") and item.rsplit("/", 1)[-1] in safe_basenames:
+            output.append(item.rsplit("/", 1)[-1])
         elif item in scripts:
             output.append("APP_SCRIPT=" + item.split("/")[-2] + "/" + item.split("/")[-1])
         elif item.startswith("--allow-read=") or item.startswith("--allow-write="):
