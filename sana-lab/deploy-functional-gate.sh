@@ -18,7 +18,7 @@ stage=CHECKOUT
 if [[ $mode == diagnose ]]; then
   report="$record_dir/diagnostics/$expected_sha.txt"
   [[ -f $report && ! -L $report ]] || { echo 'LAB_DIAGNOSTIC_UNAVAILABLE' >&2; exit 2; }
-  test "$(stat -c '%u' "$report")" = 0 || { echo 'LAB_DIAGNOSTIC_UNTRUSTED' >&2; exit 2; }
+  test "$(stat -c '%u' "$report")" = "$(id -u)" || { echo 'LAB_DIAGNOSTIC_UNTRUSTED' >&2; exit 2; }
   cat "$report"
   exit 0
 fi
