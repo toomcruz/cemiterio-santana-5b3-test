@@ -107,7 +107,7 @@ class DeployTest(unittest.TestCase):
         self.assertIn("PUBLIC_PORTS=NO", result.stdout)
         self.assertIn("LAB_STATE_USER_1000_WRITE_EXECUTE=YES", result.stdout)
         self.assertIn("TOKEN_USER_1000_READ=YES", result.stdout)
-        self.assertIn("ENTRYPOINT=/tini,--,deno", result.stdout)
+        self.assertIn("ENTRYPOINT=/tini,--,docker-entrypoint.sh", result.stdout)
         self.assertIn("CMD=run,READ=/app/santana-authority,/app/santana-conversation-domain,/app/conformidade,/lab-state,/run/secrets/<redacted>,WRITE=/lab-state,NET=0.0.0.0:8765,ENV=SANA_LAB_TOKEN_FILE,SANTANA_REPO_ROOT,APP_SCRIPT=sana-lab/start.ts,ARG_REDACTED", result.stdout)
         self.assertIn("ERROR_TYPE=NotCapable", result.stdout)
         self.assertIn("DENIED_OPERATION=read", result.stdout)

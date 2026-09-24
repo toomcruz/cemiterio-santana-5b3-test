@@ -104,7 +104,7 @@ def executable(value):
             output.append("ARG_REDACTED")
         elif item in binaries:
             output.append(item)
-        elif item.startswith("/") and item.rsplit("/", 1)[-1] in safe_basenames:
+        elif item.rsplit("/", 1)[-1] in safe_basenames:
             output.append(item.rsplit("/", 1)[-1])
         elif item in scripts:
             output.append("APP_SCRIPT=" + item.split("/")[-2] + "/" + item.split("/")[-1])

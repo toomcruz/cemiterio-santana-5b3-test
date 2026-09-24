@@ -59,7 +59,7 @@ if args[0] == "inspect":
         "{{.State.StartedAt}}": "2026-09-24T00:00:02Z",
         "{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}": "none",
         "{{json .Config.Cmd}}": '["run","--allow-read=/app/santana-authority,/app/santana-conversation-domain,/app/conformidade,/lab-state,/run/secrets/sana_lab_token","--allow-write=/lab-state","--allow-net=0.0.0.0:8765","--allow-env=SANA_LAB_TOKEN_FILE,SANTANA_REPO_ROOT","sana-lab/start.ts","Bearer synthetic-secret-value"]',
-        "{{json .Config.Entrypoint}}": '["/tini","--","/opt/deno-bin/deno"]',
+        "{{json .Config.Entrypoint}}": '["/tini","--","docker-entrypoint.sh"]',
         "{{.Config.User}}": "1000:1000",
         "{{range .Mounts}}{{.Destination}}:{{.Type}}:{{.RW}};{{end}}": "/lab-state:bind:true;/run/secrets/sana_lab_token:bind:false;",
         "{{range $k,$v := .NetworkSettings.Networks}}{{$k}};{{end}}": "n8n-ntga_default;",
