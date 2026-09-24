@@ -71,7 +71,7 @@ test "$(docker inspect "$container" --format '{{range .NetworkSettings.Networks}
 }
 test "$(docker inspect "$container" --format '{{.Config.Image}}')" = "$image" || { echo 'NEW_IMAGE_MISMATCH' >&2; exit 2; }
 # A non-authenticated, in-container probe checks that the process responds without exposing the secret.
-docker exec "$container" deno eval --allow-net=127.0.0.1:8765 \
+docker exec "$container" deno eval \
   'const r = await fetch("http://127.0.0.1:8765/lab/v1/turn", { method: "POST" }); if (r.status !== 401) throw Error("UNEXPECTED_STATUS_" + r.status); console.log("LAB_PRIVATE_HTTP_401_OK");'
 trap - EXIT
 echo "LAB_IMAGE=$image LAB_NETWORK=$network PUBLIC_PORTS=NO BACKUP=$backup"
