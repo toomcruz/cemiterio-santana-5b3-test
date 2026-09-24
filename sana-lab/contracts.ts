@@ -15,12 +15,14 @@ export type CaseState = {
   revision: number; family: Family; phase: "ACTIVE" | "WAITING_CITIZEN" | "WAITING_TEAM" | "RESOLVED_GRACE";
   facts: Record<string, Fact>; documents: Record<string, "DECLARED" | "RECEIVED_UNVERIFIED" | "VERIFIED">;
   demand_queue: Family[]; questions: string[]; processed_ids: string[];
+  history: Array<{ inbound_message_id: string; field: string; previous?: string; current: string; origin: "CITIZEN" }>;
   last_response: string; last_step: string; operation_ids: string[];
 };
 export type Result = {
   schema_version: typeof SCHEMA_VERSION; case_id: string; correlation_id: string;
   action: "ANSWER" | "ASK" | "SIMULATED_OPERATION" | "EXCEPTION" | "DUPLICATE" | "UNSUPPORTED";
   response: string; next_state: CaseState; sources: string[];
+  authority: Array<{ topic: string; status: "CONFIRMED" | "CONDITIONAL" | "UNKNOWN" | "HUMAN_DECISION_REQUIRED"; reason: string }>;
   operation?: { id: string; kind: string; simulated: true; confirmed_by_readback: boolean };
   exception?: { kind: "PEDIDO_HUMANO" | "DECISAO_ADMINISTRATIVA" | "FALHA_TECNICA"; reason: string; evidence: string; next_owner: string };
 };
