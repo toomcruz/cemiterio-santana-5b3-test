@@ -11,6 +11,7 @@ services:
     read_only: true
     user: "1000:1000"
     environment:
+      DENO_DIR: /lab-state/.deno
       SANA_LAB_STATE_DIR: /lab-state
       SANA_LAB_BIND_HOST: 0.0.0.0
       SANA_LAB_PORT: "8765"

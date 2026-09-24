@@ -95,6 +95,7 @@ jobs:
             -e SANA_LAB_PORT=8765 -e SANA_LAB_TOKEN_FILE=/run/secrets/sana_lab_token \
             "$image" >/dev/null
           trap 'docker rm -f sana-lab-smoke >/dev/null 2>&1 || true' EXIT
+          test "$(docker inspect sana-lab-smoke --format '{{range .Config.Env}}{{if eq . "DENO_DIR=/lab-state/.deno"}}yes{{end}}{{end}}')" = yes
           ready=0
           for attempt in {1..20}; do
             if docker exec sana-lab-smoke deno eval \

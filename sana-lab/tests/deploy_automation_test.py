@@ -59,6 +59,14 @@ class DeployTest(unittest.TestCase):
             SANA_LAB_DEPLOY_RECORD_DIR=str(self.root / "records"),
         )
 
+    def test_deno_cache_uses_writable_lab_mount(self):
+        dockerfile = (ROOT / "sana-lab/Dockerfile").read_text(encoding="utf-8")
+        compose = (ROOT / "sana-lab/compose.lab.yaml").read_text(encoding="utf-8")
+        workflow = (ROOT / ".github/workflows/sana-lab-bridge-deploy.yml").read_text(encoding="utf-8")
+        self.assertIn("DENO_DIR=/lab-state/.deno", dockerfile)
+        self.assertIn("DENO_DIR: /lab-state/.deno", compose)
+        self.assertIn('DENO_DIR=/lab-state/.deno', workflow)
+
     def run_deploy(self, mode="deploy", **env):
         return subprocess.run(["bash", str(DEPLOY), COMMIT, mode], cwd=ROOT,
                               env={**self.env, **env}, capture_output=True, text=True, check=False)
