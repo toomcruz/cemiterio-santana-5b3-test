@@ -88,6 +88,7 @@ jobs:
           chmod 0644 "$token_file"
           docker build -f sana-lab/Dockerfile -t "$image" .
           docker run -d --name sana-lab-smoke --network none --read-only --user 1000:1000 \
+            --security-opt no-new-privileges \
             --mount "type=bind,src=$state,dst=/lab-state" \
             --mount "type=bind,src=$token_file,dst=/run/secrets/sana_lab_token,readonly" \
             -e SANA_LAB_STATE_DIR=/lab-state -e SANA_LAB_BIND_HOST=0.0.0.0 \

@@ -55,6 +55,11 @@ formats = {
     "READ_ONLY": "{{.HostConfig.ReadonlyRootfs}}",
     "MOUNTS": "{{range .Mounts}}{{.Destination}}:{{.Type}}:{{.RW}};{{end}}",
     "NETWORK": "{{range $k,$v := .NetworkSettings.Networks}}{{$k}};{{end}}",
+    "NETWORK_MODE": "{{.HostConfig.NetworkMode}}",
+    "APPARMOR_PROFILE": "{{.AppArmorProfile}}",
+    "SECURITY_OPTIONS": "{{json .HostConfig.SecurityOpt}}",
+    "CAP_DROP": "{{json .HostConfig.CapDrop}}",
+    "CAP_ADD": "{{json .HostConfig.CapAdd}}",
     "PORT_BINDINGS": "{{json .HostConfig.PortBindings}}",
 }
 
@@ -212,6 +217,7 @@ def in_container_access():
             return "CONTAINER_ACCESS_CHECK=UNAVAILABLE"
         result = subprocess.run(
             ["docker", "run", "--rm", "--network", "none", "--read-only", "--user", "1000:1000",
+             "--security-opt", "no-new-privileges",
              "--mount", f"type=bind,src={state_source},dst=/lab-state",
              "--mount", f"type=bind,src={token_source},dst=/run/secrets/sana_lab_token,readonly",
              "--entrypoint", "/bin/sh",
@@ -400,6 +406,22 @@ print(f"MOUNTS={mounts(values['MOUNTS'])}")
 print(mount_metadata())
 print(in_container_access())
 print(f"NETWORK={enum(values['NETWORK'].rstrip(';'), {'n8n-ntga_default'})}")
+print(f"NETWORK_MODE={enum(values['NETWORK_MODE'], {'n8n-ntga_default', 'none'})}")
+print(f"APPARMOR_PROFILE={enum(values['APPARMOR_PROFILE'], {'docker-default', 'unconfined'})}")
+try:
+    security_options = json.loads(values['SECURITY_OPTIONS'])
+except (ValueError, TypeError):
+    security_options = None
+safe_security_options = {"no-new-privileges:true", "no-new-privileges"}
+print("SECURITY_OPTIONS=" + (",".join(item for item in security_options if item in safe_security_options)
+      if isinstance(security_options, list) and all(item in safe_security_options for item in security_options)
+      else "CUSTOM_REDACTED" if security_options else "NONE"))
+for key in ("CAP_DROP", "CAP_ADD"):
+    try:
+        capabilities = json.loads(values[key])
+    except (ValueError, TypeError):
+        capabilities = None
+    print(f"{key}=" + ("NONE" if capabilities == [] else "CUSTOM_REDACTED"))
 print(f"PUBLIC_PORTS={'NO' if values['PORT_BINDINGS'] in ('null', '{}') else 'YES'}")
 print("STARTUP_LOG_TAIL_SANITIZED_BEGIN")
 try:

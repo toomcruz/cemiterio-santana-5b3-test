@@ -63,6 +63,11 @@ if args[0] == "inspect":
         "{{.Config.User}}": "1000:1000",
         "{{range .Mounts}}{{.Destination}}:{{.Type}}:{{.RW}};{{end}}": "/lab-state:bind:true;/run/secrets/sana_lab_token:bind:false;",
         "{{range $k,$v := .NetworkSettings.Networks}}{{$k}};{{end}}": "n8n-ntga_default;",
+        "{{.HostConfig.NetworkMode}}": "n8n-ntga_default",
+        "{{.AppArmorProfile}}": "docker-default",
+        "{{json .HostConfig.SecurityOpt}}": '["no-new-privileges:true"]',
+        "{{json .HostConfig.CapDrop}}": "[]",
+        "{{json .HostConfig.CapAdd}}": "[]",
     }
     if fmt in fields:
         result(fields[fmt])
