@@ -16,7 +16,16 @@ if ! id "$account" >/dev/null 2>&1; then
 fi
 test "$(getent passwd "$account" | cut -d: -f6)" = "$home_dir" || { echo 'DEPLOY_ACCOUNT_HOME_MISMATCH' >&2; exit 2; }
 [[ " $(id -nG "$account") " != *' docker '* ]] || { echo 'DEPLOY_ACCOUNT_HAS_DOCKER_ACCESS' >&2; exit 2; }
-test "$(passwd -S "$account" | awk '{print $2}')" = L || { echo 'DEPLOY_ACCOUNT_PASSWORD_NOT_LOCKED' >&2; exit 2; }
+# OpenSSH can reject public-key access to an account whose shadow field is '!' or '!!'.
+# NP is an invalid password hash: key access works but password login cannot match it.
+shadow_marker=$(getent shadow "$account" | cut -d: -f2)
+if [[ $shadow_marker == '!' || $shadow_marker == '!!' ]]; then
+  usermod -p NP "$account"
+elif [[ $shadow_marker != NP ]]; then
+  echo 'DEPLOY_ACCOUNT_PASSWORD_MARKER_UNEXPECTED' >&2
+  exit 2
+fi
+test "$(getent shadow "$account" | cut -d: -f2)" = NP || { echo 'DEPLOY_ACCOUNT_PASSWORD_MARKER_INVALID' >&2; exit 2; }
 install -d -o root -g root -m 0755 /usr/local/libexec
 install -o root -g root -m 0755 sana-lab/ssh-dispatch.sh /usr/local/libexec/sana-lab-ssh-dispatch
 install -o root -g root -m 0755 sana-lab/deploy-entry.sh /usr/local/sbin/sana-lab-deploy-entry

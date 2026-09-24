@@ -33,7 +33,7 @@ Ao concluir, grava `/var/lib/sana-lab-deploy/active.txt` com commit, imagem, ima
    bash sana-lab/bootstrap-deploy-access.sh /caminho/privado/sana-lab-deploy.pub
    ```
 
-   `git status --porcelain` deve estar vazio; o SHA deve coincidir com o commit publicado. O bootstrap cria a conta sem senha `sana-lab-deploy`, instala **somente** a chave pública com `restrict` e forced command, e autoriza no sudo exclusivamente `/usr/local/sbin/sana-lab-deploy-entry`. Instala também uma cópia root-owned do script de deploy; o entrypoint rejeita releases que alterem esse script até uma nova revisão/bootstrap explícita. Ele não abre firewall, não cria serviço público nem executa deploy por si. A conta não entra no grupo `docker`.
+   `git status --porcelain` deve estar vazio; o SHA deve coincidir com o commit publicado. O bootstrap cria a conta `sana-lab-deploy` com marcador de senha inválido `NP` (permite chave pública, sem senha utilizável), instala **somente** a chave pública com `restrict` e forced command, e autoriza no sudo exclusivamente `/usr/local/sbin/sana-lab-deploy-entry`. Instala também uma cópia root-owned do script de deploy; o entrypoint rejeita releases que alterem esse script até uma nova revisão/bootstrap explícita. Ele não abre firewall, não cria serviço público nem executa deploy por si. A conta não entra no grupo `docker`.
 
 ## Acionamento, evidência e limites
 
