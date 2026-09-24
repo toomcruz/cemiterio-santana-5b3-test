@@ -76,6 +76,34 @@ jobs:
             --allow-env=SANTANA_CATALOGO_OFICIAL,SANTANA_REPO_ROOT,SANTANA_PERFIL_EXUMACAO \
             sana-lab/tests santana-conversation-domain/runtime/tests/official_journey_integration_test.ts
           python3 sana-lab/tests/deploy_automation_test.py
+      - name: Testar inicialização da imagem em container efêmero sem rede externa
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          image="sana-lab-smoke:${GITHUB_SHA:0:12}"
+          state="$RUNNER_TEMP/sana-lab-smoke-state"
+          token_file="$RUNNER_TEMP/sana-lab-smoke-token"
+          mkdir -m 0777 "$state"
+          printf 'synthetic-ci-only-token-0123456789-abcdef\n' > "$token_file"
+          chmod 0644 "$token_file"
+          docker build -f sana-lab/Dockerfile -t "$image" .
+          docker run -d --name sana-lab-smoke --network none --read-only --user 1000:1000 \
+            --mount "type=bind,src=$state,dst=/lab-state" \
+            --mount "type=bind,src=$token_file,dst=/run/secrets/sana_lab_token,readonly" \
+            -e SANA_LAB_STATE_DIR=/lab-state -e SANA_LAB_BIND_HOST=0.0.0.0 \
+            -e SANA_LAB_PORT=8765 -e SANA_LAB_TOKEN_FILE=/run/secrets/sana_lab_token \
+            "$image" >/dev/null
+          trap 'docker logs --tail 35 sana-lab-smoke 2>&1 || true; docker rm -f sana-lab-smoke >/dev/null 2>&1 || true' EXIT
+          ready=0
+          for attempt in {1..20}; do
+            if docker exec sana-lab-smoke deno eval \
+              'const r=await fetch("http://127.0.0.1:8765/lab/v1/turn",{method:"POST"}); if(r.status!==401)throw Error("UNEXPECTED_HTTP_"+r.status)' >/dev/null 2>&1; then
+              ready=1; break
+            fi
+            sleep 0.5
+          done
+          test "$ready" = 1 || { echo 'LAB_DOCKER_SMOKE_FAILED' >&2; exit 2; }
+          echo 'LAB_DOCKER_SMOKE_OK HTTP=401 PUBLIC_PORTS=NO'
 
   deploy:
     needs: validate
