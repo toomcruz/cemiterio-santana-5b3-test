@@ -24,18 +24,22 @@ export function sanitizeStartupError(error: Error): string {
   ]);
   const type = allowedTypes.has(error.name) ? error.name : "Error";
   const match = permission.exec(error.message);
-  const systemCall = syscall.exec(error.message)?.[1].toLowerCase();
-  const operation = match?.[1].toLowerCase() ??
+  const systemCallMatch = syscall.exec(error.message);
+  const systemCall = systemCallMatch?.[1]?.toLowerCase();
+  const permissionOperation = match?.[1]?.toLowerCase();
+  const operation = permissionOperation ??
     (systemCall && ["write", "writefile", "mkdir", "rename", "remove"].includes(systemCall) ? "write" :
       systemCall && ["read", "readfile"].includes(systemCall) ? "read" :
         systemCall && ["connect", "fetch", "resolve"].includes(systemCall) ? "net" : "unknown");
   const path = quotedPath.exec(error.message)?.[1];
-  const resource = match ? safeResource(match[2]) : path ? safeResource(path) : undefined;
+  const rawResource = match?.[2] ?? path;
+  const resource = rawResource ? safeResource(rawResource) : undefined;
   const frame = error.stack?.split("\n").map((line) => {
     const found = framePattern.exec(line);
     if (!found) return undefined;
-    const path = safeResource(found[1]);
-    return path + ":" + found[2] + (found[3] ? ":" + found[3] : "");
+    const framePath = found[1], lineNumber = found[2];
+    if (!framePath || !lineNumber) return undefined;
+    return safeResource(framePath) + ":" + lineNumber + (found[3] ? ":" + found[3] : "");
   }).find(Boolean);
   const osError = /permission denied\s+\(os error\s+(\d{1,3})\)/i.exec(error.message)?.[1];
   const message = match
