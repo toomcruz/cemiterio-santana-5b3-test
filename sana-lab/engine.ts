@@ -13,7 +13,7 @@ export class MemoryStore implements Store {
 export function emptyState(input: Input): CaseState {
   return { schema_version: SCHEMA_VERSION, case_id: input.case_id, conversation_id: input.conversation_id,
     revision: 0, family: "INDEFINIDO", phase: "ACTIVE", facts: {}, documents: {}, demand_queue: [], questions: [],
-    processed_ids: [], last_response: "", last_step: "NEW", operation_ids: [] };
+    processed_ids: [], history: [], last_response: "", last_step: "NEW", operation_ids: [] };
 }
 const normalize = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 function fact(v: string): Fact { return { value: v, origin: "CITIZEN" }; }
@@ -28,12 +28,13 @@ export async function handle(input: Input, store: Store, today = "2026-09-24"): 
   if (current.conversation_id !== input.conversation_id) throw Error("CASE_MISMATCH");
   if (input.current_state && input.current_state.revision !== current.revision) throw Error("STALE_STATE");
   const base = { schema_version: SCHEMA_VERSION, case_id: input.case_id, correlation_id: input.correlation_id };
-  if (current.processed_ids.includes(input.inbound_message_id)) return { ...base, action: "DUPLICATE", response: "", next_state: current, sources: [] };
+  if (current.processed_ids.includes(input.inbound_message_id)) return { ...base, action: "DUPLICATE", response: "", next_state: current, sources: [], authority: [] };
   const s: CaseState = structuredClone(current);
   const message = normalize(input.current_message);
   let action: Result["action"] = "ANSWER";
   let response = "";
   let sources: string[] = [];
+  const authority: Result["authority"] = [];
   let operation: Result["operation"];
   let human: Result["exception"];
   const family = input.interpretation.family === "INDEFINIDO" ? s.family : input.interpretation.family;
@@ -53,23 +54,38 @@ export async function handle(input: Input, store: Store, today = "2026-09-24"): 
       s.facts[k] = v;
     }
     if (input.interpretation.reference && !s.facts.reference) s.facts.reference = fact(input.interpretation.reference);
+    // Destino é fato declarado deste caso, nunca nova demanda OSSUARIO/TRANSLADO.
+    const destination = /\bossuario\b/.test(message) ? "OSSUARIO" :
+      /(?:outro cemiterio|traslad|levar para outro)/.test(message) ? "OUTRO_CEMITERIO" : "";
+    if (destination) {
+      const previous = s.facts.destination?.value;
+      s.facts.destination = fact(destination);
+      if (previous !== destination) s.history.push({ inbound_message_id: input.inbound_message_id, field: "destination", previous, current: destination, origin: "CITIZEN" });
+      authority.push({ topic: "DESTINATION", status: "CONFIRMED", reason: "Declaração do munícipe, sem confirmação operacional" });
+    }
     if (/(?:corrig|na verdade|retific)/.test(message)) {
       if (input.interpretation.reference) s.facts.reference = fact(input.interpretation.reference);
-      action = "ASK"; response = "Atualizei a referência declarada nesta simulação. Qual informação da exumação você quer corrigir ou completar?";
+      action = "ASK"; response = destination === "OUTRO_CEMITERIO"
+        ? "Atualizei o destino declarado para outro cemitério neste mesmo caso. Isso pode exigir regras de traslado ainda não verificadas. Qual é o cemitério de destino?"
+        : "Atualizei a referência declarada nesta simulação. Qual informação da exumação você quer corrigir ou completar?";
+      if (destination === "OUTRO_CEMITERIO") authority.push({ topic: "TRANSLADO_REGRAS", status: "UNKNOWN", reason: "Condições e documentos de destino externo não validados neste LAB" });
     } else if (/\b(?:disputa|briga|conflito|sem autorizacao)\b/.test(message)) {
       action = "EXCEPTION"; human = exception("DECISAO_ADMINISTRATIVA", "Conflito de autorização exige verificação", input.current_message);
+      authority.push({ topic: "AUTORIZACAO", status: "HUMAN_DECISION_REQUIRED", reason: "Conflito declarado entre responsáveis" });
       response = "Registrei a situação para análise nesta simulação. Não posso confirmar autorização para a exumação."; s.phase = "WAITING_TEAM";
-    } else if (/(?:preco|valor|custa|taxa)/.test(message)) {
+    } else if (/(?:preco|valor|custa|taxa|quanto fica)/.test(message)) {
       const price = await consultar("PRECO", { servico: "EXUMACAO" }, today);
       sources = [price.release_id, ...(price.source_id ? [price.source_id] : [])];
       if (price.status !== "NEEDS_CONTEXT") throw Error(`UNEXPECTED_PRICE_STATUS_${price.status}`);
       action = "ASK"; response = "O valor depende da modalidade da exumação. Você sabe se a sepultura é em terreno a prazo indeterminado, gaveta unitária a prazo fixo ou se a exumação será feita em ossuário? Não vou escolher uma tarifa pelo destino dos restos.";
+      authority.push({ topic: "PRECO", status: "CONDITIONAL", reason: "Modalidade tarifária não confirmada; destino não a determina" });
       s.phase = "WAITING_CITIZEN";
     } else if (/(?:document|foto|anexo)/.test(message) || (input.document_references?.length ?? 0) > 0) {
       for (const ref of input.document_references ?? []) s.documents[ref] = "RECEIVED_UNVERIFIED";
       const docs = await consultar("DOCUMENTOS", {}, today);
       sources = [docs.release_id, ...(docs.source_id ? [docs.source_id] : [])];
       action = "ASK"; response = "Registrei as referências dos arquivos nesta simulação, sem conferir o conteúdo. A lista de documentos depende do destino e de quem assina. Qual é o destino pretendido dos restos?";
+      authority.push({ topic: "DOCUMENTOS", status: "UNKNOWN", reason: "Referências recebidas sem verificação; lista aplicável não determinada" });
       s.phase = "WAITING_CITIZEN";
     } else if (input.interpretation.objective === "ACOMPANHAMENTO") {
       response = s.operation_ids.length ? `Há um registro simulado ${s.operation_ids.at(-1)} neste caso. Isso não indica aprovação nem agendamento.` : "Não encontrei operação simulada neste caso. Você tem alguma referência para identificar a solicitação?";
@@ -77,6 +93,10 @@ export async function handle(input: Input, store: Store, today = "2026-09-24"): 
     } else if (/(?:terminar atendimento|encerrar conversa|obrigad)/.test(message)) {
       response = "Concluí esta conversa informativa na simulação. Nenhum serviço físico ou pedido administrativo foi confirmado.";
       s.phase = "RESOLVED_GRACE";
+    } else if (destination && s.operation_ids.length) {
+      response = `Registrei ${destination === "OSSUARIO" ? "ossuário" : "outro cemitério"} como destino declarado no mesmo caso de exumação. A viabilidade e as condições ainda precisam de fonte aplicável; não abri outra demanda.`;
+      action = "ANSWER";
+      authority.push({ topic: "VIABILIDADE_DESTINO", status: "UNKNOWN", reason: "Destino informado não comprova disponibilidade ou autorização" });
     } else if (input.interpretation.objective === "INFORMACAO") {
       response = "A exumação requer agendamento prévio. Posso orientar a próxima etapa conforme o caso; o pedido de data não confirma agendamento.";
       sources = ["docs/regras-operacionais-n8n.md@main:sha3a912f4"];
@@ -100,5 +120,5 @@ export async function handle(input: Input, store: Store, today = "2026-09-24"): 
   store.commit(s, current.revision);
   const reread = store.read(input.case_id)!;
   if (operation) operation.confirmed_by_readback = reread.operation_ids.includes(operation.id);
-  return { ...base, action, response, next_state: reread, sources, ...(operation && { operation }), ...(human && { exception: human }) };
+  return { ...base, action, response, next_state: reread, sources, authority, ...(operation && { operation }), ...(human && { exception: human }) };
 }
