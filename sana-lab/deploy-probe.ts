@@ -17,7 +17,12 @@ const reply = await fetch(endpoint, {
   method: "POST", headers: { "authorization": `Bearer ${token}`, "content-type": "application/json" },
   body: JSON.stringify(request),
 });
-if (reply.status !== 200) throw Error(`LAB_PROBE_HTTP_${reply.status}`);
+if (reply.status !== 200) {
+  const failure = await reply.json().catch(() => null);
+  const reason = failure?.error === "LAB_STARTUP_FAILED" && /^[A-Z][A-Z0-9_]{2,64}$/.test(failure.code)
+    ? `_STARTUP_${failure.code}` : "";
+  throw Error(`LAB_PROBE_HTTP_${reply.status}${reason}`);
+}
 const body = await reply.json();
 if (body.contract_version !== "sana-lab-bridge/1" || body.case_id !== caseId ||
     body.module !== "EXUMACAO" || body.evidence?.engine_called !== true ||

@@ -100,9 +100,12 @@ jobs:
               'const r=await fetch("http://127.0.0.1:8765/lab/v1/turn",{method:"POST"}); if(r.status!==401)throw Error("UNEXPECTED_HTTP_"+r.status)' >/dev/null 2>&1; then
               ready=1; break
             fi
+            if (( attempt == 20 )); then break; fi
             sleep 0.5
           done
           test "$ready" = 1 || { echo 'LAB_DOCKER_SMOKE_FAILED' >&2; exit 2; }
+          docker exec sana-lab-smoke deno run --allow-read=/run/secrets/sana_lab_token --allow-net=127.0.0.1:8765 \
+            /app/sana-lab/deploy-probe.ts "$GITHUB_SHA"
           echo 'LAB_DOCKER_SMOKE_OK HTTP=401 PUBLIC_PORTS=NO'
 
   deploy:

@@ -91,7 +91,7 @@ export function createBridgeHandler(store: Store, token: string) {
   };
 }
 
-if (import.meta.main) {
+export function serveLabBridge(): void {
   const tokenFile = Deno.env.get("SANA_LAB_TOKEN_FILE") ?? "";
   const token = tokenFile ? Deno.readTextFileSync(tokenFile).trim() : (Deno.env.get("SANA_LAB_TOKEN") ?? "");
   const root = Deno.env.get("SANA_LAB_STATE_DIR") ?? "";
@@ -104,3 +104,5 @@ if (import.meta.main) {
   // 0.0.0.0 is allowed only inside a container with no published host port.
   Deno.serve({ hostname: host, port }, handler);
 }
+
+if (import.meta.main) serveLabBridge();
