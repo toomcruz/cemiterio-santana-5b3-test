@@ -1,13 +1,24 @@
 /** Technical startup guard for the SAME private bridge; never substitutes business logic. */
 import { sanitizeStartupError } from "./startup_diagnostic.ts";
 
+let startupErrorReported = false;
+function reportStartupError(cause: unknown) {
+  if (startupErrorReported) return;
+  startupErrorReported = true;
+  const error = cause instanceof Error ? cause : Error("UNKNOWN_STARTUP_FAILURE");
+  console.error(sanitizeStartupError(error));
+}
+
+addEventListener("error", (event) => reportStartupError(event.error));
+addEventListener("unhandledrejection", (event) => reportStartupError(event.reason));
+
 if (import.meta.main) {
   try {
     const { serveLabBridge } = await import("./bridge.ts");
     serveLabBridge();
   } catch (cause) {
     const error = cause instanceof Error ? cause : Error("UNKNOWN_STARTUP_FAILURE");
-    console.error(sanitizeStartupError(error));
+    reportStartupError(error);
     const code = /^[A-Z][A-Z0-9_]{2,64}$/.test(error.message) ? error.message :
       error.name === "NotCapable" ? "NOT_CAPABLE" :
       error.name === "PermissionDenied" ? "PERMISSION_DENIED" : "STARTUP_FAILURE";
