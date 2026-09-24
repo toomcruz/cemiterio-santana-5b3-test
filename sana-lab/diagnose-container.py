@@ -186,6 +186,39 @@ def mount_metadata():
     return " ".join(result)
 
 
+def in_container_access():
+    """Check metadata/access bits as the configured user; never read contents."""
+    script = (
+        "printf 'RUNTIME_UID=%s RUNTIME_GID=%s\\n' \"$(id -u)\" \"$(id -g)\"; "
+        "for p in /lab-state /run/secrets/sana_lab_token /deno-dir; do "
+        "if [ -e \"$p\" ]; then "
+        "stat -c 'ACCESS_PATH=%n ACCESS_UID=%u ACCESS_GID=%g ACCESS_MODE=%a' \"$p\"; "
+        "for op in read write exec; do "
+        "if [ \"$op\" = read ]; then test -r \"$p\"; "
+        "elif [ \"$op\" = write ]; then test -w \"$p\"; else test -x \"$p\"; fi; "
+        "rc=$?; printf 'ACCESS_CHECK_PATH=%s ACCESS_OP=%s ACCESS_RESULT=%s\\n' \"$p\" \"$op\" \"$( [ \"$rc\" -eq 0 ] && echo YES || echo NO )\"; "
+        "done; else printf 'ACCESS_PATH=%s ACCESS_RESULT=MISSING\\n' \"$p\"; fi; done"
+    )
+    try:
+        result = subprocess.run(["docker", "exec", name, "/bin/sh", "-c", script],
+                                capture_output=True, text=True, timeout=5, check=False)
+    except (subprocess.SubprocessError, OSError):
+        return "CONTAINER_ACCESS_CHECK=UNAVAILABLE"
+    if result.returncode:
+        return "CONTAINER_ACCESS_CHECK=UNAVAILABLE"
+    output = []
+    patterns = (
+        r"RUNTIME_UID=[0-9]{1,10} RUNTIME_GID=[0-9]{1,10}",
+        r"ACCESS_PATH=(?:/lab-state|/run/secrets/sana_lab_token|/deno-dir) ACCESS_UID=[0-9]{1,10} ACCESS_GID=[0-9]{1,10} ACCESS_MODE=[0-7]{3,4}",
+        r"ACCESS_CHECK_PATH=(?:/lab-state|/run/secrets/sana_lab_token|/deno-dir) ACCESS_OP=(?:read|write|exec) ACCESS_RESULT=(?:YES|NO)",
+        r"ACCESS_PATH=(?:/lab-state|/run/secrets/sana_lab_token|/deno-dir) ACCESS_RESULT=MISSING",
+    )
+    for line in result.stdout.splitlines():
+        if any(re.fullmatch(pattern, line) for pattern in patterns):
+            output.append(line)
+    return " ".join(output) if output else "CONTAINER_ACCESS_CHECK=UNAVAILABLE"
+
+
 error_types = re.compile(
     r"\b(NotCapable|PermissionDenied|TypeError|SyntaxError|ReferenceError|"
     r"ModuleNotFound|InvalidData|NotFound|EACCES|ENOENT|OOM|Error)\b"
@@ -349,6 +382,7 @@ print(f"USER={enum(values['USER'], {'1000:1000', '1000', 'deno'})}")
 print(f"READ_ONLY={enum(values['READ_ONLY'], {'true', 'false'})}")
 print(f"MOUNTS={mounts(values['MOUNTS'])}")
 print(mount_metadata())
+print(in_container_access())
 print(f"NETWORK={enum(values['NETWORK'].rstrip(';'), {'n8n-ntga_default'})}")
 print(f"PUBLIC_PORTS={'NO' if values['PORT_BINDINGS'] in ('null', '{}') else 'YES'}")
 print("STARTUP_LOG_TAIL_SANITIZED_BEGIN")
