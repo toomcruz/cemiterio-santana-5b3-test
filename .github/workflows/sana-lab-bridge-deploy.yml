@@ -1,0 +1,117 @@
+name: SANA LAB — deploy bridge privada
+
+on:
+  push:
+    branches: [sana-lab-exumacao-f0-f2]
+    paths:
+      - .github/workflows/sana-lab-bridge-deploy.yml
+      - deno.json
+      - sana-lab/**
+      - santana-authority/**
+      - santana-authority-gateway/**
+      - santana-conversation-domain/**
+      - conformidade/**
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: Commit completo (deve ser o HEAD da branch LAB)
+        required: true
+        type: string
+      mode:
+        description: Deploy normal ou prova controlada de rollback LAB
+        required: true
+        type: choice
+        options: [deploy, rollback-test]
+        default: deploy
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sana-lab-bridge-deploy
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.ref == 'refs/heads/sana-lab-exumacao-f0-f2'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    outputs:
+      target_sha: ${{ steps.commit.outputs.target_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fixar commit da branch LAB
+        id: commit
+        shell: bash
+        env:
+          REQUESTED_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.commit_sha || github.sha }}
+        run: |
+          set -Eeuo pipefail
+          [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$REQUESTED_SHA"
+          echo "target_sha=$REQUESTED_SHA" >> "$GITHUB_OUTPUT"
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.1.4
+      - name: Testar engine, ponte e procedimento de deploy LAB
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          bash -n sana-lab/deploy-functional-gate.sh sana-lab/ssh-dispatch.sh \
+            sana-lab/deploy-entry.sh sana-lab/bootstrap-deploy-access.sh
+          deno check sana-lab/deploy-probe.ts
+          deno test --allow-read --allow-write --allow-net \
+            --allow-env=SANTANA_CATALOGO_OFICIAL,SANTANA_REPO_ROOT,SANTANA_PERFIL_EXUMACAO \
+            sana-lab/tests santana-conversation-domain/runtime/tests/official_journey_integration_test.ts
+          python3 sana-lab/tests/deploy_automation_test.py
+
+  deploy:
+    needs: validate
+    if: github.ref == 'refs/heads/sana-lab-exumacao-f0-f2'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: sana-lab
+    env:
+      TARGET_SHA: ${{ needs.validate.outputs.target_sha }}
+      MODE: ${{ inputs.mode || 'deploy' }}
+      DEPLOY_HOST: ${{ vars.SANA_LAB_DEPLOY_HOST }}
+      DEPLOY_USER: ${{ vars.SANA_LAB_DEPLOY_USER }}
+      SSH_KEY: ${{ secrets.SANA_LAB_DEPLOY_SSH_KEY }}
+      SSH_KNOWN_HOSTS: ${{ secrets.SANA_LAB_SSH_KNOWN_HOSTS }}
+    steps:
+      - name: Verificar configuração isolada de acesso
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$MODE" == deploy || "$MODE" == rollback-test ]]
+          [[ "$DEPLOY_HOST" =~ ^[A-Za-z0-9][A-Za-z0-9.-]+$ ]]
+          test "$DEPLOY_USER" = sana-lab-deploy
+          test -n "$SSH_KEY" || { echo 'SANA_LAB_DEPLOY_SSH_KEY_MISSING' >&2; exit 2; }
+          test -n "$SSH_KNOWN_HOSTS" || { echo 'SANA_LAB_SSH_KNOWN_HOSTS_MISSING' >&2; exit 2; }
+      - name: Implantar apenas bridge privada e confirmar resultado
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          key="$RUNNER_TEMP/sana-lab-deploy-key"
+          known="$RUNNER_TEMP/sana-lab-known-hosts"
+          log="$RUNNER_TEMP/sana-lab-deploy-result"
+          trap 'rm -f "$key" "$known"' EXIT
+          printf '%s\n' "$SSH_KEY" > "$key"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$known"
+          ssh-keygen -F "$DEPLOY_HOST" -f "$known" >/dev/null || {
+            echo 'PINNED_HOST_KEY_MISSING' >&2; exit 2;
+          }
+          ssh -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o "UserKnownHostsFile=$known" -o ConnectTimeout=15 \
+            -o ServerAliveInterval=10 -o ServerAliveCountMax=3 -i "$key" \
+            "$DEPLOY_USER@$DEPLOY_HOST" "$MODE $TARGET_SHA" | tee "$log"
+          if [[ "$MODE" == deploy ]]; then
+            grep -Fq "DEPLOY_OK COMMIT=$TARGET_SHA " "$log"
+          else
+            grep -Fq 'ROLLBACK_CONFIRMED=YES ' "$log"
+            ! grep -Fq 'DEPLOY_OK ' "$log"
+          fi
