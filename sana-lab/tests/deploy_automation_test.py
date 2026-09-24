@@ -37,8 +37,10 @@ class DeployTest(unittest.TestCase):
         git.chmod(0o700)
         state_dir = self.root / "lab-state"
         state_dir.mkdir()
+        state_dir.chmod(0o777)
         secret = self.root / "token-placeholder"
         secret.touch()
+        secret.chmod(0o644)
         self.state_path = self.root / "state.json"
         self.old_state = {
             "images": {}, "state_mount": str(state_dir), "secret_mount": str(secret),
@@ -103,6 +105,8 @@ class DeployTest(unittest.TestCase):
         self.assertIn("CONTAINER_RESTART_COUNT=3", result.stdout)
         self.assertIn("CONTAINER_OOM_KILLED=false", result.stdout)
         self.assertIn("PUBLIC_PORTS=NO", result.stdout)
+        self.assertIn("LAB_STATE_USER_1000_WRITE_EXECUTE=YES", result.stdout)
+        self.assertIn("TOKEN_USER_1000_READ=YES", result.stdout)
         self.assertIn("ENTRYPOINT=/tini,--,deno", result.stdout)
         self.assertIn("CMD=run,READ=/app/santana-authority,/app/santana-conversation-domain,/app/conformidade,/lab-state,/run/secrets/<redacted>,WRITE=/lab-state,NET=0.0.0.0:8765,ENV=SANA_LAB_TOKEN_FILE,SANTANA_REPO_ROOT,APP_SCRIPT=sana-lab/start.ts,ARG_REDACTED", result.stdout)
         self.assertIn("ERROR_TYPE=NotCapable", result.stdout)

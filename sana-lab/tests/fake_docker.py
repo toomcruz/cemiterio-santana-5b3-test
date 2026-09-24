@@ -70,6 +70,11 @@ if args[0] == "inspect":
         result(container.get("commit", "<no value>"))
     if ".Config.Env" in fmt:
         result("yes")
+    if fmt == "{{json .Mounts}}":
+        result(json.dumps([
+            {"Destination": "/lab-state", "Source": state["state_mount"]},
+            {"Destination": "/run/secrets/sana_lab_token", "Source": state["secret_mount"]},
+        ]))
     if ".Mounts" in fmt:
         if "/lab-state" in fmt:
             result("true" if ".RW" in fmt else state["state_mount"])

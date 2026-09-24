@@ -5,7 +5,9 @@ Invoked by the reviewed, root-owned deploy procedure before removing a failed
 LAB container. Never print a raw log line, Docker error or host mount source.
 """
 import json
+import os
 import re
+import stat
 import subprocess
 import sys
 
@@ -137,6 +139,51 @@ def mounts(value):
         target = target if target in allowed else "OTHER_REDACTED"
         entries.append(f"{target}:{enum(kind, {'bind', 'volume', 'tmpfs'})}:{enum(rw, {'true', 'false'})}")
     return ",".join(entries) if entries else "NONE"
+
+
+def user_1000_access(metadata, required):
+    try:
+        mode = stat.S_IMODE(metadata.st_mode)
+        if metadata.st_uid == 1000:
+            bits = (mode >> 6) & 0b111
+        elif metadata.st_gid == 1000:
+            bits = (mode >> 3) & 0b111
+        else:
+            bits = mode & 0b111
+        return (bits & required) == required
+    except (AttributeError, OSError):
+        return False
+
+
+def mount_metadata():
+    """Stat only the two configured mount roots/files; never read their content or print host paths."""
+    try:
+        raw = docker("inspect", name, "--format", "{{json .Mounts}}")
+        entries = json.loads(raw)
+        destinations = {item.get("Destination"): item.get("Source")
+                        for item in entries if isinstance(item, dict)}
+    except (subprocess.SubprocessError, OSError, ValueError, TypeError):
+        return "LAB_STATE_UID_GID=UNKNOWN LAB_STATE_MODE=UNKNOWN LAB_STATE_USER_1000_WRITE_EXECUTE=UNKNOWN TOKEN_UID_GID=UNKNOWN TOKEN_MODE=UNKNOWN TOKEN_USER_1000_READ=UNKNOWN"
+
+    result = []
+    for destination, label, required in (
+        ("/lab-state", "LAB_STATE", 0b011),
+        ("/run/secrets/sana_lab_token", "TOKEN", 0b100),
+    ):
+        host_source = destinations.get(destination)
+        try:
+            metadata = os.stat(host_source) if isinstance(host_source, str) else None
+            if metadata is None:
+                raise OSError("mount missing")
+            uid_gid = f"{metadata.st_uid}:{metadata.st_gid}"
+            mode = f"{stat.S_IMODE(metadata.st_mode):04o}"
+            access_ok = user_1000_access(metadata, required)
+            result.extend((f"{label}_UID_GID={uid_gid}", f"{label}_MODE={mode}",
+                           f"{label}_USER_1000_{'WRITE_EXECUTE' if label == 'LAB_STATE' else 'READ'}={'YES' if access_ok else 'NO'}"))
+        except OSError:
+            result.extend((f"{label}_UID_GID=UNAVAILABLE", f"{label}_MODE=UNAVAILABLE",
+                           f"{label}_USER_1000_{'WRITE_EXECUTE' if label == 'LAB_STATE' else 'READ'}=NO"))
+    return " ".join(result)
 
 
 error_types = re.compile(
@@ -301,6 +348,7 @@ print(f"ENTRYPOINT={executable(values['ENTRYPOINT'])}")
 print(f"USER={enum(values['USER'], {'1000:1000', '1000', 'deno'})}")
 print(f"READ_ONLY={enum(values['READ_ONLY'], {'true', 'false'})}")
 print(f"MOUNTS={mounts(values['MOUNTS'])}")
+print(mount_metadata())
 print(f"NETWORK={enum(values['NETWORK'].rstrip(';'), {'n8n-ntga_default'})}")
 print(f"PUBLIC_PORTS={'NO' if values['PORT_BINDINGS'] in ('null', '{}') else 'YES'}")
 print("STARTUP_LOG_TAIL_SANITIZED_BEGIN")
