@@ -1,0 +1,31 @@
+# Only use after inspecting the live n8n Docker network and confirming its name.
+services:
+  sana-lab-bridge:
+    build:
+      context: ..
+      dockerfile: sana-lab/Dockerfile
+    image: sana-lab-bridge:8924ac8
+    container_name: sana-lab-bridge
+    hostname: sana-lab-bridge
+    restart: unless-stopped
+    read_only: true
+    user: "1000:1000"
+    environment:
+      SANA_LAB_STATE_DIR: /lab-state
+      SANA_LAB_BIND_HOST: 0.0.0.0
+      SANA_LAB_PORT: "8765"
+      SANA_LAB_TOKEN_FILE: /run/secrets/sana_lab_token
+    secrets:
+      - sana_lab_token
+    volumes:
+      - ${SANA_LAB_STATE_DIR_HOST:?create_private_lab_state_directory_on_host}:/lab-state
+    networks:
+      - n8n_internal
+    # Intentionally no ports: host port remains closed.
+networks:
+  n8n_internal:
+    external: true
+    name: ${SANA_N8N_DOCKER_NETWORK:?inspect_live_n8n_network_first}
+secrets:
+  sana_lab_token:
+    file: ${SANA_LAB_TOKEN_FILE_HOST:?create_lab_only_secret_file_on_host}
