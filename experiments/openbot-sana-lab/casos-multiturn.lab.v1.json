@@ -1,0 +1,289 @@
+{
+  "schema": "santana.openbot.lab.cases.v1",
+  "versao": "1.0.0",
+  "status": "CASOS_A_EXECUTAR_NAO_SAO_TESTES_APROVADOS",
+  "referencia": "experiments/openbot-sana-lab/regras-operacionais.lab.v1.json",
+  "metodo": "Agente Munícipe de Teste envia mensagens uma por vez para a Sana por comunicação entre agentes. Transcrever cada resposta efetivamente gerada, capturar IDs/erros e avaliar. Resposta de outro agente só é prova de atendimento simulado, não de WhatsApp nem do runtime de produção.",
+  "regra_de_resultado": "PASS apenas com transcrição real e evidência; sem execução deve ficar NOT_RUN. Não inventar resposta nem avaliar apenas roteiro.",
+  "cenarios": [
+    {
+      "id": "S01",
+      "nome": "Exumação Quadra Geral e aluguel",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Boa tarde, quero fazer a exumação do meu pai. Quanto custa?",
+        "Ele está sepultado na Quadra Geral.",
+        "Quero saber também sobre o aluguel de ossuário."
+      ],
+      "esperado": [
+        "Não exigir parentesco apenas para informar o preço",
+        "Quando Quadra Geral conhecida, informar R$ 350,00 (referência operacional LAB)",
+        "Ao pedir aluguel, informar R$ 386,65 por cinco anos sem negar informação conhecida",
+        "Manter o contexto do pai e da modalidade"
+      ],
+      "proibido": [
+        "Repetir em cada turno que a Administração precisa confirmar o valor",
+        "Confundir 'exumação de ossuário' com destino ao ossuário"
+      ]
+    },
+    {
+      "id": "S02",
+      "nome": "Modalidade indefinida",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Olá, qual é o valor da exumação?"
+      ],
+      "esperado": [
+        "Esclarecer que Quadra Geral e jazigo particular são diferentes",
+        "Se não houver modalidade, perguntar apenas essa informação ou apresentar alternativas corretamente"
+      ],
+      "proibido": [
+        "Exigir nome, parentesco e documentos antes de explicar valores"
+      ]
+    },
+    {
+      "id": "S03",
+      "nome": "Jazigo particular",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Preciso de exumação em jazigo particular. Quanto custa?"
+      ],
+      "esperado": [
+        "Informar R$ 836,65 para urna com exumação (referência operacional LAB)",
+        "Só falar de translado se solicitado"
+      ],
+      "proibido": [
+        "Incluir automaticamente aluguel de ossuário e compra de ossuário",
+        "Informar valor da Quadra Geral como se fosse jazigo particular"
+      ]
+    },
+    {
+      "id": "S04",
+      "nome": "Compra de ossuário",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Quanto custa comprar um ossuário perpétuo?"
+      ],
+      "esperado": [
+        "Informar R$ 2.955,00 como referência operacional LAB sem exigir triagem"
+      ],
+      "proibido": [
+        "Somar aluguel ou exumação automaticamente"
+      ]
+    },
+    {
+      "id": "S05",
+      "nome": "Escolha explícita e total",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Quero exumar da Quadra Geral.",
+        "Escolho o aluguel de ossuário.",
+        "Qual é o total das duas etapas?"
+      ],
+      "esperado": [
+        "Usar exumação Quadra Geral e aluguel, sem compra",
+        "Somar apenas após a opção ter sido escolhida e após pedido explícito de total",
+        "Não somar taxa semi-intacto automaticamente"
+      ],
+      "proibido": [
+        "Cobrar simultaneamente aluguel e compra de ossuário"
+      ]
+    },
+    {
+      "id": "S06",
+      "nome": "Documentos objetivos",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Quais documentos preciso para exumação na Quadra Geral?"
+      ],
+      "esperado": [
+        "Orientar inicialmente certidão de óbito, RG/CPF e comprovante de residência do responsável",
+        "Informar que revisão de documentos cabe à equipe humana",
+        "Não exigir triagem ou validação de cada foto para responder à dúvida"
+      ],
+      "proibido": [
+        "Dizer que todos os documentos enviados estão válidos sem conferência"
+      ]
+    },
+    {
+      "id": "S07",
+      "nome": "Parentesco na Quadra Geral",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Quero solicitar a exumação da minha mãe.",
+        "Sou filho dela."
+      ],
+      "esperado": [
+        "Perguntar parentesco somente se faltante e necessário para solicitação",
+        "Reconhecer a informação de filho sem repetir pergunta"
+      ],
+      "proibido": [
+        "Confundir com as assinaturas do jazigo particular",
+        "Declarar autorização administrativa já concedida"
+      ]
+    },
+    {
+      "id": "S08",
+      "nome": "Autorização em jazigo familiar",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Quero fazer exumação no jazigo da família.",
+        "O marido dela está vivo."
+      ],
+      "esperado": [
+        "Distinguir cônjuge sobrevivente e responsável pelo jazigo conforme contrato oficial",
+        "Encaminhar a verificação administrativa da autorização, sem bloquear dúvidas simples"
+      ],
+      "proibido": [
+        "Afirmar que autorização já foi assinada",
+        "Aplicar automaticamente comunicado simplificado da Quadra Geral"
+      ]
+    },
+    {
+      "id": "S09",
+      "nome": "Local do jazigo desconhecido",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Preciso localizar o jazigo mas não sei a quadra nem o número.",
+        "Sei o nome da minha avó."
+      ],
+      "esperado": [
+        "Registrar referência do jazigo como indisponível",
+        "Perguntar nome completo de algum(a) falecido(a) sepultado(a) no jazigo",
+        "Não repetir pergunta de local"
+      ],
+      "proibido": [
+        "Inventar localização"
+      ]
+    },
+    {
+      "id": "S10",
+      "nome": "Recadastro com referência ausente",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Preciso fazer o recadastro do jazigo.",
+        "Não sei o número do jazigo."
+      ],
+      "esperado": [
+        "Pedir nome completo de algum(a) falecido(a) sepultado(a) no jazigo",
+        "Diferenciar coleta de dados de confirmação de recadastro"
+      ],
+      "proibido": [
+        "Afirmar que recadastro ficou concluído",
+        "Repetir identificação do jazigo depois de resposta desconhecida"
+      ]
+    },
+    {
+      "id": "S11",
+      "nome": "Correção de nome",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Minha mãe se chama Marina Silva.",
+        "Desculpe, é Maria Silva, não Marina.",
+        "Que nome você registrou?"
+      ],
+      "esperado": [
+        "Usar Maria Silva depois da correção dentro desse caso",
+        "Não restabelecer Marina Silva"
+      ],
+      "proibido": [
+        "Repetir pergunta do nome já corrigido"
+      ]
+    },
+    {
+      "id": "S12",
+      "nome": "Correção de modalidade",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "É exumação em jazigo particular.",
+        "Corrigindo: é na Quadra Geral.",
+        "E quanto custa?"
+      ],
+      "esperado": [
+        "Corrigir modalidade do próprio caso",
+        "Usar referência R$ 350,00 da Quadra Geral e não R$ 836,65"
+      ],
+      "proibido": [
+        "Manter preço da modalidade anterior"
+      ]
+    },
+    {
+      "id": "S13",
+      "nome": "Condição semi-intacta",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Como funciona exumação na Quadra Geral? E se estiver semi-intacto?"
+      ],
+      "esperado": [
+        "Explicar que a condição pode alterar o procedimento, não é certa antecipadamente",
+        "Informar referência operacional LAB R$ 1.427,00 quando especificamente perguntado"
+      ],
+      "proibido": [
+        "Somar automaticamente à exumação básica",
+        "Afirmar resultado do procedimento antes da avaliação"
+      ]
+    },
+    {
+      "id": "S14",
+      "nome": "Intervenção humana",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Quero falar com uma pessoa sobre autorização de exumação."
+      ],
+      "esperado": [
+        "Oferecer revisão humana de forma natural",
+        "Não alegar protocolo/encaminhamento criado sem recibo"
+      ],
+      "proibido": [
+        "Prometer agendamento, autorização ou prazo como já confirmado"
+      ]
+    },
+    {
+      "id": "S15",
+      "nome": "Sem duplicidade de entrada",
+      "modo": "RUNTIME_INTEGRACAO_PENDENTE",
+      "turnos": [
+        "Mensagem simulada com mesmo external_message_id entregue duas vezes."
+      ],
+      "esperado": [
+        "O runtime registra apenas um evento lógico e não dispara duas respostas"
+      ],
+      "proibido": [
+        "Declarar PASS com teste apenas de prompt"
+      ]
+    },
+    {
+      "id": "S16",
+      "nome": "Isolamento de dois munícipes",
+      "modo": "RUNTIME_INTEGRACAO_PENDENTE",
+      "turnos": [
+        "Contato fictício A informa jazigo particular.",
+        "Contato fictício B informa Quadra Geral.",
+        "Contato fictício A pergunta valor."
+      ],
+      "esperado": [
+        "A responde com modalidade própria sem herdar dado do contato B",
+        "Threads/sessões distintas e IDs persistidos"
+      ],
+      "proibido": [
+        "Declarar PASS em um único chat comum entre agentes"
+      ]
+    },
+    {
+      "id": "S17",
+      "nome": "Assumido por humano",
+      "modo": "RUNTIME_INTEGRACAO_PENDENTE",
+      "turnos": [
+        "A equipe assume a conversa fictícia.",
+        "Nova mensagem fictícia chega para o mesmo contato."
+      ],
+      "esperado": [
+        "A Sana não envia resposta após manual_takeover"
+      ],
+      "proibido": [
+        "Sana e atendente respondendo ao mesmo tempo"
+      ]
+    }
+  ],
+  "resultados": []
+}
