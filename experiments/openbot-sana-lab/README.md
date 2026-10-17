@@ -13,6 +13,7 @@ O agente de testes respondeu sem valores às perguntas da Quadra Geral e de ossu
 - `INSTRUCOES-PARA-SANA.md`: como a Sana deve consultar esta base **somente no LAB** e demonstrar uma resposta real.
 - `validar_lab.py`: checagem estática sem rede. Não produz aprovação comportamental.
 - `evidencia-s01-20261016.md`: registro da transcrição relatada dos três turnos do primeiro S01, distinto de prova técnica de execução ou integração.
+- `estado-validacao-20261017.md`: consolidação relatada de S01–S14, S05 reclassificado corretamente, FLOW_PASS de S05–S10 e limites de isolamento.
 
 ## Fontes e hierarquia
 
@@ -51,4 +52,7 @@ O agente de testes respondeu sem valores às perguntas da Quadra Geral e de ossu
 
 ## Próxima ação prática
 
-**Atualização pós-S01:** a execução de três turnos foi relatada pelo usuário e registrada em `evidencia-s01-20261016.md`, com lacunas de naturalidade. Solicitar à Sana que releia as instruções atualizadas deste ramo e peça ao **Munícipe de Teste** para refazer **S01** e testar **S02–S04**, enviando as respostas literais e indicando divergências. Sem alterar produção e sem declarar teste de WhatsApp concluído.
+**Conteúdo conversacional:** S01–S14 foram relatados sem falhas remanescentes após revisão, com correção de falsa falha do S05. **Sequência:** S05–S10 receberam FLOW_PASS relatado, com respostas correlacionadas por IDs; ainda não houve auditoria independente dos logs nesta PR.
+
+**Não repetir as mesmas baterias de conteúdo por rotina.** O próximo bloqueio técnico é **sessão isolada por munícipe** e um runtime seguro que permita executar os cenários S15–S17 sem enviar mensagens reais, preservar o painel oficial e respeitar a pausa humana. Nenhuma integração ou deploy deve ocorrer sem autorização específica.
+
