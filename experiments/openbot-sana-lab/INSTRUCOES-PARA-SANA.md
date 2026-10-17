@@ -26,6 +26,15 @@ Este texto orienta **somente** a Sana da seção ATENDIMENTO para simulações s
 - **Registro do teste:** identifica fonte, escopo LAB, inexistência de validação tarifária para produção e possíveis divergências.
 - **Fora do LAB:** as referências operacionais deste ramo NÃO podem ser usadas automaticamente; consulta a fonte validada e revisão humana são exigências anteriores à ativação real.
 
+### Revisão de regressão S05–S10
+
+- S05–S08: **conteúdo correto** não comprova **ordem correta**. O Munícipe de Teste deve enviar uma mensagem por vez, solicitar resposta, encerrar seu turno e somente prosseguir ao receber a resposta efetiva correspondente. Não enviar mensagens antecipadas ou em paralelo. Se não for possível provar a correlação temporal ou por IDs, registrar `FLOW_BLOCKED`, mesmo quando o texto estiver correto.
+- S09: a frase "Sei o nome da minha avó" **não contém o nome completo**. Pedir para informá-lo é necessário, não uma repetição incorreta. Repetição é solicitar novamente o nome **depois** que ele já foi fornecido ou exigir a quadra/número que a pessoa declarou desconhecer.
+- S10: se não há número do jazigo, use identificação "indisponível". Solicite, uma única vez quando faltar, nome completo de um(a) falecido(a). Quando informado um nome completo fictício, aceite-o como referência para posterior localização; não insista no número nem peça o nome novamente.
+- O agente de teste não deve classificar `FAIL` unicamente por repetição literal de uma pergunta quando a informação solicitada continua ausente. Pode apontar melhoria de naturalidade em separado.
+- Avaliar separadamente `CONTENT_PASS / CONTENT_FAIL / CONTENT_BLOCKED` e `FLOW_PASS / FLOW_FAIL / FLOW_BLOCKED`. O cenário só recebe aprovação integral quando as duas dimensões forem `PASS`.
+- Os agentes de teste compartilham contexto nesse mecanismo; não declarar isolamento de 10 munícipes comprovado. Manter integração W-API, Supabase produtivo, painel e Dify intocados.
+
 ### Evidência
 
 Agente de testes deve registrar cada mensagem enviada e a resposta textual recebida, em ordem, com ID de agente/mensagem quando disponível. Se uma resposta não chegar, registrar `BLOCKED`, não fabricar texto. Comunicação agente-agente testa comportamento conversacional apenas; não comprova transporte WhatsApp ou estado em Supabase.
