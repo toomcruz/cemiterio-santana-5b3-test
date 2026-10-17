@@ -1,6 +1,6 @@
 {
   "schema": "santana.openbot.lab.cases.v1",
-  "versao": "1.0.2",
+  "versao": "1.0.3",
   "status": "CASOS_A_EXECUTAR_NAO_SAO_TESTES_APROVADOS",
   "referencia": "experiments/openbot-sana-lab/regras-operacionais.lab.v1.json",
   "metodo": "Agente Munícipe de Teste envia mensagens uma por vez para a Sana por comunicação entre agentes. Transcrever cada resposta efetivamente gerada, capturar IDs/erros e avaliar. Resposta de outro agente só é prova de atendimento simulado, não de WhatsApp nem do runtime de produção.",
@@ -90,11 +90,13 @@
       "esperado": [
         "Usar exumação Quadra Geral e aluguel, sem compra",
         "Somar apenas após a opção ter sido escolhida e após pedido explícito de total",
-        "Não somar taxa semi-intacto automaticamente"
+        "Não somar taxa semi-intacto automaticamente",
+        "Como a primeira mensagem 'Quero exumar da Quadra Geral' expressa início de uma solicitação efetiva, perguntar parentesco ainda não informado é permitido. Isso não é falha de conteúdo."
       ],
       "proibido": [
         "Cobrar simultaneamente aluguel e compra de ossuário"
-      ]
+      ],
+      "criterio_especifico": "Solicitação efetiva: pergunta de parentesco permitida quando necessária e ausente. Dúvida informativa ('quanto custa?'): responder preço sem exigir parentesco. Não repetir parentesco já informado nem afirmar autorização concluída."
     },
     {
       "id": "S06",
@@ -304,15 +306,18 @@
   ],
   "resultados": [],
   "observacoes_de_avaliacao": [
-    "Resultados anteriores relatados: 12 PASS de conteúdo, S09 e S10 marcados FAIL, mas a transcrição integral do relatório OpenBot não foi disponibilizada nesta revisão do GitHub; não converter isso em aprovação técnica.",
-    "S09/S10 anteriores podem apresentar falso positivo: o pedido de nome completo após 'Sei o nome da minha avó' é necessário, porque o nome não foi fornecido. Falha verdadeira ocorre se a Sana repete após receber o nome completo, ou volta a exigir o número que a pessoa não sabe.",
-    "Falhas de sequência relatadas para S05-S08 impedem aprovação do fluxo; registrar avaliação separada de conteúdo e ordem da conversa."
+    "2026-10-17: Munícipe de Teste informou FLOW_PASS para S05–S10, com respostas correlacionadas por IDs antes do envio seguinte, porém sem timestamps independentes. Não há inspeção independente dos logs neste GitHub.",
+    "2026-10-17: Na revisão comunicada, S09 e S10 deixaram de ter falhas de conteúdo pendentes; a avaliação anterior de repetição era imprecisa se o nome completo ainda não havia sido informado.",
+    "2026-10-17: S05 teve falsa falha de conteúdo por perguntar parentesco na primeira mensagem. O cenário inicia uma solicitação efetiva de exumação na Quadra Geral; perguntar parentesco ausente é permitido, diferentemente de exigir parentesco para mera informação de preço.",
+    "2026-10-17: Conteúdo S01–S14 reportado sem falhas pendentes após revisão; resultados do agente de testes não representam verificação independente nem aprovação de isolamento/WhatsApp/runtime.",
+    "2026-10-17: S15–S17 permanecem não executados; isolamento entre cenários em histórico compartilhado não foi comprovado."
   ],
   "regras_de_evidencia": {
     "content": "Avaliar precisão e naturalidade do texto da resposta realmente recebida, mantendo as fontes como metadados de LAB.",
-    "order": "Somente declarar FLOW_PASS quando cada próximo turno for enviado depois de resposta real correspondente ao turno anterior, com ID ou evidência temporal/correlacional da entrega. Caso contrário FLOW_BLOCKED.",
+    "order": "Declarar FLOW_PASS se houver IDs de mensagens efetivamente correlacionados mostrando que a resposta do turno anterior chegou antes do próximo envio. Timestamps independentes são evidência adicional, não requisito obrigatório quando a correlação de IDs e a relação de causalidade são demonstradas. Sem essa prova, FLOW_BLOCKED.",
     "isolation": "Testes de agentes compartilhando um histórico não demonstram separação de contatos; isolamento de conversas permanece BLOCKED até teste específico com sessões distintas.",
     "scoring": "Dividir a avaliação em CONTENT_PASS/CONTENT_FAIL/CONTENT_BLOCKED e FLOW_PASS/FLOW_FAIL/FLOW_BLOCKED; não chamar um cenário integralmente PASS quando algum eixo estiver bloqueado.",
-    "source": "Se o relatório original estiver disponível no workspace, utilizar as transcrições originais como fonte; não inventar identificadores, horários, respostas ou status."
+    "source": "Se o relatório original estiver disponível no workspace, utilizar as transcrições originais como fonte; não inventar identificadores, horários, respostas ou status.",
+    "report_origin": "As conclusões de S01–S14 foram comunicadas pelos agentes via usuário e/ou arquivo local do OpenBot; os logs e IDs individuais não foram abertos/validados nesta alteração do GitHub. O relatório registra status RELATADO, não verificação independente."
   }
 }
