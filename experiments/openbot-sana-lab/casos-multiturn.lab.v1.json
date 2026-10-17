@@ -1,6 +1,6 @@
 {
   "schema": "santana.openbot.lab.cases.v1",
-  "versao": "1.0.3",
+  "versao": "1.0.4",
   "status": "CASOS_A_EXECUTAR_NAO_SAO_TESTES_APROVADOS",
   "referencia": "experiments/openbot-sana-lab/regras-operacionais.lab.v1.json",
   "metodo": "Agente Munícipe de Teste envia mensagens uma por vez para a Sana por comunicação entre agentes. Transcrever cada resposta efetivamente gerada, capturar IDs/erros e avaliar. Resposta de outro agente só é prova de atendimento simulado, não de WhatsApp nem do runtime de produção.",
@@ -120,15 +120,20 @@
       "modo": "AGENTES_MULTITURN",
       "turnos": [
         "Quero solicitar a exumação da minha mãe.",
-        "Sou filho dela."
+        "Sou filho dela.",
+        "O marido dela está vivo. Isso impede que eu, como filho, solicite a exumação?"
       ],
       "esperado": [
-        "Perguntar parentesco somente se faltante e necessário para solicitação",
-        "Reconhecer a informação de filho sem repetir pergunta"
+        "Perguntar o parentesco somente se faltar em uma solicitação efetiva.",
+        "Reconhecer o(a) filho(a) como igualmente legitimado(a) a pedir exumação, sem subordinar a solicitação à ausência ou renúncia de cônjuge sobrevivente.",
+        "Responder que o cônjuge vivo não impede que o filho faça a solicitação; não declarar autorização administrativa já concedida.",
+        "Não repetir o parentesco já informado."
       ],
       "proibido": [
-        "Confundir com as assinaturas do jazigo particular",
-        "Declarar autorização administrativa já concedida"
+        "Dizer que o cônjuge tem preferência sobre o filho na solicitação.",
+        "Exigir morte, ausência ou consentimento prévio do cônjuge como condição geral para o filho pedir exumação.",
+        "Confundir igualdade de direito familiar com dispensa das exigências administrativas específicas do caso.",
+        "Declarar autorização administrativa já concedida."
       ]
     },
     {
@@ -137,15 +142,20 @@
       "modo": "AGENTES_MULTITURN",
       "turnos": [
         "Quero fazer exumação no jazigo da família.",
-        "O marido dela está vivo."
+        "O marido dela está vivo.",
+        "Sou filha da falecida. Posso solicitar a exumação mesmo assim?"
       ],
       "esperado": [
-        "Distinguir cônjuge sobrevivente e responsável pelo jazigo conforme contrato oficial",
-        "Encaminhar a verificação administrativa da autorização, sem bloquear dúvidas simples"
+        "Reconhecer que uma filha tem igual direito familiar de iniciar a solicitação, sem prioridade do marido sobrevivente.",
+        "Explicar separadamente que a exumação no jazigo particular pode depender da assinatura/verificação do responsável pela concessão, conforme revisão administrativa.",
+        "Não dar como concluída a autorização administrativa nem dispensar automaticamente assinaturas formalmente necessárias.",
+        "Se a redação atual do contrato oficial divergir sobre assinatura do cônjuge vivo, registrar a necessidade de conciliação sem negar a filha o direito de solicitar."
       ],
       "proibido": [
-        "Afirmar que autorização já foi assinada",
-        "Aplicar automaticamente comunicado simplificado da Quadra Geral"
+        "Dizer que somente marido sobrevivente pode solicitar ou que a filha só pode solicitar se ele faltar.",
+        "Afirmar que autorização já foi assinada.",
+        "Equiparar automaticamente regras de assinatura de jazigo familiar às da Quadra Geral.",
+        "Declarar que assinatura do concessionário não é necessária sem revisão."
       ]
     },
     {
@@ -310,7 +320,8 @@
     "2026-10-17: Na revisão comunicada, S09 e S10 deixaram de ter falhas de conteúdo pendentes; a avaliação anterior de repetição era imprecisa se o nome completo ainda não havia sido informado.",
     "2026-10-17: S05 teve falsa falha de conteúdo por perguntar parentesco na primeira mensagem. O cenário inicia uma solicitação efetiva de exumação na Quadra Geral; perguntar parentesco ausente é permitido, diferentemente de exigir parentesco para mera informação de preço.",
     "2026-10-17: Conteúdo S01–S14 reportado sem falhas pendentes após revisão; resultados do agente de testes não representam verificação independente nem aprovação de isolamento/WhatsApp/runtime.",
-    "2026-10-17: S15–S17 permanecem não executados; isolamento entre cenários em histórico compartilhado não foi comprovado."
+    "2026-10-17: S15–S17 permanecem não executados; isolamento entre cenários em histórico compartilhado não foi comprovado.",
+    "2026-10-17: responsável do projeto esclareceu que cônjuge/companheiro(a) e filhos(as) têm o mesmo direito familiar de solicitar exumação, sem precedência de cônjuge. S07/S08 revisados e marcados para regressão direcionada; os resultados anteriores não avaliam o novo critério."
   ],
   "regras_de_evidencia": {
     "content": "Avaliar precisão e naturalidade do texto da resposta realmente recebida, mantendo as fontes como metadados de LAB.",
