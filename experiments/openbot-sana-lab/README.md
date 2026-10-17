@@ -12,6 +12,7 @@ O agente de testes respondeu sem valores às perguntas da Quadra Geral e de ossu
 - `casos-multiturn.lab.v1.json`: 17 roteiros verificáveis; 14 podem ser exercitados pela comunicação de agentes; 3 exigem o runtime integrado e permanecem pendentes.
 - `INSTRUCOES-PARA-SANA.md`: como a Sana deve consultar esta base **somente no LAB** e demonstrar uma resposta real.
 - `validar_lab.py`: checagem estática sem rede. Não produz aprovação comportamental.
+- `evidencia-s01-20261016.md`: registro da transcrição relatada dos três turnos do primeiro S01, distinto de prova técnica de execução ou integração.
 
 ## Fontes e hierarquia
 
@@ -50,4 +51,4 @@ O agente de testes respondeu sem valores às perguntas da Quadra Geral e de ossu
 
 ## Próxima ação prática
 
-Solicitar à Sana, na seção **ATENDIMENTO** do OpenBot, que leia **este ramo GitHub e estes arquivos** como insumos de laboratório; verificar leitura do ramo antes de alterar as próprias instruções. Em seguida, o agente 'Munícipe de Teste' faz o diálogo de `S01` e envia a transcrição literal. Nenhuma alteração na produção é necessária para isso.
+**Atualização pós-S01:** a execução de três turnos foi relatada pelo usuário e registrada em `evidencia-s01-20261016.md`, com lacunas de naturalidade. Solicitar à Sana que releia as instruções atualizadas deste ramo e peça ao **Munícipe de Teste** para refazer **S01** e testar **S02–S04**, enviando as respostas literais e indicando divergências. Sem alterar produção e sem declarar teste de WhatsApp concluído.
