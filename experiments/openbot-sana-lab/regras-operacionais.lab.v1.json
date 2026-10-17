@@ -1,6 +1,6 @@
 {
   "schema": "santana.openbot.lab.operational.v1",
-  "versao": "1.0.1",
+  "versao": "1.0.2",
   "data_consolidacao": "2026-10-16",
   "status": "RASCUNHO_LAB_NAO_PROMOVIDO",
   "objetivo": "Consolidar orientacoes operacionais explicitadas pelo responsavel do projeto para testar o comportamento da Sana no OpenBot, sem alterar regras oficiais congeladas ou producao.",
@@ -105,12 +105,18 @@
     "agrupamento_e_repeticao": "Não responder a cada fragmento/anexo isolado nem duplicar mensagens. Agregação e idempotência dependem de um runtime testado, não apenas de prompt.",
     "isolamento_de_contatos": "Cada munícipe deve ter contexto independente. O simples chat entre dois agentes não comprova isolamento de múltiplas conversas.",
     "encerramento_sessao": "Referência anterior de aproximadamente cinco minutos de inatividade; exige decisão e mecanismo explícito no runtime antes de configurar.",
-    "limites_de_acao": "Não afirmar que criou solicitação, concluiu recadastro, autorizou exumação, confirmou agenda, recebeu pagamento ou enviou mensagem sem comprovante do sistema."
+    "limites_de_acao": "Não afirmar que criou solicitação, concluiu recadastro, autorizou exumação, confirmou agenda, recebeu pagamento ou enviou mensagem sem comprovante do sistema.",
+    "direito_familiar_exumacao": {
+      "origem": "CORRECAO_EXPLICITA_DO_RESPONSAVEL_EM_2026_10_17",
+      "regra": "Cônjuge/companheiro(a) sobrevivente e filhos(as) têm o mesmo direito familiar de solicitar exumação. Não existe prioridade automática do cônjuge sobre os filhos.",
+      "postura_da_sana": "Ao identificar o(a) solicitante como filho(a), aceitar seu parentesco para orientar o pedido mesmo que o(a) cônjuge/companheiro(a) do(a) falecido(a) esteja vivo(a); não exigir ausência, falecimento, autorização prévia ou renúncia do cônjuge como requisito geral para iniciar a solicitação.",
+      "restricao": "Igual direito de iniciar o pedido não é declaração de autorização administrativa concluída. Diferenciar documentos e assinaturas exigidos na modalidade e pela responsabilidade da concessão; regras técnicas conflitantes precisam de revisão humana antes de produção."
+    }
   },
   "exumacao_quadra_geral": {
     "natureza": "Diferente de jazigo particular; prazo de 3 anos citado no comunicado de Quadra Geral, sem convertê-lo em regra universal de elegibilidade.",
-    "parentesco": "Ao efetivamente iniciar solicitação, perguntar o parentesco somente se ainda faltar; não exigir parentesco para responder simples dúvidas sobre preço e documentos.",
-    "orientacao_solicitante": "O comunicado operativo identifica cônjuge/companheiro(a) ou filho(a). Precedência adicional (irmãos, sobrinhos) depende de caso e verificação humana; não prometer elegibilidade automática.",
+    "parentesco": "Na solicitação efetiva, perguntar o grau de parentesco apenas se faltar. Cônjuge/companheiro(a) e filhos(as) têm igual direito familiar de solicitar; não priorizar cônjuge nem exigir sua ausência para aceitar filho(a). Nunca exigir parentesco para responder dúvidas simples sobre preço/documentos.",
+    "orientacao_solicitante": "Cônjuge/companheiro(a) e filhos(as) têm o mesmo direito de solicitar exumação na Quadra Geral, independentemente de qual categoria entrou em contato primeiro. Não criar hierarquia entre essas duas categorias. Outros graus de parentesco exigem conferência das condições administrativas específicas, sem presumir elegibilidade.",
     "documentos_orientacao_inicial": [
       "certidão de óbito do(a) falecido(a)",
       "RG e CPF do(a) responsável",
@@ -123,7 +129,7 @@
   },
   "jazigo_particular": {
     "valor_principal": "URNA_COM_EXUMACAO_JAZIGO_PARTICULAR",
-    "responsabilidade_de_autorizacao": "Respeitar contrato autoritativo do domínio: cônjuge/companheiro(a) sobrevivente e responsável pelo jazigo, ou responsável pelo jazigo na ausência de cônjuge sobrevivente, conforme regras do caso. Não substituir esse contrato pelo comunicado simplificado de Quadra Geral.",
+    "responsabilidade_de_autorizacao": "Distinguir dois assuntos: (1) cônjuge/companheiro(a) e filhos(as) têm igual legitimidade familiar para SOLICITAR a exumação, sem prioridade do cônjuge; (2) assinatura/autorização do concessionário ou administrador provisório do jazigo e demais condições administrativas são assuntos separados, sujeitos à conferência humana. O contrato técnico atual impõe assinatura do cônjuge vivo, mas não contempla igualdade de direitos dos filhos; registrar conflito e não usar essa regra antiga para negar ao filho o pedido só porque o cônjuge está vivo. Não afirmar que qualquer assinatura formal foi dispensada ou concluída automaticamente.",
     "translado": "Tratar apenas quando solicitado.",
     "destino_em_jazigo_da_familia": "Antes da conclusão, requer verificação administrativa da situação do jazigo e autorização da pessoa responsável conforme contrato."
   },
@@ -174,9 +180,15 @@
     },
     {
       "id": "AUTORIZACAO_MODALIDADE",
-      "fato_usuario": "comunicado de Quadra Geral: cônjuge/companheiro(a) e filhos",
-      "fato_catalogo": "jazigo familiar possui regra de cônjuge e concessionário/administrador provisório",
-      "motivo": "Não aplicar uma modalidade à outra sem critério administrativo."
+      "fato_usuario": "Cônjuge/companheiro(a) e filhos(as) têm mesmo direito familiar à solicitação de exumação, sem ordem de precedência.",
+      "fato_catalogo": "O catálogo autoritativo de jazigo vincula a assinatura ao cônjuge sobrevivente e ao responsável pelo jazigo e não modela equivalência do direito dos filhos.",
+      "motivo": "Separar legitimidade familiar para SOLICITAR de requisitos de ASSINATURA/autorizações do jazigo; conciliar contrato e fluxo antes de produção, sem negar ao filho a solicitação com base em prioridade inexistente."
+    },
+    {
+      "id": "DIREITO_CONJUGE_FILHOS_CONTRATO_LEGADO",
+      "fato_usuario": "Correção explícita de 17/10/2026: filhos(as) têm o mesmo direito que cônjuge/companheiro(a) para a exumação; não há prioridade automática de cônjuge.",
+      "fato_catalogo": "santana-authority/catalogo/exumacao.v1.json e santana-conversation-domain/facts.v1.json presumem assinatura obrigatória de cônjuge sobrevivente e responsável pelo jazigo; não há ramo explícito de filho(a) com cônjuge vivo.",
+      "motivo": "Atualizar/revalidar o contrato oficial de assinaturas e autorização com a Administração antes de promoção produtiva. No LAB, orientar filhos como igualmente legitimados para abrir o pedido sem afirmar autorização concluída ou dispensar assinatura da concessão."
     }
   ]
 }
