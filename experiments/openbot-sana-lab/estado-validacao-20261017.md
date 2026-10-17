@@ -30,4 +30,12 @@ Parar de repetir baterias de conteúdo já concluídas. Desenhar e validar **amb
 
 **Risco tarifário não encerrado:** referências operacionais de preço de LAB continuam pendentes de conciliação com a fonte oficial para uso em produção.
 
+## Retificação de regra de parentesco (posterior ao relatório S01–S14)
+
+O responsável corrigiu a interpretação anterior: **cônjuge/companheiro(a) e filhos(as) possuem o mesmo direito familiar de solicitar exumação; o(a) cônjuge não tem prioridade automática**. A presença de cônjuge vivo não impede que um(a) filho(a) **inicie o pedido**.
+
+Os casos S07 e S08 foram modificados para testar explicitamente a nova regra e **ainda não foram reexecutados sob esse critério**. A aprovação de conteúdo relatada anteriormente permanece histórica, mas não valida a nova exigência.
+
+As regras atuais em `santana-authority/catalogo/exumacao.v1.json` e `santana-conversation-domain/facts.v1.json` sobre assinatura de cônjuge vivo divergem do enfoque de igualdade de legitimidade familiar e exigem conciliação administrativa antes de produção. A análise de quem assina pelo jazigo é **distinta** de quem pode solicitar.
+
 **Nenhum deploy, webhook, perfil OpenBot, WhatsApp, Supabase produtivo ou catálogo autoritativo alterado por esta consolidação.**
