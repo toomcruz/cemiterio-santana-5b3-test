@@ -50,6 +50,15 @@ O agente de testes respondeu sem valores às perguntas da Quadra Geral e de ossu
 - Não publicar/ativar integrações ou executar no WhatsApp real.
 - Não criar uma segunda fonte oficial paralela: este é um pacote transitório de LAB para conciliação.
 
+## Progresso da integração ChatGPT ↔ Sana (17/10/2026)
+
+- A ponte MCP 0.4.2 foi instalada na VPS e o envio/resultado direto da Sana foi demonstrado, sem Boss e sem WhatsApp.
+- **Idempotência real no próprio MCP: PASS** para duas chamadas com mesma chave e mesmos `request_id`, `message_id`, `delivery_id` e uma resposta real. Evidência: `evidencia-mcp-dedupe-20261017.md`.
+- **S15 (duplicidade de mensagem recebida pela W-API): NÃO EXECUTADO**; não inferir esse resultado do dedupe da ponte.
+- **S16 (isolamento entre munícipes): BLOQUEADO**. A ponte ainda entrega mensagens no chat principal da Sana sem identificador de sessão independente.
+- **S17 (pausa humana): BLOQUEADO** para a integração com Sana OpenBot; os guardas do runtime oficial não foram verificados em uma ponta a ponta integrada.
+- O contrato e os critérios exigidos para os três cenários ficam em `gates-isolamento-dedupe-takeover-20261017.md`. Não executar testes em produção.
+
 ## Próxima ação prática
 
 **Conteúdo conversacional:** S01–S14 foram relatados sem falhas remanescentes após revisão, com correção de falsa falha do S05. **Sequência:** S05–S10 receberam FLOW_PASS relatado, com respostas correlacionadas por IDs; ainda não houve auditoria independente dos logs nesta PR.
