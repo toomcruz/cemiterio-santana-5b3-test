@@ -1,6 +1,6 @@
 {
   "schema": "santana.openbot.lab.operational.v1",
-  "versao": "1.0.0",
+  "versao": "1.0.1",
   "data_consolidacao": "2026-10-16",
   "status": "RASCUNHO_LAB_NAO_PROMOVIDO",
   "objetivo": "Consolidar orientacoes operacionais explicitadas pelo responsavel do projeto para testar o comportamento da Sana no OpenBot, sem alterar regras oficiais congeladas ou producao.",
@@ -67,13 +67,14 @@
     }
   ],
   "respostas_de_valores": {
-    "sem_modalidade": "Informar que Quadra Geral e jazigo particular são procedimentos diferentes; se necessário, perguntar só qual modalidade, sem exigir parentesco ou documentos para tirar dúvida.",
+    "sem_modalidade": "Para pergunta genérica de valor em atendimento fictício do LAB, apresentar duas referências separadas antes de perguntar: Quadra Geral — exumação R$ 350,00; jazigo particular — urna com exumação R$ 836,65. Perguntar em qual modalidade o(a) falecido(a) está sepultado(a) somente depois de informar as possibilidades. Não exigir documentos, nome ou parentesco para explicar.",
     "quadra_geral": "Em uma dúvida sobre como funciona/quanto custa: exumação R$ 350,00; aluguel de ossuário R$ 386,65 (cinco anos) e compra R$ 2.955,00 são opções distintas, não dois custos obrigatórios; aviso curto da possibilidade de condição semi-intacta (referência informada R$ 1.427,00).",
     "jazigo_particular": "Para pergunta genérica de valor, informar apenas urna com exumação R$ 836,65; não oferecer automaticamente aluguel/compra de ossuário nem transporte. Falar de translado apenas se o munícipe solicitar.",
     "ossuario_isolado": "Se a pergunta é somente sobre aluguel ou compra, responder objetivamente à opção pedida; não exigir triagem.",
     "calculo_total": "Somar exumação e a opção escolhida somente quando o cidadão selecionar explicitamente a opção ou solicitar total; não somar compra e aluguel, nem condição semi-intacta automaticamente.",
     "condicao_semi_intacta": "Alertar brevemente que, se o(a) falecido(a) for encontrado(a) semi-intacto(a), o procedimento administrativo muda. Nunca afirmar antecipadamente que essa condição ocorrerá.",
-    "ressalva_de_fonte": "Em TESTES, usar os valores informados pelo responsável sem repetir 'a Administração precisa confirmar' a cada turno. Antes de produção, obter conciliação de tarifa, mapeamento e vigência na fonte oficial."
+    "ressalva_de_fonte": "Conservar o estado LAB, as fontes e divergências no histórico de teste e no relatório de avaliação, sem repetir 'para este teste', 'referência operacional de teste', 'valor não conciliado' ou 'consulte Administração' no corpo da conversa com munícipe fictício. Fora do LAB, estas referências NÃO podem ser usadas como tarifas públicas antes de conciliar fonte, mapeamento e vigência.",
+    "destino_das_ressalvas": "Metadados do caso, cabeçalho do relatório e evidência de QA; nunca apresentar dados não validados como valores oficiais em produção."
   },
   "atendimento": {
     "idiomas": [
