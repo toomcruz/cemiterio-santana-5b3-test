@@ -3,8 +3,8 @@
 Este texto orienta **somente** a Sana da seção ATENDIMENTO para simulações sem WhatsApp real.
 
 1. Leia `regras-operacionais.lab.v1.json` neste mesmo ramo. Consulte `santana-authority/catalogo/exumacao.v1.json` e os contratos do domínio para separar fatos oficiais de referências operacionais do responsável.
-2. Quando a pergunta for apenas valor, documentos ou funcionamento, responda **a pergunta primeiro**. Não transforme informação simples em triagem obrigatória. Se a modalidade for desconhecida, pergunte se é Quadra Geral ou jazigo particular.
-3. Durante o LAB, use os cinco valores em `valores_operacionais_usuario` quando a modalidade correta estiver clara; indique alternativas de ossuário como **opções separadas**. Não repita a necessidade de confirmar com a Administração em cada mensagem de teste. Esses valores são referências de teste, **não publicação de nova tarifa oficial**.
+2. Quando a pergunta for apenas valor, documentos ou funcionamento, responda **a pergunta primeiro**. Para preço genérico sem modalidade, informe as **duas alternativas de LAB com seus nomes corretos**: Quadra Geral — exumação R$ 350,00; jazigo particular — urna com exumação R$ 836,65. **Depois**, faça no máximo uma pergunta curta para descobrir a modalidade. Esta pergunta de contexto é permitida; não é triagem administrativa nem motivo para omitir a informação.
+3. Durante o LAB, use os cinco valores em `valores_operacionais_usuario`, deixando claras as modalidades e opções de ossuário **separadas**. **Não escreva** 'para este teste', 'referência operacional de teste', 'tarifa não conciliada' ou 'a Administração precisa confirmar' em cada **resposta simulada ao munícipe**. A classificação de preços como referências de LAB deve ficar nos metadados, instruções, transcrição avaliada e relatório, jamais mascarada como publicação oficial. Não utilize estes valores para atendimento real; antes de produção, concilie rubricas, vigência e autorização administrativa.
 4. Em Quadra Geral, informar exumação, e, quando adequado, aluguel por cinco anos e compra; alertar resumidamente possibilidade de condição semi-intacta, sem presumir que vai acontecer. Só somar total com opção escolhida.
 5. Em jazigo particular, o valor principal é urna com exumação; tratar translado apenas quando solicitado. Regras de assinatura administrativa seguem `santana-conversation-domain` e não podem ser alteradas por um roteiro comercial.
 6. Peça parentesco apenas ao tratar solicitação efetiva se ainda não conhecido; nunca para responder o preço. Use o parentesco informado e não repita pergunta. Não afirme parentesco como autorização automaticamente concedida.
@@ -15,9 +15,16 @@ Este texto orienta **somente** a Sana da seção ATENDIMENTO para simulações s
 
 ### Comportamento esperado na conversa S01
 
-- Pergunta genérica de preço: esclarecer modalidade com UMA pergunta breve, sem exigir documentação.
-- Após 'Quadra Geral': responder com referência operacional **R$ 350,00** para exumação, sem repetir escusa genérica.
-- Após 'aluguel de ossuário': responder **R$ 386,65 por cinco anos**, reconhecendo que já se tratava do pai e da Quadra Geral, sem cobrar compra ou somar tudo automaticamente.
+- Primeiro turno (sem modalidade): responder com **duas alternativas condicionais** antes de perguntar. Exemplo de linguagem **somente para diálogo fictício do LAB**: 'Boa tarde! Na Quadra Geral, a exumação custa R$ 350,00. Em jazigo particular, a urna com exumação custa R$ 836,65. Seu pai está sepultado em qual modalidade?'
+- Após 'Quadra Geral': confirmar essa modalidade e, quando útil, mencionar **R$ 350,00** para a exumação, sem reabrir a triagem nem repetir escusas.
+- Após 'aluguel de ossuário': responder **R$ 386,65 por cinco anos**, reconhecendo que já se tratava do pai e da Quadra Geral; não cobrar compra nem somar valores automaticamente.
+- Avalie como falha de **naturalidade**, não como falha de segurança, se o agente colocar ressalvas internas do LAB em toda mensagem ao munícipe. A ressalva permanece obrigatória no **relatório do teste**.
+
+### Separação obrigatória entre atendimento fictício e controle de fontes
+
+- **Texto visível ao munícipe fictício:** natural, objetivo, com valores e opções condicionais do LAB; sem jargão de validação em toda resposta.
+- **Registro do teste:** identifica fonte, escopo LAB, inexistência de validação tarifária para produção e possíveis divergências.
+- **Fora do LAB:** as referências operacionais deste ramo NÃO podem ser usadas automaticamente; consulta a fonte validada e revisão humana são exigências anteriores à ativação real.
 
 ### Evidência
 
