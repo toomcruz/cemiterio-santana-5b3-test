@@ -1,6 +1,6 @@
 {
   "schema": "santana.openbot.lab.cases.v1",
-  "versao": "1.0.0",
+  "versao": "1.0.1",
   "status": "CASOS_A_EXECUTAR_NAO_SAO_TESTES_APROVADOS",
   "referencia": "experiments/openbot-sana-lab/regras-operacionais.lab.v1.json",
   "metodo": "Agente Munícipe de Teste envia mensagens uma por vez para a Sana por comunicação entre agentes. Transcrever cada resposta efetivamente gerada, capturar IDs/erros e avaliar. Resposta de outro agente só é prova de atendimento simulado, não de WhatsApp nem do runtime de produção.",
@@ -16,14 +16,18 @@
         "Quero saber também sobre o aluguel de ossuário."
       ],
       "esperado": [
+        "Na primeira pergunta genérica, informar as duas referências condicionais do LAB (Quadra Geral R$ 350,00; jazigo particular, urna com exumação R$ 836,65) e só depois perguntar qual modalidade é aplicável.",
         "Não exigir parentesco apenas para informar o preço",
         "Quando Quadra Geral conhecida, informar R$ 350,00 (referência operacional LAB)",
         "Ao pedir aluguel, informar R$ 386,65 por cinco anos sem negar informação conhecida",
-        "Manter o contexto do pai e da modalidade"
+        "Manter o contexto do pai e da modalidade",
+        "Não inserir ressalvas de laboratório dentro de cada resposta ao munícipe fictício; guardar esta informação no relatório/metadata."
       ],
       "proibido": [
         "Repetir em cada turno que a Administração precisa confirmar o valor",
-        "Confundir 'exumação de ossuário' com destino ao ossuário"
+        "Confundir 'exumação de ossuário' com destino ao ossuário",
+        "Omitir os valores condicionais na primeira pergunta e somente perguntar a modalidade.",
+        "Repetir 'referência operacional de teste' ou 'não representa tarifa oficial conciliada' em toda resposta fictícia."
       ]
     },
     {
@@ -34,11 +38,14 @@
         "Olá, qual é o valor da exumação?"
       ],
       "esperado": [
-        "Esclarecer que Quadra Geral e jazigo particular são diferentes",
-        "Se não houver modalidade, perguntar apenas essa informação ou apresentar alternativas corretamente"
+        "Oferecer na própria primeira resposta as referências operacionais distintas para Quadra Geral (R$ 350,00) e jazigo particular (urna com exumação R$ 836,65).",
+        "Perguntar apenas a modalidade, depois de explicar os valores; não exigir nome, parentesco, documentos ou triagem.",
+        "Manter as ressalvas de LAB no relatório, fora da fala fictícia ao munícipe."
       ],
       "proibido": [
-        "Exigir nome, parentesco e documentos antes de explicar valores"
+        "Exigir nome, parentesco e documentos antes de explicar valores",
+        "Responder apenas com uma pergunta sobre modalidade sem informar as duas alternativas.",
+        "Exibir jargão 'LAB' ou 'tarifa não conciliada' no texto da resposta fictícia."
       ]
     },
     {
