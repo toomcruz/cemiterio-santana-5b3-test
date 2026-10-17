@@ -1,6 +1,6 @@
 {
   "schema": "santana.openbot.lab.cases.v1",
-  "versao": "1.0.1",
+  "versao": "1.0.2",
   "status": "CASOS_A_EXECUTAR_NAO_SAO_TESTES_APROVADOS",
   "referencia": "experiments/openbot-sana-lab/regras-operacionais.lab.v1.json",
   "metodo": "Agente Munícipe de Teste envia mensagens uma por vez para a Sana por comunicação entre agentes. Transcrever cada resposta efetivamente gerada, capturar IDs/erros e avaliar. Resposta de outro agente só é prova de atendimento simulado, não de WhatsApp nem do runtime de produção.",
@@ -152,15 +152,20 @@
       "modo": "AGENTES_MULTITURN",
       "turnos": [
         "Preciso localizar o jazigo mas não sei a quadra nem o número.",
-        "Sei o nome da minha avó."
+        "Sei o nome da minha avó.",
+        "O nome completo dela é Maria de Lourdes Almeida.",
+        "Podemos continuar com as informações que já forneci?"
       ],
       "esperado": [
-        "Registrar referência do jazigo como indisponível",
-        "Perguntar nome completo de algum(a) falecido(a) sepultado(a) no jazigo",
-        "Não repetir pergunta de local"
+        "Quando a localização não é conhecida, aceitar 'indisponível' como referência e não exigir quadra ou número.",
+        "Se o munícipe disser apenas 'Sei o nome da minha avó', ainda NÃO informou o nome completo. Solicitar o nome completo é correto; não contar isso como repetição indevida.",
+        "Depois de 'Maria de Lourdes Almeida', reconhecer e utilizar esse nome como referência de busca, sem pedi-lo novamente.",
+        "Não confirmar localização real nem abertura de solicitação sem integração/recibo."
       ],
       "proibido": [
-        "Inventar localização"
+        "Repetir a pergunta sobre quadra e número depois que o munícipe disse que não sabe.",
+        "Voltar a perguntar o nome completo depois de já receber 'Maria de Lourdes Almeida'.",
+        "Inventar localização ou confirmação administrativa."
       ]
     },
     {
@@ -169,15 +174,20 @@
       "modo": "AGENTES_MULTITURN",
       "turnos": [
         "Preciso fazer o recadastro do jazigo.",
-        "Não sei o número do jazigo."
+        "Não sei o número do jazigo.",
+        "Sei que José Augusto Ferreira está sepultado nesse jazigo.",
+        "Podemos seguir com essa informação?"
       ],
       "esperado": [
-        "Pedir nome completo de algum(a) falecido(a) sepultado(a) no jazigo",
-        "Diferenciar coleta de dados de confirmação de recadastro"
+        "Prosseguir com a identificação do jazigo como 'indisponível', sem exigir que a pessoa informe o número que desconhece.",
+        "Pedir o nome completo de algum(a) falecido(a) sepultado(a) no jazigo quando ainda estiver faltando.",
+        "Depois que o nome completo 'José Augusto Ferreira' for dado, reconhecê-lo e não repetir o pedido de nome nem de número do jazigo.",
+        "Separar coleta de dados de conclusão do recadastro: sem sinal administrativo, não afirmar que está concluído."
       ],
       "proibido": [
-        "Afirmar que recadastro ficou concluído",
-        "Repetir identificação do jazigo depois de resposta desconhecida"
+        "Repetir a exigência do número do jazigo após 'não sei'.",
+        "Repetir a solicitação de nome depois que 'José Augusto Ferreira' tiver sido informado.",
+        "Afirmar que recadastro foi concluído."
       ]
     },
     {
@@ -292,5 +302,17 @@
       ]
     }
   ],
-  "resultados": []
+  "resultados": [],
+  "observacoes_de_avaliacao": [
+    "Resultados anteriores relatados: 12 PASS de conteúdo, S09 e S10 marcados FAIL, mas a transcrição integral do relatório OpenBot não foi disponibilizada nesta revisão do GitHub; não converter isso em aprovação técnica.",
+    "S09/S10 anteriores podem apresentar falso positivo: o pedido de nome completo após 'Sei o nome da minha avó' é necessário, porque o nome não foi fornecido. Falha verdadeira ocorre se a Sana repete após receber o nome completo, ou volta a exigir o número que a pessoa não sabe.",
+    "Falhas de sequência relatadas para S05-S08 impedem aprovação do fluxo; registrar avaliação separada de conteúdo e ordem da conversa."
+  ],
+  "regras_de_evidencia": {
+    "content": "Avaliar precisão e naturalidade do texto da resposta realmente recebida, mantendo as fontes como metadados de LAB.",
+    "order": "Somente declarar FLOW_PASS quando cada próximo turno for enviado depois de resposta real correspondente ao turno anterior, com ID ou evidência temporal/correlacional da entrega. Caso contrário FLOW_BLOCKED.",
+    "isolation": "Testes de agentes compartilhando um histórico não demonstram separação de contatos; isolamento de conversas permanece BLOCKED até teste específico com sessões distintas.",
+    "scoring": "Dividir a avaliação em CONTENT_PASS/CONTENT_FAIL/CONTENT_BLOCKED e FLOW_PASS/FLOW_FAIL/FLOW_BLOCKED; não chamar um cenário integralmente PASS quando algum eixo estiver bloqueado.",
+    "source": "Se o relatório original estiver disponível no workspace, utilizar as transcrições originais como fonte; não inventar identificadores, horários, respostas ou status."
+  }
 }
