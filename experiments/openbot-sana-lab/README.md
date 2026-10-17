@@ -38,7 +38,7 @@ O agente de testes respondeu sem valores às perguntas da Quadra Geral e de ossu
 - A Sana responde valores do **LAB** quando a modalidade é conhecida, em linguagem curta, sem pedir documentos para esclarecer um preço e sem repetir 'consulte a Administração' a cada turno.
 - As respostas de teste nunca se tornam prova de tarifa pública vigente. O agente não executa agendamentos, registros, autorização, verificação documental ou mensagens reais.
 - A equipe humana revisa documentos. Para Quadra Geral, orientação inicial comunicada: certidão de óbito, RG/CPF e comprovante de residência do responsável; não transformar esse resumo em lista jurídica universal.
-- A ordem de parentesco mencionada nas comunicações da Quadra Geral não substitui a regra oficial de assinatura em jazigo particular. Ausência de cônjuge deve ser interpretada conforme o caso, não mera indisponibilidade momentânea.
+- **Direito familiar corrigido em 17/10/2026:** cônjuge/companheiro(a) e filhos(as) têm igual direito à solicitação da exumação, sem prioridade do cônjuge, inclusive se ele(a) estiver vivo(a). Isso não substitui a verificação de assinaturas e da responsabilidade por jazigo particular. O catálogo técnico legado que presume assinatura obrigatória do cônjuge precisa ser conciliado antes de produção.
 - Para um jazigo/ossuário cuja identificação o cidadão desconhece, registrar `indisponível` e perguntar **uma vez** pelo nome completo de algum(a) falecido(a) sepultado(a) no jazigo.
 - Um teste é `PASS` somente quando a resposta **efetiva** do agente foi capturada e avaliada. Um roteiro ou HTTP 202 não é prova de execução.
 - Os casos de duplicidade, isolamento de múltiplos contatos e pausa humana devem aguardar integração/runtime de testes apropriado, sem experimentar em produção.
@@ -53,6 +53,8 @@ O agente de testes respondeu sem valores às perguntas da Quadra Geral e de ossu
 ## Próxima ação prática
 
 **Conteúdo conversacional:** S01–S14 foram relatados sem falhas remanescentes após revisão, com correção de falsa falha do S05. **Sequência:** S05–S10 receberam FLOW_PASS relatado, com respostas correlacionadas por IDs; ainda não houve auditoria independente dos logs nesta PR.
+
+**Regressão pontual necessária após correção de direito familiar:** reexecutar apenas S07 e S08 com cônjuge sobrevivente vivo e filho(a) solicitante, verificando igualdade de direito à solicitação, sem dispensar assinaturas do jazigo. O histórico de aprovação S01–S14 antecede esta nova exigência.
 
 **Não repetir as mesmas baterias de conteúdo por rotina.** O próximo bloqueio técnico é **sessão isolada por munícipe** e um runtime seguro que permita executar os cenários S15–S17 sem enviar mensagens reais, preservar o painel oficial e respeitar a pausa humana. Nenhuma integração ou deploy deve ocorrer sem autorização específica.
 
