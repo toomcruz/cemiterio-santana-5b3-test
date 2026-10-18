@@ -1,5 +1,5 @@
 {
-  "status": "FIRST_SUPERVISED_REAL_TEXT_RECEIVED_BY_USER",
+  "status": "MEDIA_DEPLOYED_IMAGE_SPECIFIC_APPROVAL_PENDING",
   "updated_at": "2026-10-18T19:38:47Z",
   "chatgpt": {
     "existing_connection": true,
@@ -311,10 +311,10 @@
     "hmg_deployment": "dpl_7bjuy2baqG1QaXSGKGZDoJQ5xSNw",
     "hmg_edge_version": 12,
     "hmg_edge_sha256": "fffb3cd4242a6fcdb778e2acb7d0041a4531b218d0ff1bdf86a1f3ad86df2f51",
-    "prod_read_edge_version": 38,
-    "prod_read_edge_sha256": "dfe8931f811967b80b1245f28631156f814fe6c3de0fb62ca55b105d02599093",
-    "official_panel_deployment": "dpl_Uwa113ogFA62MuvC97JX6maAZqMz",
-    "official_panel_source_commit": "6e991ad5a9fa6ecd4b544a1e762ebed8ca3828d6",
+    "prod_read_edge_version": 40,
+    "prod_read_edge_sha256": "373f6e2842fb3415e09be50802625698beac1785ab40aaf05117ad96ddf988ed",
+    "official_panel_deployment": "dpl_DZeVGQYhot7ASav3h3dWduEEj8K4",
+    "official_panel_source_commit": "762e13ff6d341c2e7eb0cd0b2f0a71a49eca9929",
     "official_panel_previous_deployment": "dpl_HE1XmDS5Bz9UHd2dhKS5JLoGjvdc"
   },
   "preservation": {
@@ -395,13 +395,12 @@
   "real_messages_sent": 1,
   "first_real_text_test_complete": true,
   "separate_remaining_work": [
-    "media_candidate_requires_exact_production_deployment_approval",
     "image_and_pdf_real_tests_require_separate_exact_approvals",
     "openbot_trusted_agent_isolation_and_authorized_read_not_proven"
   ],
   "media_candidate": {
-    "status": "MEDIA_CANDIDATE_TESTED_PRODUCTION_APPROVAL_PENDING",
-    "checked_at": "2026-10-18T20:01:52.646911+00:00",
+    "status": "MEDIA_DEPLOYED_IMAGE_SPECIFIC_APPROVAL_PENDING",
+    "checked_at": "2026-10-18T20:13:58.652664+00:00",
     "node_tests": 27,
     "python_tests": 2,
     "local_tests_passed": true,
@@ -427,11 +426,11 @@
         "ambiguous_outcome_no_retry"
       ]
     },
-    "production_deployed": false,
+    "production_deployed": true,
     "real_media_provider_attempts": 0,
     "official_text_test_still_received_and_complete": true,
     "live_gate_still_closed": true,
-    "panel_build_pending_deployment": true,
+    "panel_build_pending_deployment": false,
     "separate_real_test_approvals_required": true,
     "candidate_sha256": {
       "media-upgrade.sql": "b7ab5cabfc414e147e8d510d7258b17ca1a9eccddcbdc0801e5d501ce272742e",
@@ -439,12 +438,12 @@
       "official-adapter.mjs": "5a3af90627ddd67855415cf88f7f4ba168acfb0d13cca2868be3604e152eafda",
       "edge-operations.ts": "d7e8cf23248407cc33414e2d952f9979b2ec0eaa104773654eca8b6d413a173e",
       "edge-operations.mjs": "919f4c93660a88908aa12793bface6fb8527c54479754b2e960cfcd0c25d953b",
-      "media-attachments.mjs": "ca9164e2a48f0a4253589656967baaf2ac6e99c10f5f8ab904cce768137324d4",
+      "media-attachments.mjs": "4972b6148e6b6a46e8a94eb795db0fbc8398424b77094973d3ddf91236f72f89",
       "panel-authorization-page.tsx": "4c9b527bcad91ead07d5502027d958783ad8e6bfed544d157792125829610602",
       "production-sana-control-route.ts": "2ca116d25fb3b4f861b01260c7db51484698a1cb6ca99d48087bf23581619732",
       "test-adapter.mjs": "537aa30fd912087b2fdcb4e3d02e0e208a822debc3ec23bcf030640dae3528c8",
       "test-binding.mjs": "a819dc5c0629f063bd5349b4e0616dd8f22aa36937c85c06d366c793589ce475",
-      "test-media-attachments.mjs": "27098ca6908243f1960c563f10a2e76ce3be8a234bf984c27aa67b357ff89611",
+      "test-media-attachments.mjs": "d7d4e39d18c22acbc788ff0ef08d2e8d62c602b6dcfd073717060da3b8ea2397",
       "build-media-qualification.py": "f6c5f4f820a04ac04fba197c4ca5e966bd989cf935ed81116406f6ff0745f6b2",
       "qualify-media.sql": "c74af330118e45514ab4cadf54b4e2c895f45c2e00b61a7a734f8ea6df503d43",
       "MEDIA-DEPLOYMENT-SCOPE.md": "3bc35d0dd82b8742c7878977e091b84b3276705b3ddf4c4d3a4ef159c80f9fc6",
@@ -478,6 +477,56 @@
         "path": "media-fixtures/Santana-Teste-Documento.pdf",
         "library_file_id": "libfile_d62575f22c88819191bcaf6761ec8c87"
       }
+    },
+    "production": {
+      "project": "prj_4noV4vaUS3JIDs88sBxsK1fjXzb0",
+      "deployment": "dpl_DZeVGQYhot7ASav3h3dWduEEj8K4",
+      "state": "READY",
+      "commit": "762e13ff6d341c2e7eb0cd0b2f0a71a49eca9929",
+      "url": "https://atendimento-cemiterio-santana.vercel.app",
+      "edge_version": 40,
+      "edge_sha256": "373f6e2842fb3415e09be50802625698beac1785ab40aaf05117ad96ddf988ed",
+      "edge_files": 49,
+      "edge_unchanged_original_files": 47,
+      "edge_source_verification": "PASS",
+      "edge_verify_jwt": false,
+      "sql_schema_installed": true,
+      "closed_gate_smoke": "PASS_MCP_LIVE_PERMISSION_DISABLED",
+      "new_operations_from_smoke": 0,
+      "native_manual_md5": "93b59d411d2bb5792fb76973c619115c",
+      "native_manual_unchanged": true,
+      "authorization_page_http": 200,
+      "runtime_error_scan": "no_errors_selected_routes_at_initial_release"
+    },
+    "image_preparation": {
+      "status": "ready",
+      "intent_id": "79d70616-9ac8-4da8-93f1-5685c740f611",
+      "payload": {
+        "text": "Teste supervisionado de imagem da integração WhatsApp Santana com o ChatGPT.",
+        "recipient": {
+          "name": "Wellington",
+          "phone_mask": "+••••••5497"
+        },
+        "attachment": {
+          "name": "Santana-Teste-Imagem.png",
+          "sha256": "7f85ed6053f7024e2776d6846c8a9e7260e1abc744757e3ba22095163160e8e4",
+          "mime_type": "image/png",
+          "size_bytes": 26289
+        },
+        "conversation_id": "789ea855-4e5e-5767-aae8-1316129c2ddc",
+        "expected_revision": 184
+      },
+      "payload_sha256": "1d8dde33d0e563514b2fe788c1aabfc2f451a353b08e83dec0f70fe9604f0884",
+      "state": "prepared",
+      "expires_at": "2026-10-18T20:40:07.856+00:00",
+      "real_dispatch_enabled": false,
+      "coordinator_verified": false,
+      "external_request_attempted": false
+    },
+    "last_targeted_local_tests": {
+      "count": 16,
+      "passed": true,
+      "includes_upload_acknowledgement_loss": true
     }
   }
 }

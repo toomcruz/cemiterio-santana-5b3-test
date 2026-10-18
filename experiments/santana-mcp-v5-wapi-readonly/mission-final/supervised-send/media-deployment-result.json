@@ -1,0 +1,57 @@
+{
+  "production_deployed": true,
+  "status": "MEDIA_DEPLOYED_IMAGE_SPECIFIC_APPROVAL_PENDING",
+  "production": {
+    "project": "prj_4noV4vaUS3JIDs88sBxsK1fjXzb0",
+    "deployment": "dpl_DZeVGQYhot7ASav3h3dWduEEj8K4",
+    "state": "READY",
+    "commit": "762e13ff6d341c2e7eb0cd0b2f0a71a49eca9929",
+    "url": "https://atendimento-cemiterio-santana.vercel.app",
+    "edge_version": 40,
+    "edge_sha256": "373f6e2842fb3415e09be50802625698beac1785ab40aaf05117ad96ddf988ed",
+    "edge_files": 49,
+    "edge_unchanged_original_files": 47,
+    "edge_source_verification": "PASS",
+    "edge_verify_jwt": false,
+    "sql_schema_installed": true,
+    "closed_gate_smoke": "PASS_MCP_LIVE_PERMISSION_DISABLED",
+    "new_operations_from_smoke": 0,
+    "native_manual_md5": "93b59d411d2bb5792fb76973c619115c",
+    "native_manual_unchanged": true,
+    "authorization_page_http": 200,
+    "runtime_error_scan": "no_errors_selected_routes_at_initial_release"
+  },
+  "image_preparation": {
+    "status": "ready",
+    "intent_id": "79d70616-9ac8-4da8-93f1-5685c740f611",
+    "payload": {
+      "text": "Teste supervisionado de imagem da integração WhatsApp Santana com o ChatGPT.",
+      "recipient": {
+        "name": "Wellington",
+        "phone_mask": "+••••••5497"
+      },
+      "attachment": {
+        "name": "Santana-Teste-Imagem.png",
+        "sha256": "7f85ed6053f7024e2776d6846c8a9e7260e1abc744757e3ba22095163160e8e4",
+        "mime_type": "image/png",
+        "size_bytes": 26289
+      },
+      "conversation_id": "789ea855-4e5e-5767-aae8-1316129c2ddc",
+      "expected_revision": 184
+    },
+    "payload_sha256": "1d8dde33d0e563514b2fe788c1aabfc2f451a353b08e83dec0f70fe9604f0884",
+    "state": "prepared",
+    "expires_at": "2026-10-18T20:40:07.856+00:00",
+    "real_dispatch_enabled": false,
+    "coordinator_verified": false,
+    "external_request_attempted": false
+  },
+  "real_media_provider_attempts": 0,
+  "live_gate_still_closed": true,
+  "panel_build_pending_deployment": false,
+  "last_targeted_local_tests": {
+    "count": 16,
+    "passed": true,
+    "includes_upload_acknowledgement_loss": true
+  }
+}

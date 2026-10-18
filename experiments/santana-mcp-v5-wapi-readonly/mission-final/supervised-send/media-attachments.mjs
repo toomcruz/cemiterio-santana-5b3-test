@@ -35,13 +35,11 @@ export async function stageApprovedMedia(service,proof,actor,op){
  const lookup=await service.from('sana_operator_attachments').select('*').eq('artifact_id',staged.data.artifact_id).eq('actor_id',actor).eq('action_id',op).maybeSingle();
  if(lookup.error||!lookup.data)throw Error('MCP_ATTACHMENT_STAGE_FAILED');
  const row=lookup.data;manifest(a,row,actor,cid,op);const bucket=service.storage.from(BUCKET);
- let stored=await bucket.download(row.storage_path);
- if(stored.error){
-  if(String(stored.error.statusCode??stored.error.status)!=='404')throw Error('MCP_ATTACHMENT_STORAGE_UNAVAILABLE');
-  const upload=await bucket.upload(row.storage_path,bytes,{contentType:a.mime_type,upsert:false,cacheControl:'300'});
-  if(upload.error)throw Error('MCP_ATTACHMENT_UPLOAD_FAILED');
-  stored=await bucket.download(row.storage_path);
- }
+ // The native manifest owns the staging lifecycle. Do not infer object
+ // absence from a particular HTTP status. An interrupted prior upload may
+ // already exist; never overwrite or retry its write, verify canonical bytes.
+ if(!row.verified_at)await bucket.upload(row.storage_path,bytes,{contentType:a.mime_type,upsert:false,cacheControl:'300'});
+ const stored=await bucket.download(row.storage_path);
  if(stored.error||!stored.data)throw Error('MCP_ATTACHMENT_STORAGE_UNAVAILABLE');
  await checkBytes(stored.data,a);
  const verified=await service.from('sana_operator_attachments').update({verified_at:new Date().toISOString()}).eq('artifact_id',row.artifact_id).eq('actor_id',actor).eq('conversation_id',cid).eq('action_id',op).select('artifact_id').maybeSingle();

@@ -1,34 +1,25 @@
 {
-  "operation_id": "2b3a1623-5541-488b-b1e9-c4350b9bcc5c",
-  "status": "recorded",
-  "delivery_state": "sent",
-  "accepted_by_api": true,
-  "delivery_confirmed": false,
-  "retry_allowed": false,
-  "production_consent_at": "2026-10-18T19:37:22.528146Z",
-  "claimed_at": "2026-10-18T19:37:48.238353Z",
-  "settled_at": "2026-10-18T19:37:50.487926Z",
-  "provider_message_id": "3EB0AA0A9E1BE6C3BDA05639A1CD03E6",
-  "provider_attempts": 1,
-  "audit_events": [
-    "prod_operator_authorized_one_attempt",
-    "official_claim_created",
-    "settled"
-  ],
-  "official_conversation_after_send": {
-    "revision": 184,
-    "automation_mode": "human",
-    "manual_takeover": true
+  "status": "ready",
+  "intent_id": "79d70616-9ac8-4da8-93f1-5685c740f611",
+  "payload": {
+    "text": "Teste supervisionado de imagem da integração WhatsApp Santana com o ChatGPT.",
+    "recipient": {
+      "name": "Wellington",
+      "phone_mask": "+••••••5497"
+    },
+    "attachment": {
+      "name": "Santana-Teste-Imagem.png",
+      "sha256": "7f85ed6053f7024e2776d6846c8a9e7260e1abc744757e3ba22095163160e8e4",
+      "mime_type": "image/png",
+      "size_bytes": 26289
+    },
+    "conversation_id": "789ea855-4e5e-5767-aae8-1316129c2ddc",
+    "expected_revision": 184
   },
-  "user_cellphone_receipt_confirmation": {
-    "confirmed": true,
-    "source": "user_chat_message",
-    "statement": "recebi sim",
-    "at": "2026-10-18T19:38:47Z"
-  },
-  "permission_after_send": {
-    "live_enabled": false,
-    "scope": "same_operator_client_single_personal_conversation",
-    "reason": "close_live_gate_after_authorized_single_attempt"
-  }
+  "payload_sha256": "1d8dde33d0e563514b2fe788c1aabfc2f451a353b08e83dec0f70fe9604f0884",
+  "state": "prepared",
+  "expires_at": "2026-10-18T20:40:07.856+00:00",
+  "real_dispatch_enabled": false,
+  "coordinator_verified": false,
+  "external_request_attempted": false
 }
