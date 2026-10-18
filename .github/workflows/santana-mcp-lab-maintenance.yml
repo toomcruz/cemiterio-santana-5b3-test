@@ -31,20 +31,23 @@ jobs:
           host=os.environ.get('DEPLOY_HOST','').strip(); user=os.environ.get('DEPLOY_USER','').strip()
           key=os.environ.get('DEPLOY_KEY',''); known=os.environ.get('DEPLOY_KNOWN_HOSTS','')
           if host and user and key and known and re.fullmatch(r'[A-Za-z0-9._:-]+',host) and re.fullmatch(r'[a-z_][a-z0-9_-]*',user):
-              env=os.environ.copy(); agent=None; fd=None
+              env=os.environ.copy(); agent=None; fd=None; phase='AGENT_START'
               try:
                   a=subprocess.run(['ssh-agent','-s'],capture_output=True,text=True,check=True,timeout=10)
                   sock=re.search(r'SSH_AUTH_SOCK=([^;]+)',a.stdout); pid=re.search(r'SSH_AGENT_PID=([0-9]+)',a.stdout)
                   if not sock or not pid: raise RuntimeError()
                   env.update(SSH_AUTH_SOCK=sock[1],SSH_AGENT_PID=pid[1]); agent=env
+                  phase='KEY_LOAD'
                   added=subprocess.run(['ssh-add','-'],input=key,text=True,capture_output=True,env=env,timeout=10)
-                  if added.returncode: raise RuntimeError()
+                  if added.returncode: raise RuntimeError('KEY_NOT_ACCEPTED')
+                  phase='KNOWN_HOSTS'
                   fd=os.memfd_create('santana-known-hosts',0); os.write(fd,known.encode())
+                  phase='SSH_EXECUTION'
                   p=subprocess.run(['ssh','-T','-o','BatchMode=yes','-o','StrictHostKeyChecking=yes','-o','ConnectTimeout=10','-o','UserKnownHostsFile=/proc/self/fd/'+str(fd),user+'@'+host,'python3 -'],input=probe,capture_output=True,text=True,env=env,pass_fds=(fd,),timeout=90)
                   if p.returncode==0:
                       result['existing_ssh']=json.loads(p.stdout)
                   else: result['existing_ssh']={'status':'SSH_AUTH_OR_POLICY_DENIED','exit_code':p.returncode}
-              except Exception: result['existing_ssh']={'status':'SSH_UNAVAILABLE_REDACTED'}
+              except Exception as exc: result['existing_ssh']={'status':'SSH_UNAVAILABLE_REDACTED','phase':phase,'error_class':type(exc).__name__}
               finally:
                   if fd is not None: os.close(fd)
                   if agent: subprocess.run(['ssh-agent','-k'],capture_output=True,env=agent,timeout=10)
