@@ -1,0 +1,81 @@
+{
+  "status": "ISOLATED_TESTS_PASS",
+  "suites": [
+    {
+      "suite": "original_package",
+      "exit_code": 0,
+      "tests": 18,
+      "log_sha256": "a713e3273a1580889abeb8b845a27a2ff5d890582c4729f3669b51374c374080"
+    },
+    {
+      "suite": "candidate",
+      "exit_code": 0,
+      "tests": 40,
+      "log_sha256": "f1b824a3b54da18eee059a7c814055130d4f357f57f05404bcec5c9f6860c473"
+    },
+    {
+      "suite": "bridge_patch",
+      "exit_code": 0,
+      "tests": 4,
+      "log_sha256": "540ff2bc48c1c300c3f5167a5ddf01e56a1f6a10a3226b73c5e6efabed93d27a"
+    },
+    {
+      "suite": "privileged_gate",
+      "exit_code": 0,
+      "tests": 6,
+      "log_sha256": "239510096721e1f6182d362f8d9762ec453cd10189b3d5491d8aaacdfa264cd9"
+    },
+    {
+      "suite": "existing_multiagent_regression",
+      "exit_code": 0,
+      "tests": 13,
+      "log_sha256": "24ba718b4cf0a0151d355e99d135ebe89326e890f6d92af3e1aa6f4f5907d64f"
+    }
+  ],
+  "candidate_and_regression_tests": 63,
+  "original_package_tests": 18,
+  "live_openbot_session_tests": "NOT_RUN_TEAM_MEMBER_ACCESS_NOT_ESTABLISHED",
+  "live_result_reproduction": {
+    "task_id": "d6d8d76dbb344a0a9d70e22acaeee342",
+    "run_id": "1acc093e-de6c-40a5-9c13-1aa004c38e7e",
+    "delivery_id": "8e77a49f-53a0-443b-9667-439e83cf57f2",
+    "run_status": "succeeded",
+    "result_available": false,
+    "attempts": 1
+  },
+  "metadata": {
+    "application_roots": [
+      {
+        "path": "/opt/OpenBot/app",
+        "matches": [
+          {
+            "path": "/opt/OpenBot/app/resources/cli/openbot-cli.mjs",
+            "sha256": "f74e2c6a64baffbcaebc681cf8dde935b0278bcd67bea1812d523a59797e3f88",
+            "bytes": 15800,
+            "markers": {
+              "agent-tasks-v1": false,
+              "/v1/agent-tasks/start": false,
+              "/v1/agent-tasks/send": false,
+              "/deliveries/": true
+            }
+          }
+        ],
+        "js_files_scanned": 3
+      },
+      {
+        "path": "/opt/OpenBot/hosted",
+        "matches": [],
+        "js_files_scanned": 0
+      }
+    ]
+  },
+  "production_writes": 0,
+  "whatsapp_sends": 0,
+  "sana_activated": false,
+  "root_payload": {
+    "path": "/home/runner/santana-mcp-staging/sana-memory-dbbfe50433c1/apply-lab.py",
+    "sha256": "dbbfe50433c183b2e4462266b20bb8ee062c3bd731ea0ebbc7fd15dfb91a9fa0",
+    "installed": false
+  },
+  "service_pids_unchanged": true
+}

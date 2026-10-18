@@ -42,7 +42,7 @@ jobs:
               run_validation.main(stage=True)
               raise SystemExit(0)
           if os.environ.get('ACTION')=='memory_inventory':
-              runpy.run_path('experiments/santana-mcp-v5-wapi-readonly/mission-final/sana-memory-lab/vps_inventory.py',run_name='__main__')
+              runpy.run_path('experiments/santana-mcp-v5-wapi-readonly/mission-final/sana-memory-lab/vps_contract_inventory.py',run_name='__main__')
               raise SystemExit(0)
           if os.environ.get('ACTION')=='admin_assist':
               testroot=Path('experiments/santana-mcp-v5-wapi-readonly/mission-final/admin-assist')
