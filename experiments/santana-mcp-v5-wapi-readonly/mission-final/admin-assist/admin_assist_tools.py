@@ -1,5 +1,5 @@
 """Four read-only tools for the existing individual OAuth connection."""
-import base64,hashlib,importlib.util,json,os,subprocess,sys
+import base64,hashlib,importlib.util,json,os,subprocess,sys,sysconfig
 from pathlib import Path
 
 def tool(name,description,properties,required):
@@ -24,7 +24,13 @@ def render_attachment(data,args):
         paths.append(str(Path(spec.origin).resolve().parent.parent))
     body={k:data[k] for k in ('content_base64','mime_type','size_bytes','sha256')}
     body.update(page_start=args.get('page_start',1),page_limit=args.get('page_limit',2))
-    result=subprocess.run([sys.executable,'-I','-c','import sys,json,runpy;sys.path[:0]=json.loads(sys.argv[1]);runpy.run_path(sys.argv[2],run_name="__main__")',json.dumps(sorted(set(paths))),str(worker)],input=json.dumps(body),text=True,capture_output=True,timeout=10,env={'PATH':os.defpath})
+    # Standalone CPython builds may keep libffi beside libpython. Use only the
+    # interpreter's configured library directory; never inherit caller env.
+    clean_env={'PATH':os.defpath}
+    libdir=sysconfig.get_config_var('LIBDIR')
+    if sys.platform.startswith('linux') and libdir and Path(libdir).is_absolute() and Path(libdir).is_dir():
+        clean_env['LD_LIBRARY_PATH']=str(Path(libdir).resolve())
+    result=subprocess.run([sys.executable,'-I','-c','import sys,json,runpy;sys.path[:0]=json.loads(sys.argv[1]);runpy.run_path(sys.argv[2],run_name="__main__")',json.dumps(sorted(set(paths))),str(worker)],input=json.dumps(body),text=True,capture_output=True,timeout=10,env=clean_env)
     if result.returncode or len(result.stdout)>2100000:raise RuntimeError('Análise limitada pelo orçamento de recursos.')
     value=json.loads(result.stdout)
     images=value.pop('images',[])

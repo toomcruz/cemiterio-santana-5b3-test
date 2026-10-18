@@ -1,4 +1,4 @@
-import base64,hashlib,importlib.util,io,json,os,sys,unittest
+import base64,hashlib,importlib.util,io,json,os,sys,sysconfig,unittest
 from pathlib import Path
 from unittest.mock import patch
 ROOT=Path(__file__).resolve().parent
@@ -67,6 +67,7 @@ class AdminMCP(unittest.TestCase):
         with patch('admin_assist_tools.subprocess.run') as run:
             run.return_value.returncode=0;run.return_value.stdout=json.dumps({'status':'ready','images':[]})
             result=render_attachment({**payload(b'abc','image/png'),'token':'MUST_NOT_REACH_RENDERER','provider':{'mediaKey':'MUST_NOT_REACH_RENDERER'}},{})
-            kwargs=run.call_args.kwargs;self.assertNotIn('MUST_NOT_REACH_RENDERER',kwargs['input']);self.assertEqual(set(kwargs['env']),{'PATH'});self.assertEqual(kwargs['timeout'],10)
+            kwargs=run.call_args.kwargs;self.assertNotIn('MUST_NOT_REACH_RENDERER',kwargs['input']);self.assertLessEqual(set(kwargs['env']),{'PATH','LD_LIBRARY_PATH'});self.assertEqual(kwargs['timeout'],10)
+            if 'LD_LIBRARY_PATH' in kwargs['env']:self.assertEqual(kwargs['env']['LD_LIBRARY_PATH'],str(Path(sysconfig.get_config_var('LIBDIR')).resolve()))
             self.assertNotIn('MUST_NOT_REACH_RENDERER',json.dumps(result))
 if __name__=='__main__':unittest.main()
