@@ -1,25 +1,32 @@
 {
   "status": "ready",
-  "intent_id": "79d70616-9ac8-4da8-93f1-5685c740f611",
+  "source": "santana_send_intent_homolog",
+  "intent_id": "1f45f9e1-915f-479b-b791-67b436e72b7c",
   "payload": {
-    "text": "Teste supervisionado de imagem da integração WhatsApp Santana com o ChatGPT.",
+    "text": "Teste supervisionado de documento PDF da integração WhatsApp Santana com o ChatGPT.",
     "recipient": {
       "name": "Wellington",
       "phone_mask": "+••••••5497"
     },
     "attachment": {
-      "name": "Santana-Teste-Imagem.png",
-      "sha256": "7f85ed6053f7024e2776d6846c8a9e7260e1abc744757e3ba22095163160e8e4",
-      "mime_type": "image/png",
-      "size_bytes": 26289
+      "name": "Santana-Teste-Documento.pdf",
+      "sha256": "9a89a7a628685a1b1b0f420c65154d477690d9a3688dbaa110fe65490daa6c18",
+      "mime_type": "application/pdf",
+      "size_bytes": 1810
     },
     "conversation_id": "789ea855-4e5e-5767-aae8-1316129c2ddc",
-    "expected_revision": 184
+    "expected_revision": 186
   },
-  "payload_sha256": "1d8dde33d0e563514b2fe788c1aabfc2f451a353b08e83dec0f70fe9604f0884",
+  "payload_sha256": "dfc37c70c7923af45e2e676697da3d88d0aef2beccec736c8901da61938797e3",
   "state": "prepared",
-  "expires_at": "2026-10-18T20:40:07.856+00:00",
+  "approval_url": "https://santana-mcp-homolog-consent.vercel.app/revisar-envio#1f45f9e1-915f-479b-b791-67b436e72b7c",
   "real_dispatch_enabled": false,
-  "coordinator_verified": false,
-  "external_request_attempted": false
+  "external_request_attempted": false,
+  "specific_chat_authorization": {
+    "approved": false
+  },
+  "independent_human_review_pending": true,
+  "production_operator_consent_pending": true,
+  "real_media_provider_attempts": 0,
+  "permission_live_enabled": false
 }

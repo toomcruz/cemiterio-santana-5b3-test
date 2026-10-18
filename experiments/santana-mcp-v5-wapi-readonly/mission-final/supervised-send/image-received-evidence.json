@@ -1,0 +1,59 @@
+{
+  "status": "ready",
+  "intent_id": "d3bf8032-5f13-414e-923f-366f8ce9fa91",
+  "payload": {
+    "text": "Teste supervisionado de imagem da integração WhatsApp Santana com o ChatGPT.",
+    "recipient": {
+      "name": "Wellington",
+      "phone_mask": "+••••••5497"
+    },
+    "attachment": {
+      "name": "Santana-Teste-Imagem.png",
+      "sha256": "7f85ed6053f7024e2776d6846c8a9e7260e1abc744757e3ba22095163160e8e4",
+      "mime_type": "image/png",
+      "size_bytes": 26289
+    },
+    "conversation_id": "789ea855-4e5e-5767-aae8-1316129c2ddc",
+    "expected_revision": 184
+  },
+  "payload_sha256": "1d8dde33d0e563514b2fe788c1aabfc2f451a353b08e83dec0f70fe9604f0884",
+  "state": "sent",
+  "expires_at": "2026-10-18T21:06:37.964+00:00",
+  "real_dispatch_enabled": false,
+  "coordinator_verified": false,
+  "external_request_attempted": false,
+  "specific_chat_authorization": {
+    "approved": true,
+    "scope": "one_image_attempt_exact_prepared_png_and_caption_to_personal_5497"
+  },
+  "supersedes_intent_id": "79d70616-9ac8-4da8-93f1-5685c740f611",
+  "password_updated_reported_at": "2026-10-18T20:35:18Z",
+  "independent_human_review_pending": false,
+  "production_operator_consent_pending": false,
+  "real_media_provider_attempts": 1,
+  "permission_live_enabled": false,
+  "permission_window_expires_at": "2026-10-18T21:06:37.964+00:00",
+  "approval_url": "https://santana-mcp-homolog-consent.vercel.app/revisar-envio?imagem=20261018b#d3bf8032-5f13-414e-923f-366f8ce9fa91",
+  "accepted_by_api": true,
+  "delivery_confirmed": false,
+  "retry_allowed": false,
+  "provider_message_id": "3EB0DE07FD4FC662644F1E121EBF140F",
+  "authorized_at": "2026-10-18T20:50:33.428438Z",
+  "claimed_at": "2026-10-18T20:54:00.458042Z",
+  "settled_at": "2026-10-18T20:54:03.388525Z",
+  "audit_events": [
+    "prod_operator_authorized_one_attempt",
+    "official_claim_created",
+    "settled"
+  ],
+  "human_pause": true,
+  "conversation_revision_after": 186,
+  "password_update_verified_at": "2026-10-18T20:43:09Z",
+  "oauth_reconnection_proven": true,
+  "recipient_receipt_confirmation": {
+    "confirmed": true,
+    "source": "user_chat",
+    "at": "2026-10-18T20:55:09Z"
+  },
+  "provider_delivery_confirmed": false
+}
