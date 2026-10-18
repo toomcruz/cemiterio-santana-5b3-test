@@ -1,6 +1,6 @@
 {
-  "status": "REAL_READ_PROVEN_SEND_AND_OPENBOT_PENDING",
-  "updated_at": "2026-10-18T18:19:58.671713+00:00",
+  "status": "REAL_READ_PROVEN_SUPERVISED_INSTALLED_HUMAN_HANDOFF_PENDING",
+  "updated_at": "2026-10-18T18:36:00Z",
   "chatgpt": {
     "existing_connection": true,
     "authorized_real_read_proven": true,
@@ -53,16 +53,16 @@
     "real_messages_sent": 0,
     "live_provider_acceptance_proven": false,
     "delivery_confirmed": false,
-    "intent_backend": "deployed_homolog_only",
+    "intent_backend": "existing_homolog_review_bound_to_existing_official_prod_channel",
     "human_review_interface": "https://santana-mcp-homolog-consent.vercel.app/revisar-envio",
     "actual_human_approval_recorded": true,
     "actual_authenticated_preparation_proven": true,
     "official_channel_source_commit": "370cd4c161496a73d2638e9b0a947f55fdf10a6e",
     "official_channel_git_blob": "6737ddc86661de804e00b89b34193da02cd83285",
     "blockers": [
-      "official_manual_prepare_updates_json_automation_but_not_authoritative_column",
-      "approval_proof_not_connected_to_official_dispatcher",
-      "homolog_review_not_equivalent_to_production_operator_write_authorization"
+      "fresh_personal_review_and_authenticated_prod_preview_not_yet_proven",
+      "live_permission_disabled_and_send_catalog_hidden",
+      "specific_single_live_test_authorization_not_yet_given"
     ],
     "review_and_audit_atomic": true,
     "human_review_is_live_dispatch_authorization": false,
@@ -93,21 +93,40 @@
       "real_messages_sent": 0
     },
     "supervised_candidate": {
-      "status": "SIMULATED_CHAIN_AND_SQL_CHECKS_PASS_NOT_DEPLOYED",
+      "status": "DEPLOYED_LIVE_GATE_CLOSED_HUMAN_HANDOFF_PENDING",
       "scope": "supervised-send/DEPLOYMENT-SCOPE.md",
       "commit": "86416783a78671336c2c5e48bc2e30fecd87e47d",
       "tests_node": 10,
       "tests_python": 2,
       "vps_run": "https://github.com/toomcruz/cemiterio-santana-5b3-test/actions/runs/39153406433",
       "postgres_homolog": "PASS_temporary_tables_rolled_back",
-      "nextjs_build_verified": false,
+      "nextjs_build_verified": true,
       "protected_prod_authorization_handoff_verified": false,
       "actual_multiconnection_sql_race_test": false,
-      "production_writes": 0,
+      "production_writes": "explicitly_authorized_schema_and_deployment_changes_only_no_business_messages",
       "real_messages_sent": 0,
       "pending_for_test_conversation_at_inspection": 0,
       "n8n_modified": false,
-      "catalog_tool_enabled": false
+      "catalog_tool_enabled": false,
+      "official_source_commit": "d9912ca3b2e1192a8d01243978997b74a6cbe8ef",
+      "nextjs_type_validation": "skipped_by_existing_project_configuration",
+      "production_schema_installed": true,
+      "production_edge_addition_installed": true,
+      "prod_read_files_unchanged": 46,
+      "zero_live_permissions_verified": true,
+      "closed_gate_sql_result": "MCP_LIVE_PERMISSION_DISABLED",
+      "unauthenticated_send_http": "409 MCP_REVIEW_UNAVAILABLE retry_allowed=false",
+      "cross_origin_preview_http": "403 MCP_PANEL_ORIGIN_REQUIRED",
+      "human_review_page_http": 200
+    },
+    "current_preparation": {
+      "intent_id": "9aed79d8-a50e-46c3-afe2-2edf29650e3c",
+      "state": "prepared",
+      "payload_sha256": "17851da59f9a5aab4c6582fb09f12ebdf4698a75e6750495711741fb1cfc391d",
+      "expected_revision": 182,
+      "expires_at": "2026-10-18T19:03:54.862Z",
+      "recipient_mask": "+••••••5497",
+      "real_dispatch_enabled": false
     }
   },
   "tests": {
@@ -222,12 +241,14 @@
   },
   "deployments": {
     "existing_hmg_project": true,
-    "hmg_deployment": "dpl_ELd7w4Y3yFfDutMCgvR1BVJfoTDB",
-    "hmg_edge_version": 10,
-    "hmg_edge_sha256": "5e174ceac3edd9deebf1ca8e756139d7b3590cf198c275645f363e4a7f8eff85",
-    "prod_read_edge_version": 36,
-    "prod_read_edge_sha256": "0bf68b92003ce88a8fd1b95ec4e9a5f28638c0b84739981ab67b229cfcf83e6f",
-    "official_panel_deployment_unchanged": "dpl_9y2hx3H5HumsTbSeD6r2aQbjUbrn"
+    "hmg_deployment": "dpl_HFE2MWvQhrqqQCLj9H9NV5Um29rG",
+    "hmg_edge_version": 11,
+    "hmg_edge_sha256": "0e80db3ed7e171f92cc5b46cd62b142ce2d877291b26978b847a2368b8340477",
+    "prod_read_edge_version": 37,
+    "prod_read_edge_sha256": "9481d96253ef473c250ae3fc2180d35f19a0748b2e7116ed50d03b3a9df40114",
+    "official_panel_deployment": "dpl_8KWCkDnyQtGkkrPWapxoWg2gYPNV",
+    "official_panel_source_commit": "d9912ca3b2e1192a8d01243978997b74a6cbe8ef",
+    "official_panel_previous_deployment": "dpl_HE1XmDS5Bz9UHd2dhKS5JLoGjvdc"
   },
   "preservation": {
     "production_business_messages_unchanged": true,
@@ -242,12 +263,15 @@
     "password_login_attempts": 0,
     "new_projects": 0,
     "new_services": 0,
-    "new_plugins": 0
+    "new_plugins": 0,
+    "production_supervised_coordinator_added": true,
+    "native_control_and_manual_functions_unchanged": true
   },
   "repository": {
     "pr": "https://github.com/toomcruz/cemiterio-santana-5b3-test/pull/57",
     "branch": "codex/santana-mcp-lab-maintenance",
-    "latest_commit": "011d13dfad72a976bf36576e1b5fc6d68d370711"
+    "latest_commit": "011d13dfad72a976bf36576e1b5fc6d68d370711",
+    "official_deployment_branch": "codex/santana-mcp-supervised-send"
   },
   "report_library_file_id": "libfile_7aac830c56408191ab9ea30e587108d0",
   "root_diagnostic_stage_run": "https://github.com/toomcruz/cemiterio-santana-5b3-test/actions/runs/39143461965"
