@@ -6,7 +6,7 @@ on:
       action:
         description: Stage patch, collect report, or read OpenBot configuration schema
         type: choice
-        options: [stage, collect, inventory, root_inventory_stage]
+        options: [stage, collect, inventory, root_inventory_stage, supervised]
         default: stage
 permissions:
   contents: read
@@ -43,6 +43,15 @@ jobs:
               fd=os.open(target,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o444)
               with os.fdopen(fd,'wb') as f:f.write(content)
               print(json.dumps({'status':'READ_ONLY_DIAGNOSTIC_STAGED','path':str(target),'sha256':expected,'services_changed':0,'real_messages_sent':0}))
+              raise SystemExit(0)
+          if os.environ.get('ACTION')=='supervised':
+              testroot=Path('experiments/santana-mcp-v5-wapi-readonly/mission-final/supervised-send')
+              commands=[['node','--experimental-strip-types','--test',str(testroot/'test-adapter.mjs'),str(testroot/'test-binding.mjs')],[sys.executable,str(testroot/'test_mcp_gate.py')]]
+              for command in commands:
+                  result=subprocess.run(command,capture_output=True,text=True,timeout=60)
+                  print(json.dumps({'suite':Path(command[0]).name,'exit_code':result.returncode,'log_tail':(result.stdout+result.stderr)[-5000:]}))
+                  if result.returncode:raise SystemExit('SUPERVISED_TESTS_FAILED')
+              print(json.dumps({'status':'SUPERVISED_SYNTHETIC_PASS','real_messages_sent':0,'production_writes':0,'services_changed':0}))
               raise SystemExit(0)
           if os.environ.get('ACTION')=='inventory':
               runpy.run_path('experiments/santana-mcp-v5-wapi-readonly/openbot-readonly-inventory.py',run_name='__main__')
