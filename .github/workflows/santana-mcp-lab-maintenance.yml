@@ -1,5 +1,5 @@
 name: Santana MCP LAB controlled maintenance
-run-name: Santana MCP LAB unprivileged preflight
+run-name: Santana MCP LAB and HOMOLOG read-only checks
 on:
   workflow_dispatch:
 permissions:
@@ -52,6 +52,44 @@ jobs:
           report['node_available']=bool(shutil.which('node'))
           report['openssl_available']=bool(shutil.which('openssl'))
           report['disk_free_mib']=shutil.disk_usage('/').free//1048576
+          import urllib.request, urllib.error, time
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self,*a,**k):return None
+          opener=urllib.request.build_opener(NoRedirect)
+          checks=[]
+          public='https://santana-mcp-homolog-consent.vercel.app'
+          auth='https://xdccjulfqcqefykunwtg.supabase.co/auth/v1'
+          calls=[
+            ('resource_discovery',public+'/.well-known/oauth-protected-resource','GET',None,{}),
+            ('oauth_server_discovery',auth+'/.well-known/oauth-authorization-server','GET',None,{}),
+            ('jwks',auth+'/.well-known/jwks.json','GET',None,{}),
+            ('mcp_get',public+'/mcp','GET',None,{}),
+            ('mcp_no_auth',public+'/mcp','POST',{'jsonrpc':'2.0','id':1,'method':'tools/list','params':{}},{'Origin':'https://chatgpt.com'}),
+            ('mcp_disallowed_origin',public+'/mcp','POST',{'jsonrpc':'2.0','id':1,'method':'tools/list','params':{}},{'Origin':'https://attacker.invalid'}),
+            ('edge_no_auth','https://xdccjulfqcqefykunwtg.supabase.co/functions/v1/sana-mcp-read','POST',{'operation':'listar_conversas','page':1,'per_page':1},{})
+          ]
+          for label,url,method,body,extra in calls:
+              headers={'Content-Type':'application/json','Accept':'application/json, text/event-stream'}
+              headers.update(extra);start=time.monotonic()
+              req=urllib.request.Request(url,data=json.dumps(body).encode() if body is not None else None,method=method,headers=headers)
+              try:
+                  with opener.open(req,timeout=15) as response:
+                      status=response.status;data=response.read(65536)
+              except urllib.error.HTTPError as error:status=error.code;data=error.read(65536)
+              except Exception as error:
+                  checks.append({'name':label,'status':None,'error_type':type(error).__name__});continue
+              item={'name':label,'status':status,'latency_ms':round((time.monotonic()-start)*1000)}
+              if label in ('resource_discovery','oauth_server_discovery','jwks') and status==200:
+                  try:
+                      obj=json.loads(data)
+                      if label=='resource_discovery':
+                          item.update({k:obj.get(k) for k in ('resource','authorization_servers','bearer_methods_supported')})
+                      elif label=='oauth_server_discovery':
+                          item.update({k:obj.get(k) for k in ('issuer','authorization_endpoint','token_endpoint','code_challenge_methods_supported','registration_endpoint')})
+                      else:item['algorithms']=sorted(set(k.get('alg','unspecified') for k in obj.get('keys',[])))
+                  except Exception:item['invalid_json']=True
+              checks.append(item)
+          report['homolog_http_checks']=checks
           report['status']='READ_ONLY_PREFLIGHT_NO_INSTALLATION'
           print(json.dumps(report,ensure_ascii=False,indent=2))
           PY
