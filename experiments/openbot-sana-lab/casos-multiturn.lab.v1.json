@@ -1,0 +1,334 @@
+{
+  "schema": "santana.openbot.lab.cases.v1",
+  "versao": "1.0.4",
+  "status": "CASOS_A_EXECUTAR_NAO_SAO_TESTES_APROVADOS",
+  "referencia": "experiments/openbot-sana-lab/regras-operacionais.lab.v1.json",
+  "metodo": "Agente Munícipe de Teste envia mensagens uma por vez para a Sana por comunicação entre agentes. Transcrever cada resposta efetivamente gerada, capturar IDs/erros e avaliar. Resposta de outro agente só é prova de atendimento simulado, não de WhatsApp nem do runtime de produção.",
+  "regra_de_resultado": "PASS apenas com transcrição real e evidência; sem execução deve ficar NOT_RUN. Não inventar resposta nem avaliar apenas roteiro.",
+  "cenarios": [
+    {
+      "id": "S01",
+      "nome": "Exumação Quadra Geral e aluguel",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Boa tarde, quero fazer a exumação do meu pai. Quanto custa?",
+        "Ele está sepultado na Quadra Geral.",
+        "Quero saber também sobre o aluguel de ossuário."
+      ],
+      "esperado": [
+        "Na primeira pergunta genérica, informar as duas referências condicionais do LAB (Quadra Geral R$ 350,00; jazigo particular, urna com exumação R$ 836,65) e só depois perguntar qual modalidade é aplicável.",
+        "Não exigir parentesco apenas para informar o preço",
+        "Quando Quadra Geral conhecida, informar R$ 350,00 (referência operacional LAB)",
+        "Ao pedir aluguel, informar R$ 386,65 por cinco anos sem negar informação conhecida",
+        "Manter o contexto do pai e da modalidade",
+        "Não inserir ressalvas de laboratório dentro de cada resposta ao munícipe fictício; guardar esta informação no relatório/metadata."
+      ],
+      "proibido": [
+        "Repetir em cada turno que a Administração precisa confirmar o valor",
+        "Confundir 'exumação de ossuário' com destino ao ossuário",
+        "Omitir os valores condicionais na primeira pergunta e somente perguntar a modalidade.",
+        "Repetir 'referência operacional de teste' ou 'não representa tarifa oficial conciliada' em toda resposta fictícia."
+      ]
+    },
+    {
+      "id": "S02",
+      "nome": "Modalidade indefinida",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Olá, qual é o valor da exumação?"
+      ],
+      "esperado": [
+        "Oferecer na própria primeira resposta as referências operacionais distintas para Quadra Geral (R$ 350,00) e jazigo particular (urna com exumação R$ 836,65).",
+        "Perguntar apenas a modalidade, depois de explicar os valores; não exigir nome, parentesco, documentos ou triagem.",
+        "Manter as ressalvas de LAB no relatório, fora da fala fictícia ao munícipe."
+      ],
+      "proibido": [
+        "Exigir nome, parentesco e documentos antes de explicar valores",
+        "Responder apenas com uma pergunta sobre modalidade sem informar as duas alternativas.",
+        "Exibir jargão 'LAB' ou 'tarifa não conciliada' no texto da resposta fictícia."
+      ]
+    },
+    {
+      "id": "S03",
+      "nome": "Jazigo particular",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Preciso de exumação em jazigo particular. Quanto custa?"
+      ],
+      "esperado": [
+        "Informar R$ 836,65 para urna com exumação (referência operacional LAB)",
+        "Só falar de translado se solicitado"
+      ],
+      "proibido": [
+        "Incluir automaticamente aluguel de ossuário e compra de ossuário",
+        "Informar valor da Quadra Geral como se fosse jazigo particular"
+      ]
+    },
+    {
+      "id": "S04",
+      "nome": "Compra de ossuário",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Quanto custa comprar um ossuário perpétuo?"
+      ],
+      "esperado": [
+        "Informar R$ 2.955,00 como referência operacional LAB sem exigir triagem"
+      ],
+      "proibido": [
+        "Somar aluguel ou exumação automaticamente"
+      ]
+    },
+    {
+      "id": "S05",
+      "nome": "Escolha explícita e total",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Quero exumar da Quadra Geral.",
+        "Escolho o aluguel de ossuário.",
+        "Qual é o total das duas etapas?"
+      ],
+      "esperado": [
+        "Usar exumação Quadra Geral e aluguel, sem compra",
+        "Somar apenas após a opção ter sido escolhida e após pedido explícito de total",
+        "Não somar taxa semi-intacto automaticamente",
+        "Como a primeira mensagem 'Quero exumar da Quadra Geral' expressa início de uma solicitação efetiva, perguntar parentesco ainda não informado é permitido. Isso não é falha de conteúdo."
+      ],
+      "proibido": [
+        "Cobrar simultaneamente aluguel e compra de ossuário"
+      ],
+      "criterio_especifico": "Solicitação efetiva: pergunta de parentesco permitida quando necessária e ausente. Dúvida informativa ('quanto custa?'): responder preço sem exigir parentesco. Não repetir parentesco já informado nem afirmar autorização concluída."
+    },
+    {
+      "id": "S06",
+      "nome": "Documentos objetivos",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Quais documentos preciso para exumação na Quadra Geral?"
+      ],
+      "esperado": [
+        "Orientar inicialmente certidão de óbito, RG/CPF e comprovante de residência do responsável",
+        "Informar que revisão de documentos cabe à equipe humana",
+        "Não exigir triagem ou validação de cada foto para responder à dúvida"
+      ],
+      "proibido": [
+        "Dizer que todos os documentos enviados estão válidos sem conferência"
+      ]
+    },
+    {
+      "id": "S07",
+      "nome": "Parentesco na Quadra Geral",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Quero solicitar a exumação da minha mãe.",
+        "Sou filho dela.",
+        "O marido dela está vivo. Isso impede que eu, como filho, solicite a exumação?"
+      ],
+      "esperado": [
+        "Perguntar o parentesco somente se faltar em uma solicitação efetiva.",
+        "Reconhecer o(a) filho(a) como igualmente legitimado(a) a pedir exumação, sem subordinar a solicitação à ausência ou renúncia de cônjuge sobrevivente.",
+        "Responder que o cônjuge vivo não impede que o filho faça a solicitação; não declarar autorização administrativa já concedida.",
+        "Não repetir o parentesco já informado."
+      ],
+      "proibido": [
+        "Dizer que o cônjuge tem preferência sobre o filho na solicitação.",
+        "Exigir morte, ausência ou consentimento prévio do cônjuge como condição geral para o filho pedir exumação.",
+        "Confundir igualdade de direito familiar com dispensa das exigências administrativas específicas do caso.",
+        "Declarar autorização administrativa já concedida."
+      ]
+    },
+    {
+      "id": "S08",
+      "nome": "Autorização em jazigo familiar",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Quero fazer exumação no jazigo da família.",
+        "O marido dela está vivo.",
+        "Sou filha da falecida. Posso solicitar a exumação mesmo assim?"
+      ],
+      "esperado": [
+        "Reconhecer que uma filha tem igual direito familiar de iniciar a solicitação, sem prioridade do marido sobrevivente.",
+        "Explicar separadamente que a exumação no jazigo particular pode depender da assinatura/verificação do responsável pela concessão, conforme revisão administrativa.",
+        "Não dar como concluída a autorização administrativa nem dispensar automaticamente assinaturas formalmente necessárias.",
+        "Se a redação atual do contrato oficial divergir sobre assinatura do cônjuge vivo, registrar a necessidade de conciliação sem negar a filha o direito de solicitar."
+      ],
+      "proibido": [
+        "Dizer que somente marido sobrevivente pode solicitar ou que a filha só pode solicitar se ele faltar.",
+        "Afirmar que autorização já foi assinada.",
+        "Equiparar automaticamente regras de assinatura de jazigo familiar às da Quadra Geral.",
+        "Declarar que assinatura do concessionário não é necessária sem revisão."
+      ]
+    },
+    {
+      "id": "S09",
+      "nome": "Local do jazigo desconhecido",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Preciso localizar o jazigo mas não sei a quadra nem o número.",
+        "Sei o nome da minha avó.",
+        "O nome completo dela é Maria de Lourdes Almeida.",
+        "Podemos continuar com as informações que já forneci?"
+      ],
+      "esperado": [
+        "Quando a localização não é conhecida, aceitar 'indisponível' como referência e não exigir quadra ou número.",
+        "Se o munícipe disser apenas 'Sei o nome da minha avó', ainda NÃO informou o nome completo. Solicitar o nome completo é correto; não contar isso como repetição indevida.",
+        "Depois de 'Maria de Lourdes Almeida', reconhecer e utilizar esse nome como referência de busca, sem pedi-lo novamente.",
+        "Não confirmar localização real nem abertura de solicitação sem integração/recibo."
+      ],
+      "proibido": [
+        "Repetir a pergunta sobre quadra e número depois que o munícipe disse que não sabe.",
+        "Voltar a perguntar o nome completo depois de já receber 'Maria de Lourdes Almeida'.",
+        "Inventar localização ou confirmação administrativa."
+      ]
+    },
+    {
+      "id": "S10",
+      "nome": "Recadastro com referência ausente",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Preciso fazer o recadastro do jazigo.",
+        "Não sei o número do jazigo.",
+        "Sei que José Augusto Ferreira está sepultado nesse jazigo.",
+        "Podemos seguir com essa informação?"
+      ],
+      "esperado": [
+        "Prosseguir com a identificação do jazigo como 'indisponível', sem exigir que a pessoa informe o número que desconhece.",
+        "Pedir o nome completo de algum(a) falecido(a) sepultado(a) no jazigo quando ainda estiver faltando.",
+        "Depois que o nome completo 'José Augusto Ferreira' for dado, reconhecê-lo e não repetir o pedido de nome nem de número do jazigo.",
+        "Separar coleta de dados de conclusão do recadastro: sem sinal administrativo, não afirmar que está concluído."
+      ],
+      "proibido": [
+        "Repetir a exigência do número do jazigo após 'não sei'.",
+        "Repetir a solicitação de nome depois que 'José Augusto Ferreira' tiver sido informado.",
+        "Afirmar que recadastro foi concluído."
+      ]
+    },
+    {
+      "id": "S11",
+      "nome": "Correção de nome",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Minha mãe se chama Marina Silva.",
+        "Desculpe, é Maria Silva, não Marina.",
+        "Que nome você registrou?"
+      ],
+      "esperado": [
+        "Usar Maria Silva depois da correção dentro desse caso",
+        "Não restabelecer Marina Silva"
+      ],
+      "proibido": [
+        "Repetir pergunta do nome já corrigido"
+      ]
+    },
+    {
+      "id": "S12",
+      "nome": "Correção de modalidade",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "É exumação em jazigo particular.",
+        "Corrigindo: é na Quadra Geral.",
+        "E quanto custa?"
+      ],
+      "esperado": [
+        "Corrigir modalidade do próprio caso",
+        "Usar referência R$ 350,00 da Quadra Geral e não R$ 836,65"
+      ],
+      "proibido": [
+        "Manter preço da modalidade anterior"
+      ]
+    },
+    {
+      "id": "S13",
+      "nome": "Condição semi-intacta",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Como funciona exumação na Quadra Geral? E se estiver semi-intacto?"
+      ],
+      "esperado": [
+        "Explicar que a condição pode alterar o procedimento, não é certa antecipadamente",
+        "Informar referência operacional LAB R$ 1.427,00 quando especificamente perguntado"
+      ],
+      "proibido": [
+        "Somar automaticamente à exumação básica",
+        "Afirmar resultado do procedimento antes da avaliação"
+      ]
+    },
+    {
+      "id": "S14",
+      "nome": "Intervenção humana",
+      "modo": "AGENTES_MULTITURN",
+      "turnos": [
+        "Quero falar com uma pessoa sobre autorização de exumação."
+      ],
+      "esperado": [
+        "Oferecer revisão humana de forma natural",
+        "Não alegar protocolo/encaminhamento criado sem recibo"
+      ],
+      "proibido": [
+        "Prometer agendamento, autorização ou prazo como já confirmado"
+      ]
+    },
+    {
+      "id": "S15",
+      "nome": "Sem duplicidade de entrada",
+      "modo": "RUNTIME_INTEGRACAO_PENDENTE",
+      "turnos": [
+        "Mensagem simulada com mesmo external_message_id entregue duas vezes."
+      ],
+      "esperado": [
+        "O runtime registra apenas um evento lógico e não dispara duas respostas"
+      ],
+      "proibido": [
+        "Declarar PASS com teste apenas de prompt"
+      ]
+    },
+    {
+      "id": "S16",
+      "nome": "Isolamento de dois munícipes",
+      "modo": "RUNTIME_INTEGRACAO_PENDENTE",
+      "turnos": [
+        "Contato fictício A informa jazigo particular.",
+        "Contato fictício B informa Quadra Geral.",
+        "Contato fictício A pergunta valor."
+      ],
+      "esperado": [
+        "A responde com modalidade própria sem herdar dado do contato B",
+        "Threads/sessões distintas e IDs persistidos"
+      ],
+      "proibido": [
+        "Declarar PASS em um único chat comum entre agentes"
+      ]
+    },
+    {
+      "id": "S17",
+      "nome": "Assumido por humano",
+      "modo": "RUNTIME_INTEGRACAO_PENDENTE",
+      "turnos": [
+        "A equipe assume a conversa fictícia.",
+        "Nova mensagem fictícia chega para o mesmo contato."
+      ],
+      "esperado": [
+        "A Sana não envia resposta após manual_takeover"
+      ],
+      "proibido": [
+        "Sana e atendente respondendo ao mesmo tempo"
+      ]
+    }
+  ],
+  "resultados": [],
+  "observacoes_de_avaliacao": [
+    "2026-10-17: Munícipe de Teste informou FLOW_PASS para S05–S10, com respostas correlacionadas por IDs antes do envio seguinte, porém sem timestamps independentes. Não há inspeção independente dos logs neste GitHub.",
+    "2026-10-17: Na revisão comunicada, S09 e S10 deixaram de ter falhas de conteúdo pendentes; a avaliação anterior de repetição era imprecisa se o nome completo ainda não havia sido informado.",
+    "2026-10-17: S05 teve falsa falha de conteúdo por perguntar parentesco na primeira mensagem. O cenário inicia uma solicitação efetiva de exumação na Quadra Geral; perguntar parentesco ausente é permitido, diferentemente de exigir parentesco para mera informação de preço.",
+    "2026-10-17: Conteúdo S01–S14 reportado sem falhas pendentes após revisão; resultados do agente de testes não representam verificação independente nem aprovação de isolamento/WhatsApp/runtime.",
+    "2026-10-17: S15–S17 permanecem não executados; isolamento entre cenários em histórico compartilhado não foi comprovado.",
+    "2026-10-17: responsável do projeto esclareceu que cônjuge/companheiro(a) e filhos(as) têm o mesmo direito familiar de solicitar exumação, sem precedência de cônjuge. S07/S08 revisados e marcados para regressão direcionada; os resultados anteriores não avaliam o novo critério."
+  ],
+  "regras_de_evidencia": {
+    "content": "Avaliar precisão e naturalidade do texto da resposta realmente recebida, mantendo as fontes como metadados de LAB.",
+    "order": "Declarar FLOW_PASS se houver IDs de mensagens efetivamente correlacionados mostrando que a resposta do turno anterior chegou antes do próximo envio. Timestamps independentes são evidência adicional, não requisito obrigatório quando a correlação de IDs e a relação de causalidade são demonstradas. Sem essa prova, FLOW_BLOCKED.",
+    "isolation": "Testes de agentes compartilhando um histórico não demonstram separação de contatos; isolamento de conversas permanece BLOCKED até teste específico com sessões distintas.",
+    "scoring": "Dividir a avaliação em CONTENT_PASS/CONTENT_FAIL/CONTENT_BLOCKED e FLOW_PASS/FLOW_FAIL/FLOW_BLOCKED; não chamar um cenário integralmente PASS quando algum eixo estiver bloqueado.",
+    "source": "Se o relatório original estiver disponível no workspace, utilizar as transcrições originais como fonte; não inventar identificadores, horários, respostas ou status.",
+    "report_origin": "As conclusões de S01–S14 foram comunicadas pelos agentes via usuário e/ou arquivo local do OpenBot; os logs e IDs individuais não foram abertos/validados nesta alteração do GitHub. O relatório registra status RELATADO, não verificação independente."
+  }
+}

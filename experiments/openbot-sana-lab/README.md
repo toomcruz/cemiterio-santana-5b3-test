@@ -1,0 +1,69 @@
+# Sana no OpenBot — base de trabalho EXCLUSIVA do laboratório
+
+> **Estado:** material de conhecimento e cenários para homologação da Sana no OpenBot; NÃO integra o atendimento real, NÃO publica tarifa oficial, NÃO altera WhatsApp/W-API, Dify, Supabase, Vercel, webhook ou a Sana já instalada.
+
+## Por que este pacote existe
+
+O agente de testes respondeu sem valores às perguntas da Quadra Geral e de ossuário porque o catálogo oficial de exumação ainda tem mapeamentos de modalidade/vigência pendentes. Ao longo do projeto, o responsável informou valores e regras operacionais detalhadas que são úteis para testar o comportamento. O pacote preserva ambos os conjuntos **sem fingir que a divergência já foi resolvida**.
+
+## Arquivos
+
+- `regras-operacionais.lab.v1.json`: referências operacionais fornecidas pelo responsável, respostas por modalidade, documentos iniciais, limites de autorização e diferenças não resolvidas com a fonte oficial.
+- `casos-multiturn.lab.v1.json`: 17 roteiros verificáveis; 14 podem ser exercitados pela comunicação de agentes; 3 exigem o runtime integrado e permanecem pendentes.
+- `INSTRUCOES-PARA-SANA.md`: como a Sana deve consultar esta base **somente no LAB** e demonstrar uma resposta real.
+- `validar_lab.py`: checagem estática sem rede. Não produz aprovação comportamental.
+- `evidencia-s01-20261016.md`: registro da transcrição relatada dos três turnos do primeiro S01, distinto de prova técnica de execução ou integração.
+- `estado-validacao-20261017.md`: consolidação relatada de S01–S14, S05 reclassificado corretamente, FLOW_PASS de S05–S10 e limites de isolamento.
+
+## Fontes e hierarquia
+
+1. **Contrato técnico oficial e de produção:** `santana-authority/catalogo/exumacao.v1.json` e `santana-conversation-domain/*.v1.json`, com release_id/integridade preservados. Regras de autorização administrativa nunca podem ser substituídas por exemplos de conversa.
+2. **Informações operacionais já fornecidas pelo responsável do projeto:** registradas neste LAB apenas como referência para respostas de teste. Preços, documentos, vigência e enquadramento só poderão ser promovidos após conciliação autorizada com a fonte tarifária vigente.
+3. **Painel operacional atual:** `toomcruz/atendimento-cemiterio-santana`, em especial `docs/PRODUCTION-ARCHITECTURE.md`, `app/api/webhooks/wapi/route.ts`, `app/api/testing/wapi/route.ts`. O simulador atual NÃO executa a Sana do OpenBot.
+
+### Divergências que permanecem abertas
+
+| Assunto | Registro do atendimento / LAB | Catálogo técnico congelado | Situação |
+| --- | --- | --- | --- |
+| Exumação na Quadra Geral | R$ 350,00, informado pelo responsável | R$ 351,67 em **gaveta unitária a prazo fixo**; sem equivalência demonstrada com Quadra Geral | **Não converter automaticamente** |
+| Aluguel de ossuário | R$ 386,65 / cinco anos, informado | Não há entrada do aluguel correspondente no catálogo de exumação | Validar fonte tarifária antes de produção |
+| Compra de ossuário perpétuo | R$ 2.955,00, informado | Não há entrada equivalente no catálogo de exumação | Validar fonte tarifária antes de produção |
+| Jazigo particular | Urna com exumação R$ 836,65, informado | 'Terreno a prazo indeterminado' R$ 586,04 não está mapeado como o mesmo serviço | Não equiparar rubricas |
+| Semi-intacto | R$ 1.427,00, informado | Sem procedimento/tarifa oficialmente mapeados no catálogo congelado | LAB somente |
+| Fonte 'Tabela_Politica_Tarifaria_07_01_2026' | Necessidade de conferir a vigência | Data interpretada do nome do arquivo, não confirmada | Pendente |
+| 'Exumação de ossuário' | Não confundir com aluguel de ossuário **após** a exumação | Tarifa R$ 106,57 para exumação **feita no** ossuário | Conceitos diferentes |
+
+## Critérios para testes
+
+- A Sana responde valores do **LAB** quando a modalidade é conhecida, em linguagem curta, sem pedir documentos para esclarecer um preço e sem repetir 'consulte a Administração' a cada turno.
+- As respostas de teste nunca se tornam prova de tarifa pública vigente. O agente não executa agendamentos, registros, autorização, verificação documental ou mensagens reais.
+- A equipe humana revisa documentos. Para Quadra Geral, orientação inicial comunicada: certidão de óbito, RG/CPF e comprovante de residência do responsável; não transformar esse resumo em lista jurídica universal.
+- **Direito familiar corrigido em 17/10/2026:** cônjuge/companheiro(a) e filhos(as) têm igual direito à solicitação da exumação, sem prioridade do cônjuge, inclusive se ele(a) estiver vivo(a). Isso não substitui a verificação de assinaturas e da responsabilidade por jazigo particular. O catálogo técnico legado que presume assinatura obrigatória do cônjuge precisa ser conciliado antes de produção.
+- Para um jazigo/ossuário cuja identificação o cidadão desconhece, registrar `indisponível` e perguntar **uma vez** pelo nome completo de algum(a) falecido(a) sepultado(a) no jazigo.
+- Um teste é `PASS` somente quando a resposta **efetiva** do agente foi capturada e avaliada. Um roteiro ou HTTP 202 não é prova de execução.
+- Os casos de duplicidade, isolamento de múltiplos contatos e pausa humana devem aguardar integração/runtime de testes apropriado, sem experimentar em produção.
+
+## O que NÃO fazer
+
+- Não editar o catálogo congelado, seus SHA/release_id, nem tabelas `service_*` de produção.
+- Não ligar a Sana do OpenBot ao webhook da W-API nem deixar OpenBot e runtime atual responderem ao mesmo número.
+- Não publicar/ativar integrações ou executar no WhatsApp real.
+- Não criar uma segunda fonte oficial paralela: este é um pacote transitório de LAB para conciliação.
+
+## Progresso da integração ChatGPT ↔ Sana (17/10/2026)
+
+- A ponte MCP 0.4.2 foi instalada na VPS e o envio/resultado direto da Sana foi demonstrado, sem Boss e sem WhatsApp.
+- **Idempotência real no próprio MCP: PASS** para duas chamadas com mesma chave e mesmos `request_id`, `message_id`, `delivery_id` e uma resposta real. Evidência: `evidencia-mcp-dedupe-20261017.md`.
+- **S15 (duplicidade de mensagem recebida pela W-API): NÃO EXECUTADO**; não inferir esse resultado do dedupe da ponte.
+- **S16 (isolamento entre munícipes): BLOQUEADO**. A ponte ainda entrega mensagens no chat principal da Sana sem identificador de sessão independente.
+- **S17 (pausa humana): BLOQUEADO** para a integração com Sana OpenBot; os guardas do runtime oficial não foram verificados em uma ponta a ponta integrada.
+- O contrato e os critérios exigidos para os três cenários ficam em `gates-isolamento-dedupe-takeover-20261017.md`. Não executar testes em produção.
+
+## Próxima ação prática
+
+**Conteúdo conversacional:** S01–S14 foram relatados sem falhas remanescentes após revisão, com correção de falsa falha do S05. **Sequência:** S05–S10 receberam FLOW_PASS relatado, com respostas correlacionadas por IDs; ainda não houve auditoria independente dos logs nesta PR.
+
+**Regressão pontual necessária após correção de direito familiar:** reexecutar apenas S07 e S08 com cônjuge sobrevivente vivo e filho(a) solicitante, verificando igualdade de direito à solicitação, sem dispensar assinaturas do jazigo. O histórico de aprovação S01–S14 antecede esta nova exigência.
+
+**Não repetir as mesmas baterias de conteúdo por rotina.** O próximo bloqueio técnico é **sessão isolada por munícipe** e um runtime seguro que permita executar os cenários S15–S17 sem enviar mensagens reais, preservar o painel oficial e respeitar a pausa humana. Nenhuma integração ou deploy deve ocorrer sem autorização específica.
+

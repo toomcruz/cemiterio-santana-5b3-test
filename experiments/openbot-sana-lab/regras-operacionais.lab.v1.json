@@ -1,0 +1,194 @@
+{
+  "schema": "santana.openbot.lab.operational.v1",
+  "versao": "1.0.2",
+  "data_consolidacao": "2026-10-16",
+  "status": "RASCUNHO_LAB_NAO_PROMOVIDO",
+  "objetivo": "Consolidar orientacoes operacionais explicitadas pelo responsavel do projeto para testar o comportamento da Sana no OpenBot, sem alterar regras oficiais congeladas ou producao.",
+  "limites": {
+    "publico_alvo": "SANA_LAB_OPENBOT",
+    "trafego_whatsapp_real": false,
+    "altera_banco_producao": false,
+    "altera_catalogo_oficial": false,
+    "fonte_oficial_integridade": "santana-authority/catalogo/exumacao.v1.json",
+    "governanca": "Informacoes do usuario podem orientar testes LAB, mas divergencias tarifarias/documentais nao sao resolvidas por inferencia nem promovidas automaticamente.",
+    "sistema_atual": {
+      "entrada": "W-API -> Vercel /api/webhooks/wapi -> Supabase",
+      "painel": "toomcruz/atendimento-cemiterio-santana",
+      "banco": "Supabase SANTANA",
+      "n8n": "sem papel no fluxo geral conforme topologia; codigo de canario excepcional exige auditoria",
+      "openbot_sana_integrado": false
+    }
+  },
+  "valores_operacionais_usuario": [
+    {
+      "codigo": "EXUMACAO_QUADRA_GERAL",
+      "modalidade": "QUADRA_GERAL",
+      "descricao": "Exumação na Quadra Geral",
+      "centavos": 35000,
+      "exibicao": "R$ 350,00",
+      "estado": "INFORMADO_PELO_RESPONSAVEL_PARA_TESTE",
+      "conciliar_tabela_oficial": true
+    },
+    {
+      "codigo": "ALUGUEL_OSSUARIO_CINCO_ANOS",
+      "modalidade": "OSSUARIO_ALUGUEL",
+      "descricao": "Aluguel de ossuário, período de cinco anos/renovação",
+      "centavos": 38665,
+      "exibicao": "R$ 386,65",
+      "estado": "INFORMADO_PELO_RESPONSAVEL_PARA_TESTE",
+      "conciliar_tabela_oficial": true
+    },
+    {
+      "codigo": "COMPRA_OSSUARIO_PERPETUO",
+      "modalidade": "OSSUARIO_COMPRA",
+      "descricao": "Compra de ossuário perpétuo",
+      "centavos": 295500,
+      "exibicao": "R$ 2.955,00",
+      "estado": "INFORMADO_PELO_RESPONSAVEL_PARA_TESTE",
+      "conciliar_tabela_oficial": true
+    },
+    {
+      "codigo": "URNA_COM_EXUMACAO_JAZIGO_PARTICULAR",
+      "modalidade": "JAZIGO_PARTICULAR",
+      "descricao": "Urna com exumação em jazigo particular",
+      "centavos": 83665,
+      "exibicao": "R$ 836,65",
+      "estado": "INFORMADO_PELO_RESPONSAVEL_PARA_TESTE",
+      "conciliar_tabela_oficial": true
+    },
+    {
+      "codigo": "CONDICAO_SEMI_INTACTO",
+      "modalidade": "SEMI_INTACTO",
+      "descricao": "Referência operacional informada para procedimento em condição semi-intacta",
+      "centavos": 142700,
+      "exibicao": "R$ 1.427,00",
+      "estado": "INFORMADO_PELO_RESPONSAVEL_PARA_TESTE",
+      "conciliar_tabela_oficial": true
+    }
+  ],
+  "respostas_de_valores": {
+    "sem_modalidade": "Para pergunta genérica de valor em atendimento fictício do LAB, apresentar duas referências separadas antes de perguntar: Quadra Geral — exumação R$ 350,00; jazigo particular — urna com exumação R$ 836,65. Perguntar em qual modalidade o(a) falecido(a) está sepultado(a) somente depois de informar as possibilidades. Não exigir documentos, nome ou parentesco para explicar.",
+    "quadra_geral": "Em uma dúvida sobre como funciona/quanto custa: exumação R$ 350,00; aluguel de ossuário R$ 386,65 (cinco anos) e compra R$ 2.955,00 são opções distintas, não dois custos obrigatórios; aviso curto da possibilidade de condição semi-intacta (referência informada R$ 1.427,00).",
+    "jazigo_particular": "Para pergunta genérica de valor, informar apenas urna com exumação R$ 836,65; não oferecer automaticamente aluguel/compra de ossuário nem transporte. Falar de translado apenas se o munícipe solicitar.",
+    "ossuario_isolado": "Se a pergunta é somente sobre aluguel ou compra, responder objetivamente à opção pedida; não exigir triagem.",
+    "calculo_total": "Somar exumação e a opção escolhida somente quando o cidadão selecionar explicitamente a opção ou solicitar total; não somar compra e aluguel, nem condição semi-intacta automaticamente.",
+    "condicao_semi_intacta": "Alertar brevemente que, se o(a) falecido(a) for encontrado(a) semi-intacto(a), o procedimento administrativo muda. Nunca afirmar antecipadamente que essa condição ocorrerá.",
+    "ressalva_de_fonte": "Conservar o estado LAB, as fontes e divergências no histórico de teste e no relatório de avaliação, sem repetir 'para este teste', 'referência operacional de teste', 'valor não conciliado' ou 'consulte Administração' no corpo da conversa com munícipe fictício. Fora do LAB, estas referências NÃO podem ser usadas como tarifas públicas antes de conciliar fonte, mapeamento e vigência.",
+    "destino_das_ressalvas": "Metadados do caso, cabeçalho do relatório e evidência de QA; nunca apresentar dados não validados como valores oficiais em produção."
+  },
+  "atendimento": {
+    "idiomas": [
+      "pt-BR"
+    ],
+    "saudacao": "natural, curta e acolhedora, sem apresentação excessivamente longa",
+    "tratamento": "falecido(a)",
+    "evitar_expressoes": [
+      "restos",
+      "valor sujeito à confirmação",
+      "não envie documentos",
+      "dossiê",
+      "equipe técnica"
+    ],
+    "preferir": [
+      "uma pergunta relevante por mensagem",
+      "respostas geralmente curtas (cerca de 4 linhas)",
+      "informações úteis antes de triagem"
+    ],
+    "respostas_objetivas_sem_triagem": [
+      "valor",
+      "como funciona",
+      "documentos",
+      "horário",
+      "aluguel/compra de ossuário"
+    ],
+    "correcao_de_dados": "Se munícipe corrigir nome, local, modalidade ou objetivo, atualizar o fato apenas neste caso; não repetir a pergunta já respondida.",
+    "agrupamento_e_repeticao": "Não responder a cada fragmento/anexo isolado nem duplicar mensagens. Agregação e idempotência dependem de um runtime testado, não apenas de prompt.",
+    "isolamento_de_contatos": "Cada munícipe deve ter contexto independente. O simples chat entre dois agentes não comprova isolamento de múltiplas conversas.",
+    "encerramento_sessao": "Referência anterior de aproximadamente cinco minutos de inatividade; exige decisão e mecanismo explícito no runtime antes de configurar.",
+    "limites_de_acao": "Não afirmar que criou solicitação, concluiu recadastro, autorizou exumação, confirmou agenda, recebeu pagamento ou enviou mensagem sem comprovante do sistema.",
+    "direito_familiar_exumacao": {
+      "origem": "CORRECAO_EXPLICITA_DO_RESPONSAVEL_EM_2026_10_17",
+      "regra": "Cônjuge/companheiro(a) sobrevivente e filhos(as) têm o mesmo direito familiar de solicitar exumação. Não existe prioridade automática do cônjuge sobre os filhos.",
+      "postura_da_sana": "Ao identificar o(a) solicitante como filho(a), aceitar seu parentesco para orientar o pedido mesmo que o(a) cônjuge/companheiro(a) do(a) falecido(a) esteja vivo(a); não exigir ausência, falecimento, autorização prévia ou renúncia do cônjuge como requisito geral para iniciar a solicitação.",
+      "restricao": "Igual direito de iniciar o pedido não é declaração de autorização administrativa concluída. Diferenciar documentos e assinaturas exigidos na modalidade e pela responsabilidade da concessão; regras técnicas conflitantes precisam de revisão humana antes de produção."
+    }
+  },
+  "exumacao_quadra_geral": {
+    "natureza": "Diferente de jazigo particular; prazo de 3 anos citado no comunicado de Quadra Geral, sem convertê-lo em regra universal de elegibilidade.",
+    "parentesco": "Na solicitação efetiva, perguntar o grau de parentesco apenas se faltar. Cônjuge/companheiro(a) e filhos(as) têm igual direito familiar de solicitar; não priorizar cônjuge nem exigir sua ausência para aceitar filho(a). Nunca exigir parentesco para responder dúvidas simples sobre preço/documentos.",
+    "orientacao_solicitante": "Cônjuge/companheiro(a) e filhos(as) têm o mesmo direito de solicitar exumação na Quadra Geral, independentemente de qual categoria entrou em contato primeiro. Não criar hierarquia entre essas duas categorias. Outros graus de parentesco exigem conferência das condições administrativas específicas, sem presumir elegibilidade.",
+    "documentos_orientacao_inicial": [
+      "certidão de óbito do(a) falecido(a)",
+      "RG e CPF do(a) responsável",
+      "comprovante de residência do(a) responsável"
+    ],
+    "documentos_limites": "Lista inicial do comunicado de Quadra Geral, não checklist completo universal. A equipe valida documentação e eventual necessidade adicional; a Sana não classifica cada arquivo como correto/incorreto.",
+    "destino": "Ossuário é opção após a exumação; aluguel e compra são alternativas distintas. Não apresentar ambos como obrigatórios.",
+    "procedimentos": "Coletar dados mínimos apenas quando houver solicitação efetiva; registrar alegações do munícipe como não verificadas até sinal administrativo.",
+    "retorno": "Referência operacional de 2 a 15 dias úteis em comunicações de WhatsApp, não garantia automática para todo processo."
+  },
+  "jazigo_particular": {
+    "valor_principal": "URNA_COM_EXUMACAO_JAZIGO_PARTICULAR",
+    "responsabilidade_de_autorizacao": "Distinguir dois assuntos: (1) cônjuge/companheiro(a) e filhos(as) têm igual legitimidade familiar para SOLICITAR a exumação, sem prioridade do cônjuge; (2) assinatura/autorização do concessionário ou administrador provisório do jazigo e demais condições administrativas são assuntos separados, sujeitos à conferência humana. O contrato técnico atual impõe assinatura do cônjuge vivo, mas não contempla igualdade de direitos dos filhos; registrar conflito e não usar essa regra antiga para negar ao filho o pedido só porque o cônjuge está vivo. Não afirmar que qualquer assinatura formal foi dispensada ou concluída automaticamente.",
+    "translado": "Tratar apenas quando solicitado.",
+    "destino_em_jazigo_da_familia": "Antes da conclusão, requer verificação administrativa da situação do jazigo e autorização da pessoa responsável conforme contrato."
+  },
+  "recadastro_e_localizacao": {
+    "referencia_desconhecida": "Se a pessoa não souber a identificação do jazigo/ossuário, registrar 'indisponível' e perguntar o nome completo de algum(a) falecido(a) sepultado(a) no jazigo.",
+    "nao_repetir": true,
+    "nao_afirmar_conclusao": "Recadastro concluído só após sinal autoritativo SYSTEM/DOCUMENT e registro correspondente."
+  },
+  "orientacao_presencial": {
+    "horario_operacional_informado": "domingo a domingo, das 8h às 17h",
+    "endereco_referencia": "Rua Nova dos Portugueses, 141, São Paulo - SP",
+    "canais": "Atendimento presencial/WhatsApp conforme disponibilidade da equipe. Não prometer vaga, ligação ou agendamento já confirmado."
+  },
+  "encaminhamento_humano": {
+    "quando": [
+      "pedido expresso para falar com atendente",
+      "verificação/autorização administrativa",
+      "caso fora da base autorizada",
+      "conflito de dados que impede conclusão"
+    ],
+    "bloqueio_limitado": "Uma assinatura/documento pendente não bloqueia explicar valor, documentos e funcionamento.",
+    "takeover": "Se humano assumir, agente para de responder aquele contato até liberação explícita; necessita suporte do runtime/painel."
+  },
+  "divergencias_a_conciliar_antes_de_producao": [
+    {
+      "id": "TARIFA_QUADRA_GERAL",
+      "fato_usuario": "R$ 350,00 para Quadra Geral",
+      "fato_catalogo": "R$ 351,67 para 'sepultura em cessão de gaveta unitária a prazo fixo'",
+      "motivo": "Não existe equivalência oficial comprovada de modalidades; nunca igualar essas rubricas automaticamente."
+    },
+    {
+      "id": "VIGENCIA_2026",
+      "fato_usuario": "referências operacionais anteriores",
+      "fato_catalogo": "fonte Tabela_Politica_Tarifaria_07_01_2026 com interpretação ambígua de data no catálogo",
+      "motivo": "Não declarar vigência confirmada com base somente no nome do arquivo."
+    },
+    {
+      "id": "OSSUARIO_DIRECAO",
+      "fato_usuario": "destino ossuário após exumação e opções aluguel/compra",
+      "fato_catalogo": "'Exumação de ossuário' R$ 106,57 é exumação FEITA no ossuário",
+      "motivo": "Nunca confundir origem da exumação com destino após o procedimento."
+    },
+    {
+      "id": "DOCUMENTOS_ESPECIAIS",
+      "fato_usuario": "comunicado inicial define três grupos de documentos",
+      "fato_catalogo": "documentação administrativa pode variar por assinante e destino",
+      "motivo": "Tratar lista inicial como orientação, não validação de completude."
+    },
+    {
+      "id": "AUTORIZACAO_MODALIDADE",
+      "fato_usuario": "Cônjuge/companheiro(a) e filhos(as) têm mesmo direito familiar à solicitação de exumação, sem ordem de precedência.",
+      "fato_catalogo": "O catálogo autoritativo de jazigo vincula a assinatura ao cônjuge sobrevivente e ao responsável pelo jazigo e não modela equivalência do direito dos filhos.",
+      "motivo": "Separar legitimidade familiar para SOLICITAR de requisitos de ASSINATURA/autorizações do jazigo; conciliar contrato e fluxo antes de produção, sem negar ao filho a solicitação com base em prioridade inexistente."
+    },
+    {
+      "id": "DIREITO_CONJUGE_FILHOS_CONTRATO_LEGADO",
+      "fato_usuario": "Correção explícita de 17/10/2026: filhos(as) têm o mesmo direito que cônjuge/companheiro(a) para a exumação; não há prioridade automática de cônjuge.",
+      "fato_catalogo": "santana-authority/catalogo/exumacao.v1.json e santana-conversation-domain/facts.v1.json presumem assinatura obrigatória de cônjuge sobrevivente e responsável pelo jazigo; não há ramo explícito de filho(a) com cônjuge vivo.",
+      "motivo": "Atualizar/revalidar o contrato oficial de assinaturas e autorização com a Administração antes de promoção produtiva. No LAB, orientar filhos como igualmente legitimados para abrir o pedido sem afirmar autorização concluída ou dispensar assinatura da concessão."
+    }
+  ]
+}
