@@ -38,6 +38,12 @@ jobs:
                   if not sock or not pid: raise RuntimeError()
                   env.update(SSH_AUTH_SOCK=sock[1],SSH_AGENT_PID=pid[1]); agent=env
                   phase='KEY_LOAD'
+                  if key.strip().startswith('LS0tLS1CRUdJTi'):
+                      import base64
+                      key=base64.b64decode(key.strip(),validate=True).decode()
+                  if key.startswith('-----BEGIN ') and '\\n' in key and '\n' not in key:
+                      key=key.replace('\\n','\n')
+                  key=key.strip()+'\n'
                   added=subprocess.run(['ssh-add','-'],input=key,text=True,capture_output=True,env=env,timeout=10)
                   if added.returncode: raise RuntimeError('KEY_NOT_ACCEPTED')
                   phase='KNOWN_HOSTS'
