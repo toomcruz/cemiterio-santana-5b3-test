@@ -6,7 +6,7 @@ on:
       action:
         description: Stage patch, collect report, or read OpenBot configuration schema
         type: choice
-        options: [stage, collect, inventory, root_inventory_stage, supervised, admin_assist, memory_inventory]
+        options: [stage, collect, inventory, root_inventory_stage, supervised, admin_assist, memory_inventory, memory_validate]
         default: stage
 permissions:
   contents: read
@@ -24,7 +24,7 @@ jobs:
           persist-credentials: false
           sparse-checkout: experiments/santana-mcp-v5-wapi-readonly
       - uses: actions/setup-python@v5
-        if: inputs.action == 'admin_assist'
+        if: inputs.action == 'admin_assist' || inputs.action == 'memory_validate'
         with:
           python-version: '3.12'
       - name: Stage or collect without changing running services
@@ -36,8 +36,13 @@ jobs:
           python3 - <<'PY'
           import hashlib,io,json,os,runpy,stat,subprocess,sys,tempfile,zipfile
           from pathlib import Path
+          if os.environ.get('ACTION')=='memory_validate':
+              sys.path.insert(0,'experiments/santana-mcp-v5-wapi-readonly/mission-final/sana-memory-lab')
+              import run_validation
+              run_validation.main(stage=True)
+              raise SystemExit(0)
           if os.environ.get('ACTION')=='memory_inventory':
-              runpy.run_path('experiments/santana-mcp-v5-wapi-readonly/mission-final/sana-memory-lab/vps_access.py',run_name='__main__')
+              runpy.run_path('experiments/santana-mcp-v5-wapi-readonly/mission-final/sana-memory-lab/vps_inventory.py',run_name='__main__')
               raise SystemExit(0)
           if os.environ.get('ACTION')=='admin_assist':
               testroot=Path('experiments/santana-mcp-v5-wapi-readonly/mission-final/admin-assist')

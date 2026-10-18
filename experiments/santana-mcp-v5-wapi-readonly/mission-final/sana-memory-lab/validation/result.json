@@ -1,0 +1,52 @@
+{
+  "status": "ISOLATED_TESTS_PASS",
+  "suites": [
+    {
+      "suite": "original_package",
+      "exit_code": 0,
+      "tests": 18,
+      "log_sha256": "741109d9b6b26f31390fef84a35b994c0203094c961f919b8dd4c86cef962408"
+    },
+    {
+      "suite": "candidate",
+      "exit_code": 0,
+      "tests": 40,
+      "log_sha256": "90d10b61ccc62718d3edcd81c4bd022436e9f6e071025b8b0579b1c2dc0ca2ff"
+    },
+    {
+      "suite": "bridge_patch",
+      "exit_code": 0,
+      "tests": 4,
+      "log_sha256": "8a1c487ae5429ccf2e3baed9f2245f3087b668898c708f45111d27f0e4435d0c"
+    },
+    {
+      "suite": "privileged_gate",
+      "exit_code": 0,
+      "tests": 6,
+      "log_sha256": "239510096721e1f6182d362f8d9762ec453cd10189b3d5491d8aaacdfa264cd9"
+    },
+    {
+      "suite": "existing_multiagent_regression",
+      "exit_code": 0,
+      "tests": 13,
+      "log_sha256": "6170b16d6f95a407f816ebc984a08a72028782a6140d43377bd20664b5147267"
+    }
+  ],
+  "candidate_and_regression_tests": 63,
+  "original_package_tests": 18,
+  "live_openbot_session_tests": "NOT_RUN_TEAM_MEMBER_ACCESS_NOT_ESTABLISHED",
+  "live_result_reproduction": {
+    "task_id": "d6d8d76dbb344a0a9d70e22acaeee342",
+    "run_id": "1acc093e-de6c-40a5-9c13-1aa004c38e7e",
+    "delivery_id": "8e77a49f-53a0-443b-9667-439e83cf57f2",
+    "run_status": "succeeded",
+    "result_available": false,
+    "attempts": 1
+  },
+  "metadata": {
+    "application_roots": []
+  },
+  "production_writes": 0,
+  "whatsapp_sends": 0,
+  "sana_activated": false
+}

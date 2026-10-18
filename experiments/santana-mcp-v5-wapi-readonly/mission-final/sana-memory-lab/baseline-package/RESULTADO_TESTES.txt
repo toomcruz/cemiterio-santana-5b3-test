@@ -1,0 +1,22 @@
+SANA / MEMORIA ISOLADA / 18-10-2026
+Prototipo offline, somente dados ficticios.
+
+Comando: python -m unittest -v test_lab test_reconciliation
+Resultado: 18 testes executados; 18 aprovados.
+
+Verificacoes:
+- mesma task/thread em tres turnos sinteticos
+- threads diferentes para familias sinteticas A e B
+- rotacao por TTL e encerramento somente apos resultado terminal verificado
+- idempotencia persistida atraves de reinicio e deduplicacao
+- rejeicao de idempotency_key reutilizada entre conversas
+- estado desconhecido bloqueia replay e seguimento
+- liberacao de capacidade mediante fechamento verificado de sessoes expiradas
+- falha no fechamento permanece pendente e bloqueia nova sessao daquele contato
+- nenhuma mensagem/conteudo de contato armazenado no banco SQLite
+- dados reais e transportes de producao nao sao aceitos
+- run succeeded mas resultado ausente permanece RESULT_MISSING
+- run_id ausente ou conflitante tratado sem erro ou replay
+- nenhum envio WhatsApp/Supabase/Vercel/Dify
+
+LIMITE: contrato Team API/OpenBot real, autorizacao, privacidade entre tasks e bug RESULT_MISSING nao estao validados neste prototipo.

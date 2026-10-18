@@ -1,0 +1,7 @@
+python3 -I - <<'SANA_MEMORY_LAB'
+import hashlib,os
+fd=os.open('/home/runner/santana-mcp-staging/sana-memory-dbbfe50433c1/apply-lab.py',os.O_RDONLY|os.O_NOFOLLOW)
+with os.fdopen(fd,'rb') as f: code=f.read(524289)
+if len(code)>524288 or hashlib.sha256(code).hexdigest()!='dbbfe50433c183b2e4462266b20bb8ee062c3bd731ea0ebbc7fd15dfb91a9fa0': raise SystemExit('PAREI: integridade divergente; nada executado.')
+exec(compile(code,'sana_memory_lab_verificado','exec'),{'__name__':'__main__'})
+SANA_MEMORY_LAB
