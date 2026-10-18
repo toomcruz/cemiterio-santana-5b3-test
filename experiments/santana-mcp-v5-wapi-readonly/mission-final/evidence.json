@@ -1,6 +1,6 @@
 {
-  "status": "PROD_ONE_ATTEMPT_CONSENT_PROVEN_CHATGPT_TOOL_REFRESH_PENDING",
-  "updated_at": "2026-10-18T19:29:00Z",
+  "status": "FIRST_SUPERVISED_REAL_TEXT_RECEIVED_BY_USER",
+  "updated_at": "2026-10-18T19:38:47Z",
   "chatgpt": {
     "existing_connection": true,
     "authorized_real_read_proven": true,
@@ -20,7 +20,8 @@
       "listar_contatos",
       "listar_conversas",
       "preparar_envio",
-      "consultar_envio_preparado"
+      "consultar_envio_preparado",
+      "enviar_envio_preparado"
     ],
     "preparation_tools_published_but_not_observed_in_active_catalog": false,
     "catalog_refresh_attempt": {
@@ -50,18 +51,16 @@
   },
   "send": {
     "real_dispatch_enabled": false,
-    "real_messages_sent": 0,
-    "live_provider_acceptance_proven": false,
-    "delivery_confirmed": false,
+    "real_messages_sent": 1,
+    "live_provider_acceptance_proven": true,
+    "delivery_confirmed": true,
     "intent_backend": "existing_homolog_review_bound_to_existing_official_prod_channel",
     "human_review_interface": "https://santana-mcp-homolog-consent.vercel.app/revisar-envio",
     "actual_human_approval_recorded": true,
     "actual_authenticated_preparation_proven": true,
     "official_channel_source_commit": "370cd4c161496a73d2638e9b0a947f55fdf10a6e",
     "official_channel_git_blob": "6737ddc86661de804e00b89b34193da02cd83285",
-    "blockers": [
-      "active_chatgpt_connection_catalog_missing_enviar_envio_preparado"
-    ],
+    "blockers": [],
     "review_and_audit_atomic": true,
     "human_review_is_live_dispatch_authorization": false,
     "human_review_evidence": {
@@ -91,7 +90,7 @@
       "real_messages_sent": 0
     },
     "supervised_candidate": {
-      "status": "DEPLOYED_LIVE_GATE_CLOSED_HUMAN_HANDOFF_PENDING",
+      "status": "FIRST_REAL_TEXT_RECEIVED_SINGLE_ATTEMPT",
       "scope": "supervised-send/DEPLOYMENT-SCOPE.md",
       "commit": "86416783a78671336c2c5e48bc2e30fecd87e47d",
       "tests_node": 10,
@@ -101,12 +100,12 @@
       "nextjs_build_verified": true,
       "protected_prod_authorization_handoff_verified": true,
       "actual_multiconnection_sql_race_test": false,
-      "production_writes": "explicitly_authorized_schema_and_deployment_changes_only_no_business_messages",
-      "real_messages_sent": 0,
+      "production_writes": "authorized_deployment_coordinator_audit_one_text_and_test_conversation_human_pause_only",
+      "real_messages_sent": 1,
       "pending_for_test_conversation_at_inspection": 0,
       "n8n_modified": false,
-      "catalog_tool_enabled": false,
-      "official_source_commit": "b95cd04c8a0720406f0ba80ed366712fe002e315",
+      "catalog_tool_enabled": true,
+      "official_source_commit": "6e991ad5a9fa6ecd4b544a1e762ebed8ca3828d6",
       "nextjs_type_validation": "skipped_by_existing_project_configuration",
       "production_schema_installed": true,
       "production_edge_addition_installed": true,
@@ -117,20 +116,22 @@
       "cross_origin_preview_http": "403 MCP_PANEL_ORIGIN_REQUIRED",
       "human_review_page_http": 200,
       "catalog_tool_enabled_server": true,
-      "catalog_tool_observed_chatgpt": false
+      "catalog_tool_observed_chatgpt": true
     },
     "current_preparation": {
-      "intent_id": "a77bc4d4-8260-425a-9cec-94205ef53f37",
-      "state": "human_reviewed_dispatch_blocked",
+      "intent_id": "2b3a1623-5541-488b-b1e9-c4350b9bcc5c",
+      "state": "sent",
       "payload_sha256": "17851da59f9a5aab4c6582fb09f12ebdf4698a75e6750495711741fb1cfc391d",
       "expected_revision": 182,
-      "expires_at": "2026-10-18T19:33:32.691Z",
+      "expires_at": "2026-10-18T20:05:36.795Z",
       "recipient_mask": "+••••••5497",
-      "real_dispatch_enabled": false,
-      "reviewed_at": "2026-10-18T19:07:25.998455Z"
+      "attachment": null,
+      "human_review_pending": false,
+      "production_operator_approval_pending": false,
+      "provider_attempts": 1
     },
     "specific_live_test_chat_authorization": true,
-    "live_conversation_permission_enabled": true,
+    "live_conversation_permission_enabled": false,
     "authorization_bug": {
       "first_code": "MCP_LIVE_PERMISSION_DISABLED",
       "first_error_at": "2026-10-18T18:47:02.139Z",
@@ -149,7 +150,7 @@
       "real_dispatch_enabled": false,
       "invalidated_without_dispatch_at": "2026-10-18T19:03:28.339106Z"
     },
-    "current_permission_expires_at": "2026-10-18T19:23:21.184559Z",
+    "current_permission_expires_at": "2026-10-18T20:05:36.795Z",
     "consent_ui_fix": {
       "native_required_checkbox": true,
       "visible_submit_button": "Confirmar autorização",
@@ -159,9 +160,31 @@
       "automatic_retries": 0,
       "preview_build": "READY",
       "production_build": "READY",
-      "actual_submit_from_user_not_yet_proven": true
+      "actual_submit_from_user_not_yet_proven": false
     },
     "production_consent": {
+      "operation_id": "2b3a1623-5541-488b-b1e9-c4350b9bcc5c",
+      "authorized_at": "2026-10-18T19:37:22.528146Z",
+      "expires_at": "2026-10-18T19:47:22.410Z",
+      "payload_sha256": "17851da59f9a5aab4c6582fb09f12ebdf4698a75e6750495711741fb1cfc391d",
+      "expected_revision": 182,
+      "audit_event": "prod_operator_authorized_one_attempt",
+      "claimed_at": "2026-10-18T19:37:48.238353Z",
+      "state": "sent"
+    },
+    "backend_consent_proven": true,
+    "delivery_confirmation_source": "recipient_statement_in_chat_not_provider_delivery_webhook",
+    "previous_preparation_expired_without_dispatch": {
+      "intent_id": "a77bc4d4-8260-425a-9cec-94205ef53f37",
+      "state": "human_reviewed_dispatch_blocked",
+      "payload_sha256": "17851da59f9a5aab4c6582fb09f12ebdf4698a75e6750495711741fb1cfc391d",
+      "expected_revision": 182,
+      "expires_at": "2026-10-18T19:33:32.691Z",
+      "recipient_mask": "+••••••5497",
+      "real_dispatch_enabled": false,
+      "reviewed_at": "2026-10-18T19:07:25.998455Z"
+    },
+    "previous_production_consent_expired_without_dispatch": {
       "operation_id": "a77bc4d4-8260-425a-9cec-94205ef53f37",
       "state": "authorized",
       "authorized_at": "2026-10-18T19:25:28.268159Z",
@@ -171,8 +194,7 @@
       "audit_event": "prod_operator_authorized_one_attempt",
       "operator_session_active": true,
       "claimed_at": null
-    },
-    "backend_consent_proven": true
+    }
   },
   "tests": {
     "node": 22,
@@ -296,7 +318,7 @@
     "official_panel_previous_deployment": "dpl_HE1XmDS5Bz9UHd2dhKS5JLoGjvdc"
   },
   "preservation": {
-    "production_business_messages_unchanged": true,
+    "production_business_messages_unchanged": false,
     "production_acl_and_read_audit_added": true,
     "production_edge_read_boundary_added": true,
     "n8n_changed": false,
@@ -310,7 +332,9 @@
     "new_services": 0,
     "new_plugins": 0,
     "production_supervised_coordinator_added": true,
-    "native_control_and_manual_functions_unchanged": true
+    "native_control_and_manual_functions_unchanged": true,
+    "production_business_message_change_scope": "one_explicitly_authorized_text_only_to_personal_test_contact_5497",
+    "conversation_human_pause_after_send": true
   },
   "repository": {
     "pr": "https://github.com/toomcruz/cemiterio-santana-5b3-test/pull/57",
@@ -319,5 +343,59 @@
     "official_deployment_branch": "codex/santana-mcp-supervised-send"
   },
   "report_library_file_id": "libfile_7aac830c56408191ab9ea30e587108d0",
-  "root_diagnostic_stage_run": "https://github.com/toomcruz/cemiterio-santana-5b3-test/actions/runs/39143461965"
+  "root_diagnostic_stage_run": "https://github.com/toomcruz/cemiterio-santana-5b3-test/actions/runs/39143461965",
+  "latest_native_send_call": {
+    "operation_id": "2b3a1623-5541-488b-b1e9-c4350b9bcc5c",
+    "status": "recorded",
+    "delivery_state": "sent",
+    "accepted_by_api": true,
+    "delivery_confirmed": false,
+    "retry_allowed": false,
+    "production_consent_at": "2026-10-18T19:37:22.528146Z",
+    "claimed_at": "2026-10-18T19:37:48.238353Z",
+    "settled_at": "2026-10-18T19:37:50.487926Z",
+    "provider_message_id": "3EB0AA0A9E1BE6C3BDA05639A1CD03E6",
+    "provider_attempts": 1,
+    "audit_events": [
+      "prod_operator_authorized_one_attempt",
+      "official_claim_created",
+      "settled"
+    ],
+    "official_conversation_after_send": {
+      "revision": 184,
+      "automation_mode": "human",
+      "manual_takeover": true
+    },
+    "user_cellphone_receipt_confirmation": {
+      "confirmed": true,
+      "source": "user_chat_message",
+      "statement": "recebi sim",
+      "at": "2026-10-18T19:38:47Z"
+    },
+    "permission_after_send": {
+      "live_enabled": false,
+      "scope": "same_operator_client_single_personal_conversation",
+      "reason": "close_live_gate_after_authorized_single_attempt"
+    }
+  },
+  "active_chatgpt_send_tool_announced": true,
+  "fresh_preparation": {
+    "intent_id": "2b3a1623-5541-488b-b1e9-c4350b9bcc5c",
+    "state": "sent",
+    "payload_sha256": "17851da59f9a5aab4c6582fb09f12ebdf4698a75e6750495711741fb1cfc391d",
+    "expected_revision": 182,
+    "expires_at": "2026-10-18T20:05:36.795Z",
+    "recipient_mask": "+••••••5497",
+    "attachment": null,
+    "human_review_pending": false,
+    "production_operator_approval_pending": false,
+    "provider_attempts": 1
+  },
+  "remaining_blocker": null,
+  "real_messages_sent": 1,
+  "first_real_text_test_complete": true,
+  "separate_remaining_work": [
+    "image_and_pdf_real_tests_require_separate_exact_approvals",
+    "openbot_trusted_agent_isolation_and_authorized_read_not_proven"
+  ]
 }

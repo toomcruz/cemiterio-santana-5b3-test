@@ -1,9 +1,34 @@
 {
-  "intent_id": "a77bc4d4-8260-425a-9cec-94205ef53f37",
-  "state": "prepared",
-  "payload_sha256": "17851da59f9a5aab4c6582fb09f12ebdf4698a75e6750495711741fb1cfc391d",
-  "expected_revision": 182,
-  "expires_at": "2026-10-18T19:33:32.691Z",
-  "recipient_mask": "+••••••5497",
-  "real_dispatch_enabled": false
+  "operation_id": "2b3a1623-5541-488b-b1e9-c4350b9bcc5c",
+  "status": "recorded",
+  "delivery_state": "sent",
+  "accepted_by_api": true,
+  "delivery_confirmed": false,
+  "retry_allowed": false,
+  "production_consent_at": "2026-10-18T19:37:22.528146Z",
+  "claimed_at": "2026-10-18T19:37:48.238353Z",
+  "settled_at": "2026-10-18T19:37:50.487926Z",
+  "provider_message_id": "3EB0AA0A9E1BE6C3BDA05639A1CD03E6",
+  "provider_attempts": 1,
+  "audit_events": [
+    "prod_operator_authorized_one_attempt",
+    "official_claim_created",
+    "settled"
+  ],
+  "official_conversation_after_send": {
+    "revision": 184,
+    "automation_mode": "human",
+    "manual_takeover": true
+  },
+  "user_cellphone_receipt_confirmation": {
+    "confirmed": true,
+    "source": "user_chat_message",
+    "statement": "recebi sim",
+    "at": "2026-10-18T19:38:47Z"
+  },
+  "permission_after_send": {
+    "live_enabled": false,
+    "scope": "same_operator_client_single_personal_conversation",
+    "reason": "close_live_gate_after_authorized_single_attempt"
+  }
 }
