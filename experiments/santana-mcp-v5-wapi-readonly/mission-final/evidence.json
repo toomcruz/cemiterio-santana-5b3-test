@@ -1,6 +1,6 @@
 {
   "status": "REAL_READ_PROVEN_SEND_AND_OPENBOT_PENDING",
-  "updated_at": "2026-10-18T17:19:18.194476+00:00",
+  "updated_at": "2026-10-18T18:19:58.671713+00:00",
   "chatgpt": {
     "existing_connection": true,
     "authorized_real_read_proven": true,
@@ -18,16 +18,19 @@
       "consultar_mensagens",
       "listar_arquivos",
       "listar_contatos",
-      "listar_conversas"
+      "listar_conversas",
+      "preparar_envio",
+      "consultar_envio_preparado"
     ],
-    "preparation_tools_published_but_not_observed_in_active_catalog": true,
+    "preparation_tools_published_but_not_observed_in_active_catalog": false,
     "catalog_refresh_attempt": {
       "via": "existing_connection_UI",
       "result": "credential_observation_restricted",
       "login_attempts": 0,
       "automatic_retries": 0,
       "metadata_refresh_confirmed": false
-    }
+    },
+    "catalog_refresh_confirmed": true
   },
   "permissions": {
     "public_acl_table_access": false,
@@ -52,17 +55,60 @@
     "delivery_confirmed": false,
     "intent_backend": "deployed_homolog_only",
     "human_review_interface": "https://santana-mcp-homolog-consent.vercel.app/revisar-envio",
-    "actual_human_approval_recorded": false,
-    "actual_authenticated_preparation_proven": false,
+    "actual_human_approval_recorded": true,
+    "actual_authenticated_preparation_proven": true,
     "official_channel_source_commit": "370cd4c161496a73d2638e9b0a947f55fdf10a6e",
     "official_channel_git_blob": "6737ddc86661de804e00b89b34193da02cd83285",
     "blockers": [
       "official_manual_prepare_updates_json_automation_but_not_authoritative_column",
       "approval_proof_not_connected_to_official_dispatcher",
-      "active_chatgpt_preparation_catalog_not_refreshed",
       "homolog_review_not_equivalent_to_production_operator_write_authorization"
     ],
-    "review_and_audit_atomic": true
+    "review_and_audit_atomic": true,
+    "human_review_is_live_dispatch_authorization": false,
+    "human_review_evidence": {
+      "checked_at": "2026-10-18T17:48:03.647Z",
+      "status": "ready",
+      "intent_id": "85b03a19-ea47-4fab-bece-c45318c773ca",
+      "payload": {
+        "text": "Teste supervisionado da integração WhatsApp Santana com o ChatGPT. Esta é uma única mensagem de teste para conferência do recebimento.",
+        "recipient": {
+          "name": "Wellington",
+          "phone_mask": "+••••••5497"
+        },
+        "attachment": null,
+        "conversation_id": "789ea855-4e5e-5767-aae8-1316129c2ddc",
+        "expected_revision": 180
+      },
+      "payload_sha256": "96383a7ec7aad4beafa54e072d4a79a12d043864eb3ee94fb03f39496d8fb0ba",
+      "state": "human_reviewed_dispatch_blocked",
+      "expires_at": "2026-10-18T18:12:49.975+00:00",
+      "real_dispatch_enabled": false,
+      "coordinator_verified": false,
+      "external_request_attempted": false,
+      "reviewed_by_owner": true,
+      "session_bound": true,
+      "reviewed_at": "2026-10-18T17:45:44.036669+00:00",
+      "human_review_audit_count": 1,
+      "real_messages_sent": 0
+    },
+    "supervised_candidate": {
+      "status": "SIMULATED_CHAIN_AND_SQL_CHECKS_PASS_NOT_DEPLOYED",
+      "scope": "supervised-send/DEPLOYMENT-SCOPE.md",
+      "commit": "86416783a78671336c2c5e48bc2e30fecd87e47d",
+      "tests_node": 10,
+      "tests_python": 2,
+      "vps_run": "https://github.com/toomcruz/cemiterio-santana-5b3-test/actions/runs/39153406433",
+      "postgres_homolog": "PASS_temporary_tables_rolled_back",
+      "nextjs_build_verified": false,
+      "protected_prod_authorization_handoff_verified": false,
+      "actual_multiconnection_sql_race_test": false,
+      "production_writes": 0,
+      "real_messages_sent": 0,
+      "pending_for_test_conversation_at_inspection": 0,
+      "n8n_modified": false,
+      "catalog_tool_enabled": false
+    }
   },
   "tests": {
     "node": 22,

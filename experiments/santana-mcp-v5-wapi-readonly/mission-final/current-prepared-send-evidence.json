@@ -1,0 +1,45 @@
+{
+  "recorded_at": "2026-10-18T17:43:17.199Z",
+  "tool_catalog_updated": true,
+  "authenticated_preparation": {
+    "status": "ready",
+    "source": "santana_send_intent_homolog",
+    "intent_id": "85b03a19-ea47-4fab-bece-c45318c773ca",
+    "payload": {
+      "text": "Teste supervisionado da integração WhatsApp Santana com o ChatGPT. Esta é uma única mensagem de teste para conferência do recebimento.",
+      "recipient": {
+        "name": "Wellington",
+        "phone_mask": "+••••••5497"
+      },
+      "attachment": null,
+      "conversation_id": "789ea855-4e5e-5767-aae8-1316129c2ddc",
+      "expected_revision": 180
+    },
+    "payload_sha256": "96383a7ec7aad4beafa54e072d4a79a12d043864eb3ee94fb03f39496d8fb0ba",
+    "state": "prepared",
+    "approval_url": "https://santana-mcp-homolog-consent.vercel.app/revisar-envio#85b03a19-ea47-4fab-bece-c45318c773ca",
+    "real_dispatch_enabled": false,
+    "external_request_attempted": false
+  },
+  "status": {
+    "status": "ready",
+    "intent_id": "85b03a19-ea47-4fab-bece-c45318c773ca",
+    "payload": {
+      "text": "Teste supervisionado da integração WhatsApp Santana com o ChatGPT. Esta é uma única mensagem de teste para conferência do recebimento.",
+      "recipient": {
+        "name": "Wellington",
+        "phone_mask": "+••••••5497"
+      },
+      "attachment": null,
+      "conversation_id": "789ea855-4e5e-5767-aae8-1316129c2ddc",
+      "expected_revision": 180
+    },
+    "payload_sha256": "96383a7ec7aad4beafa54e072d4a79a12d043864eb3ee94fb03f39496d8fb0ba",
+    "state": "prepared",
+    "expires_at": "2026-10-18T18:12:49.975+00:00",
+    "real_dispatch_enabled": false,
+    "coordinator_verified": false,
+    "external_request_attempted": false
+  },
+  "real_messages_sent": 0
+}
