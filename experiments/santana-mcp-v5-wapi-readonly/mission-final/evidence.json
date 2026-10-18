@@ -1,6 +1,6 @@
 {
-  "status": "REAL_READ_PROVEN_SUPERVISED_INSTALLED_HUMAN_HANDOFF_PENDING",
-  "updated_at": "2026-10-18T19:13:30Z",
+  "status": "PROD_ONE_ATTEMPT_CONSENT_PROVEN_CHATGPT_TOOL_REFRESH_PENDING",
+  "updated_at": "2026-10-18T19:29:00Z",
   "chatgpt": {
     "existing_connection": true,
     "authorized_real_read_proven": true,
@@ -60,8 +60,7 @@
     "official_channel_source_commit": "370cd4c161496a73d2638e9b0a947f55fdf10a6e",
     "official_channel_git_blob": "6737ddc86661de804e00b89b34193da02cd83285",
     "blockers": [
-      "production_operator_consent_still_unrecorded",
-      "send_catalog_hidden_until_protected_interface_proven"
+      "active_chatgpt_connection_catalog_missing_enviar_envio_preparado"
     ],
     "review_and_audit_atomic": true,
     "human_review_is_live_dispatch_authorization": false,
@@ -100,7 +99,7 @@
       "vps_run": "https://github.com/toomcruz/cemiterio-santana-5b3-test/actions/runs/39153406433",
       "postgres_homolog": "PASS_temporary_tables_rolled_back",
       "nextjs_build_verified": true,
-      "protected_prod_authorization_handoff_verified": false,
+      "protected_prod_authorization_handoff_verified": true,
       "actual_multiconnection_sql_race_test": false,
       "production_writes": "explicitly_authorized_schema_and_deployment_changes_only_no_business_messages",
       "real_messages_sent": 0,
@@ -116,7 +115,9 @@
       "closed_gate_sql_result": "MCP_LIVE_PERMISSION_DISABLED",
       "unauthenticated_send_http": "409 MCP_REVIEW_UNAVAILABLE retry_allowed=false",
       "cross_origin_preview_http": "403 MCP_PANEL_ORIGIN_REQUIRED",
-      "human_review_page_http": 200
+      "human_review_page_http": 200,
+      "catalog_tool_enabled_server": true,
+      "catalog_tool_observed_chatgpt": false
     },
     "current_preparation": {
       "intent_id": "a77bc4d4-8260-425a-9cec-94205ef53f37",
@@ -159,7 +160,19 @@
       "preview_build": "READY",
       "production_build": "READY",
       "actual_submit_from_user_not_yet_proven": true
-    }
+    },
+    "production_consent": {
+      "operation_id": "a77bc4d4-8260-425a-9cec-94205ef53f37",
+      "state": "authorized",
+      "authorized_at": "2026-10-18T19:25:28.268159Z",
+      "expires_at": "2026-10-18T19:33:32.691Z",
+      "payload_sha256": "17851da59f9a5aab4c6582fb09f12ebdf4698a75e6750495711741fb1cfc391d",
+      "expected_revision": 182,
+      "audit_event": "prod_operator_authorized_one_attempt",
+      "operator_session_active": true,
+      "claimed_at": null
+    },
+    "backend_consent_proven": true
   },
   "tests": {
     "node": 22,
@@ -273,7 +286,7 @@
   },
   "deployments": {
     "existing_hmg_project": true,
-    "hmg_deployment": "dpl_Lhh6kER66KxnCVD7kbFpfN1cJ2Wm",
+    "hmg_deployment": "dpl_7bjuy2baqG1QaXSGKGZDoJQ5xSNw",
     "hmg_edge_version": 12,
     "hmg_edge_sha256": "fffb3cd4242a6fcdb778e2acb7d0041a4531b218d0ff1bdf86a1f3ad86df2f51",
     "prod_read_edge_version": 38,
