@@ -1,5 +1,5 @@
 name: Santana MCP LAB controlled maintenance
-run-name: Stage verified MCP LAB package without installing
+run-name: Santana MCP LAB status and root installation report
 on:
   workflow_dispatch:
 permissions:
@@ -13,46 +13,57 @@ jobs:
     runs-on: [self-hosted, Linux, X64, hermes, omniroute-local]
     timeout-minutes: 3
     steps:
-      - name: Stage encrypted package and verify original SHA-256
+      - name: Read-only VPS preflight without elevation
         shell: bash
-        env:
-          SANTANA_MCP_PACKAGE_KEY: ${{ secrets.SANTANA_MCP_PACKAGE_63A85C50 }}
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import base64,hashlib,json,os,socket,subprocess,tempfile
+          import json,os,re,socket,subprocess,sys,shutil
           from pathlib import Path
-          from urllib.request import build_opener,HTTPRedirectHandler
+          def cmd(args):
+              p=subprocess.run(args,capture_output=True,text=True,timeout=10)
+              return p.returncode,p.stdout.strip()
           if socket.gethostname().split('.')[0]!='srv1849463':raise SystemExit('UNEXPECTED_HOST')
-          if os.environ.get('RUNNER_NAME')!='hermes-santana-lab':raise SystemExit('UNEXPECTED_RUNNER')
-          key=os.environ.pop('SANTANA_MCP_PACKAGE_KEY','')
-          if len(key)!=64:raise SystemExit('PACKAGE_KEY_UNAVAILABLE')
-          class NoRedirect(HTTPRedirectHandler):
-              def redirect_request(self,*a,**k):return None
-          url='https://raw.githubusercontent.com/toomcruz/cemiterio-santana-5b3-test/1e1c81ba6da953807c2cbe798f0f897913f8bd75/deploy/mcp-lab/package-63a85c50.enc.b64'
-          with build_opener(NoRedirect).open(url,timeout=20) as r:encoded=r.read(300000)
-          encrypted=base64.b64decode(encoded,validate=True)
-          if hashlib.sha256(encrypted).hexdigest()!='f3fc346a1103246f6446b5a17db291ec426e28ea72e745a16b7eb07776bdfefa':raise SystemExit('CIPHERTEXT_HASH_MISMATCH')
-          fd,enc_path=tempfile.mkstemp(prefix='santana-mcp-transfer-')
-          try:
-              with os.fdopen(fd,'wb') as f:f.write(encrypted)
-              p=subprocess.run(['openssl','enc','-d','-aes-256-cbc','-pbkdf2','-iter','200000','-in',enc_path,'-pass','stdin'],input=(key+'\n').encode(),capture_output=True,timeout=20)
-              key=''
-              if p.returncode:raise SystemExit('PACKAGE_DECRYPTION_FAILED')
-              blob=p.stdout;expected='63a85c509957532a8091f0ad13b5a5423a0dfeb19a007310bac1f0943f27b6ee'
-              if len(blob)>2097152 or hashlib.sha256(blob).hexdigest()!=expected:raise SystemExit('ORIGINAL_PACKAGE_HASH_MISMATCH')
-              stage=Path.home()/'santana-mcp-staging'/expected[:16]
-              for path in (stage.parent,stage):
-                  if path.is_symlink():raise SystemExit('UNSAFE_STAGING_DIRECTORY')
-                  path.mkdir(mode=0o700,exist_ok=True)
-                  os.chmod(path,0o700)
-              archive=stage/'WhatsApp-Santana-MCP-v5-Consolidado.zip'
-              if archive.exists():
-                  if archive.is_symlink() or hashlib.sha256(archive.read_bytes()).hexdigest()!=expected:raise SystemExit('UNSAFE_EXISTING_STAGING_FILE')
-              else:
-                  fd=os.open(archive,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
-                  with os.fdopen(fd,'wb') as f:f.write(blob)
-              print(json.dumps({'status':'STAGED_NOT_INSTALLED','path':str(archive),'sha256':expected,'bytes':len(blob),'service_changes':0,'production_changes':False,'secrets_printed':False},indent=2))
-          finally:
-              os.unlink(enc_path)
+          report={'host_verified':True,'uid':os.geteuid(),'root_access':os.geteuid()==0,'ports':{},'services':{}}
+          for port in (8768,8769,8770):
+              rc,out=cmd(['ss','-H','-ltnp',f'sport = :{port}'])
+              report['ports'][str(port)]={'listening':bool(out),'localhost_only':bool(out) and all(f'127.0.0.1:{port}' in x for x in out.splitlines()),'listeners':len(out.splitlines())}
+          rc,out=cmd(['systemctl','list-units','--all','--type=service','--no-legend','--plain','santana-mcp*','openbot-tunnel.service','docker.service'])
+          units=[]
+          for line in out.splitlines():
+              match=re.search(r'([a-zA-Z0-9@_.:-]+\.service)',line)
+              if match:units.append(match.group(1))
+          for unit in units:
+              rc,out=cmd(['systemctl','show',unit,'-p','ActiveState','-p','SubState','-p','MainPID','-p','FragmentPath','-p','WorkingDirectory'])
+              report['services'][unit]=dict(x.split('=',1) for x in out.splitlines() if '=' in x)
+          rc,out=cmd(['sudo','-n','-l'])
+          report['sudo_listing_available']=rc==0
+          report['sudo_helper_names']=sorted(set(re.findall(r'/(?:usr/local/(?:s?bin)|opt)/[A-Za-z0-9_./-]+',out))) if rc==0 else []
+          for unit,props in report['services'].items():
+              if unit.startswith('santana-mcp') and 'tunnel' not in unit:
+                  pid=props.get('MainPID','0')
+                  proc=Path('/proc')/pid
+                  try:
+                      env=dict(x.split('=',1) for x in proc.joinpath('environ').read_bytes().decode().split('\0') if '=' in x)
+                      props.update({'process_environment_readable':True,'source':env.get('SANTANA_DATA_SOURCE'),'configured_port':env.get('MCP_PORT'),'send_disabled':env.get('SANTANA_SEND_ENABLED','false').lower()=='false' and env.get('SANTANA_SEND_MODE','disabled')=='disabled','credential_present':bool(env.get('CHATGPT_READ_TOKEN'))})
+                  except (OSError,ValueError):props['process_environment_readable']=False
+                  try:props['code_readable']=Path(props.get('WorkingDirectory','/not-found'),'server.py').is_file()
+                  except OSError:props['code_readable']=False
+          report['node_available']=bool(shutil.which('node'))
+          report['openssl_available']=bool(shutil.which('openssl'))
+          report['disk_free_mib']=shutil.disk_usage('/').free//1048576
+          import stat
+          stage=Path('/home/runner/santana-mcp-staging/63a85c509957532a')
+          report['staged_package_present']=(stage/'WhatsApp-Santana-MCP-v5-Consolidado.zip').is_file()
+          candidates=sorted(stage.glob('root-execution-*.json'))[-1:]
+          report['root_installation_report_found']=False
+          if candidates:
+              path=candidates[0];info=path.lstat()
+              if stat.S_ISREG(info.st_mode) and info.st_uid==0 and not info.st_mode & 0o022 and info.st_size<=262144:
+                  with path.open() as f: result=json.load(f)
+                  if result.get('package_sha256')=='63a85c509957532a8091f0ad13b5a5423a0dfeb19a007310bac1f0943f27b6ee':
+                      report['root_installation_report_found']=True
+                      report['root_installation_result']=result
+          report['status']='READ_ONLY_STATUS_NO_INSTALLATION'
+          print(json.dumps(report,ensure_ascii=False,indent=2))
           PY
