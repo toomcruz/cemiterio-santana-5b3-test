@@ -14,7 +14,7 @@ $('checked').onchange=()=>{$('approve').disabled=!$('checked').checked||$('check
 $('approve').onclick=async()=>{$('approve').disabled=true;try{await call({action:'approve',payload_sha256:sha});$('checked').disabled=true;$('prod').hidden=false;$('status').textContent='Revisão registrada com sua sessão pessoal. O envio real permanece bloqueado.';}catch(error){$('status').textContent='Revisão não confirmada: '+error.message+'. Nenhuma mensagem foi enviada.';}};
 
 let prodWindow=null,prodNonce=null;
-$('prod').onclick=()=>{prodNonce=crypto.randomUUID();prodWindow=window.open('https://atendimento-cemiterio-santana.vercel.app/mcp-authorize?operation='+encodeURIComponent(id)+'#'+prodNonce,'santana-single-send-authorization');};
+$('prod').onclick=()=>{prodNonce=crypto.randomUUID();prodWindow=window.open('https://atendimento-cemiterio-santana.vercel.app/mcp-authorize?operation='+encodeURIComponent(id)+'#'+prodNonce,'santana-single-send-'+prodNonce);};
 addEventListener('message',event=>{if(event.origin==='https://atendimento-cemiterio-santana.vercel.app'&&event.source===prodWindow&&event.data?.type==='santana-session-request'&&event.data.nonce===prodNonce&&token)prodWindow.postMessage({type:'santana-reviewed-session',nonce:prodNonce,token},'https://atendimento-cemiterio-santana.vercel.app');});
 
 if(!valid){$('login').hidden=true;$('status').textContent='Preparação ausente. Abra o link de uma mensagem preparada pelo MCP.';}
