@@ -1,0 +1,208 @@
+{
+  "status": "REAL_READ_PROVEN_SEND_AND_OPENBOT_PENDING",
+  "updated_at": "2026-10-18T17:19:18.194476+00:00",
+  "chatgpt": {
+    "existing_connection": true,
+    "authorized_real_read_proven": true,
+    "source": "sana_panel_fast_snapshot",
+    "authorized_conversations": 1,
+    "personal_phone_suffix": "5497",
+    "messages_returned": 3,
+    "content_included": true,
+    "history_complete": false,
+    "unauthorized_conversation_denied": true,
+    "unauthorized_mcp_code": -32003,
+    "active_tool_catalog": [
+      "consultar_contato",
+      "consultar_conversa",
+      "consultar_mensagens",
+      "listar_arquivos",
+      "listar_contatos",
+      "listar_conversas"
+    ],
+    "preparation_tools_published_but_not_observed_in_active_catalog": true,
+    "catalog_refresh_attempt": {
+      "via": "existing_connection_UI",
+      "result": "credential_observation_restricted",
+      "login_attempts": 0,
+      "automatic_retries": 0,
+      "metadata_refresh_confirmed": false
+    }
+  },
+  "permissions": {
+    "public_acl_table_access": false,
+    "public_rate_function_execute": false,
+    "production_grant_expires_at": "2026-10-25T15:36:05.217067Z"
+  },
+  "wapi": {
+    "connection_evidence_time": "2026-10-18T08:41:52.083Z",
+    "source": "existing live-evidence-20261018.json",
+    "connected": true,
+    "plan": "LITE",
+    "connection_http": 200,
+    "instance_http": 200,
+    "chats_http": 403,
+    "contacts_http": 403,
+    "diagnosis_reused_without_credentials_export": true
+  },
+  "send": {
+    "real_dispatch_enabled": false,
+    "real_messages_sent": 0,
+    "live_provider_acceptance_proven": false,
+    "delivery_confirmed": false,
+    "intent_backend": "deployed_homolog_only",
+    "human_review_interface": "https://santana-mcp-homolog-consent.vercel.app/revisar-envio",
+    "actual_human_approval_recorded": false,
+    "actual_authenticated_preparation_proven": false,
+    "official_channel_source_commit": "370cd4c161496a73d2638e9b0a947f55fdf10a6e",
+    "official_channel_git_blob": "6737ddc86661de804e00b89b34193da02cd83285",
+    "blockers": [
+      "official_manual_prepare_updates_json_automation_but_not_authoritative_column",
+      "approval_proof_not_connected_to_official_dispatcher",
+      "active_chatgpt_preparation_catalog_not_refreshed",
+      "homolog_review_not_equivalent_to_production_operator_write_authorization"
+    ],
+    "review_and_audit_atomic": true
+  },
+  "tests": {
+    "node": 22,
+    "python": 2,
+    "all_passed": true,
+    "environment": "existing_vps_runner_with_synthetic_transports",
+    "run": "https://github.com/toomcruz/cemiterio-santana-5b3-test/actions/runs/39146979441",
+    "suites": [
+      {
+        "suite": "node",
+        "exit_code": 0,
+        "log_tail": "✔ technical no-send and existing duplicate never call W-API (57.300594ms)\n✔ text uses one official request and acceptance does not assert delivery (4.339443ms)\n✔ PNG and PDF each carry caption in the same single request (7.696884ms)\n✔ timeout, server error and malformed success are unknown; no retry (11.224654ms)\n✔ explicit rejection settles failed without retry (2.436638ms)\n✔ no production or invalid provider attachment fails before transport (0.972843ms)\n✔ list returns only granted conversation and masks phone (50.756623ms)\n✔ ungranted conversation cannot reach snapshot (0.878643ms)\n✔ content requires independent scope (0.711181ms)\n✔ metadata excludes message text; explicit authorized content returns text (3.19842ms)\n✔ files omit provider links and storage paths (1.615365ms)\n✔ revoked identities, absent bindings and quota deny before data (2.524318ms)\n✔ extra fields and invalid pagination denied (1.640465ms)\n✔ audit failure never returns data (2.031997ms)\n✔ preparation has immutable preview, idempotency and no live dispatch (44.347074ms)\n✔ OAuth and chat approval flags cannot approve (9.170818ms)\n✔ human review binds signed session, exact digest, expiry and owner (3.366961ms)\n✔ no other conversation, spoofed agent, stale human session or dispatch action (2.063956ms)\n✔ PNG and PDF bind exact bytes, name, MIME and SHA; byte replacement conflicts (5.099875ms)\n✔ invalid attachment names, types and spoofed bytes fail closed (1.069443ms)\nℹ tests 20\nℹ suites 0\nℹ pass 20\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 624.780846\n"
+      },
+      {
+        "suite": "python3",
+        "exit_code": 0,
+        "log_tail": "..\n----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n"
+      }
+    ],
+    "homolog_postgres_atomic_review": "PASS_synthetic_transaction_rolled_back"
+  },
+  "openbot": {
+    "uid": 1001,
+    "services": {
+      "openbot.service": {
+        "MainPID": "373781",
+        "WorkingDirectory": "",
+        "User": "openbot",
+        "ActiveState": "active"
+      },
+      "openbot-tunnel.service": {
+        "MainPID": "757",
+        "WorkingDirectory": "",
+        "User": "openbot-tunnel",
+        "ActiveState": "active"
+      },
+      "santana-mcp-lab.service": {
+        "MainPID": "2289363",
+        "WorkingDirectory": "/root/santana-mcp-v5-lab-20261017_161954/whatsapp-santana-mcp",
+        "User": "",
+        "ActiveState": "active"
+      },
+      "santana-mcp-lab-tunnel.service": {
+        "MainPID": "1219382",
+        "WorkingDirectory": "",
+        "User": "",
+        "ActiveState": "active"
+      }
+    },
+    "configurations": [
+      {
+        "root": "/var/lib/openbot/.config/OpenBot",
+        "accessible": false,
+        "stat": "permission_denied",
+        "files": []
+      },
+      {
+        "root": "/root/.openbot",
+        "accessible": false,
+        "stat": "permission_denied",
+        "files": []
+      },
+      {
+        "root": "/home/runner/.openbot",
+        "accessible": false,
+        "exists": false,
+        "files": []
+      },
+      {
+        "root": "/home/openbot/.openbot",
+        "accessible": false,
+        "exists": false,
+        "files": []
+      }
+    ],
+    "real_messages_sent": 0,
+    "services_changed": 0,
+    "openbot_cli_found": true,
+    "openbot_version": "unavailable",
+    "isolation_proven": false,
+    "reason": "upstream_host_global_mcp_and_url_shared_oauth_no_verified_agent_boundary",
+    "root_diagnostic": {
+      "status": "USER_EXECUTED_RESULT_RECEIVED",
+      "path": "/home/runner/santana-mcp-staging/openbot-inventory-6996a0320ac9/inventory.py",
+      "sha256": "6996a0320ac933fc204a736ea0406ee6193c041db122c8f402b6e5886410a6c3",
+      "services_changed": 0,
+      "real_messages_sent": 0,
+      "private_config_accessible": true,
+      "database_identified": "openbot.db",
+      "table": "projection_mcp_servers",
+      "row_count": 0,
+      "has_agent_binding_column": false,
+      "isolation_proven": false,
+      "evidence_source": "user_provided_root_result_2026-10-18"
+    },
+    "new_credentials_issued": 0,
+    "configuration_changes_applied": false,
+    "bridge_changes_applied": false,
+    "upstream_analysis": {
+      "repository": "nightly-labs/openbot",
+      "commit": "90240fe3f3d7de09bff7a9644871ca54b0bf6dd4",
+      "gateway_blob": "678fd684ce13ae8a89cf0a7bc302f4917264c1ea",
+      "schema_blob": "82e2e60747c8819acba144c380aaefaf5647f30e",
+      "store_blob": "3ad238563a308ce61ef274e267f777caed714279",
+      "enabled_servers_are_host_global": true,
+      "oauth_account_shared_by_resource_url": true,
+      "trusted_agent_id_in_gateway_endpoint": false,
+      "installed_binary_match_verified": false,
+      "installed_version": "not_established_by_provided_root_metadata"
+    }
+  },
+  "deployments": {
+    "existing_hmg_project": true,
+    "hmg_deployment": "dpl_ELd7w4Y3yFfDutMCgvR1BVJfoTDB",
+    "hmg_edge_version": 10,
+    "hmg_edge_sha256": "5e174ceac3edd9deebf1ca8e756139d7b3590cf198c275645f363e4a7f8eff85",
+    "prod_read_edge_version": 36,
+    "prod_read_edge_sha256": "0bf68b92003ce88a8fd1b95ec4e9a5f28638c0b84739981ab67b229cfcf83e6f",
+    "official_panel_deployment_unchanged": "dpl_9y2hx3H5HumsTbSeD6r2aQbjUbrn"
+  },
+  "preservation": {
+    "production_business_messages_unchanged": true,
+    "production_acl_and_read_audit_added": true,
+    "production_edge_read_boundary_added": true,
+    "n8n_changed": false,
+    "sana_runtime_changed": false,
+    "webhooks_changed": false,
+    "lab_changed": false,
+    "tunnels_changed": false,
+    "password_values_received": false,
+    "password_login_attempts": 0,
+    "new_projects": 0,
+    "new_services": 0,
+    "new_plugins": 0
+  },
+  "repository": {
+    "pr": "https://github.com/toomcruz/cemiterio-santana-5b3-test/pull/57",
+    "branch": "codex/santana-mcp-lab-maintenance",
+    "latest_commit": "011d13dfad72a976bf36576e1b5fc6d68d370711"
+  },
+  "report_library_file_id": "libfile_7aac830c56408191ab9ea30e587108d0",
+  "root_diagnostic_stage_run": "https://github.com/toomcruz/cemiterio-santana-5b3-test/actions/runs/39143461965"
+}

@@ -1,16 +1,42 @@
 {
   "enabled": false,
-  "reason": "runtime_configuration_privileged_and_isolation_not_proven",
+  "reason": "host_global_mcp_and_url_shared_oauth_without_verified_agent_boundary",
   "endpoint": "https://santana-mcp-homolog-consent.vercel.app/mcp",
   "shared_chatgpt_credentials_allowed": false,
   "agent_id_from_arguments_allowed": false,
   "trusted_identity_required": "independent_credential_bound_to_verified_agent_subject",
-  "session_partition": ["issuer", "client_id", "agent_id", "operator_id", "conversation_id"],
+  "session_partition": [
+    "issuer",
+    "client_id",
+    "agent_id",
+    "operator_id",
+    "conversation_id"
+  ],
   "agents": [
-    {"name":"Boss","agent_id":"agent-285e17aa-ddc6-4866-8408-ce39b59bed3c","credential_ref":null,"proposed_scopes":["santana.conversations.read","santana.messages.read_metadata"],"production_grant_active":false},
-    {"name":"Sana","agent_id":"agent-463cb080-75d4-4371-b3d5-552fc9a435e5","credential_ref":null,"proposed_scopes":["santana.conversations.read"],"production_grant_active":false}
+    {
+      "name": "Boss",
+      "agent_id": "agent-285e17aa-ddc6-4866-8408-ce39b59bed3c",
+      "credential_ref": null,
+      "proposed_scopes": [
+        "santana.conversations.read",
+        "santana.messages.read_metadata"
+      ],
+      "production_grant_active": false
+    },
+    {
+      "name": "Sana",
+      "agent_id": "agent-463cb080-75d4-4371-b3d5-552fc9a435e5",
+      "credential_ref": null,
+      "proposed_scopes": [
+        "santana.conversations.read"
+      ],
+      "production_grant_active": false
+    }
   ],
   "write_tools": [],
   "configuration_changes_applied": false,
-  "bridge_changes_applied": false
+  "bridge_changes_applied": false,
+  "root_diagnostic_received": true,
+  "upstream_review_commit": "90240fe3f3d7de09bff7a9644871ca54b0bf6dd4",
+  "installed_binary_match_verified": false
 }
