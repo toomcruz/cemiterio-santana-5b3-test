@@ -1,5 +1,5 @@
 name: Santana MCP LAB controlled maintenance
-run-name: Santana MCP LAB preflight
+run-name: Santana MCP LAB unprivileged preflight
 on:
   workflow_dispatch:
 permissions:
@@ -13,57 +13,45 @@ jobs:
     runs-on: [self-hosted, Linux, X64, hermes, omniroute-local]
     timeout-minutes: 3
     steps:
-      - name: Read-only VPS and LAB preflight
+      - name: Read-only VPS preflight without elevation
         shell: bash
         run: |
           set -euo pipefail
-          if [ "$(id -u)" = 0 ]; then py=(python3); else py=(sudo -n python3); fi
-          "${py[@]}" - <<'PY'
-          import os, json, re, socket, subprocess, sys
+          python3 - <<'PY'
+          import json,os,re,socket,subprocess,sys,shutil
           from pathlib import Path
-          from urllib.request import Request, build_opener, HTTPRedirectHandler
           def cmd(args):
               p=subprocess.run(args,capture_output=True,text=True,timeout=10)
               return p.returncode,p.stdout.strip()
-          if socket.gethostname().split('.')[0] != 'srv1849463':
-              print(json.dumps({'status':'BLOCKED','reason':'UNEXPECTED_HOST'}));sys.exit(1)
-          report={'host_verified':True,'root_access':os.geteuid()==0,'ports':{},'services':{}}
-          if os.geteuid()!=0: raise SystemExit('ROOT_ACCESS_UNAVAILABLE')
+          if socket.gethostname().split('.')[0]!='srv1849463':raise SystemExit('UNEXPECTED_HOST')
+          report={'host_verified':True,'uid':os.geteuid(),'root_access':os.geteuid()==0,'ports':{},'services':{}}
           for port in (8768,8769,8770):
               rc,out=cmd(['ss','-H','-ltnp',f'sport = :{port}'])
-              if rc: raise SystemExit('SS_UNAVAILABLE')
-              report['ports'][str(port)]={'listeners':len(out.splitlines()),'localhost_only':bool(out) and all('127.0.0.1:'+str(port) in x for x in out.splitlines())}
-              if port in (8769,8770) and out:
-                  ids=set(re.findall(r'pid=(\d+)',out))
-                  if len(ids)!=1: raise SystemExit('AMBIGUOUS_LAB_PID')
-                  pid=next(iter(ids));proc=Path('/proc')/pid
-                  env=dict(x.split('=',1) for x in proc.joinpath('environ').read_bytes().decode().split('\0') if '=' in x)
-                  units=re.findall(r'/([^/\n]+\.service)(?:/|$)',proc.joinpath('cgroup').read_text())
-                  report['ports'][str(port)].update({'pid':int(pid),'unit':units[0] if len(units)==1 else None,'source':env.get('SANTANA_DATA_SOURCE'),'configured_port':env.get('MCP_PORT'),'send_disabled':env.get('SANTANA_SEND_ENABLED','false').lower()=='false' and env.get('SANTANA_SEND_MODE','disabled')=='disabled','read_credential_present':bool(env.get('CHATGPT_READ_TOKEN')),'cwd':str(proc.joinpath('cwd').resolve()),'ledger_persistent':env.get('SANTANA_AUDIT_DB')!=':memory:'})
-                  if port==8770 and env.get('SANTANA_DATA_SOURCE')=='fixture' and env.get('CHATGPT_READ_TOKEN'):
-                      class NoRedirect(HTTPRedirectHandler):
-                          def redirect_request(self,*a,**k): return None
-                      opener=build_opener(NoRedirect)
-                      def rpc(method,params):
-                          data=json.dumps({'jsonrpc':'2.0','id':1,'method':method,'params':params}).encode()
-                          req=Request('http://127.0.0.1:8770/mcp',data=data,headers={'Authorization':'Bearer '+env['CHATGPT_READ_TOKEN'],'Content-Type':'application/json','Accept':'application/json, text/event-stream','MCP-Protocol-Version':'2025-11-25'})
-                          with opener.open(req,timeout=5) as r: value=json.load(r)
-                          if 'result' not in value: raise RuntimeError('MCP_RPC_DENIED')
-                          return value['result']
-                      init=rpc('initialize',{'protocolVersion':'2025-11-25','capabilities':{},'clientInfo':{'name':'santana-read-only-preflight','version':'1'}})
-                      names=sorted(x['name'] for x in rpc('tools/list',{}).get('tools',[]))
-                      result=rpc('tools/call',{'name':'listar_conversas','arguments':{'per_page':1,'page':1}})
-                      data=result.get('structuredContent') or json.loads(result['content'][0]['text'])
-                      report['mcp']={'initialize':'PASS','tools':names,'source':data.get('source'),'write_tools_announced':any('send' in x for x in names)}
-          for unit in ('openbot-tunnel.service','santana-mcp-lab-tunnel.service','docker.service'):
-              rc,out=cmd(['systemctl','show',unit,'-p','ActiveState','-p','MainPID'])
+              report['ports'][str(port)]={'listening':bool(out),'localhost_only':bool(out) and all(f'127.0.0.1:{port}' in x for x in out.splitlines()),'listeners':len(out.splitlines())}
+          rc,out=cmd(['systemctl','list-units','--all','--type=service','--no-legend','--plain','santana-mcp*','openbot-tunnel.service','docker.service'])
+          units=[]
+          for line in out.splitlines():
+              match=re.search(r'([a-zA-Z0-9@_.:-]+\.service)',line)
+              if match:units.append(match.group(1))
+          for unit in units:
+              rc,out=cmd(['systemctl','show',unit,'-p','ActiveState','-p','SubState','-p','MainPID','-p','FragmentPath','-p','WorkingDirectory'])
               report['services'][unit]=dict(x.split('=',1) for x in out.splitlines() if '=' in x)
-          rc,out=cmd(['free','-m'])
-          report['memory_mib']=out.splitlines()[1].split()[1:4] if rc==0 and len(out.splitlines())>1 else None
-          rc,out=cmd(['sh','-c','command -v node >/dev/null && node --version'])
-          report['node']=out if rc==0 else None
-          report['python']=sys.version.split()[0]
-          report['disk_free_mib']=__import__('shutil').disk_usage('/root').free//(1024*1024)
-          report['status']='PREFLIGHT_ONLY_NO_INSTALLATION'
+          rc,out=cmd(['sudo','-n','-l'])
+          report['sudo_listing_available']=rc==0
+          report['sudo_helper_names']=sorted(set(re.findall(r'/(?:usr/local/(?:s?bin)|opt)/[A-Za-z0-9_./-]+',out))) if rc==0 else []
+          for unit,props in report['services'].items():
+              if unit.startswith('santana-mcp') and 'tunnel' not in unit:
+                  pid=props.get('MainPID','0')
+                  proc=Path('/proc')/pid
+                  try:
+                      env=dict(x.split('=',1) for x in proc.joinpath('environ').read_bytes().decode().split('\0') if '=' in x)
+                      props.update({'process_environment_readable':True,'source':env.get('SANTANA_DATA_SOURCE'),'configured_port':env.get('MCP_PORT'),'send_disabled':env.get('SANTANA_SEND_ENABLED','false').lower()=='false' and env.get('SANTANA_SEND_MODE','disabled')=='disabled','credential_present':bool(env.get('CHATGPT_READ_TOKEN'))})
+                  except (OSError,ValueError):props['process_environment_readable']=False
+                  try:props['code_readable']=Path(props.get('WorkingDirectory','/not-found'),'server.py').is_file()
+                  except OSError:props['code_readable']=False
+          report['node_available']=bool(shutil.which('node'))
+          report['openssl_available']=bool(shutil.which('openssl'))
+          report['disk_free_mib']=shutil.disk_usage('/').free//1048576
+          report['status']='READ_ONLY_PREFLIGHT_NO_INSTALLATION'
           print(json.dumps(report,ensure_ascii=False,indent=2))
           PY
