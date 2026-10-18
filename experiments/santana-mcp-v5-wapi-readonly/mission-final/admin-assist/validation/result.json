@@ -1,0 +1,32 @@
+{
+  "at": "2026-10-18T22:01:41.453923+00:00",
+  "environment": "isolated_synthetic",
+  "status": "PASS",
+  "real_messages_sent": 0,
+  "production_writes": 0,
+  "real_message_access_expanded": false,
+  "services_changed": 0,
+  "suites": [
+    {
+      "name": "build",
+      "exit_code": 0,
+      "tests": null
+    },
+    {
+      "name": "node",
+      "exit_code": 0,
+      "tests": 24
+    },
+    {
+      "name": "python",
+      "exit_code": 0,
+      "tests": 14
+    },
+    {
+      "name": "send-regression",
+      "exit_code": 0,
+      "tests": 28
+    }
+  ],
+  "total_tests": 66
+}

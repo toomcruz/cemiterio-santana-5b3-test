@@ -6,7 +6,7 @@ on:
       action:
         description: Stage patch, collect report, or read OpenBot configuration schema
         type: choice
-        options: [stage, collect, inventory, root_inventory_stage, supervised]
+        options: [stage, collect, inventory, root_inventory_stage, supervised, admin_assist]
         default: stage
 permissions:
   contents: read
@@ -23,6 +23,10 @@ jobs:
         with:
           persist-credentials: false
           sparse-checkout: experiments/santana-mcp-v5-wapi-readonly
+      - uses: actions/setup-python@v5
+        if: inputs.action == 'admin_assist'
+        with:
+          python-version: '3.12'
       - name: Stage or collect without changing running services
         env:
           ACTION: ${{ inputs.action }}
@@ -32,6 +36,26 @@ jobs:
           python3 - <<'PY'
           import hashlib,io,json,os,runpy,stat,subprocess,sys,tempfile,zipfile
           from pathlib import Path
+          if os.environ.get('ACTION')=='admin_assist':
+              testroot=Path('experiments/santana-mcp-v5-wapi-readonly/mission-final/admin-assist')
+              units=('santana-mcp-lab.service','santana-mcp-lab-tunnel.service','openbot.service','openbot-tunnel.service','docker.service')
+              def pids():
+                  return {u:subprocess.run(['systemctl','show',u,'-p','MainPID','--value'],capture_output=True,text=True,timeout=5).stdout.strip() for u in units}
+              before=pids()
+              with tempfile.TemporaryDirectory(prefix='santana-admin-synthetic-') as td:
+                  tmp=Path(td);npm=tmp/'npm';pydeps=tmp/'python'
+                  commands=[['npm','install','--ignore-scripts','--no-audit','--no-fund','--package-lock=false','--prefix',str(npm),'@electric-sql/pglite@0.3.14'],[sys.executable,'-m','pip','install','--disable-pip-version-check','--no-input','--only-binary=:all:','--target',str(pydeps),'-r',str(testroot/'requirements.txt')]]
+                  for cmd in commands:
+                      result=subprocess.run(cmd,capture_output=True,text=True,timeout=90)
+                      if result.returncode:print((result.stdout+result.stderr)[-2500:]);raise SystemExit('ISOLATED_TEST_DEPENDENCY_FAILED')
+                  env={**os.environ,'PYTHONPATH':str(pydeps),'PYTHONDONTWRITEBYTECODE':'1','SANTANA_PGLITE_MODULE':str(npm/'node_modules/@electric-sql/pglite/dist/index.js')}
+                  result=subprocess.run([sys.executable,str(testroot/'run-validation.py')],env=env,capture_output=True,text=True,timeout=120)
+                  print(result.stdout)
+                  if result.returncode:
+                      for log in (testroot/'validation').glob('*.log'):print(log.name,log.read_text()[-5000:])
+                      raise SystemExit('ADMIN_ASSIST_TESTS_FAILED')
+              print(json.dumps({'status':'ADMIN_ASSIST_SYNTHETIC_PASS','environment':'isolated_synthetic','service_pids_unchanged':before==pids(),'real_messages_sent':0,'production_writes':0,'services_changed_by_test':0}))
+              raise SystemExit(0)
           if os.environ.get('ACTION')=='root_inventory_stage':
               content=Path('experiments/santana-mcp-v5-wapi-readonly/openbot-readonly-inventory.py').read_bytes()
               expected='6996a0320ac933fc204a736ea0406ee6193c041db122c8f402b6e5886410a6c3'
@@ -108,3 +132,4 @@ jobs:
           (stage/'stage-evidence.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
           print(json.dumps(report,ensure_ascii=False,indent=2))
           PY
+

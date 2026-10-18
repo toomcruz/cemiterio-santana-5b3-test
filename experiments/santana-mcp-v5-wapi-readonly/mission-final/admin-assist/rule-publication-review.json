@@ -1,0 +1,74 @@
+{
+  "status": "PROPOSED_NOT_APPROVED",
+  "catalog_version": "2026-10-02.canary.47",
+  "catalog_sha256": "2dffd7a236bb6239cae3d480315c47f42cec213c72fb7a04b58cd4cf9795db60",
+  "publication_scope": "assisted_drafts_only_no_autonomous_send",
+  "rules": [
+    {
+      "id": "AUTHORITY",
+      "scope": [
+        "*"
+      ],
+      "facets": [
+        "AUTHORIZATION"
+      ],
+      "text": "Posso orientar e registrar o pedido. A autorização, a conferência dos documentos e a confirmação do serviço cabem à Administração.",
+      "sources": [
+        "USR"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": [],
+      "presentation": "INTERNAL"
+    },
+    {
+      "id": "LOCATOR",
+      "scope": [
+        "LOCALIZACAO"
+      ],
+      "facets": [
+        "OVERVIEW",
+        "LOCATION"
+      ],
+      "text": "Posso reunir as referências para localizar o sepultamento ou ossuário. Não vou indicar uma localização sem confirmação no cadastro.",
+      "sources": [
+        "BURIALS",
+        "USR"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "FOLLOWUP_SCOPE",
+      "scope": [
+        "CO09"
+      ],
+      "facets": [
+        "OVERVIEW"
+      ],
+      "text": "Posso consultar o andamento pelo protocolo informado neste atendimento ou registrar uma consulta para a equipe localizar a solicitação. Não vou presumir aprovação por uma declaração ou pagamento.",
+      "sources": [
+        "USR"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    }
+  ],
+  "sources": {
+    "USR": {
+      "title": "Instrução desta tarefa",
+      "authority": "Requisito atual do usuário; prevalece para arquitetura, sessão e memória",
+      "date": "2026-09-29"
+    },
+    "BURIALS": {
+      "title": "Sepultados Santana",
+      "url": "https://docs.google.com/spreadsheets/d/1tA5pj4lu6gmru9JsKPMLo4qpa9Ebw7CtjTcOxKlM_Wo/edit",
+      "date": "2026-08-26",
+      "authority": "Cadastro operacional localizado; não sincronizado nem fonte automática do modelo"
+    }
+  },
+  "remaining_rules_not_published": 77,
+  "pending_policy_rules_not_promoted": 16
+}

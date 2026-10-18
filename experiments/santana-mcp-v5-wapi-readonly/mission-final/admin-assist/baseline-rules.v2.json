@@ -1,0 +1,2654 @@
+{
+  "version": "2026-10-02.canary.47",
+  "status": "CANARY_ONLY",
+  "processes": [
+    {
+      "id": "RC01",
+      "family": "RECADASTRO",
+      "name": "Recadastro de jazigo de família",
+      "source_ids": [
+        "PROC",
+        "LEGACY"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "RC02",
+      "family": "RECADASTRO",
+      "name": "Recadastro de ossuário",
+      "source_ids": [
+        "N05"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "RC03",
+      "family": "RECADASTRO",
+      "name": "Acompanhamento e complementação de recadastro",
+      "source_ids": [
+        "PROC",
+        "LEGACY"
+      ],
+      "operation": "FOLLOW_UP",
+      "intake_fields": [
+        "protocol"
+      ]
+    },
+    {
+      "id": "EX01",
+      "family": "EXUMACAO",
+      "name": "Exumação em quadra geral",
+      "source_ids": [
+        "PROC",
+        "LAW"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": [],
+      "semantic_scope": "Retirada do falecido(a) da sepultura em quadra geral. Preço da exumação e suas opções de destinação. Consulta específica ao aluguel ou compra de ossuário corresponde à modalidade de ossuário; o destino não muda a sepultura de origem.",
+      "selection_contract": {
+        "required_evidence": true,
+        "evidence_key": "process_evidence"
+      }
+    },
+    {
+      "id": "EX02",
+      "family": "EXUMACAO",
+      "name": "Exumação em jazigo de família",
+      "source_ids": [
+        "PROC",
+        "DOMAIN",
+        "LAW"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": [],
+      "semantic_scope": "Exumação em jazigo particular/de família. Orientação local: informar somente o pacote urna com exumação; não oferecer aluguel/compra de ossuário nem somar esses serviços. Não incluir alerta espontâneo de condição semi-intacta na apresentação de preço ou funcionamento; a dúvida explícita ou situação concreta sobre essa condição pertence a EX05. Demais serviços de transporte somente diante de intenção expressa de traslado. Conferir concessão e assinaturas familiar e responsável pelo jazigo, sem confundir os papéis.",
+      "selection_contract": {
+        "required_evidence": true,
+        "evidence_key": "process_evidence"
+      }
+    },
+    {
+      "id": "EX03",
+      "family": "EXUMACAO",
+      "name": "Exumação de ossuário",
+      "source_ids": [
+        "DOMAIN",
+        "TAR-PUB"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": [],
+      "semantic_scope": "Exumação feita em um ossuário de origem. Não é aluguel/compra de ossuário para receber o falecido(a) após exumação de outra sepultura."
+    },
+    {
+      "id": "EX04",
+      "family": "EXUMACAO",
+      "name": "Exumação antecipada por determinação competente",
+      "source_ids": [
+        "LAW"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "EX05",
+      "family": "EXUMACAO",
+      "name": "Restos semi-intactos e reinumação",
+      "source_ids": [
+        "PROC",
+        "MINING"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": [],
+      "semantic_scope": "Dúvida explícita ou relato de situação concreta envolvendo condição semi-intacta e reinumação, inclusive em jazigo particular. process_evidence identifica o trecho dessa dúvida ou relato. Não selecionar preventivamente numa consulta geral de preço ou funcionamento nem deduzir essa condição pelo tempo de sepultamento. A equipe precisa avaliar o caso; não inferir novo prazo, custo ou obrigação legal. Preserve separadamente a sepultura de origem em exumation_origin: EX01 (quadra geral), EX02 (jazigo particular/de família), EX03 (ossuário de origem), unknown se desconhecida. Quando essa origem estiver faltando, esclareça somente a modalidade antes de informar o valor específico; mantenha EX05 ao receber essa resposta.",
+      "selection_contract": {
+        "required_evidence": true,
+        "evidence_key": "process_evidence"
+      },
+      "guidance_required_field": "exumation_origin"
+    },
+    {
+      "id": "EX06",
+      "family": "EXUMACAO",
+      "name": "Remarcação de exumação",
+      "source_ids": [
+        "PROC",
+        "CAL"
+      ],
+      "operation": "FOLLOW_UP",
+      "intake_fields": [
+        "protocol"
+      ]
+    },
+    {
+      "id": "EX07",
+      "family": "EXUMACAO",
+      "name": "Localização/conferência de restos já exumados",
+      "source_ids": [
+        "N05",
+        "ORDER"
+      ],
+      "operation": "LOOKUP",
+      "intake_fields": [
+        "deceased_name"
+      ]
+    },
+    {
+      "id": "OS01",
+      "family": "OSSUARIO",
+      "name": "Cessão de ossuário a prazo determinado",
+      "source_ids": [
+        "PROC",
+        "TAR-PUB"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": [],
+      "semantic_scope": "Aluguel ou locação de ossuário por cinco anos, inclusive preço, contratação e condições. Pode ser destino após exumação; perguntar pelo aluguel é dúvida sobre esta modalidade, não sobre o preço de retirar o falecido(a) da sepultura."
+    },
+    {
+      "id": "OS02",
+      "family": "OSSUARIO",
+      "name": "Cessão de ossuário a prazo indeterminado",
+      "source_ids": [
+        "PROC",
+        "TAR-PUB"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": [],
+      "semantic_scope": "Compra ou aquisição de ossuário a prazo indeterminado no Santana, inclusive preço e contratação. Distinta de exumação e de aluguel temporário, mesmo quando escolhida como destino após exumação."
+    },
+    {
+      "id": "OS03",
+      "family": "OSSUARIO",
+      "name": "Renovação de ossuário",
+      "source_ids": [
+        "PROC"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": [],
+      "semantic_scope": "Renovação do aluguel ou permanência por cinco anos de ossuário já contratado, inclusive preço da renovação. Não é nova exumação nem nova compra."
+    },
+    {
+      "id": "OS04",
+      "family": "OSSUARIO",
+      "name": "Recebimento em ossuário de restos de outra origem",
+      "source_ids": [
+        "PROC"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "OS05",
+      "family": "OSSUARIO",
+      "name": "Consulta sobre ossuário geral e restos não reclamados",
+      "source_ids": [
+        "N05",
+        "ORDER"
+      ],
+      "operation": "LOOKUP",
+      "intake_fields": [
+        "deceased_name"
+      ]
+    },
+    {
+      "id": "TR01",
+      "family": "TRASLADO",
+      "name": "Saída de restos para outro cemitério em São Paulo",
+      "source_ids": [
+        "N05",
+        "LAW"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "TR02",
+      "family": "TRASLADO",
+      "name": "Saída de restos para fora do município",
+      "source_ids": [
+        "N05",
+        "LAW"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "TR03",
+      "family": "TRASLADO",
+      "name": "Entrada de restos no Santana e memorandos",
+      "source_ids": [
+        "PROC"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "TR04",
+      "family": "TRASLADO",
+      "name": "Movimentação interna para jazigo ou ossuário",
+      "source_ids": [
+        "N05",
+        "DOMAIN"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "TR05",
+      "family": "TRASLADO",
+      "name": "Traslado de corpo, distinto de restos exumados",
+      "source_ids": [
+        "MINING"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "CR01",
+      "family": "CREMACAO_CINZAS",
+      "name": "Orientação sobre cremação de corpo recente",
+      "source_ids": [
+        "MINING",
+        "LAW"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "CR02",
+      "family": "CREMACAO_CINZAS",
+      "name": "Cremação de restos após exumação",
+      "source_ids": [
+        "N05",
+        "LAW"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "CR03",
+      "family": "CREMACAO_CINZAS",
+      "name": "Acomodação de cinzas em jazigo",
+      "source_ids": [
+        "OPS",
+        "PROC"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "CR04",
+      "family": "CREMACAO_CINZAS",
+      "name": "Acomodação de cinzas em ossuário/columbário",
+      "source_ids": [
+        "LEGACY",
+        "ORDER"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "CO01",
+      "family": "CONCESSAO_TITULARIDADE",
+      "name": "Sucessão em linha direta",
+      "source_ids": [
+        "FORM-DOC",
+        "FORM-REQ",
+        "FORM-CAS",
+        "FORM-SOL",
+        "LAW"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": [],
+      "semantic_scope": "Sucessão do titular falecido pela linha de filhos/descendentes; dúvidas de direitos, documentos e assinaturas dessa linha, sem conceder titularidade."
+    },
+    {
+      "id": "CO02",
+      "family": "CONCESSAO_TITULARIDADE",
+      "name": "Sucessão em linha colateral",
+      "source_ids": [
+        "FORM-DOC",
+        "LAW"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": [],
+      "semantic_scope": "Sucessão por linha colateral quando essa linha está indicada; não presumir ausência de filhos nem escolher sucessor."
+    },
+    {
+      "id": "CO03",
+      "family": "CONCESSAO_TITULARIDADE",
+      "name": "Transferência/regularização de titularidade",
+      "source_ids": [
+        "FORM-DOC",
+        "FORM-REQ",
+        "LAW"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": [],
+      "semantic_scope": "Regularização/transferência de titularidade, inclusive orientação geral quando a linha aplicável ainda não está definida."
+    },
+    {
+      "id": "CO04",
+      "family": "CONCESSAO_TITULARIDADE",
+      "name": "Administração provisória",
+      "source_ids": [
+        "PROC",
+        "N05"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": [],
+      "semantic_scope": "Emissão, natureza, efeitos e limites da administração provisória; dúvidas sobre ela continuam nesta modalidade e não viram consulta de andamento."
+    },
+    {
+      "id": "CO05",
+      "family": "CONCESSAO_TITULARIDADE",
+      "name": "Renúncia ou desistência em favor de sucessor",
+      "source_ids": [
+        "FORM-CAS",
+        "FORM-SOL",
+        "LAW"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": [],
+      "semantic_scope": "Desistência/renúncia em favor de sucessor e termos pertinentes; não confundir com devolução da concessão."
+    },
+    {
+      "id": "CO06",
+      "family": "CONCESSAO_TITULARIDADE",
+      "name": "Devolução de jazigo/concessão",
+      "source_ids": [
+        "PROC"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "CO07",
+      "family": "CONCESSAO_TITULARIDADE",
+      "name": "Disponibilidade e nova cessão de jazigo",
+      "source_ids": [
+        "PROC"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "CO08",
+      "family": "CONCESSAO_TITULARIDADE",
+      "name": "Renovação de concessão, modalidade a esclarecer",
+      "source_ids": [
+        "CARE"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "CO09",
+      "family": "CONCESSAO_TITULARIDADE",
+      "name": "Acompanhamento de processo de concessão",
+      "source_ids": [
+        "FORM-DOC",
+        "PROC"
+      ],
+      "operation": "FOLLOW_UP",
+      "intake_fields": [
+        "protocol"
+      ],
+      "selection_contract": {
+        "kind": "TRACKING",
+        "any_facets": [
+          "STATUS",
+          "SERVICE_STATUS"
+        ],
+        "any_fact_keys": [
+          "protocol"
+        ]
+      }
+    },
+    {
+      "id": "CO10",
+      "family": "FINANCEIRO",
+      "name": "Emissão da taxa de expediente da concessão",
+      "source_ids": [
+        "FORM-DOC",
+        "PROC"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "CO11",
+      "family": "CONCESSAO_TITULARIDADE",
+      "name": "Emissão de nova carta após deferimento",
+      "source_ids": [
+        "FORM-DOC"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "FU01",
+      "family": "SEPULTAMENTO_VELORIO",
+      "name": "Óbito recente com jazigo de família",
+      "source_ids": [
+        "PROC",
+        "N05"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "FU02",
+      "family": "SEPULTAMENTO_VELORIO",
+      "name": "Sepultamento em quadra geral",
+      "source_ids": [
+        "PROC",
+        "ORDER"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "FU03",
+      "family": "SEPULTAMENTO_VELORIO",
+      "name": "Velório e sala de velório",
+      "source_ids": [
+        "PROC",
+        "MINING"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "FU04",
+      "family": "SEPULTAMENTO_VELORIO",
+      "name": "Capela e cerimônia de despedida",
+      "source_ids": [
+        "MINING",
+        "CAPELA"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "FU05",
+      "family": "SEPULTAMENTO_VELORIO",
+      "name": "Contratação de serviço funerário",
+      "source_ids": [
+        "PROC"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "FU06",
+      "family": "SEPULTAMENTO_VELORIO",
+      "name": "Plano funerário, adesão ou uso de plano existente",
+      "source_ids": [
+        "N05"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "FU07",
+      "family": "SEPULTAMENTO_VELORIO",
+      "name": "Pacote Ossuário relacionado a funeral",
+      "source_ids": [
+        "N05",
+        "PROC"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "JA01",
+      "family": "JAZIGO_SERVICOS",
+      "name": "Lápide: aquisição, reparo ou instalação",
+      "source_ids": [
+        "PROC",
+        "N05"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "JA02",
+      "family": "JAZIGO_SERVICOS",
+      "name": "Acompanhamento de serviço já contratado",
+      "source_ids": [
+        "PROC"
+      ],
+      "operation": "FOLLOW_UP",
+      "intake_fields": [
+        "protocol"
+      ]
+    },
+    {
+      "id": "JA03",
+      "family": "JAZIGO_SERVICOS",
+      "name": "Placa, letreiro e identificação numérica",
+      "source_ids": [
+        "N05"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "JA04",
+      "family": "JAZIGO_SERVICOS",
+      "name": "Portão, porta ou grade",
+      "source_ids": [
+        "N05"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "JA05",
+      "family": "JAZIGO_SERVICOS",
+      "name": "Chaves e miolo de fechadura",
+      "source_ids": [
+        "N05"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "JA06",
+      "family": "JAZIGO_SERVICOS",
+      "name": "Limpeza, lavagem, capina e zeladoria",
+      "source_ids": [
+        "N05",
+        "MINING"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "JA07",
+      "family": "JAZIGO_SERVICOS",
+      "name": "Plano de zeladoria",
+      "source_ids": [
+        "MINING"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "JA08",
+      "family": "JAZIGO_SERVICOS",
+      "name": "Pintura, conservação e manutenção",
+      "source_ids": [
+        "N05"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "JA09",
+      "family": "JAZIGO_SERVICOS",
+      "name": "Obras, reforma e construção de gaveta",
+      "source_ids": [
+        "PROC",
+        "CARE"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "JA10",
+      "family": "JAZIGO_SERVICOS",
+      "name": "Árvore, poda, raízes e prejuízo ao acesso",
+      "source_ids": [
+        "PROC",
+        "N05"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "OC01",
+      "family": "OCORRENCIA_NO_LOCAL",
+      "name": "Furto, dano, arrombamento ou violação",
+      "source_ids": [
+        "PROC",
+        "N05"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "FN01",
+      "family": "FINANCEIRO",
+      "name": "Consulta e contestação de cobrança/débito",
+      "source_ids": [
+        "PROC"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "FN02",
+      "family": "FINANCEIRO",
+      "name": "Pagamento declarado e conferência de comprovante",
+      "source_ids": [
+        "N05"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "FN03",
+      "family": "FINANCEIRO",
+      "name": "Pedido de estorno/reembolso",
+      "source_ids": [
+        "TICKETS"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "FN04",
+      "family": "FINANCEIRO",
+      "name": "Consulta sobre taxa de manutenção",
+      "source_ids": [
+        "PROC",
+        "N05"
+      ],
+      "operation": "INFORMATION",
+      "intake_fields": []
+    },
+    {
+      "id": "AD01",
+      "family": "ADMINISTRATIVO",
+      "name": "Documentos, termos, certidões e segunda via",
+      "source_ids": [
+        "FORM-REQ",
+        "FORM-CAS",
+        "FORM-SOL",
+        "MINING"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "AD02",
+      "family": "ADMINISTRATIVO",
+      "name": "Contrato: cópia, dúvida, cancelamento ou contestação",
+      "source_ids": [
+        "N05"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "AD03",
+      "family": "ADMINISTRATIVO",
+      "name": "Comunicado/notificação de regularização",
+      "source_ids": [
+        "PROC",
+        "N05"
+      ],
+      "operation": "FOLLOW_UP",
+      "intake_fields": [
+        "protocol"
+      ]
+    },
+    {
+      "id": "AD04",
+      "family": "ADMINISTRATIVO",
+      "name": "Consulta por protocolo e continuidade formal",
+      "source_ids": [
+        "N05"
+      ],
+      "operation": "FOLLOW_UP",
+      "intake_fields": [
+        "protocol"
+      ],
+      "selection_contract": {
+        "kind": "TRACKING",
+        "any_facets": [
+          "STATUS",
+          "SERVICE_STATUS"
+        ],
+        "any_fact_keys": [
+          "protocol"
+        ]
+      }
+    },
+    {
+      "id": "AD05",
+      "family": "ADMINISTRATIVO",
+      "name": "Ouvidoria e reclamação formal",
+      "source_ids": [
+        "PROC",
+        "N05"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": [],
+      "subject_kind": "REPORT"
+    },
+    {
+      "id": "AD06",
+      "family": "ADMINISTRATIVO",
+      "name": "Questão jurídica, disputa familiar ou ordem judicial",
+      "source_ids": [
+        "N05"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "AD07",
+      "family": "ADMINISTRATIVO",
+      "name": "Solicitação diversa ou atendimento humano",
+      "source_ids": [
+        "N05"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "IF01",
+      "family": "LOCALIZACAO",
+      "name": "Localização de pessoa sepultada/jazigo",
+      "source_ids": [
+        "BURIALS",
+        "PROC"
+      ],
+      "operation": "LOOKUP",
+      "intake_fields": [
+        "deceased_name"
+      ]
+    },
+    {
+      "id": "IF02",
+      "family": "LOCALIZACAO",
+      "name": "Localização de ossuário",
+      "source_ids": [
+        "N05"
+      ],
+      "operation": "LOOKUP",
+      "intake_fields": [
+        "location",
+        "deceased_name"
+      ]
+    },
+    {
+      "id": "IF03",
+      "family": "INFORMACOES_GERAIS",
+      "name": "Visitação, acesso, endereço, expediente e feriados",
+      "source_ids": [
+        "OPS",
+        "PROC"
+      ],
+      "operation": "INFORMATION",
+      "intake_fields": []
+    },
+    {
+      "id": "GR01",
+      "family": "ADMINISTRATIVO",
+      "name": "Gratuidade por baixa renda e hipóteses alternativas",
+      "source_ids": [
+        "N05",
+        "LAW"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    },
+    {
+      "id": "GR02",
+      "family": "ADMINISTRATIVO",
+      "name": "Gratuidade relacionada à doação de órgãos",
+      "source_ids": [
+        "N05",
+        "LAW"
+      ],
+      "operation": "REQUEST",
+      "intake_fields": []
+    }
+  ],
+  "rules": [
+    {
+      "id": "AUTHORITY",
+      "scope": [
+        "*"
+      ],
+      "facets": [
+        "AUTHORIZATION"
+      ],
+      "text": "Posso orientar e registrar o pedido. A autorização, a conferência dos documentos e a confirmação do serviço cabem à Administração.",
+      "sources": [
+        "USR"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": [],
+      "presentation": "INTERNAL"
+    },
+    {
+      "id": "EX_PRIVATE_PRICE",
+      "scope": [
+        "EX02"
+      ],
+      "facets": [
+        "PRICE"
+      ],
+      "text": "Urna com exumação em jazigo particular custa R$ 836,65.",
+      "sources": [
+        "USR_PRICE_PRIVATE_20260929",
+        "USR_EX_PRIVATE_PACKAGE_20260930"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": [],
+      "tariff": {
+        "amount_minor": 83665,
+        "currency": "BRL",
+        "confirmed_on": "2026-09-29",
+        "service": "EXUMACAO",
+        "process_id": "EX02",
+        "label": "Urna com exumação em jazigo particular",
+        "related_services": []
+      }
+    },
+    {
+      "id": "PRICE_PENDING",
+      "scope": [
+        "*"
+      ],
+      "facets": [
+        "PRICE"
+      ],
+      "text": "O valor depende da modalidade e da tabela vigente. Ainda preciso da confirmação da Administração para informar a cobrança correta.",
+      "sources": [
+        "USR",
+        "TAR-PUB"
+      ],
+      "status": "PENDING",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "PAYMENT_PENDING",
+      "scope": [
+        "*"
+      ],
+      "facets": [
+        "PAYMENT"
+      ],
+      "text": "O pagamento precisa seguir a cobrança oficial. Não há dados bancários ou chave Pix validados nesta base para eu enviar; um comprovante recebido ainda precisa de conferência.",
+      "sources": [
+        "USR"
+      ],
+      "status": "PENDING",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "AVAILABILITY_PENDING",
+      "scope": [
+        "*"
+      ],
+      "facets": [
+        "AVAILABILITY"
+      ],
+      "text": "Posso anotar sua preferência. A disponibilidade e o agendamento precisam ser confirmados pela equipe.",
+      "sources": [
+        "OPS",
+        "USR"
+      ],
+      "status": "PENDING",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "DEADLINE_PENDING",
+      "scope": [
+        "*"
+      ],
+      "facets": [
+        "DEADLINE"
+      ],
+      "text": "O prazo atual de análise ou execução precisa ser confirmado pela Administração; a solicitação não garante uma data de conclusão.",
+      "sources": [
+        "PROC",
+        "USR"
+      ],
+      "status": "PENDING",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "ALTERNATIVES_PENDING",
+      "scope": [
+        "*"
+      ],
+      "facets": [
+        "ALTERNATIVE_DOCUMENT",
+        "PROXY"
+      ],
+      "text": "Documentos alternativos e procurações precisam ser conferidos conforme o ato e a situação da família. Não posso dispensar ou substituir uma autorização sem essa análise.",
+      "sources": [
+        "USR",
+        "LAW"
+      ],
+      "status": "PENDING",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "STATUS_PROTOCOL",
+      "scope": [
+        "*"
+      ],
+      "facets": [
+        "STATUS"
+      ],
+      "text": "Para consultar um pedido anterior, preciso localizar a solicitação pelo protocolo. O histórico de uma conversa encerrada não é recuperado automaticamente.",
+      "sources": [
+        "USR"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "REQUESTER_CAPACITY",
+      "scope": [
+        "*"
+      ],
+      "facets": [
+        "ELIGIBILITY"
+      ],
+      "text": "Como você informou idade inferior a 18 anos, a equipe precisa analisar a representação ou eventual emancipação. Posso registrar o pedido, sem confirmar sua habilitação para autorizar o serviço.",
+      "sources": [
+        "CIVIL",
+        "USR"
+      ],
+      "status": "PENDING",
+      "when": {
+        "requester_minor": true
+      },
+      "exclude_processes": []
+    },
+    {
+      "id": "RC_SCOPE",
+      "scope": [
+        "RECADASTRO"
+      ],
+      "facets": [
+        "OVERVIEW"
+      ],
+      "text": "O recadastro atualiza os dados do jazigo ou ossuário e de seu responsável. Ele não substitui um processo de sucessão ou transferência da concessão.",
+      "sources": [
+        "PROC"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "RC_DOCS",
+      "scope": [
+        "RECADASTRO"
+      ],
+      "facets": [
+        "DOCUMENTS"
+      ],
+      "text": "A relação documental registrada inclui identificação, comprovante de endereço e carta de concessão ou documentos da sucessão; certidões de óbito entram quando aplicáveis. A Administração confere a documentação do caso.",
+      "sources": [
+        "PROC"
+      ],
+      "status": "PROJECT_REFERENCE",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "EX_SCOPE",
+      "scope": [
+        "EXUMACAO"
+      ],
+      "facets": [
+        "OVERVIEW"
+      ],
+      "text": "A exumação é a retirada do falecido(a) do local de sepultamento. O fluxo inclui conferência da documentação, análise, agendamento e definição do destino após o procedimento. O atendimento padrão é no próprio Cemitério Santana, com opções de aluguel ou compra de ossuário, ou permanência no jazigo, conforme a situação. Se você pretender levar para outro local, também precisamos tratar do traslado.",
+      "sources": [
+        "PROC",
+        "OPS"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": [
+        "EX03",
+        "EX06",
+        "EX07"
+      ],
+      "presentation": "OVERVIEW_CORE"
+    },
+    {
+      "id": "EX_DOCUMENTS",
+      "scope": [
+        "EXUMACAO"
+      ],
+      "facets": [
+        "DOCUMENTS"
+      ],
+      "text": "A orientação registrada pede certidão de óbito, identificação do solicitante e comprovante de endereço. No jazigo de família, também é necessário conferir a documentação da concessão ou da administração provisória. A lista final depende da situação.",
+      "sources": [
+        "PROC"
+      ],
+      "status": "PROJECT_REFERENCE",
+      "when": {},
+      "exclude_processes": [
+        "EX03",
+        "EX06",
+        "EX07"
+      ],
+      "presentation": "DOCUMENT_CHECKLIST",
+      "document_items": [
+        "certidão de óbito",
+        "identificação do solicitante",
+        "comprovante de endereço",
+        "no jazigo de família, documentação da concessão ou da administração provisória"
+      ],
+      "document_next_step": "A Administração confere os documentos; a lista final depende da situação."
+    },
+    {
+      "id": "EX_LEGAL_MINIMUM",
+      "scope": [
+        "EXUMACAO"
+      ],
+      "facets": [
+        "LEGAL_TIME"
+      ],
+      "text": "A regra municipal prevê 3 anos desde o óbito, ou 2 para criança de até 6 anos. Antecipação exige determinação judicial ou sanitária. A legitimidade de quem pede precisa ser conferida.",
+      "sources": [
+        "LAW"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": [
+        "EX03",
+        "EX06",
+        "EX07"
+      ]
+    },
+    {
+      "id": "EX_NO_SPOUSE",
+      "scope": [
+        "EXUMACAO"
+      ],
+      "facets": [
+        "DOCUMENTS"
+      ],
+      "text": "Se nunca houve cônjuge ou companheiro(a), não vou pedir certidão de óbito dessa pessoa. A inexistência e os vínculos dos familiares pertinentes serão conferidos pela Administração.",
+      "sources": [
+        "USR_EX_PRIORITY_20260930",
+        "N05"
+      ],
+      "status": "RESOLVED",
+      "when": {
+        "ex_spouse_presence": "NONEXISTENT"
+      },
+      "exclude_processes": [],
+      "additive": true
+    },
+    {
+      "id": "EX_NON_NATURAL",
+      "scope": [
+        "EXUMACAO"
+      ],
+      "facets": [
+        "DOCUMENTS",
+        "ELIGIBILITY"
+      ],
+      "text": "Quando a morte não foi natural ou existe dúvida sobre sua causa, a documentação e as autorizações precisam de análise específica antes de prosseguir.",
+      "sources": [
+        "PROC",
+        "LAW"
+      ],
+      "status": "PENDING",
+      "when": {
+        "death_natural": false
+      },
+      "exclude_processes": [],
+      "additive": true
+    },
+    {
+      "id": "EX_INTACT",
+      "automatic_alert_processes": [
+        "EX01"
+      ],
+      "respond_on_process_evidence": true,
+      "scope": [
+        "EX05"
+      ],
+      "facets": [
+        "OVERVIEW",
+        "DOCUMENTS",
+        "ELIGIBILITY",
+        "PRICE"
+      ],
+      "text": "Se a equipe identificar que o falecido(a) está em condição semi-intacta, precisa avaliar a reinumação e a destinação apropriada. Não posso confirmar retirada, cremação ou custo antes dessa avaliação.",
+      "sources": [
+        "PROC",
+        "USR_EX_SEMI_INTACT_20261001"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": [],
+      "modality_guidance": {
+        "EX01": {
+          "text": "Durante a exumação, o falecido(a) pode estar semi-intacto; em quadra geral, o procedimento previsto é a reinumação no mesmo local por mais 3 anos, conforme avaliação da equipe.",
+          "sources": [
+            "N05",
+            "SPREGULA_TARIFF_2026",
+            "USR_EX_SEMI_INTACT_20261001"
+          ],
+          "status": "CONFIRMED_LOCAL_GUIDANCE",
+          "tariff_rule_id": "EX_REBURIAL_TARIFF_REFERENCE"
+        }
+      },
+      "response_priority": 100
+    },
+    {
+      "id": "EX_EARLY",
+      "scope": [
+        "EX04"
+      ],
+      "facets": [
+        "OVERVIEW",
+        "DOCUMENTS"
+      ],
+      "text": "O pedido antecipado precisa ser analisado com a determinação competente. Posso registrar a existência da ordem e encaminhar o documento recebido, sem autorizar a exumação.",
+      "sources": [
+        "LAW",
+        "USR"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "EX_RESCHEDULE",
+      "scope": [
+        "EX06"
+      ],
+      "facets": [
+        "OVERVIEW"
+      ],
+      "text": "Posso registrar a preferência de remarcação. A nova data só fica confirmada após a verificação da equipe.",
+      "sources": [
+        "PROC"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "OS_SCOPE",
+      "scope": [
+        "OSSUARIO"
+      ],
+      "facets": [
+        "OVERVIEW"
+      ],
+      "text": "O ossuário é destinado à guarda do falecido(a) após a exumação. Contratação, renovação e recebimento de outra origem são pedidos diferentes; a modalidade e a disponibilidade precisam ser conferidas.",
+      "sources": [
+        "PROC"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": [
+        "OS05"
+      ]
+    },
+    {
+      "id": "OS_LOCATOR",
+      "scope": [
+        "OSSUARIO"
+      ],
+      "facets": [
+        "LOCATION"
+      ],
+      "text": "A identificação do ossuário usa bloco e número, quando disponíveis. Não é necessário informar uma quadra de jazigo para localizar um ossuário.",
+      "sources": [
+        "PROC"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "TR_SCOPE",
+      "scope": [
+        "TRASLADO"
+      ],
+      "facets": [
+        "OVERVIEW",
+        "DOCUMENTS"
+      ],
+      "text": "O traslado depende da origem, do destino e de se tratar de pessoa falecida antes ou depois da exumação, ou de cinzas. Memorandos e autorizações precisam corresponder a essa situação; o transporte não fica autorizado pela abertura do pedido.",
+      "sources": [
+        "PROC"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "TR_MEMO",
+      "scope": [
+        "TR03",
+        "OS04"
+      ],
+      "facets": [
+        "ELIGIBILITY"
+      ],
+      "text": "A fonte operacional mais recente permite iniciar a análise sem o memorando da origem. Isso não dispensa os documentos exigidos para o transporte e o recebimento.",
+      "sources": [
+        "HIST"
+      ],
+      "status": "PROJECT_REFERENCE",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "CRE_BODY",
+      "scope": [
+        "CR01"
+      ],
+      "facets": [
+        "OVERVIEW",
+        "DOCUMENTS",
+        "ELIGIBILITY"
+      ],
+      "text": "A cremação de corpo exige documentação própria. A norma distingue morte natural e violenta, incluindo autorização competente nesta última; a equipe deve conferir o caso.",
+      "sources": [
+        "LAW"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "CRE_REMAINS",
+      "scope": [
+        "CR02"
+      ],
+      "facets": [
+        "OVERVIEW",
+        "DOCUMENTS"
+      ],
+      "text": "A cremação após exumação precisa da análise da destinação e da documentação aplicável. Não posso liberar retirada ou cremação pelo atendimento automático.",
+      "sources": [
+        "N05",
+        "USR"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "ASH_GRAVE",
+      "scope": [
+        "CR03"
+      ],
+      "facets": [
+        "OVERVIEW"
+      ],
+      "text": "Como já se trata de cinzas, o pedido é de acomodação no jazigo. Há conferência documental e agendamento prévio.",
+      "sources": [
+        "OPS"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "ASH_DOCS",
+      "scope": [
+        "CR03"
+      ],
+      "facets": [
+        "DOCUMENTS"
+      ],
+      "text": "A orientação do projeto pede certidão de óbito, documento com foto do responsável pelas cinzas e carta de concessão se o titular comparecer, ou administração provisória Consolare emitida após 2023. Outras situações precisam de análise.",
+      "sources": [
+        "OPS"
+      ],
+      "status": "PROJECT_REFERENCE",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "CO_SCOPE",
+      "scope": [
+        "CONCESSAO_TITULARIDADE"
+      ],
+      "facets": [
+        "OVERVIEW",
+        "ELIGIBILITY"
+      ],
+      "text": "A regularização depende da situação do titular e da linha familiar. Posso reunir as informações, mas não definir quem tem direito à concessão.",
+      "sources": [
+        "FORM-DOC"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": [
+        "CO07",
+        "CO08",
+        "CO09",
+        "CO10",
+        "CO11"
+      ]
+    },
+    {
+      "id": "CO_DOCS",
+      "scope": [
+        "CO01",
+        "CO02",
+        "CO03"
+      ],
+      "facets": [
+        "DOCUMENTS"
+      ],
+      "text": "O checklist da Consolare parte da carta de concessão e da linha familiar do titular. Inclui certidões dos falecidos da linha, quando aplicáveis, termos dos sucessores vivos e requerimento do sucessor proposto com RG, CPF e comprovante de residência. A Administração define a documentação pertinente ao seu caso.",
+      "sources": [
+        "FORM-DOC"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "CO_DECEASED_LINE",
+      "scope": [
+        "CO01",
+        "CO02",
+        "CO03"
+      ],
+      "facets": [
+        "ELIGIBILITY"
+      ],
+      "text": "Se uma pessoa da linha familiar faleceu, a análise precisa considerar essa informação e os demais sucessores. Não é possível concluir a titularidade só pelo parentesco informado.",
+      "sources": [
+        "FORM-DOC"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "CO_RENOUNCE",
+      "scope": [
+        "CO05"
+      ],
+      "facets": [
+        "OVERVIEW",
+        "DOCUMENTS"
+      ],
+      "text": "A desistência em favor de sucessor exige o termo aplicável. O formulário para casado prevê assinatura do herdeiro e do cônjuge; o checklist orienta o formulário de solteiro para viúvo ou divorciado. A assinatura deve observar a forma aceita no documento.",
+      "sources": [
+        "FORM-DOC",
+        "FORM-CAS",
+        "FORM-SOL"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "CO_PROVISIONAL",
+      "scope": [
+        "CO04"
+      ],
+      "facets": [
+        "OVERVIEW"
+      ],
+      "text": "A administração provisória é uma representação temporária sujeita a análise; não é transferência definitiva da concessão.",
+      "sources": [
+        "PROC"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "CO_RETURN",
+      "scope": [
+        "CO06"
+      ],
+      "facets": [
+        "OVERVIEW"
+      ],
+      "text": "A devolução do jazigo é diferente de desistir em favor de um sucessor. O pedido e seus efeitos precisam de análise administrativa.",
+      "sources": [
+        "PROC"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "CO_FEE",
+      "scope": [
+        "CO10",
+        "CO11"
+      ],
+      "facets": [
+        "OVERVIEW"
+      ],
+      "text": "A taxa de expediente, a abertura do processo e a emissão da nova carta são etapas diferentes. Pagar uma taxa não confirma abertura, deferimento ou transferência.",
+      "sources": [
+        "FORM-DOC"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "FUN_SCOPE",
+      "scope": [
+        "SEPULTAMENTO_VELORIO"
+      ],
+      "facets": [
+        "OVERVIEW"
+      ],
+      "text": "Posso registrar a necessidade e os dados já disponíveis. A equipe precisa conferir a documentação, o local e a disponibilidade antes de confirmar o serviço.",
+      "sources": [
+        "PROC"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "CHAPEL",
+      "scope": [
+        "FU04"
+      ],
+      "facets": [
+        "OVERVIEW",
+        "PRICE"
+      ],
+      "text": "O uso da capela multiconfessional é gratuito no escopo da norma municipal. Capela e sala de velório são serviços distintos; a disponibilidade concreta deve ser conferida.",
+      "sources": [
+        "CAPELA"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "GRAVE_WORK",
+      "scope": [
+        "JAZIGO_SERVICOS"
+      ],
+      "facets": [
+        "OVERVIEW"
+      ],
+      "text": "Posso registrar o serviço desejado e a identificação do jazigo para orçamento ou análise. Preço, execução e autorização dependem do setor responsável.",
+      "sources": [
+        "PROC"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "WORK_EXISTING",
+      "scope": [
+        "JA02"
+      ],
+      "facets": [
+        "OVERVIEW"
+      ],
+      "text": "Como o serviço já foi contratado, o pedido é de acompanhamento. Não vou abrir um novo orçamento para a mesma contratação.",
+      "sources": [
+        "PROC"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "DAMAGE",
+      "scope": [
+        "OC01"
+      ],
+      "facets": [
+        "OVERVIEW"
+      ],
+      "text": "O relato de furto, dano ou violação precisa de análise da Administração. Vou tratá-lo como ocorrência, sem presumir a causa ou transformá-lo em orçamento.",
+      "sources": [
+        "PROC",
+        "N05"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "FINANCE",
+      "scope": [
+        "FINANCEIRO"
+      ],
+      "facets": [
+        "OVERVIEW"
+      ],
+      "text": "Posso registrar a cobrança, o pagamento declarado ou o pedido de estorno. A confirmação do pagamento e a decisão sobre valores cabem ao setor responsável.",
+      "sources": [
+        "PROC",
+        "TICKETS"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "ADMIN",
+      "scope": [
+        "ADMINISTRATIVO"
+      ],
+      "facets": [
+        "OVERVIEW"
+      ],
+      "text": "Posso registrar o que você precisa e os documentos recebidos para análise da Administração.",
+      "sources": [
+        "USR"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": [
+        "AD05"
+      ]
+    },
+    {
+      "id": "LOCATOR",
+      "scope": [
+        "LOCALIZACAO"
+      ],
+      "facets": [
+        "OVERVIEW",
+        "LOCATION"
+      ],
+      "text": "Posso reunir as referências para localizar o sepultamento ou ossuário. Não vou indicar uma localização sem confirmação no cadastro.",
+      "sources": [
+        "BURIALS",
+        "USR"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "FREE",
+      "scope": [
+        "GR01",
+        "GR02"
+      ],
+      "facets": [
+        "OVERVIEW",
+        "ELIGIBILITY",
+        "DOCUMENTS"
+      ],
+      "text": "Há hipóteses de gratuidade previstas na norma, com critérios e comprovação próprios. Posso registrar a situação; o benefício depende de análise.",
+      "sources": [
+        "LAW"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "REMAINS_WITHDRAWAL",
+      "scope": [
+        "EX03"
+      ],
+      "facets": [
+        "OVERVIEW"
+      ],
+      "text": "Se o falecido(a) já está no ossuário, o pedido é de retirada e definição do destino. A equipe precisa conferir a documentação e a liberação; isso não significa realizar uma nova exumação.",
+      "sources": [
+        "PROC",
+        "HIST"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "REMAINS_LOOKUP",
+      "scope": [
+        "EX07",
+        "OS05"
+      ],
+      "facets": [
+        "OVERVIEW",
+        "LOCATION"
+      ],
+      "text": "Posso reunir as referências do falecido(a) e do local para a equipe conferir a destinação após a exumação. Não vou indicar uma localização sem confirmação no cadastro.",
+      "sources": [
+        "N05",
+        "ORDER",
+        "USR"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "ASH_LOCATION_PENDING",
+      "scope": [
+        "CR04"
+      ],
+      "facets": [
+        "OVERVIEW",
+        "LOCATION",
+        "AVAILABILITY"
+      ],
+      "text": "A acomodação da urna de cinzas em ossuário ou columbário precisa de confirmação da Administração. Ainda não tenho uma oferta ou lista documental validada para essa modalidade.",
+      "sources": [
+        "LEGACY",
+        "ORDER",
+        "USR"
+      ],
+      "status": "PENDING",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "NEW_GRAVE_PENDING",
+      "scope": [
+        "CO07"
+      ],
+      "facets": [
+        "OVERVIEW",
+        "AVAILABILITY"
+      ],
+      "text": "Posso registrar o interesse em um jazigo. A equipe precisa confirmar se existe uma modalidade e uma unidade disponíveis; não posso reservar ou assegurar a cessão.",
+      "sources": [
+        "PROC",
+        "USR"
+      ],
+      "status": "PENDING",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "CONCESSION_RENEWAL_PENDING",
+      "scope": [
+        "CO08"
+      ],
+      "facets": [
+        "OVERVIEW"
+      ],
+      "text": "A modalidade de renovação da concessão ainda precisa ser esclarecida pela Administração. Posso registrar a referência da concessão e a consulta, sem afirmar que existe renovação automática.",
+      "sources": [
+        "CARE",
+        "USR"
+      ],
+      "status": "PENDING",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "MAINTENANCE_CHARGE_PENDING",
+      "scope": [
+        "FN04"
+      ],
+      "facets": [
+        "OVERVIEW",
+        "SERVICE_STATUS",
+        "PRICE",
+        "DEADLINE"
+      ],
+      "text": "A situação atual da taxa de manutenção precisa ser confirmada pelo setor responsável. Uma tarifa publicada, por si só, não confirma que a cobrança já começou no seu caso.",
+      "sources": [
+        "PROC",
+        "N05",
+        "USR"
+      ],
+      "status": "PENDING",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "PUBLIC_HOURS_PENDING",
+      "scope": [
+        "IF03"
+      ],
+      "facets": [
+        "OVERVIEW",
+        "HOURS",
+        "ADDRESS",
+        "AVAILABILITY"
+      ],
+      "text": "Visitação, atendimento administrativo e execução de serviços têm horários distintos. O expediente da atividade e as exceções de feriados precisam de confirmação; posso registrar o dia e o que você pretende fazer.",
+      "sources": [
+        "OPS",
+        "PROC",
+        "USR"
+      ],
+      "status": "PENDING",
+      "when": {},
+      "exclude_processes": [],
+      "cross_cutting_facets": [
+        "HOURS",
+        "ADDRESS"
+      ]
+    },
+    {
+      "id": "FOLLOWUP_SCOPE",
+      "scope": [
+        "CO09"
+      ],
+      "facets": [
+        "OVERVIEW"
+      ],
+      "text": "Posso consultar o andamento pelo protocolo informado neste atendimento ou registrar uma consulta para a equipe localizar a solicitação. Não vou presumir aprovação por uma declaração ou pagamento.",
+      "sources": [
+        "USR"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "SERVICE_STATUS_PENDING",
+      "scope": [
+        "*"
+      ],
+      "facets": [
+        "SERVICE_STATUS"
+      ],
+      "text": "A situação atual desse serviço precisa de confirmação da Administração. Posso registrar sua consulta sem afirmar uma condição que ainda não foi verificada.",
+      "sources": [
+        "USR"
+      ],
+      "status": "PENDING",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "EX_DOCUMENTS_GENERAL_GRAVE",
+      "scope": [
+        "EX01"
+      ],
+      "facets": [
+        "DOCUMENTS"
+      ],
+      "text": "A orientação registrada para quadra geral pede certidão de óbito, identificação do solicitante e comprovante de endereço. A Administração confere os documentos e a legitimidade do solicitante.",
+      "sources": [
+        "PROC"
+      ],
+      "status": "PROJECT_REFERENCE",
+      "when": {},
+      "exclude_processes": [],
+      "presentation": "DOCUMENT_CHECKLIST",
+      "document_items": [
+        "certidão de óbito",
+        "identificação do solicitante",
+        "comprovante de endereço"
+      ],
+      "document_next_step": "A Administração confere os documentos e a legitimidade do solicitante."
+    },
+    {
+      "id": "EX_FAMILY_AUTHORITY",
+      "scope": [
+        "EXUMACAO"
+      ],
+      "facets": [
+        "ELIGIBILITY",
+        "AUTHORIZATION"
+      ],
+      "text": "A prioridade para autorizar a exumação é do cônjuge/companheiro(a) sobrevivente; na ausência, dos filhos; na ausência de filhos, dos irmãos; e na ausência de irmãos, dos sobrinhos. Pais não integram essa sequência. Ausência significa inexistência ou falecimento de todos desse grupo; recusa, distância, falta de contato ou impossibilidade de comparecer não transferem a prioridade. Quem pede informações pode ser diferente de quem autoriza; a Administração confere o vínculo e os documentos.",
+      "sources": [
+        "USR_EX_PRIORITY_20260930"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": [
+        "EX03",
+        "EX06",
+        "EX07"
+      ],
+      "presentation": "FAMILY_GENERAL"
+    },
+    {
+      "id": "EX_CHILD_MINOR",
+      "scope": [
+        "EXUMACAO"
+      ],
+      "facets": [
+        "ELIGIBILITY"
+      ],
+      "text": "Sendo menor de 18 anos, você não deve assinar sozinho(a) como familiar responsável pela exumação. Precisamos de um familiar adulto habilitado e da conferência da Administração.",
+      "sources": [
+        "USR_EX_AUTH_20260929",
+        "N05"
+      ],
+      "status": "RESOLVED",
+      "when": {
+        "relationship_kind": "CHILD",
+        "requester_adult": false
+      },
+      "exclude_processes": [
+        "EX03",
+        "EX06",
+        "EX07"
+      ],
+      "response_priority": 10
+    },
+    {
+      "id": "EX_OTHER_FAMILY",
+      "scope": [
+        "EXUMACAO"
+      ],
+      "facets": [
+        "ELIGIBILITY"
+      ],
+      "text": "Seu vínculo não integra a sequência administrativa de autorização da exumação. Você pode pedir informações ou acompanhar; a autorização segue a prioridade de cônjuge/companheiro(a), filhos, irmãos e sobrinhos, conforme inexistência ou falecimento dos grupos anteriores.",
+      "sources": [
+        "USR_EX_PRIORITY_20260930"
+      ],
+      "status": "RESOLVED",
+      "when": {
+        "relationship_kind": "OTHER"
+      },
+      "exclude_processes": [
+        "EX03",
+        "EX06",
+        "EX07"
+      ],
+      "presentation": "ACTOR_BOUNDARY"
+    },
+    {
+      "id": "EX_SPOUSE_REFUSAL",
+      "scope": [
+        "EXUMACAO"
+      ],
+      "facets": [
+        "ELIGIBILITY"
+      ],
+      "text": "O cônjuge/companheiro(a) sobrevivente mantém a prioridade mesmo se recusar a assinatura. Essa recusa não permite passar a autorização para filhos, irmãos ou sobrinhos. Essa dificuldade precisa ser validada pela Administração antes de prosseguir.",
+      "sources": [
+        "USR_EX_PRIORITY_20260930",
+        "N05"
+      ],
+      "status": "RESOLVED",
+      "when": {
+        "ex_priority": "SPOUSE",
+        "spouse_authorizes": false
+      },
+      "exclude_processes": [
+        "EX03",
+        "EX06",
+        "EX07"
+      ],
+      "response_priority": 10
+    },
+    {
+      "id": "EX_SPOUSE_NO_ATTENDANCE",
+      "scope": [
+        "EXUMACAO"
+      ],
+      "facets": [
+        "ATTENDANCE"
+      ],
+      "text": "O cônjuge/companheiro(a) pode autorizar e assinar sem acompanhar o procedimento presencialmente. Outra pessoa pode acompanhar depois que a documentação e as autorizações estiverem resolvidas.",
+      "sources": [
+        "USR_EX_AUTH_20260929",
+        "N05"
+      ],
+      "status": "RESOLVED",
+      "when": {
+        "ex_priority": "SPOUSE",
+        "spouse_authorizes": true
+      },
+      "exclude_processes": [
+        "EX03",
+        "EX06",
+        "EX07"
+      ],
+      "cross_cutting_facets": [
+        "ATTENDANCE"
+      ]
+    },
+    {
+      "id": "EX_DUAL_SIGNATURES",
+      "scope": [
+        "EX02"
+      ],
+      "facets": [
+        "DOCUMENTS",
+        "ELIGIBILITY"
+      ],
+      "text": "No jazigo particular, há a assinatura familiar conforme a prioridade da exumação e a assinatura do concessionário ou administrador provisório do jazigo. Se a mesma pessoa reúne os dois papéis, assina nas duas condições. Isso não define quantas assinaturas são necessárias quando há vários familiares no mesmo grupo.",
+      "sources": [
+        "USR_EX_PRIORITY_20260930",
+        "N05"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": [
+        "EX03",
+        "EX06",
+        "EX07"
+      ],
+      "additive": true,
+      "presentation": "DUAL_ROLE"
+    },
+    {
+      "id": "CO_LIVING_HOLDER",
+      "scope": [
+        "CO01",
+        "CO02",
+        "CO03"
+      ],
+      "facets": [
+        "ELIGIBILITY"
+      ],
+      "text": "Com o titular vivo, a regularização não deve presumir sucessão por falecimento. Cadastro, representação e qualquer alteração de titularidade precisam ser tratados conforme o pedido e a análise do Setor de Concessão.",
+      "sources": [
+        "FORM-DOC",
+        "N05",
+        "LAW_SUCCESSION_CURRENT"
+      ],
+      "status": "RESOLVED",
+      "when": {
+        "holder_alive": true
+      },
+      "exclude_processes": []
+    },
+    {
+      "id": "CO_CHILDREN_LINE",
+      "scope": [
+        "CO01",
+        "CO02",
+        "CO03"
+      ],
+      "facets": [
+        "ELIGIBILITY"
+      ],
+      "text": "Na linha familiar do titular falecido, os filhos e demais sucessores pertinentes precisam ser considerados. Se um filho faleceu, a análise inclui os descendentes dessa linha; isso não torna automaticamente o neto o novo concessionário.",
+      "sources": [
+        "FORM-DOC",
+        "N05",
+        "LAW_SUCCESSION_CURRENT"
+      ],
+      "status": "RESOLVED",
+      "when": {
+        "holder_alive": false,
+        "holder_has_children": true
+      },
+      "exclude_processes": []
+    },
+    {
+      "id": "CO_OTHER_LINE",
+      "scope": [
+        "CO01",
+        "CO02",
+        "CO03"
+      ],
+      "facets": [
+        "ELIGIBILITY"
+      ],
+      "text": "Sem filhos, o Setor de Concessão verifica as outras linhas familiares pertinentes, incluindo irmãos e descendentes de irmãos conforme o caso. Não posso definir o sucessor por essa declaração isolada.",
+      "sources": [
+        "FORM-DOC",
+        "N05",
+        "LAW_SUCCESSION_CURRENT"
+      ],
+      "status": "RESOLVED",
+      "when": {
+        "holder_alive": false,
+        "holder_has_children": false
+      },
+      "exclude_processes": []
+    },
+    {
+      "id": "CO_DECEASED_CERTIFICATES",
+      "scope": [
+        "CO01",
+        "CO02",
+        "CO03"
+      ],
+      "facets": [
+        "ELIGIBILITY",
+        "DOCUMENTS"
+      ],
+      "text": "Quando um familiar da linha analisada faleceu, a certidão de óbito pertinente ajuda a comprovar a continuidade da linha. Não é uma exigência automática para todas as pessoas sepultadas no jazigo.",
+      "sources": [
+        "FORM-DOC",
+        "N05"
+      ],
+      "status": "RESOLVED",
+      "when": {
+        "line_includes_deceased": true,
+        "holder_alive": false
+      },
+      "exclude_processes": []
+    },
+    {
+      "id": "CO_PROVISIONAL_LIMITS",
+      "scope": [
+        "CO04"
+      ],
+      "facets": [
+        "ELIGIBILITY",
+        "DOCUMENTS"
+      ],
+      "text": "A administração provisória depende da análise da linha familiar e dos documentos; ser neto(a), bisneto(a) ou sobrinho(a) não garante sua emissão. Ela não transfere a concessão e não autoriza venda ou devolução.",
+      "sources": [
+        "PROC",
+        "N05"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "RC_MISSING_LETTER",
+      "scope": [
+        "RECADASTRO"
+      ],
+      "facets": [
+        "DOCUMENTS",
+        "ELIGIBILITY"
+      ],
+      "text": "Não possuir a Carta de Concessão não encerra a orientação sobre recadastro. A Administração precisa conferir os registros e a documentação da linha familiar pertinente; pode ser necessário obter segunda via.",
+      "sources": [
+        "PROC",
+        "N05",
+        "FORM-DOC"
+      ],
+      "status": "RESOLVED",
+      "when": {
+        "has_concession_letter": false
+      },
+      "exclude_processes": []
+    },
+    {
+      "id": "COMPLAINT_CHANNEL",
+      "scope": [
+        "AD05"
+      ],
+      "facets": [
+        "OVERVIEW"
+      ],
+      "text": "Para uma reclamação formal, o canal da Consolare é contato@consolare.com.br. Reclamações sobre a prestação do serviço também podem ser feitas no Portal 156 da Prefeitura. Este WhatsApp orienta o canal; não envia a manifestação nem cria protocolo de Ouvidoria.",
+      "sources": [
+        "N05",
+        "CONSOLARE_CURRENT"
+      ],
+      "status": "RESOLVED",
+      "when": {
+        "complaint_described": true
+      },
+      "exclude_processes": []
+    },
+    {
+      "id": "CONCESSION_CHANNEL",
+      "scope": [
+        "CO01",
+        "CO02",
+        "CO03",
+        "CO04",
+        "CO05",
+        "CO06"
+      ],
+      "facets": [
+        "OVERVIEW"
+      ],
+      "text": "O Setor de Concessão recebe a documentação e analisa a regularização: concessao@consolare.com.br e WhatsApp (11) 91615-8664. A Administração do cemitério não define automaticamente o novo titular.",
+      "sources": [
+        "PROC",
+        "CONSOLARE_CURRENT"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "EX_DECEASED_SPOUSE",
+      "scope": [
+        "EXUMACAO"
+      ],
+      "facets": [
+        "DOCUMENTS",
+        "ELIGIBILITY"
+      ],
+      "text": "Se o cônjuge ou companheiro(a) faleceu, a certidão de óbito pertinente precisa ser conferida para a análise familiar. Isso é diferente de nunca ter existido cônjuge ou companheiro(a).",
+      "sources": [
+        "N05"
+      ],
+      "status": "RESOLVED",
+      "when": {
+        "ex_spouse_presence": "ALL_DECEASED"
+      },
+      "exclude_processes": [
+        "EX03",
+        "EX06",
+        "EX07"
+      ],
+      "additive": true
+    },
+    {
+      "id": "EX_HOLDER_DIFFERENT",
+      "scope": [
+        "EX02"
+      ],
+      "facets": [
+        "ELIGIBILITY"
+      ],
+      "text": "O concessionário ou administrador provisório também participa da assinatura referente ao jazigo. Esse papel não substitui o familiar prioritário do falecido(a); a Administração confere os dois vínculos antes do agendamento.",
+      "sources": [
+        "USR_EX_PRIORITY_20260930",
+        "N05"
+      ],
+      "status": "RESOLVED",
+      "when": {
+        "holder_responsible_same": false
+      },
+      "exclude_processes": []
+    },
+    {
+      "id": "RC_LETTER_ALTERNATIVE",
+      "scope": [
+        "RECADASTRO"
+      ],
+      "facets": [
+        "ALTERNATIVE_DOCUMENT"
+      ],
+      "text": "Não possuir a Carta de Concessão não encerra a orientação sobre recadastro. A Administração precisa conferir os registros e a documentação da linha familiar pertinente; pode ser necessário obter segunda via.",
+      "sources": [
+        "PROC",
+        "N05",
+        "FORM-DOC"
+      ],
+      "status": "RESOLVED",
+      "when": {},
+      "exclude_processes": []
+    },
+    {
+      "id": "EX_PRIORITY_PENDING",
+      "scope": [
+        "EXUMACAO"
+      ],
+      "facets": [
+        "ELIGIBILITY",
+        "AUTHORIZATION"
+      ],
+      "text": "A prioridade para autorizar a exumação é do cônjuge/companheiro(a) sobrevivente; na ausência, dos filhos; na ausência de filhos, dos irmãos; e na ausência de irmãos, dos sobrinhos. Pais não integram essa sequência. Ausência significa inexistência ou falecimento de todos desse grupo; recusa, distância, falta de contato ou impossibilidade de comparecer não transferem a prioridade. Ainda falta confirmar os familiares anteriores antes de indicar quem tem prioridade neste caso.",
+      "sources": [
+        "USR_EX_PRIORITY_20260930"
+      ],
+      "status": "RESOLVED",
+      "when": {
+        "ex_priority": "UNKNOWN",
+        "ex_family_case": true
+      },
+      "exclude_processes": [
+        "EX03",
+        "EX06",
+        "EX07"
+      ],
+      "additive": true,
+      "presentation": "FAMILY_PENDING"
+    },
+    {
+      "id": "EX_PARENT_EXCLUDED",
+      "scope": [
+        "EXUMACAO"
+      ],
+      "facets": [
+        "ELIGIBILITY",
+        "AUTHORIZATION"
+      ],
+      "text": "Ser pai ou mãe não dá prioridade para autorizar a exumação nessa sequência administrativa. Você pode buscar informações, mas a autorização segue cônjuge/companheiro(a), filhos, irmãos e sobrinhos, após verificar a ausência dos grupos anteriores.",
+      "sources": [
+        "USR_EX_PRIORITY_20260930"
+      ],
+      "status": "RESOLVED",
+      "when": {
+        "authorization_subject_kind": "PARENT"
+      },
+      "exclude_processes": [
+        "EX03",
+        "EX06",
+        "EX07"
+      ],
+      "additive": true,
+      "presentation": "ACTOR_BOUNDARY"
+    },
+    {
+      "id": "EX_PRIORITY_CONFLICT",
+      "scope": [
+        "EXUMACAO"
+      ],
+      "facets": [
+        "ELIGIBILITY",
+        "AUTHORIZATION"
+      ],
+      "text": "Há declarações incompatíveis sobre os familiares do falecido(a). Precisamos esclarecer se esses familiares existem e estão vivos antes de indicar a prioridade para autorização.",
+      "sources": [
+        "USR_EX_PRIORITY_20260930"
+      ],
+      "status": "PENDING",
+      "when": {
+        "ex_priority": "CONFLICT"
+      },
+      "exclude_processes": [
+        "EX03",
+        "EX06",
+        "EX07"
+      ],
+      "additive": true,
+      "response_priority": 10
+    },
+    {
+      "id": "EX_PRIORITY_NONE",
+      "scope": [
+        "EXUMACAO"
+      ],
+      "facets": [
+        "ELIGIBILITY",
+        "AUTHORIZATION"
+      ],
+      "text": "Pelas informações declaradas, não há familiar vivo nos quatro grupos da sequência. A Administração precisa validar especificamente quem poderá autorizar; não vou indicar outro parentesco por suposição.",
+      "sources": [
+        "USR_EX_PRIORITY_20260930"
+      ],
+      "status": "PENDING",
+      "when": {
+        "ex_priority": "NONE"
+      },
+      "exclude_processes": [
+        "EX03",
+        "EX06",
+        "EX07"
+      ],
+      "additive": true,
+      "response_priority": 10
+    },
+    {
+      "id": "EX_MULTIPLE_SIGNATURES_PENDING",
+      "scope": [
+        "EXUMACAO"
+      ],
+      "facets": [
+        "ELIGIBILITY",
+        "AUTHORIZATION"
+      ],
+      "text": "Há mais de uma pessoa viva no grupo com prioridade. A regra documental disponível não define se basta uma assinatura ou se todos desse grupo devem autorizar a exumação. Essa questão específica precisa de validação da Administração antes de concluir as autorizações; a regra de sucessão da concessão não resolve essa dúvida.",
+      "sources": [
+        "USR_EX_PRIORITY_20260930"
+      ],
+      "status": "PENDING",
+      "when": {
+        "ex_priority_multiple": true
+      },
+      "exclude_processes": [
+        "EX03",
+        "EX06",
+        "EX07"
+      ],
+      "additive": true,
+      "response_priority": 10,
+      "exclude_when": {
+        "ex_priority": "CHILD"
+      }
+    },
+    {
+      "id": "EX_PRIORITY_SPOUSE",
+      "scope": [
+        "EXUMACAO"
+      ],
+      "facets": [
+        "ELIGIBILITY",
+        "AUTHORIZATION"
+      ],
+      "text": "Pela presença declarada de cônjuge/companheiro(a) sobrevivente, esse grupo tem prioridade para autorizar a exumação. Isso não autoriza automaticamente quem está conversando; a Administração confere quem assina e a documentação. Recusa, distância, falta de contato ou impossibilidade de comparecer não são ausência e não transferem essa prioridade.",
+      "sources": [
+        "USR_EX_PRIORITY_20260930"
+      ],
+      "status": "RESOLVED",
+      "when": {
+        "ex_priority": "SPOUSE"
+      },
+      "exclude_processes": [
+        "EX03",
+        "EX06",
+        "EX07"
+      ],
+      "additive": true,
+      "presentation": "FAMILY_PRIORITY",
+      "response_priority": 5,
+      "customer_text": "O cônjuge ou companheiro(a) tem prioridade para assinar."
+    },
+    {
+      "id": "EX_PRIORITY_CHILD",
+      "scope": [
+        "EXUMACAO"
+      ],
+      "facets": [
+        "ELIGIBILITY",
+        "AUTHORIZATION"
+      ],
+      "text": "Na ausência de cônjuge/companheiro(a) sobrevivente, basta a assinatura de um filho(a) maior de 18 anos; não são necessárias assinaturas de todos os filhos. A Administração confere o vínculo e os documentos. Recusa, distância, falta de contato ou impossibilidade de comparecer não são ausência e não transferem essa prioridade.",
+      "sources": [
+        "USR_EX_PRIORITY_20260930",
+        "USR_EX_SINGLE_CHILD_20261002"
+      ],
+      "status": "RESOLVED",
+      "when": {
+        "ex_priority": "CHILD"
+      },
+      "exclude_processes": [
+        "EX03",
+        "EX06",
+        "EX07"
+      ],
+      "additive": true,
+      "presentation": "FAMILY_PRIORITY",
+      "response_priority": 5,
+      "customer_text": "Basta a assinatura de um filho(a) maior de 18 anos. A Administração confere os documentos."
+    },
+    {
+      "id": "EX_PRIORITY_SIBLING",
+      "scope": [
+        "EXUMACAO"
+      ],
+      "facets": [
+        "ELIGIBILITY",
+        "AUTHORIZATION"
+      ],
+      "text": "Com a inexistência ou falecimento de todos os familiares anteriores (cônjuge/companheiro(a) e filhos) e a presença declarada de irmãos, a prioridade é desse grupo. Isso não autoriza automaticamente quem está conversando; a Administração confere quem assina e a documentação. Recusa, distância, falta de contato ou impossibilidade de comparecer não são ausência e não transferem essa prioridade.",
+      "sources": [
+        "USR_EX_PRIORITY_20260930"
+      ],
+      "status": "RESOLVED",
+      "when": {
+        "ex_priority": "SIBLING"
+      },
+      "exclude_processes": [
+        "EX03",
+        "EX06",
+        "EX07"
+      ],
+      "additive": true,
+      "presentation": "FAMILY_PRIORITY",
+      "response_priority": 5,
+      "customer_text": "Neste caso, a prioridade para assinar é dos irmãos."
+    },
+    {
+      "id": "EX_PRIORITY_NEPHEW",
+      "scope": [
+        "EXUMACAO"
+      ],
+      "facets": [
+        "ELIGIBILITY",
+        "AUTHORIZATION"
+      ],
+      "text": "Com a inexistência ou falecimento de todos os familiares anteriores (cônjuge/companheiro(a), filhos e irmãos) e a presença declarada de sobrinhos, a prioridade é desse grupo. Isso não autoriza automaticamente quem está conversando; a Administração confere quem assina e a documentação. Recusa, distância, falta de contato ou impossibilidade de comparecer não são ausência e não transferem essa prioridade.",
+      "sources": [
+        "USR_EX_PRIORITY_20260930"
+      ],
+      "status": "RESOLVED",
+      "when": {
+        "ex_priority": "NEPHEW"
+      },
+      "exclude_processes": [
+        "EX03",
+        "EX06",
+        "EX07"
+      ],
+      "additive": true,
+      "presentation": "FAMILY_PRIORITY",
+      "response_priority": 5,
+      "customer_text": "Neste caso, a prioridade para assinar é dos sobrinhos."
+    },
+    {
+      "id": "EX_SCHEDULING",
+      "scope": [
+        "EXUMACAO"
+      ],
+      "facets": [
+        "SCHEDULING"
+      ],
+      "text": "O agendamento vem após a conferência dos documentos, análise do pedido e assinaturas necessárias. A data é confirmada pela Administração.",
+      "sources": [
+        "PROC",
+        "N05"
+      ],
+      "status": "PROJECT_REFERENCE",
+      "when": {},
+      "exclude_processes": [
+        "EX03",
+        "EX06",
+        "EX07"
+      ]
+    }
+  ],
+  "questions": {
+    "purpose": "O que você precisa fazer neste atendimento?",
+    "location_type": "O falecido(a) está em quadra geral, jazigo particular ou ossuário?",
+    "location": "Você tem a identificação do jazigo ou do ossuário?",
+    "deceased_name": "Qual é o nome completo do falecido(a)?",
+    "relationship": "Qual é o seu grau de parentesco com o falecido(a)?",
+    "destination": "Qual destino você considera para o falecido(a) após a exumação?",
+    "origin": "De onde virá o falecido(a)?",
+    "holder_name": "Quem consta como titular na carta de concessão?",
+    "holder_alive": "O titular da concessão está vivo?",
+    "service_detail": "Qual serviço ou providência você precisa?",
+    "protocol": "Qual é o protocolo da solicitação que você quer consultar?",
+    "document_purpose": "A que pedido este documento se refere?",
+    "requester_name": "Como posso te chamar?",
+    "confirm_registration": "Quer que eu registre esse pedido para análise da equipe?",
+    "unknown_detail": "Pode me contar um pouco mais sobre o que você precisa?",
+    "requester_adult": "Você tem 18 anos ou mais?",
+    "has_spouse": "O falecido(a) deixou cônjuge ou companheiro(a) vivo(a)?",
+    "adult_children_alive": "O falecido(a) deixou algum filho(a) maior de 18 anos que esteja vivo(a)?",
+    "family_authorizer_available": "Há um familiar do grupo com prioridade para autorizar? Existência e prioridade são diferentes de disponibilidade para comparecer.",
+    "spouse_authorizes": "O cônjuge ou companheiro(a) concorda em autorizar e assinar a exumação?",
+    "holder_responsible_same": "Você também é o concessionário ou administrador provisório do jazigo?",
+    "holder_has_children": "O titular deixou filhos?",
+    "line_includes_deceased": "Algum dos filhos do titular faleceu?",
+    "holder_has_siblings": "O titular deixou irmãos ou descendentes de irmãos?",
+    "complaint_report": "Pode me contar o que aconteceu e o que você deseja reclamar?",
+    "ex_spouse_presence": "Há cônjuge ou companheiro(a) vivo(a), nunca houve esse vínculo ou já faleceu?",
+    "ex_children_presence": "O falecido(a) tem algum filho(a) vivo(a), nunca teve filhos, ou todos os filhos faleceram?",
+    "ex_siblings_presence": "O falecido(a) tem algum irmão ou irmã vivo(a), nunca teve irmãos, ou todos os irmãos faleceram?",
+    "ex_nephews_presence": "Há algum sobrinho ou sobrinha do falecido(a) vivo(a), não existem sobrinhos, ou todos faleceram?",
+    "ex_children_multiple": "Há apenas um filho(a) vivo(a) do falecido(a) ou mais de um?",
+    "ex_siblings_multiple": "Há apenas um irmão ou irmã vivo(a) do falecido(a) ou mais de um?",
+    "ex_nephews_multiple": "Há apenas um sobrinho ou sobrinha vivo(a) do falecido(a) ou mais de um?",
+    "authorizer_adult": "A pessoa indicada para assinar tem 18 anos ou mais?",
+    "buried_reference_name": "Qual é o nome completo de algum falecido(a) sepultado nesse jazigo?",
+    "burial_period": "Você sabe aproximadamente quando esse falecido(a) foi sepultado? Se não souber, podemos seguir com as referências disponíveis.",
+    "search_reference": "Que outra referência você consegue informar para ajudar a equipe na busca?",
+    "exumation_origin": "A situação é em quadra geral ou em jazigo particular?"
+  },
+  "sources": {
+    "USR": {
+      "title": "Instrução desta tarefa",
+      "authority": "Requisito atual do usuário; prevalece para arquitetura, sessão e memória",
+      "date": "2026-09-29"
+    },
+    "HIST": {
+      "title": "Export n8n V7.7 com patches V7.8/V7.9 e matriz de 69 regras",
+      "date": "2026-09-20",
+      "authority": "Fonte operacional histórica; nome do export não identifica sozinho a versão de cada regra; vigência não confirmada"
+    },
+    "N05": {
+      "title": "Prompt Agente de Atendimento1 extraído do export",
+      "date": "2026-09-20",
+      "authority": "Histórico; prioridade declarada entre patches não equivale a aprovação administrativa"
+    },
+    "PROC": {
+      "title": "PROCEDIMENTOS_CEMITERIO_SANTANA_FLUXOGRAMA_E_RESUMOS.md",
+      "date": "2026-09-20",
+      "authority": "Consolidação operacional; o próprio documento exige conferência da vigência"
+    },
+    "OPS": {
+      "title": "Regras operacionais n8n no repositório do painel",
+      "commit": "c69de717435beea746d3599a641e24764e6d0f4e",
+      "authority": "Regra documentada no projeto; disponibilidade concreta não comprovada"
+    },
+    "LEGACY": {
+      "title": "support-flow-context / support-rules-context, produção Git",
+      "commit": "6749355b620b73292eac5be45058d64099fe7b95",
+      "authority": "Código histórico; projeto Supabase original excluído, conforme confirmação do usuário."
+    },
+    "DOMAIN": {
+      "title": "Catálogo exumacao.v1.json",
+      "commit": "5fcba023a4fc461d91e0412fa041ed0669171680",
+      "authority": "Domínio marcado approved no código; conflitos não resolvidos apenas por esse marcador"
+    },
+    "FORM-DOC": {
+      "title": "DOCUMENTOS PARA TRANSFERÊNCIA.pdf — Consolare",
+      "url": "https://drive.google.com/file/d/1N_WKxwaKvUFaJbRuSNcVIpQG9R1Yilqn/view",
+      "date": "2026-05-12",
+      "authority": "Documento administrativo primário disponível; data é metadado, não declaração de vigência"
+    },
+    "FORM-REQ": {
+      "title": "REQUERIMENTO DE TRANSFERÊNCIA DE CONCESSÃO.pdf",
+      "url": "https://drive.google.com/file/d/1bZD0RAYkbpP5zx9jaZBypKOW-AqZA1Fd/view",
+      "date": "2026-06-10",
+      "authority": "Formulário Consolare"
+    },
+    "FORM-CAS": {
+      "title": "TERMO DE DESISTÊNCIA — CASADO.pdf",
+      "url": "https://drive.google.com/file/d/1z0Pdh6I5a84l0zCgVjprZfOiDuVp8ZwV/view",
+      "date": "2026-06-10",
+      "authority": "Formulário Consolare; duas assinaturas"
+    },
+    "FORM-SOL": {
+      "title": "TERMO DE DESISTÊNCIA — SOLTEIRO.pdf",
+      "url": "https://drive.google.com/file/d/1OOoGq2pEHHVJLstTwAM460lyGnLV38mr/view",
+      "date": "2026-06-10",
+      "authority": "Formulário Consolare; inclui viúvo/divorciado conforme FORM-DOC"
+    },
+    "CAL": {
+      "title": "CALENDARIO DE EXUMAÇÃO 2026.xlsx",
+      "date": "2026-09-08",
+      "authority": "Planilha operacional enviada; evidência de programação, não fonte de capacidade ou agenda livre"
+    },
+    "MINING": {
+      "title": "Fases 11 e 12 — mineração de conversas",
+      "date": "2026-09-12",
+      "authority": "258 candidatas, nenhuma promovida; linguagem e cobertura, não norma"
+    },
+    "ORDER": {
+      "title": "Ordem de Exumação FR.OP.009 rev.00, exemplo preenchido",
+      "url": "https://docs.google.com/document/d/1G25BTJzg9mb2zrvEfFhjtOnFadosaC5YNBi1G46zHtk/edit",
+      "date": "2025-12-31",
+      "authority": "Registro individual de 2025; campos e destinos observados, não regra universal; dados pessoais omitidos"
+    },
+    "TICKETS": {
+      "title": "TICKETS — SANTANA E TREMEMBÉ 2024 E 2025, aba ESTORNO",
+      "url": "https://docs.google.com/spreadsheets/d/1_QBtHFr8UyoYQmf4W4roVBzKJi9kl1idaZqwfINix8s/edit",
+      "date": "2026-09-16",
+      "authority": "Cabeçalhos operacionais: status, ticket, inscrição, motivo, data, valor, comprovante; nenhuma autorização automática inferida"
+    },
+    "BURIALS": {
+      "title": "Sepultados Santana",
+      "url": "https://docs.google.com/spreadsheets/d/1tA5pj4lu6gmru9JsKPMLo4qpa9Ebw7CtjTcOxKlM_Wo/edit",
+      "date": "2026-08-26",
+      "authority": "Cadastro operacional localizado; não sincronizado nem fonte automática do modelo"
+    },
+    "CARE": {
+      "title": "santana-care-connect — interface de solicitações",
+      "commit": "b242fa113f2816051d19eea2243e188688d0bddc",
+      "authority": "Interface em Fase 0; itens de menu não comprovam operação implantada"
+    },
+    "LAW": {
+      "title": "Decreto municipal 59.196/2020, texto com alterações",
+      "url": "https://legislacao.prefeitura.sp.gov.br/decreto-59196-de-29-de-janeiro-de-2020",
+      "authority": "Norma municipal consultada nesta auditoria; aplicação individual exige análise competente"
+    },
+    "CAPELA": {
+      "title": "Resolução SP Regula 49/2026",
+      "url": "https://legislacao.prefeitura.sp.gov.br/resolucao-agencia-reguladora-de-servicos-publicos-do-municipio-de-sao-paulo-sp-regula-49-de-5-de-janeiro-de-2026",
+      "authority": "Norma municipal específica de capelas multiconfessionais, distinta de sala de velório"
+    },
+    "TAR-PUB": {
+      "title": "Tabela_Politica_Tarifaria_07_01_2026.pdf — cópia pública Velar",
+      "url": "https://velarspfuneraria.com.br/wp-content/uploads/2026/01/Tabela_Politica_Tarifaria_07_01_2026.pdf",
+      "authority": "Tabela pública com mesmo nome e cifras do catálogo; não prova correspondência com serviço composto Santana nem identidade binária do upload original"
+    },
+    "CIVIL": {
+      "title": "Código Civil, arts. 3 a 5",
+      "url": "https://www2.camara.leg.br/legin/fed/lei/2002/lei-10406-10-janeiro-2002-432893-normaatualizada-pl.html",
+      "authority": "Fonte legislativa federal atualizada consultada em 29/09/2026; idade não determina sozinha representação ou emancipação."
+    },
+    "USR_PRICE_PRIVATE_20260929": {
+      "title": "Valor atual informado pelo responsável do projeto nesta sessão",
+      "date": "2026-09-29",
+      "authority": "Confirmação atual: exumação em jazigo particular custa R$ 836,65; substitui R$ 729,65 para esta modalidade. Não aprova outras tarifas ou composições."
+    },
+    "USR_EX_AUTH_20260929": {
+      "title": "Autorização de exumação e familiar responsável",
+      "date": "2026-09-29",
+      "authority": "Histórico de 2026-09-29; prioridade familiar supersedida por USR_EX_PRIORITY_20260930. N05 continua referência documental para papéis familiar/jazigo, capacidade e acompanhamento; não concede autorização."
+    },
+    "CONSOLARE_CURRENT": {
+      "title": "Canais e regularização da Consolare verificados em fonte primária",
+      "date": "2026-09-29",
+      "urls": [
+        "https://consolare.com.br/",
+        "https://consolare.com.br/regularizacao/",
+        "https://consolare.com.br/termos-de-uso/"
+      ],
+      "authority": "Busca atual confirmou contato@consolare.com.br, canal da concessão e distinção de transferência após falecimento. Páginas abertas restritas nesta ferramenta; texto indexado recuperado. Não prova análise individual ou autorização."
+    },
+    "LAW_SUCCESSION_CURRENT": {
+      "title": "Decreto municipal 59.196/2020, art. 56 e distinção de concessões (consulta 29/09/2026)",
+      "url": "https://legislacao.prefeitura.sp.gov.br/leis/decreto-59196-de-29-de-janeiro-de-2020",
+      "note": "Transferência após falecimento depende da formalização e documentos previstos. Não fundamenta uma autorização automática de exumação nem exclusividade universal de primeiro grau."
+    },
+    "USR_EX_PRIORITY_20260930": {
+      "title": "Prioridade familiar da exumação — orientação administrativa confirmada",
+      "authority": "Confirmação expressa do responsável pelo Cemitério Santana em 2026-09-30. Supersede a prioridade familiar de USR_EX_AUTH_20260929/N05 apenas para exumação. Não é regra de sucessão da concessão.",
+      "path": "docs/sana-rebuild-20260929/EXUMATION-PRIORITY-20260930.md"
+    },
+    "USR_EX_PRIVATE_PACKAGE_20260930": {
+      "title": "Fluxos distintos de exumação — confirmação administrativa atual",
+      "date": "2026-09-30",
+      "authority": "Orientação expressa do responsável: no jazigo particular informar somente urna com exumação; demais serviços de transporte apenas por intenção expressa de traslado. Quadra geral tem fluxo e opções próprios. Substitui a orientação histórica de não mencionar urna; preserva R$ 836,65 confirmado.",
+      "path": "docs/sana-rebuild-20260929/CONVERSATION-INTAKE-20260930.md"
+    },
+    "SPREGULA_TARIFF_2026": {
+      "title": "SP Regula — Política tarifária 2026, Tabela 1",
+      "url": "https://prefeitura.sp.gov.br/documents/d/spregula/tabelas_1_a_4_politica_tarifaria_2026",
+      "verified_date": "2026-10-01",
+      "authority": "Fonte oficial: página 1, itens 3.3 (exumação R$ 351,67), 4.2 categoria 2 (inumação/reinumação R$ 785,69) e 1.11 (cessão de gaveta por 3 anos R$ 290,50). Composição local confirmada para condição semi-intacta em quadra geral do Santana, categoria 2; total R$ 1.427,86 inclui a exumação."
+    },
+    "USR_EX_SEMI_INTACT_20261001": {
+      "title": "Orientação local confirmada — alerta e procedimento para condição semi-intacta",
+      "date": "2026-10-01",
+      "authority": "Responsável confirmou: não alertar espontaneamente em consultas de jazigo particular; responder se houver dúvida explícita ou situação concreta. Em quadra geral, explicar condicionalmente retorno ao mesmo local por mais 3 anos e total R$ 1.427,86 com exumação, reinumação e cessão da gaveta. Não é cobrança automática em toda exumação nem regra legal universal; não extrapolar preço ou prazo para jazigo particular."
+    },
+    "USR_EX_SINGLE_CHILD_20261002": {
+      "title": "Correção operacional do usuário: uma assinatura de filho habilitado",
+      "date": "2026-10-02",
+      "authority": "Quando filhos são o grupo habilitado, basta a assinatura de um filho; não exigir todos nem enumerar os demais. Não altera as regras existentes de prioridade de cônjuge/companheiro, capacidade do assinante, conferência documental ou assinatura pelo jazigo."
+    }
+  },
+  "pending_policy": "PENDENTE DE VALIDAÇÃO HUMANA: não completar nem aplicar como autorização.",
+  "prohibited": [
+    "autorizar exumação, traslado ou cremação",
+    "deferir concessão ou benefício",
+    "validar documento ou parentesco",
+    "confirmar pagamento, vaga, agendamento ou execução sem recibo competente"
+  ]
+}
+
+
