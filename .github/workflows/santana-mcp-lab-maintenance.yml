@@ -49,6 +49,10 @@ jobs:
                   except (OSError,ValueError):props['process_environment_readable']=False
                   try:props['code_readable']=Path(props.get('WorkingDirectory','/not-found'),'server.py').is_file()
                   except OSError:props['code_readable']=False
+          for unit,props in report['services'].items():
+              if unit=='santana-mcp-lab.service':
+                  rc,values=cmd(['ps','-p',props.get('MainPID','0'),'-o','pcpu=,rss='])
+                  props['cpu_rss_observation']=values if rc==0 else None
           report['node_available']=bool(shutil.which('node'))
           report['openssl_available']=bool(shutil.which('openssl'))
           report['disk_free_mib']=shutil.disk_usage('/').free//1048576
