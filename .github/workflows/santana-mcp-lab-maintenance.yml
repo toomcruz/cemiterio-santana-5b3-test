@@ -1,5 +1,5 @@
 name: Santana MCP LAB controlled maintenance
-run-name: Santana MCP LAB and HOMOLOG read-only checks
+run-name: Stage verified MCP LAB package without installing
 on:
   workflow_dispatch:
 permissions:
@@ -13,83 +13,46 @@ jobs:
     runs-on: [self-hosted, Linux, X64, hermes, omniroute-local]
     timeout-minutes: 3
     steps:
-      - name: Read-only VPS preflight without elevation
+      - name: Stage encrypted package and verify original SHA-256
         shell: bash
+        env:
+          SANTANA_MCP_PACKAGE_KEY: ${{ secrets.SANTANA_MCP_PACKAGE_63A85C50 }}
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import json,os,re,socket,subprocess,sys,shutil
+          import base64,hashlib,json,os,socket,subprocess,tempfile
           from pathlib import Path
-          def cmd(args):
-              p=subprocess.run(args,capture_output=True,text=True,timeout=10)
-              return p.returncode,p.stdout.strip()
+          from urllib.request import build_opener,HTTPRedirectHandler
           if socket.gethostname().split('.')[0]!='srv1849463':raise SystemExit('UNEXPECTED_HOST')
-          report={'host_verified':True,'uid':os.geteuid(),'root_access':os.geteuid()==0,'ports':{},'services':{}}
-          for port in (8768,8769,8770):
-              rc,out=cmd(['ss','-H','-ltnp',f'sport = :{port}'])
-              report['ports'][str(port)]={'listening':bool(out),'localhost_only':bool(out) and all(f'127.0.0.1:{port}' in x for x in out.splitlines()),'listeners':len(out.splitlines())}
-          rc,out=cmd(['systemctl','list-units','--all','--type=service','--no-legend','--plain','santana-mcp*','openbot-tunnel.service','docker.service'])
-          units=[]
-          for line in out.splitlines():
-              match=re.search(r'([a-zA-Z0-9@_.:-]+\.service)',line)
-              if match:units.append(match.group(1))
-          for unit in units:
-              rc,out=cmd(['systemctl','show',unit,'-p','ActiveState','-p','SubState','-p','MainPID','-p','FragmentPath','-p','WorkingDirectory'])
-              report['services'][unit]=dict(x.split('=',1) for x in out.splitlines() if '=' in x)
-          rc,out=cmd(['sudo','-n','-l'])
-          report['sudo_listing_available']=rc==0
-          report['sudo_helper_names']=sorted(set(re.findall(r'/(?:usr/local/(?:s?bin)|opt)/[A-Za-z0-9_./-]+',out))) if rc==0 else []
-          for unit,props in report['services'].items():
-              if unit.startswith('santana-mcp') and 'tunnel' not in unit:
-                  pid=props.get('MainPID','0')
-                  proc=Path('/proc')/pid
-                  try:
-                      env=dict(x.split('=',1) for x in proc.joinpath('environ').read_bytes().decode().split('\0') if '=' in x)
-                      props.update({'process_environment_readable':True,'source':env.get('SANTANA_DATA_SOURCE'),'configured_port':env.get('MCP_PORT'),'send_disabled':env.get('SANTANA_SEND_ENABLED','false').lower()=='false' and env.get('SANTANA_SEND_MODE','disabled')=='disabled','credential_present':bool(env.get('CHATGPT_READ_TOKEN'))})
-                  except (OSError,ValueError):props['process_environment_readable']=False
-                  try:props['code_readable']=Path(props.get('WorkingDirectory','/not-found'),'server.py').is_file()
-                  except OSError:props['code_readable']=False
-          report['node_available']=bool(shutil.which('node'))
-          report['openssl_available']=bool(shutil.which('openssl'))
-          report['disk_free_mib']=shutil.disk_usage('/').free//1048576
-          import urllib.request, urllib.error, time
-          class NoRedirect(urllib.request.HTTPRedirectHandler):
+          if os.environ.get('RUNNER_NAME')!='hermes-santana-lab':raise SystemExit('UNEXPECTED_RUNNER')
+          key=os.environ.pop('SANTANA_MCP_PACKAGE_KEY','')
+          if len(key)!=64:raise SystemExit('PACKAGE_KEY_UNAVAILABLE')
+          class NoRedirect(HTTPRedirectHandler):
               def redirect_request(self,*a,**k):return None
-          opener=urllib.request.build_opener(NoRedirect)
-          checks=[]
-          public='https://santana-mcp-homolog-consent.vercel.app'
-          auth='https://xdccjulfqcqefykunwtg.supabase.co/auth/v1'
-          calls=[
-            ('resource_discovery',public+'/.well-known/oauth-protected-resource','GET',None,{}),
-            ('oauth_server_discovery',auth+'/.well-known/oauth-authorization-server','GET',None,{}),
-            ('jwks',auth+'/.well-known/jwks.json','GET',None,{}),
-            ('mcp_get',public+'/mcp','GET',None,{}),
-            ('mcp_no_auth',public+'/mcp','POST',{'jsonrpc':'2.0','id':1,'method':'tools/list','params':{}},{'Origin':'https://chatgpt.com'}),
-            ('mcp_disallowed_origin',public+'/mcp','POST',{'jsonrpc':'2.0','id':1,'method':'tools/list','params':{}},{'Origin':'https://attacker.invalid'}),
-            ('edge_no_auth','https://xdccjulfqcqefykunwtg.supabase.co/functions/v1/sana-mcp-read','POST',{'operation':'listar_conversas','page':1,'per_page':1},{})
-          ]
-          for label,url,method,body,extra in calls:
-              headers={'Content-Type':'application/json','Accept':'application/json, text/event-stream'}
-              headers.update(extra);start=time.monotonic()
-              req=urllib.request.Request(url,data=json.dumps(body).encode() if body is not None else None,method=method,headers=headers)
-              try:
-                  with opener.open(req,timeout=15) as response:
-                      status=response.status;data=response.read(65536)
-              except urllib.error.HTTPError as error:status=error.code;data=error.read(65536)
-              except Exception as error:
-                  checks.append({'name':label,'status':None,'error_type':type(error).__name__});continue
-              item={'name':label,'status':status,'latency_ms':round((time.monotonic()-start)*1000)}
-              if label in ('resource_discovery','oauth_server_discovery','jwks') and status==200:
-                  try:
-                      obj=json.loads(data)
-                      if label=='resource_discovery':
-                          item.update({k:obj.get(k) for k in ('resource','authorization_servers','bearer_methods_supported')})
-                      elif label=='oauth_server_discovery':
-                          item.update({k:obj.get(k) for k in ('issuer','authorization_endpoint','token_endpoint','code_challenge_methods_supported','registration_endpoint')})
-                      else:item['algorithms']=sorted(set(k.get('alg','unspecified') for k in obj.get('keys',[])))
-                  except Exception:item['invalid_json']=True
-              checks.append(item)
-          report['homolog_http_checks']=checks
-          report['status']='READ_ONLY_PREFLIGHT_NO_INSTALLATION'
-          print(json.dumps(report,ensure_ascii=False,indent=2))
+          url='https://raw.githubusercontent.com/toomcruz/cemiterio-santana-5b3-test/1e1c81ba6da953807c2cbe798f0f897913f8bd75/deploy/mcp-lab/package-63a85c50.enc.b64'
+          with build_opener(NoRedirect).open(url,timeout=20) as r:encoded=r.read(300000)
+          encrypted=base64.b64decode(encoded,validate=True)
+          if hashlib.sha256(encrypted).hexdigest()!='f3fc346a1103246f6446b5a17db291ec426e28ea72e745a16b7eb07776bdfefa':raise SystemExit('CIPHERTEXT_HASH_MISMATCH')
+          fd,enc_path=tempfile.mkstemp(prefix='santana-mcp-transfer-')
+          try:
+              with os.fdopen(fd,'wb') as f:f.write(encrypted)
+              p=subprocess.run(['openssl','enc','-d','-aes-256-cbc','-pbkdf2','-iter','200000','-in',enc_path,'-pass','stdin'],input=(key+'\n').encode(),capture_output=True,timeout=20)
+              key=''
+              if p.returncode:raise SystemExit('PACKAGE_DECRYPTION_FAILED')
+              blob=p.stdout;expected='63a85c509957532a8091f0ad13b5a5423a0dfeb19a007310bac1f0943f27b6ee'
+              if len(blob)>2097152 or hashlib.sha256(blob).hexdigest()!=expected:raise SystemExit('ORIGINAL_PACKAGE_HASH_MISMATCH')
+              stage=Path.home()/'santana-mcp-staging'/expected[:16]
+              for path in (stage.parent,stage):
+                  if path.is_symlink():raise SystemExit('UNSAFE_STAGING_DIRECTORY')
+                  path.mkdir(mode=0o700,exist_ok=True)
+                  os.chmod(path,0o700)
+              archive=stage/'WhatsApp-Santana-MCP-v5-Consolidado.zip'
+              if archive.exists():
+                  if archive.is_symlink() or hashlib.sha256(archive.read_bytes()).hexdigest()!=expected:raise SystemExit('UNSAFE_EXISTING_STAGING_FILE')
+              else:
+                  fd=os.open(archive,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+                  with os.fdopen(fd,'wb') as f:f.write(blob)
+              print(json.dumps({'status':'STAGED_NOT_INSTALLED','path':str(archive),'sha256':expected,'bytes':len(blob),'service_changes':0,'production_changes':False,'secrets_printed':False},indent=2))
+          finally:
+              os.unlink(enc_path)
           PY
