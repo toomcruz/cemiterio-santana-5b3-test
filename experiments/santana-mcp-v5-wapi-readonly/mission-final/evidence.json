@@ -1,6 +1,6 @@
 {
   "status": "REAL_READ_PROVEN_SUPERVISED_INSTALLED_HUMAN_HANDOFF_PENDING",
-  "updated_at": "2026-10-18T18:36:00Z",
+  "updated_at": "2026-10-18T18:57:00Z",
   "chatgpt": {
     "existing_connection": true,
     "authorized_real_read_proven": true,
@@ -60,9 +60,8 @@
     "official_channel_source_commit": "370cd4c161496a73d2638e9b0a947f55fdf10a6e",
     "official_channel_git_blob": "6737ddc86661de804e00b89b34193da02cd83285",
     "blockers": [
-      "fresh_personal_review_and_authenticated_prod_preview_not_yet_proven",
-      "live_permission_disabled_and_send_catalog_hidden",
-      "specific_single_live_test_authorization_not_yet_given"
+      "production_operator_consent_still_unrecorded",
+      "send_catalog_hidden_until_protected_interface_proven"
     ],
     "review_and_audit_atomic": true,
     "human_review_is_live_dispatch_authorization": false,
@@ -108,12 +107,12 @@
       "pending_for_test_conversation_at_inspection": 0,
       "n8n_modified": false,
       "catalog_tool_enabled": false,
-      "official_source_commit": "d9912ca3b2e1192a8d01243978997b74a6cbe8ef",
+      "official_source_commit": "b95cd04c8a0720406f0ba80ed366712fe002e315",
       "nextjs_type_validation": "skipped_by_existing_project_configuration",
       "production_schema_installed": true,
       "production_edge_addition_installed": true,
       "prod_read_files_unchanged": 46,
-      "zero_live_permissions_verified": true,
+      "zero_live_permissions_verified": false,
       "closed_gate_sql_result": "MCP_LIVE_PERMISSION_DISABLED",
       "unauthenticated_send_http": "409 MCP_REVIEW_UNAVAILABLE retry_allowed=false",
       "cross_origin_preview_http": "403 MCP_PANEL_ORIGIN_REQUIRED",
@@ -121,12 +120,22 @@
     },
     "current_preparation": {
       "intent_id": "9aed79d8-a50e-46c3-afe2-2edf29650e3c",
-      "state": "prepared",
+      "state": "human_reviewed_dispatch_blocked",
       "payload_sha256": "17851da59f9a5aab4c6582fb09f12ebdf4698a75e6750495711741fb1cfc391d",
       "expected_revision": 182,
       "expires_at": "2026-10-18T19:03:54.862Z",
       "recipient_mask": "+••••••5497",
       "real_dispatch_enabled": false
+    },
+    "specific_live_test_chat_authorization": true,
+    "live_conversation_permission_enabled": true,
+    "authorization_bug": {
+      "first_code": "MCP_LIVE_PERMISSION_DISABLED",
+      "first_error_at": "2026-10-18T18:47:02.139Z",
+      "later_human_session_different_from_review": true,
+      "fix": "Preserve original review session and audit; require same verified owner, fresh current human session and separate server proof original review session is still active",
+      "new_node_tests_passed": 11,
+      "real_attempts": 0
     }
   },
   "tests": {
@@ -242,12 +251,12 @@
   "deployments": {
     "existing_hmg_project": true,
     "hmg_deployment": "dpl_HFE2MWvQhrqqQCLj9H9NV5Um29rG",
-    "hmg_edge_version": 11,
-    "hmg_edge_sha256": "0e80db3ed7e171f92cc5b46cd62b142ce2d877291b26978b847a2368b8340477",
-    "prod_read_edge_version": 37,
-    "prod_read_edge_sha256": "9481d96253ef473c250ae3fc2180d35f19a0748b2e7116ed50d03b3a9df40114",
-    "official_panel_deployment": "dpl_8KWCkDnyQtGkkrPWapxoWg2gYPNV",
-    "official_panel_source_commit": "d9912ca3b2e1192a8d01243978997b74a6cbe8ef",
+    "hmg_edge_version": 12,
+    "hmg_edge_sha256": "fffb3cd4242a6fcdb778e2acb7d0041a4531b218d0ff1bdf86a1f3ad86df2f51",
+    "prod_read_edge_version": 38,
+    "prod_read_edge_sha256": "dfe8931f811967b80b1245f28631156f814fe6c3de0fb62ca55b105d02599093",
+    "official_panel_deployment": "dpl_GivFdo3yd4grWedeD2b8k2w8dE1e",
+    "official_panel_source_commit": "b95cd04c8a0720406f0ba80ed366712fe002e315",
     "official_panel_previous_deployment": "dpl_HE1XmDS5Bz9UHd2dhKS5JLoGjvdc"
   },
   "preservation": {

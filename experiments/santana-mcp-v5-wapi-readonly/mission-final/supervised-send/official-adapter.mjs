@@ -21,7 +21,7 @@ export function createSupervisedOfficialHandler({prodIdentity,homologIdentity,re
     const human=await homologIdentity(humanToken,{human:true,operation_id:b.operation_id});
     if(!human?.session_active||human.client_id||!human.password_amr||!Number.isFinite(human.auth_time)||human.auth_time<now()/1000-600||human.auth_time>now()/1000+30)return json(403,{error:'INDEPENDENT_HUMAN_SESSION_REQUIRED'});
     const proof=await reviewProof(humanToken,b.operation_id,{human:true});
-    if(!proof||proof.owner_id!==human.id||proof.reviewed_by!==human.id||proof.review_session_id!==human.session_id||proof.state!=='human_reviewed_dispatch_blocked')return json(403,{error:'HUMAN_REVIEW_NOT_PROVEN'});
+    if(!proof||proof.owner_id!==human.id||proof.reviewed_by!==human.id||!UUID.test(proof.review_session_id||'')||proof.review_session_active!==true||proof.state!=='human_reviewed_dispatch_blocked')return json(403,{error:'HUMAN_REVIEW_NOT_PROVEN'});
     const p=proof.payload;
     if(proof.payload_sha256!==b.payload_sha256||!p||p.attachment!==null||typeof p.text!=='string'||p.text!==p.text.trim()||!p.text||!Number.isSafeInteger(p.expected_revision)||!UUID.test(p.conversation_id||'')||!Number.isFinite(Date.parse(proof.expires_at))||Date.parse(proof.expires_at)<=now())return json(409,{error:'REVIEW_CHANGED_EXPIRED_OR_UNSUPPORTED'});
     const receipt=await rpc({operation:'authorize',operation_id:b.operation_id,subject_id:human.id,client_id:CLIENT,operator_id:actor.id,operator_session_id:actor.session_id,
@@ -34,7 +34,7 @@ export function createSupervisedOfficialHandler({prodIdentity,homologIdentity,re
    if(b.action==='status')return json(200,await rpc({operation:'status',...identity}));
    if(!/^[a-f0-9]{64}$/.test(b.payload_sha256||''))return json(400,{error:'EXACT_CONTENT_DIGEST_REQUIRED'});
    const proof=await reviewProof(bearer,b.operation_id,{human:false});
-   if(!proof||proof.owner_id!==actor.id||proof.state!=='human_reviewed_dispatch_blocked'||proof.payload_sha256!==b.payload_sha256||Date.parse(proof.expires_at)<=now()||!Number.isFinite(Date.parse(proof.expires_at))||proof.payload?.attachment!==null)return json(403,{error:'REVIEW_NOT_CURRENT'});
+   if(!proof||proof.owner_id!==actor.id||proof.state!=='human_reviewed_dispatch_blocked'||proof.review_session_active!==true||proof.payload_sha256!==b.payload_sha256||Date.parse(proof.expires_at)<=now()||!Number.isFinite(Date.parse(proof.expires_at))||proof.payload?.attachment!==null)return json(403,{error:'REVIEW_NOT_CURRENT'});
    // The database owns the canonical operator, full recipient, revision and
    // single-use operation. Neither caller-provided text nor actor_id is accepted.
    const invoke=async body=>{

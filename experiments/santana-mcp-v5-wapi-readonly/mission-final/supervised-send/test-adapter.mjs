@@ -6,7 +6,7 @@ const CID='10000000-0000-4000-8000-000000000004',CLAIM='10000000-0000-4000-8000-
 const PROD='synthetic-production-session-token',HUMAN='synthetic-homolog-human-session',OAUTH='synthetic-chatgpt-oauth-session';
 function setup(options={}){
  const now=Date.now();let operation=null,count=0;const requests=[],events=[];
- const proof={owner_id:SUB,reviewed_by:SUB,review_session_id:SID,state:'human_reviewed_dispatch_blocked',payload_sha256:HASH,expires_at:new Date(now+300000).toISOString(),payload:{conversation_id:CID,recipient:{name:'Synthetic','phone_mask':'***0200'},expected_revision:7,text:'Synthetic supervised message',attachment:null},...options.proof};
+ const proof={owner_id:SUB,reviewed_by:SUB,review_session_id:SID,review_session_active:true,state:'human_reviewed_dispatch_blocked',payload_sha256:HASH,expires_at:new Date(now+300000).toISOString(),payload:{conversation_id:CID,recipient:{name:'Synthetic','phone_mask':'***0200'},expected_revision:7,text:'Synthetic supervised message',attachment:null},...options.proof};
  const deps={now:()=>now,prodIdentity:async t=>t===PROD?{id:ID,session_id:SID,active:true,session_active:!options.revoked}:null,
   homologIdentity:async(t,{human})=>t===(human?HUMAN:OAUTH)?{id:SUB,client_id:human?null:CLIENT,session_id:SID,session_active:!options.revoked,password_amr:human,auth_time:now/1000}:null,
   reviewProof:async()=>proof,

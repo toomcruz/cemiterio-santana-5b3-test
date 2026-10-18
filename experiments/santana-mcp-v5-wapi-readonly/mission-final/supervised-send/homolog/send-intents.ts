@@ -28,6 +28,7 @@ export function sendIntent(request:Request,admin:any,verifier:any,issuer:string)
    const r=await admin.from('homolog_mcp_send_intents').select('*').eq('owner_id',row.owner_id).eq('client_id',row.client_id).eq('idempotency_key',row.idempotency_key).single();if(r.error)throw Error('persistence');return r.data;
   },
   get:async(id:string,owner:string)=>{const r=await admin.from('homolog_mcp_send_intents').select('*').eq('id',id).eq('owner_id',owner).maybeSingle();if(r.error)throw Error('persistence');return r.data;},
+  reviewSessionActive:async(owner:string,session:string)=>{const r=await admin.rpc('sana_mcp_session_active',{p_owner:owner,p_session:session});if(r.error)throw Error('review_session_unavailable');return r.data===true;},
   approve:async(id:string,owner:string,session:string,sha:string)=>{
    const r=await admin.rpc('sana_mcp_review_intent_atomic',{p_owner:owner,p_intent:id,p_session:session,p_digest:sha});
    if(r.error)throw Error('review_persistence');return r.data===true;

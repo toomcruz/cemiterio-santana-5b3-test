@@ -12,7 +12,7 @@ function attachment(b){
  if(!valid||bytes.length<16||bytes.length>524288)throw Error('invalid_attachment');
  return {...b,size_bytes:bytes.length,bytes};
 }
-export function createIntentHandler({authenticate,contact,save,get,approve,audit,now=()=>Date.now(),id=()=>crypto.randomUUID()}){
+export function createIntentHandler({authenticate,contact,save,get,approve,audit,reviewSessionActive=async()=>false,now=()=>Date.now(),id=()=>crypto.randomUUID()}){
  return async request=>{
   if(request.method!=='POST'||request.headers.has('origin'))return json(403,{status:'origin_or_method_denied'});
   let b;try{const raw=await request.text();if(raw.length>720000)return json(413,{status:'request_too_large'});b=JSON.parse(raw);}catch{return json(400,{status:'bad_request'});}
@@ -47,8 +47,9 @@ export function createIntentHandler({authenticate,contact,save,get,approve,audit
     // approve() persists both the review and its audit atomically.
     return json(200,{status:'ready',state:'human_reviewed_dispatch_blocked',intent_id:row.id,real_dispatch_enabled:false,external_request_attempted:false});
    }
+   const review_session_active=bindingProof&&row.reviewed_by===actor.sub&&UUID.test(row.review_session_id||'')?await reviewSessionActive(row.owner_id,row.review_session_id):false;
    await audit(actor,row.id,bindingProof?(human?'human_preview':'status'):b.action);
-   return json(200,{status:'ready',intent_id:row.id,payload:row.payload,payload_sha256:row.payload_sha256,state:row.state,expires_at:row.expires_at,...(bindingProof?{owner_id:row.owner_id,reviewed_by:row.reviewed_by,review_session_id:row.review_session_id,actor:{id:actor.sub,client_id:actor.client_id,session_id:actor.session_id,auth_time:actor.auth_time,password_amr:actor.human,session_active:actor.session_active===true}}:{}),...(human?{attachment_base64:row.attachment_base64}:{}),real_dispatch_enabled:false,coordinator_verified:false,external_request_attempted:false});
+   return json(200,{status:'ready',intent_id:row.id,payload:row.payload,payload_sha256:row.payload_sha256,state:row.state,expires_at:row.expires_at,...(bindingProof?{owner_id:row.owner_id,reviewed_by:row.reviewed_by,review_session_id:row.review_session_id,review_session_active,actor:{id:actor.sub,client_id:actor.client_id,session_id:actor.session_id,auth_time:actor.auth_time,password_amr:actor.human,session_active:actor.session_active===true}}:{}),...(human?{attachment_base64:row.attachment_base64}:{}),real_dispatch_enabled:false,coordinator_verified:false,external_request_attempted:false});
   }catch(error){return json(error?.message==='invalid_attachment'?400:503,{status:error?.message==='invalid_attachment'?'invalid_attachment':'intent_backend_unavailable'});}
  };
 }

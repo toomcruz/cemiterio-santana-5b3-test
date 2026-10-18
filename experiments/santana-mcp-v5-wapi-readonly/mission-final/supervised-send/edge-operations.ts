@@ -12,7 +12,7 @@ export async function verifiedReview(token:string,operation:string,human:boolean
  const raw=await r.text();if(raw.length>12000)throw Error('MCP_REVIEW_UNAVAILABLE');
  const p=JSON.parse(raw);
  if(p.status!=='ready'||p.intent_id!==operation||p.actor?.session_active!==true||!UUID.test(p.actor?.id||'')||!UUID.test(p.actor?.session_id||'')||p.owner_id!==p.actor.id)throw Error('MCP_REVIEW_UNAVAILABLE');
- if(human){if(p.actor.client_id||!p.actor.password_amr||!Number.isFinite(p.actor.auth_time)||p.actor.auth_time<Date.now()/1000-600||p.actor.auth_time>Date.now()/1000+30||p.reviewed_by!==p.actor.id||p.review_session_id!==p.actor.session_id)throw Error('MCP_HUMAN_REVIEW_NOT_CURRENT');}
+ if(human){if(p.actor.client_id||!p.actor.password_amr||!Number.isFinite(p.actor.auth_time)||p.actor.auth_time<Date.now()/1000-600||p.actor.auth_time>Date.now()/1000+30||p.reviewed_by!==p.actor.id||!UUID.test(p.review_session_id||'')||p.review_session_active!==true)throw Error('MCP_HUMAN_REVIEW_NOT_CURRENT');}
  else if(p.actor.client_id!==CLIENT)throw Error('MCP_CLIENT_DENIED');
  return p;
 }
@@ -46,7 +46,7 @@ export async function mcpOfficialOperation(request:Request,b:any,service:any,tra
    const proof=await verifiedReview(token,b.operation_id,false,transport);
    const kind=({operator_mcp_prepare:'prepare',operator_mcp_settle:'settle',operator_mcp_status:'status'} as Record<string,string>)[b.action];
    if(!kind)throw Error('MCP_INVALID_OPERATION');
-   if(kind==='prepare'&&(proof.state!=='human_reviewed_dispatch_blocked'||proof.payload_sha256!==b.payload_sha256||proof.payload?.attachment!==null||!Number.isFinite(Date.parse(proof.expires_at))||Date.parse(proof.expires_at)<=Date.now()))throw Error('MCP_APPROVAL_INVALID_OR_STALE');
+   if(kind==='prepare'&&(proof.state!=='human_reviewed_dispatch_blocked'||proof.review_session_active!==true||proof.payload_sha256!==b.payload_sha256||proof.payload?.attachment!==null||!Number.isFinite(Date.parse(proof.expires_at))||Date.parse(proof.expires_at)<=Date.now()))throw Error('MCP_APPROVAL_INVALID_OR_STALE');
    p={operation:kind,operation_id:b.operation_id,subject_id:proof.actor.id,client_id:CLIENT,...(kind==='prepare'?{payload_sha256:b.payload_sha256}:kind==='settle'?{claim_token:b.claim_token,outcome:b.outcome,provider_message_id:b.provider_message_id}:{})};
   }
   const r=await service.rpc('sana_mcp_coordinated_send',{p});
