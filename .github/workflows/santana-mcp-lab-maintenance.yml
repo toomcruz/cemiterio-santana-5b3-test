@@ -1,7 +1,13 @@
 name: Santana MCP LAB controlled maintenance
-run-name: Santana W-API read-only diagnosis
+run-name: Santana W-API v5 patch staging and verification
 on:
   workflow_dispatch:
+    inputs:
+      action:
+        description: Stage audited patch or collect root report
+        type: choice
+        options: [stage, collect]
+        default: stage
 permissions:
   contents: read
 concurrency:
@@ -13,50 +19,62 @@ jobs:
     runs-on: [self-hosted, Linux, X64, hermes, omniroute-local]
     timeout-minutes: 4
     steps:
-      - name: Diagnose existing credentials without writes or secret export
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: experiments/santana-mcp-v5-wapi-readonly
+      - name: Stage or collect without changing running services
         env:
-          DEPLOY_HOST: ${{ secrets.SANA_LAB_DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.SANA_LAB_DEPLOY_USER }}
-          DEPLOY_KEY: ${{ secrets.SANA_LAB_DEPLOY_SSH_KEY }}
-          DEPLOY_KNOWN_HOSTS: ${{ secrets.SANA_LAB_SSH_KNOWN_HOSTS }}
+          ACTION: ${{ inputs.action }}
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import json, os, re, subprocess
-          probe = "\"\"\"One-shot, GET-only W-API diagnostic. Never prints credentials or message data.\"\"\"\nimport hashlib\nimport json\nimport os\nimport re\nimport shlex\nimport socket\nimport subprocess\nfrom pathlib import Path\nfrom urllib.error import HTTPError\nfrom urllib.parse import urlencode\nfrom urllib.request import Request, HTTPRedirectHandler, build_opener\n\nKEYS = {'WAPI_INSTANCE_ID', 'WAPI_API_TOKEN', 'WAPI_TOKEN'}\nUNITS = ('santana-mcp-lab.service', 'santana-mcp-lab-tunnel.service',\n         'openbot-tunnel.service', 'docker.service', 'sana-lab-bridge.service')\nROUTES = {'connection': '/v1/instance/status-instance',\n          'instance': '/v1/instance/fetch-instance',\n          'chats': '/v1/chats/fetch-chats',\n          'contacts': '/v1/contacts/fetch-contacts'}\n\n\ndef command(args):\n    p = subprocess.run(args, capture_output=True, text=True, timeout=10)\n    return p.returncode, p.stdout\n\n\ndef services():\n    result = {}\n    for unit in UNITS:\n        rc, out = command(['systemctl', 'show', unit, '-p', 'MainPID', '-p', 'ActiveState',\n                           '-p', 'WorkingDirectory', '-p', 'EnvironmentFiles'])\n        result[unit] = dict(x.split('=', 1) for x in out.splitlines() if '=' in x)\n    return result\n\n\ndef parse_env_file(path):\n    result = {}\n    # Parse assignments as data; never source a shell file or execute expansions.\n    for line in Path(path).read_text().splitlines():\n        m = re.match(r'^\\s*(?:export\\s+)?([A-Z][A-Z0-9_]*)=(.*)$', line)\n        if not m or m[1] not in KEYS:\n            continue\n        parts = shlex.split(m[2], comments=True)\n        if len(parts) == 1:\n            result[m[1]] = parts[0]\n    return result\n\n\nclass NoRedirect(HTTPRedirectHandler):\n    def redirect_request(self, *args, **kwargs):\n        return None\n\n\ndef project(label, http, payload):\n    \"\"\"Allowlisted evidence only. HTTP 200 error envelopes are not success.\"\"\"\n    entry = {'operation': label, 'http': http, 'ok': False}\n    if not isinstance(payload, (dict, list)):\n        return {**entry, 'result': 'INVALID_PAYLOAD'}\n    if isinstance(payload, dict):\n        failed = payload.get('error') not in (None, False, '') or payload.get('success') is False\n        texts = ' '.join(str(payload.get(k, '')) for k in ('error', 'message', 'status')).lower()\n        if http == 200 and not failed:\n            entry['ok'] = True\n        if 'pro' in texts and any(x in texts for x in ('lite', 'plano', 'plan', 'exclusive', 'exclusiv')):\n            entry['result'] = 'PLAN_RESTRICTED'\n        elif http in (401, 403):\n            entry['result'] = 'AUTH_OR_ACCESS_DENIED'\n        elif http == 429:\n            entry['result'] = 'RATE_LIMITED'\n        elif not entry['ok']:\n            entry['result'] = 'API_ERROR'\n        inner = payload.get('data') if isinstance(payload.get('data'), dict) else payload\n        if label == 'connection':\n            connected = inner.get('connected')\n            if not isinstance(connected, bool):\n                entry['ok'] = False\n                entry['result'] = 'CONNECTION_SHAPE_UNVERIFIED'\n            else:\n                entry['connected'] = connected\n        if label == 'instance':\n            for k in ('type', 'instanceType', 'plan', 'planType'):\n                if str(inner.get(k, '')).upper() in ('LITE', 'PRO'):\n                    entry['instance_type'] = str(inner[k]).upper()\n        if label in ('chats', 'contacts'):\n            for k in (label, 'items', 'data'):\n                if isinstance(payload.get(k), list):\n                    entry['sample_count'] = len(payload[k])\n                    break\n    else:\n        entry['ok'] = http == 200\n        entry['sample_count'] = len(payload)\n    return entry\n\n\ndef probe(credentials):\n    instance = credentials.get('WAPI_INSTANCE_ID', '')\n    token = credentials.get('WAPI_API_TOKEN') or credentials.get('WAPI_TOKEN', '')\n    if not re.fullmatch(r'[A-Za-z0-9_-]{1,80}', instance) or not token:\n        return {'status': 'CREDENTIALS_UNAVAILABLE', 'calls': []}\n    calls = []\n    for label, path in ROUTES.items():\n        params = {'instanceId': instance}\n        if label in ('chats', 'contacts'):\n            params.update(perPage=1, page=1)\n        request = Request('https://api.w-api.app' + path + '?' + urlencode(params),\n                          headers={'Authorization': 'Bearer ' + token, 'Accept': 'application/json'}, method='GET')\n        try:\n            try:\n                response = build_opener(NoRedirect()).open(request, timeout=8)\n            except HTTPError as e:\n                response = e\n            with response:\n                raw = response.read(1_000_001)\n                status = response.code\n            payload = json.loads(raw) if len(raw) <= 1_000_000 else None\n            entry = project(label, status, payload)\n        except Exception:\n            entry = {'operation': label, 'http': None, 'ok': False, 'result': 'REDACTED_TRANSPORT_ERROR'}\n        calls.append(entry)\n        if entry.get('http') in (401, 429):\n            break\n    return {'status': 'PROBED_READ_ONLY', 'calls': calls}\n\n\ndef main():\n    if socket.gethostname().split('.')[0] != 'srv1849463':\n        return {'status': 'WRONG_HOST'}\n    before = services()\n    report = {'uid': os.geteuid(), 'host_verified': True, 'sources': [], 'real_send_attempts': 0,\n              'production_writes': 0, 'services_before': {u: {k: v for k, v in d.items()\n              if k in ('MainPID', 'ActiveState')} for u, d in before.items()}}\n    candidates = [('invocation_environment', {k: v for k, v in os.environ.items() if k in KEYS})]\n    for unit in ('santana-mcp-lab.service', 'sana-lab-bridge.service'):\n        props = before.get(unit, {})\n        pid = props.get('MainPID', '0')\n        try:\n            data = dict(x.split('=', 1) for x in Path('/proc', pid, 'environ').read_bytes().decode().split('\\0') if '=' in x)\n            candidates.append((unit + ':process', {k: v for k, v in data.items() if k in KEYS}))\n            if unit == 'santana-mcp-lab.service':\n                report['lab'] = {'source': data.get('SANTANA_DATA_SOURCE'),\n                    'send_disabled': data.get('SANTANA_SEND_ENABLED', 'false').lower() == 'false'\n                    and data.get('SANTANA_SEND_MODE', 'disabled') == 'disabled',\n                    'oauth_forwarding': data.get('SANA_READ_FORWARD_BEARER') == 'true'}\n                cwd = Path(props['WorkingDirectory'])\n                report['lab']['server_sha256'] = hashlib.sha256((cwd / 'server.py').read_bytes()).hexdigest()\n        except (OSError, ValueError, KeyError):\n            report['sources'].append({'source': unit + ':process', 'accessible': False})\n        for path in re.findall(r'(\\S+)\\s+\\(ignore_errors=', props.get('EnvironmentFiles', '')):\n            try:\n                candidates.append((unit + ':configured_env_file', parse_env_file(path)))\n            except (OSError, ValueError):\n                report['sources'].append({'source': unit + ':configured_env_file', 'accessible': False})\n    # Only existing Sana bridge container, no enumeration of unrelated secrets.\n    rc, raw = command(['docker', 'inspect', '--format', '{{json .Config.Env}}', 'sana-lab-bridge'])\n    if rc == 0:\n        try:\n            pairs = dict(x.split('=', 1) for x in json.loads(raw) if '=' in x)\n            candidates.append(('sana-lab-bridge:container_environment', {k: v for k, v in pairs.items() if k in KEYS}))\n        except (ValueError, TypeError):\n            pass\n    else:\n        report['sources'].append({'source': 'sana-lab-bridge:container_environment', 'accessible': False})\n    selected = None\n    for label, env in candidates:\n        complete = bool(env.get('WAPI_INSTANCE_ID') and (env.get('WAPI_API_TOKEN') or env.get('WAPI_TOKEN')))\n        report['sources'].append({'source': label, 'accessible': True, 'complete_wapi_credentials': complete})\n        if complete and selected is None:\n            selected = env\n    report['wapi'] = probe(selected or {})\n    after = services()\n    report['service_pids_unchanged'] = all(before[u].get('MainPID') == after[u].get('MainPID') for u in UNITS)\n    return report\n\n\nif __name__ == '__main__':\n    try:\n        print(json.dumps(main(), ensure_ascii=False, indent=2))\n    except Exception:\n        print(json.dumps({'status': 'REDACTED_DIAGNOSTIC_FAILURE', 'real_send_attempts': 0, 'production_writes': 0}))\n"
-          local=subprocess.run(['python3','-c',probe],capture_output=True,text=True,timeout=80)
-          try: result={'runner':json.loads(local.stdout)}
-          except Exception: result={'runner':{'status':'REDACTED_FAILURE'}}
-          host=os.environ.get('DEPLOY_HOST','').strip(); user=os.environ.get('DEPLOY_USER','').strip()
-          key=os.environ.get('DEPLOY_KEY',''); known=os.environ.get('DEPLOY_KNOWN_HOSTS','')
-          if host and user and key and known and re.fullmatch(r'[A-Za-z0-9._:-]+',host) and re.fullmatch(r'[a-z_][a-z0-9_-]*',user):
-              env=os.environ.copy(); agent=None; fd=None; phase='AGENT_START'
-              try:
-                  a=subprocess.run(['ssh-agent','-s'],capture_output=True,text=True,check=True,timeout=10)
-                  sock=re.search(r'SSH_AUTH_SOCK=([^;]+)',a.stdout); pid=re.search(r'SSH_AGENT_PID=([0-9]+)',a.stdout)
-                  if not sock or not pid: raise RuntimeError()
-                  env.update(SSH_AUTH_SOCK=sock[1],SSH_AGENT_PID=pid[1]); agent=env
-                  phase='KEY_LOAD'
-                  if key.strip().startswith('LS0tLS1CRUdJTi'):
-                      import base64
-                      key=base64.b64decode(key.strip(),validate=True).decode()
-                  if key.startswith('-----BEGIN ') and '\\n' in key and '\n' not in key:
-                      key=key.replace('\\n','\n')
-                  key=key.strip()+'\n'
-                  added=subprocess.run(['ssh-add','-'],input=key,text=True,capture_output=True,env=env,timeout=10)
-                  if added.returncode: raise RuntimeError('KEY_NOT_ACCEPTED')
-                  phase='KNOWN_HOSTS'
-                  fd=os.memfd_create('santana-known-hosts',0); os.write(fd,known.encode())
-                  phase='SSH_EXECUTION'
-                  p=subprocess.run(['ssh','-T','-o','BatchMode=yes','-o','StrictHostKeyChecking=yes','-o','ConnectTimeout=10','-o','UserKnownHostsFile=/proc/self/fd/'+str(fd),user+'@'+host,'python3 -'],input=probe,capture_output=True,text=True,env=env,pass_fds=(fd,),timeout=90)
-                  if p.returncode==0:
-                      result['existing_ssh']=json.loads(p.stdout)
-                  else: result['existing_ssh']={'status':'SSH_AUTH_OR_POLICY_DENIED','exit_code':p.returncode}
-              except Exception as exc: result['existing_ssh']={'status':'SSH_UNAVAILABLE_REDACTED','phase':phase,'error_class':type(exc).__name__}
-              finally:
-                  if fd is not None: os.close(fd)
-                  if agent: subprocess.run(['ssh-agent','-k'],capture_output=True,env=agent,timeout=10)
-          else: result['existing_ssh']={'status':'EXISTING_SSH_CONFIG_UNAVAILABLE'}
-          print(json.dumps(result,ensure_ascii=False,indent=2))
+          import hashlib,io,json,os,runpy,stat,subprocess,sys,tempfile,zipfile
+          from pathlib import Path
+          expected='2011a720e421d8f6f6632e2ec061ed685530c5cc56c15d36148385d153d7ab12'
+          base=Path('/home/runner/santana-mcp-staging/63a85c509957532a/WhatsApp-Santana-MCP-v5-Consolidado.zip')
+          base_hash='63a85c509957532a8091f0ad13b5a5423a0dfeb19a007310bac1f0943f27b6ee'
+          if os.environ.get('ACTION')=='collect':
+              matches=sorted(base.parent.glob('wapi-root-result-*.json'))[-1:]
+              result={'root_report_found':False}
+              if matches:
+                  p=matches[0];info=p.lstat()
+                  if stat.S_ISREG(info.st_mode) and info.st_uid==0 and not info.st_mode&0o022 and info.st_size<1048576:
+                      result={'root_report_found':True,'result':json.loads(p.read_text())}
+              print(json.dumps(result,ensure_ascii=False,indent=2))
+              raise SystemExit(0)
+          payload=Path('experiments/santana-mcp-v5-wapi-readonly/root-payload.py')
+          content=payload.read_bytes()
+          if hashlib.sha256(content).hexdigest()!=expected:raise SystemExit('PAYLOAD_HASH_MISMATCH')
+          scope=runpy.run_path(str(payload),run_name='santana_stage')
+          blob=base.read_bytes()
+          if hashlib.sha256(blob).hexdigest()!=base_hash:raise SystemExit('BASE_HASH_MISMATCH')
+          units=('santana-mcp-lab.service','santana-mcp-lab-tunnel.service','openbot-tunnel.service','docker.service')
+          def pids():
+              return {u:subprocess.run(['systemctl','show',u,'-p','MainPID','--value'],capture_output=True,text=True,timeout=5).stdout.strip() for u in units}
+          before=pids()
+          with tempfile.TemporaryDirectory(prefix='santana-wapi-patch-test-') as td:
+              dest=Path(td)
+              with zipfile.ZipFile(io.BytesIO(blob)) as z: validator=z.read('whatsapp-santana-mcp/archive_safety.py')
+              ns={};exec(compile(validator,'verified_archive','exec'),ns);ns['extract_verified'](blob,base_hash,dest)
+              root=dest/'whatsapp-santana-mcp'
+              for name,value in scope['PATCHES'].items():
+                  p=root/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(value)
+              clean={k:os.environ[k] for k in ('PATH','HOME','LANG') if k in os.environ}
+              r=subprocess.run([sys.executable,'run_tests.py','--output',str(dest/'evidence')],cwd=root,env=clean,capture_output=True,text=True,timeout=120)
+              result=json.loads(r.stdout)
+              if r.returncode or result['status']!='PASS':raise SystemExit('PATCH_TESTS_FAILED')
+              log=(dest/'evidence/python.log').read_text()
+              import re
+              count=re.search(r'Ran ([0-9]+) tests',log)
+              result['python_tests']=int(count[1]) if count else None
+          stage=Path('/home/runner/santana-mcp-staging/wapi-readonly-'+expected[:12]);stage.mkdir(parents=True,exist_ok=True)
+          target=stage/'root-payload.py'
+          if target.is_symlink():raise SystemExit('UNSAFE_STAGE')
+          target.write_bytes(content);target.chmod(0o644)
+          after=pids()
+          report={'status':'STAGED_NOT_INSTALLED','payload_sha256':expected,'payload_path':str(target),'tests':result,'service_pids_unchanged':before==after,'real_wapi_calls':0,'real_messages_sent':0,'production_writes':0}
+          (stage/'stage-evidence.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
+          print(json.dumps(report,ensure_ascii=False,indent=2))
           PY
