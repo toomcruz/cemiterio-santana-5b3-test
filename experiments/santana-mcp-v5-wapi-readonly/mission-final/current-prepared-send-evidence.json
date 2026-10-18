@@ -1,9 +1,9 @@
 {
-  "intent_id": "9aed79d8-a50e-46c3-afe2-2edf29650e3c",
+  "intent_id": "a77bc4d4-8260-425a-9cec-94205ef53f37",
   "state": "prepared",
   "payload_sha256": "17851da59f9a5aab4c6582fb09f12ebdf4698a75e6750495711741fb1cfc391d",
   "expected_revision": 182,
-  "expires_at": "2026-10-18T19:03:54.862Z",
+  "expires_at": "2026-10-18T19:33:32.691Z",
   "recipient_mask": "+••••••5497",
   "real_dispatch_enabled": false
 }
