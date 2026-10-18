@@ -1,5 +1,5 @@
 name: Santana MCP LAB controlled maintenance
-run-name: Santana MCP LAB status and root installation report
+run-name: Santana W-API read-only diagnosis
 on:
   workflow_dispatch:
 permissions:
@@ -11,63 +11,43 @@ jobs:
   preflight:
     if: github.event_name == 'workflow_dispatch' && github.repository == 'toomcruz/cemiterio-santana-5b3-test'
     runs-on: [self-hosted, Linux, X64, hermes, omniroute-local]
-    timeout-minutes: 3
+    timeout-minutes: 4
     steps:
-      - name: Read-only VPS preflight without elevation
+      - name: Diagnose existing credentials without writes or secret export
+        env:
+          DEPLOY_HOST: ${{ secrets.SANA_LAB_DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.SANA_LAB_DEPLOY_USER }}
+          DEPLOY_KEY: ${{ secrets.SANA_LAB_DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.SANA_LAB_SSH_KNOWN_HOSTS }}
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import json,os,re,socket,subprocess,sys,shutil
-          from pathlib import Path
-          def cmd(args):
-              p=subprocess.run(args,capture_output=True,text=True,timeout=10)
-              return p.returncode,p.stdout.strip()
-          if socket.gethostname().split('.')[0]!='srv1849463':raise SystemExit('UNEXPECTED_HOST')
-          report={'host_verified':True,'uid':os.geteuid(),'root_access':os.geteuid()==0,'ports':{},'services':{}}
-          for port in (8768,8769,8770):
-              rc,out=cmd(['ss','-H','-ltnp',f'sport = :{port}'])
-              report['ports'][str(port)]={'listening':bool(out),'localhost_only':bool(out) and all(f'127.0.0.1:{port}' in x for x in out.splitlines()),'listeners':len(out.splitlines())}
-          rc,out=cmd(['systemctl','list-units','--all','--type=service','--no-legend','--plain','santana-mcp*','openbot-tunnel.service','docker.service'])
-          units=[]
-          for line in out.splitlines():
-              match=re.search(r'([a-zA-Z0-9@_.:-]+\.service)',line)
-              if match:units.append(match.group(1))
-          for unit in units:
-              rc,out=cmd(['systemctl','show',unit,'-p','ActiveState','-p','SubState','-p','MainPID','-p','FragmentPath','-p','WorkingDirectory'])
-              report['services'][unit]=dict(x.split('=',1) for x in out.splitlines() if '=' in x)
-          rc,out=cmd(['sudo','-n','-l'])
-          report['sudo_listing_available']=rc==0
-          report['sudo_helper_names']=sorted(set(re.findall(r'/(?:usr/local/(?:s?bin)|opt)/[A-Za-z0-9_./-]+',out))) if rc==0 else []
-          for unit,props in report['services'].items():
-              if unit.startswith('santana-mcp') and 'tunnel' not in unit:
-                  pid=props.get('MainPID','0')
-                  proc=Path('/proc')/pid
-                  try:
-                      env=dict(x.split('=',1) for x in proc.joinpath('environ').read_bytes().decode().split('\0') if '=' in x)
-                      props.update({'process_environment_readable':True,'source':env.get('SANTANA_DATA_SOURCE'),'configured_port':env.get('MCP_PORT'),'send_disabled':env.get('SANTANA_SEND_ENABLED','false').lower()=='false' and env.get('SANTANA_SEND_MODE','disabled')=='disabled','credential_present':bool(env.get('CHATGPT_READ_TOKEN'))})
-                  except (OSError,ValueError):props['process_environment_readable']=False
-                  try:props['code_readable']=Path(props.get('WorkingDirectory','/not-found'),'server.py').is_file()
-                  except OSError:props['code_readable']=False
-          for unit,props in report['services'].items():
-              if unit=='santana-mcp-lab.service':
-                  rc,values=cmd(['ps','-p',props.get('MainPID','0'),'-o','pcpu=,rss='])
-                  props['cpu_rss_observation']=values if rc==0 else None
-          report['node_available']=bool(shutil.which('node'))
-          report['openssl_available']=bool(shutil.which('openssl'))
-          report['disk_free_mib']=shutil.disk_usage('/').free//1048576
-          import stat
-          stage=Path('/home/runner/santana-mcp-staging/63a85c509957532a')
-          report['staged_package_present']=(stage/'WhatsApp-Santana-MCP-v5-Consolidado.zip').is_file()
-          candidates=sorted(stage.glob('root-execution-*.json'))[-1:]
-          report['root_installation_report_found']=False
-          if candidates:
-              path=candidates[0];info=path.lstat()
-              if stat.S_ISREG(info.st_mode) and info.st_uid==0 and not info.st_mode & 0o022 and info.st_size<=262144:
-                  with path.open() as f: result=json.load(f)
-                  if result.get('package_sha256')=='63a85c509957532a8091f0ad13b5a5423a0dfeb19a007310bac1f0943f27b6ee':
-                      report['root_installation_report_found']=True
-                      report['root_installation_result']=result
-          report['status']='READ_ONLY_STATUS_NO_INSTALLATION'
-          print(json.dumps(report,ensure_ascii=False,indent=2))
+          import json, os, re, subprocess
+          probe = "\"\"\"One-shot, GET-only W-API diagnostic. Never prints credentials or message data.\"\"\"\nimport hashlib\nimport json\nimport os\nimport re\nimport shlex\nimport socket\nimport subprocess\nfrom pathlib import Path\nfrom urllib.error import HTTPError\nfrom urllib.parse import urlencode\nfrom urllib.request import Request, HTTPRedirectHandler, build_opener\n\nKEYS = {'WAPI_INSTANCE_ID', 'WAPI_API_TOKEN', 'WAPI_TOKEN'}\nUNITS = ('santana-mcp-lab.service', 'santana-mcp-lab-tunnel.service',\n         'openbot-tunnel.service', 'docker.service', 'sana-lab-bridge.service')\nROUTES = {'connection': '/v1/instance/status-instance',\n          'instance': '/v1/instance/fetch-instance',\n          'chats': '/v1/chats/fetch-chats',\n          'contacts': '/v1/contacts/fetch-contacts'}\n\n\ndef command(args):\n    p = subprocess.run(args, capture_output=True, text=True, timeout=10)\n    return p.returncode, p.stdout\n\n\ndef services():\n    result = {}\n    for unit in UNITS:\n        rc, out = command(['systemctl', 'show', unit, '-p', 'MainPID', '-p', 'ActiveState',\n                           '-p', 'WorkingDirectory', '-p', 'EnvironmentFiles'])\n        result[unit] = dict(x.split('=', 1) for x in out.splitlines() if '=' in x)\n    return result\n\n\ndef parse_env_file(path):\n    result = {}\n    # Parse assignments as data; never source a shell file or execute expansions.\n    for line in Path(path).read_text().splitlines():\n        m = re.match(r'^\\s*(?:export\\s+)?([A-Z][A-Z0-9_]*)=(.*)$', line)\n        if not m or m[1] not in KEYS:\n            continue\n        parts = shlex.split(m[2], comments=True)\n        if len(parts) == 1:\n            result[m[1]] = parts[0]\n    return result\n\n\nclass NoRedirect(HTTPRedirectHandler):\n    def redirect_request(self, *args, **kwargs):\n        return None\n\n\ndef project(label, http, payload):\n    \"\"\"Allowlisted evidence only. HTTP 200 error envelopes are not success.\"\"\"\n    entry = {'operation': label, 'http': http, 'ok': False}\n    if not isinstance(payload, (dict, list)):\n        return {**entry, 'result': 'INVALID_PAYLOAD'}\n    if isinstance(payload, dict):\n        failed = payload.get('error') not in (None, False, '') or payload.get('success') is False\n        texts = ' '.join(str(payload.get(k, '')) for k in ('error', 'message', 'status')).lower()\n        if http == 200 and not failed:\n            entry['ok'] = True\n        if 'pro' in texts and any(x in texts for x in ('lite', 'plano', 'plan', 'exclusive', 'exclusiv')):\n            entry['result'] = 'PLAN_RESTRICTED'\n        elif http in (401, 403):\n            entry['result'] = 'AUTH_OR_ACCESS_DENIED'\n        elif http == 429:\n            entry['result'] = 'RATE_LIMITED'\n        elif not entry['ok']:\n            entry['result'] = 'API_ERROR'\n        inner = payload.get('data') if isinstance(payload.get('data'), dict) else payload\n        if label == 'connection':\n            connected = inner.get('connected')\n            if not isinstance(connected, bool):\n                entry['ok'] = False\n                entry['result'] = 'CONNECTION_SHAPE_UNVERIFIED'\n            else:\n                entry['connected'] = connected\n        if label == 'instance':\n            for k in ('type', 'instanceType', 'plan', 'planType'):\n                if str(inner.get(k, '')).upper() in ('LITE', 'PRO'):\n                    entry['instance_type'] = str(inner[k]).upper()\n        if label in ('chats', 'contacts'):\n            for k in (label, 'items', 'data'):\n                if isinstance(payload.get(k), list):\n                    entry['sample_count'] = len(payload[k])\n                    break\n    else:\n        entry['ok'] = http == 200\n        entry['sample_count'] = len(payload)\n    return entry\n\n\ndef probe(credentials):\n    instance = credentials.get('WAPI_INSTANCE_ID', '')\n    token = credentials.get('WAPI_API_TOKEN') or credentials.get('WAPI_TOKEN', '')\n    if not re.fullmatch(r'[A-Za-z0-9_-]{1,80}', instance) or not token:\n        return {'status': 'CREDENTIALS_UNAVAILABLE', 'calls': []}\n    calls = []\n    for label, path in ROUTES.items():\n        params = {'instanceId': instance}\n        if label in ('chats', 'contacts'):\n            params.update(perPage=1, page=1)\n        request = Request('https://api.w-api.app' + path + '?' + urlencode(params),\n                          headers={'Authorization': 'Bearer ' + token, 'Accept': 'application/json'}, method='GET')\n        try:\n            try:\n                response = build_opener(NoRedirect()).open(request, timeout=8)\n            except HTTPError as e:\n                response = e\n            with response:\n                raw = response.read(1_000_001)\n                status = response.code\n            payload = json.loads(raw) if len(raw) <= 1_000_000 else None\n            entry = project(label, status, payload)\n        except Exception:\n            entry = {'operation': label, 'http': None, 'ok': False, 'result': 'REDACTED_TRANSPORT_ERROR'}\n        calls.append(entry)\n        if entry.get('http') in (401, 429):\n            break\n    return {'status': 'PROBED_READ_ONLY', 'calls': calls}\n\n\ndef main():\n    if socket.gethostname().split('.')[0] != 'srv1849463':\n        return {'status': 'WRONG_HOST'}\n    before = services()\n    report = {'uid': os.geteuid(), 'host_verified': True, 'sources': [], 'real_send_attempts': 0,\n              'production_writes': 0, 'services_before': {u: {k: v for k, v in d.items()\n              if k in ('MainPID', 'ActiveState')} for u, d in before.items()}}\n    candidates = [('invocation_environment', {k: v for k, v in os.environ.items() if k in KEYS})]\n    for unit in ('santana-mcp-lab.service', 'sana-lab-bridge.service'):\n        props = before.get(unit, {})\n        pid = props.get('MainPID', '0')\n        try:\n            data = dict(x.split('=', 1) for x in Path('/proc', pid, 'environ').read_bytes().decode().split('\\0') if '=' in x)\n            candidates.append((unit + ':process', {k: v for k, v in data.items() if k in KEYS}))\n            if unit == 'santana-mcp-lab.service':\n                report['lab'] = {'source': data.get('SANTANA_DATA_SOURCE'),\n                    'send_disabled': data.get('SANTANA_SEND_ENABLED', 'false').lower() == 'false'\n                    and data.get('SANTANA_SEND_MODE', 'disabled') == 'disabled',\n                    'oauth_forwarding': data.get('SANA_READ_FORWARD_BEARER') == 'true'}\n                cwd = Path(props['WorkingDirectory'])\n                report['lab']['server_sha256'] = hashlib.sha256((cwd / 'server.py').read_bytes()).hexdigest()\n        except (OSError, ValueError, KeyError):\n            report['sources'].append({'source': unit + ':process', 'accessible': False})\n        for path in re.findall(r'(\\S+)\\s+\\(ignore_errors=', props.get('EnvironmentFiles', '')):\n            try:\n                candidates.append((unit + ':configured_env_file', parse_env_file(path)))\n            except (OSError, ValueError):\n                report['sources'].append({'source': unit + ':configured_env_file', 'accessible': False})\n    # Only existing Sana bridge container, no enumeration of unrelated secrets.\n    rc, raw = command(['docker', 'inspect', '--format', '{{json .Config.Env}}', 'sana-lab-bridge'])\n    if rc == 0:\n        try:\n            pairs = dict(x.split('=', 1) for x in json.loads(raw) if '=' in x)\n            candidates.append(('sana-lab-bridge:container_environment', {k: v for k, v in pairs.items() if k in KEYS}))\n        except (ValueError, TypeError):\n            pass\n    else:\n        report['sources'].append({'source': 'sana-lab-bridge:container_environment', 'accessible': False})\n    selected = None\n    for label, env in candidates:\n        complete = bool(env.get('WAPI_INSTANCE_ID') and (env.get('WAPI_API_TOKEN') or env.get('WAPI_TOKEN')))\n        report['sources'].append({'source': label, 'accessible': True, 'complete_wapi_credentials': complete})\n        if complete and selected is None:\n            selected = env\n    report['wapi'] = probe(selected or {})\n    after = services()\n    report['service_pids_unchanged'] = all(before[u].get('MainPID') == after[u].get('MainPID') for u in UNITS)\n    return report\n\n\nif __name__ == '__main__':\n    try:\n        print(json.dumps(main(), ensure_ascii=False, indent=2))\n    except Exception:\n        print(json.dumps({'status': 'REDACTED_DIAGNOSTIC_FAILURE', 'real_send_attempts': 0, 'production_writes': 0}))\n"
+          local=subprocess.run(['python3','-c',probe],capture_output=True,text=True,timeout=80)
+          try: result={'runner':json.loads(local.stdout)}
+          except Exception: result={'runner':{'status':'REDACTED_FAILURE'}}
+          host=os.environ.get('DEPLOY_HOST','').strip(); user=os.environ.get('DEPLOY_USER','').strip()
+          key=os.environ.get('DEPLOY_KEY',''); known=os.environ.get('DEPLOY_KNOWN_HOSTS','')
+          if host and user and key and known and re.fullmatch(r'[A-Za-z0-9._:-]+',host) and re.fullmatch(r'[a-z_][a-z0-9_-]*',user):
+              env=os.environ.copy(); agent=None; fd=None
+              try:
+                  a=subprocess.run(['ssh-agent','-s'],capture_output=True,text=True,check=True,timeout=10)
+                  sock=re.search(r'SSH_AUTH_SOCK=([^;]+)',a.stdout); pid=re.search(r'SSH_AGENT_PID=([0-9]+)',a.stdout)
+                  if not sock or not pid: raise RuntimeError()
+                  env.update(SSH_AUTH_SOCK=sock[1],SSH_AGENT_PID=pid[1]); agent=env
+                  added=subprocess.run(['ssh-add','-'],input=key,text=True,capture_output=True,env=env,timeout=10)
+                  if added.returncode: raise RuntimeError()
+                  fd=os.memfd_create('santana-known-hosts',0); os.write(fd,known.encode())
+                  p=subprocess.run(['ssh','-T','-o','BatchMode=yes','-o','StrictHostKeyChecking=yes','-o','ConnectTimeout=10','-o','UserKnownHostsFile=/proc/self/fd/'+str(fd),user+'@'+host,'python3 -'],input=probe,capture_output=True,text=True,env=env,pass_fds=(fd,),timeout=90)
+                  if p.returncode==0:
+                      result['existing_ssh']=json.loads(p.stdout)
+                  else: result['existing_ssh']={'status':'SSH_AUTH_OR_POLICY_DENIED','exit_code':p.returncode}
+              except Exception: result['existing_ssh']={'status':'SSH_UNAVAILABLE_REDACTED'}
+              finally:
+                  if fd is not None: os.close(fd)
+                  if agent: subprocess.run(['ssh-agent','-k'],capture_output=True,env=agent,timeout=10)
+          else: result['existing_ssh']={'status':'EXISTING_SSH_CONFIG_UNAVAILABLE'}
+          print(json.dumps(result,ensure_ascii=False,indent=2))
           PY
