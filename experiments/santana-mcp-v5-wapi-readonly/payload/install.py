@@ -151,6 +151,19 @@ def apply_transaction(source,target,changes,fail_after=None):
         if fail_after is not None and i==fail_after:raise RuntimeError('Injected installation failure')
 
 
+def select_install_entries(source, entries):
+    selected=json.loads((source/'MANIFEST.json').read_text()).get('install_files')
+    if selected is None:return entries
+    if (not isinstance(selected,list) or not selected or any(not isinstance(x,str) for x in selected)
+        or len(set(selected))!=len(selected) or not set(selected)<=set(entries)):
+        raise RuntimeError('Lista incremental de arquivos inválida; nada alterado.')
+    for rel in selected:
+        p=Path(rel)
+        if not (len(p.parts)==1 and p.suffix=='.py' or p.parts[0]=='tests' and p.suffix in ('.py','.mjs')):
+            raise RuntimeError('O patch incremental só pode substituir módulos e testes.')
+    return {rel:entries[rel] for rel in selected}
+
+
 def restore_transaction(target,backup,changes):
     for item in reversed(changes):
         dst=target/item['path']
@@ -161,9 +174,7 @@ def restore_transaction(target,backup,changes):
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--apply',action='store_true')
     a=parser.parse_args(); source=Path(__file__).resolve().parent
-    entries=verify_manifest(source)
-    # Track the manifest in the same backup/rollback transaction as its payload.
-    entries={**entries,'MANIFEST.json':hashlib.sha256((source/'MANIFEST.json').read_bytes()).hexdigest()}
+    entries=select_install_entries(source,verify_manifest(source))
     try:os.nice(10)
     except OSError:pass
     from run_tests import run
