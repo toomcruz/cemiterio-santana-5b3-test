@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "source_commit": "f2ce3fd379fa65eb66e4f03cdcd157d68d651320",
+  "workflow_run_id": 39173522011,
+  "workflow_run_url": "https://github.com/toomcruz/cemiterio-santana-5b3-test/actions/runs/39173522011",
+  "job_id": 117811371166,
+  "total_tests": 88,
+  "read_tests": 68,
+  "supervised_write_tests": 20,
+  "environment": "isolated_synthetic",
+  "service_pids_unchanged": true,
+  "real_messages_sent": 0,
+  "production_writes_by_tests": 0,
+  "production_read_already_authorized": true,
+  "new_write_permission_installed": false,
+  "evidence_lines": [
+    "2026-10-18T22:44:35.5373768Z {\"at\": \"2026-10-18T22:44:23.662491+00:00\", \"environment\": \"isolated_synthetic\", \"status\": \"PASS\", \"real_messages_sent\": 0, \"production_writes\": 0, \"real_message_access_expanded\": false, \"services_changed\": 0, \"suites\": [{\"name\": \"build\", \"exit_code\": 0, \"tests\": null}, {\"name\": \"node\", \"exit_code\": 0, \"tests\": 26}, {\"name\": \"python\", \"exit_code\": 0, \"tests\": 14}, {\"name\": \"send-regression\", \"exit_code\": 0, \"tests\": 28}], \"total_tests\": 68}",
+    "2026-10-18T22:44:35.5412701Z {\"status\": \"PASS\", \"at\": \"2026-10-18T22:44:30.610208+00:00\", \"environment\": \"isolated_synthetic\", \"production_writes\": 0, \"real_messages_sent\": 0, \"new_live_permissions\": 0, \"suites\": [{\"name\": \"build\", \"exit_code\": 0, \"tests\": 0}, {\"name\": \"node\", \"exit_code\": 0, \"tests\": 17}, {\"name\": \"python\", \"exit_code\": 0, \"tests\": 3}], \"total_tests\": 20}",
+    "2026-10-18T22:44:35.5429107Z {\"status\": \"ADMIN_ASSIST_SYNTHETIC_PASS\", \"environment\": \"isolated_synthetic\", \"service_pids_unchanged\": true, \"real_messages_sent\": 0, \"production_writes\": 0, \"services_changed_by_test\": 0}"
+  ]
+}
