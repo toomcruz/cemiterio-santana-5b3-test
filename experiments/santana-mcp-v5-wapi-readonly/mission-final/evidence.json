@@ -1,6 +1,6 @@
 {
   "status": "REAL_READ_PROVEN_SUPERVISED_INSTALLED_HUMAN_HANDOFF_PENDING",
-  "updated_at": "2026-10-18T19:04:58.964024+00:00",
+  "updated_at": "2026-10-18T19:13:30Z",
   "chatgpt": {
     "existing_connection": true,
     "authorized_real_read_proven": true,
@@ -120,12 +120,13 @@
     },
     "current_preparation": {
       "intent_id": "a77bc4d4-8260-425a-9cec-94205ef53f37",
-      "state": "prepared",
+      "state": "human_reviewed_dispatch_blocked",
       "payload_sha256": "17851da59f9a5aab4c6582fb09f12ebdf4698a75e6750495711741fb1cfc391d",
       "expected_revision": 182,
       "expires_at": "2026-10-18T19:33:32.691Z",
       "recipient_mask": "+••••••5497",
-      "real_dispatch_enabled": false
+      "real_dispatch_enabled": false,
+      "reviewed_at": "2026-10-18T19:07:25.998455Z"
     },
     "specific_live_test_chat_authorization": true,
     "live_conversation_permission_enabled": true,
@@ -147,7 +148,18 @@
       "real_dispatch_enabled": false,
       "invalidated_without_dispatch_at": "2026-10-18T19:03:28.339106Z"
     },
-    "current_permission_expires_at": "2026-10-18T19:13:59.636971Z"
+    "current_permission_expires_at": "2026-10-18T19:23:21.184559Z",
+    "consent_ui_fix": {
+      "native_required_checkbox": true,
+      "visible_submit_button": "Confirmar autorização",
+      "immediate_progress_feedback": true,
+      "session_wait_limit_seconds": 10,
+      "authorization_fetch_timeout_seconds": 20,
+      "automatic_retries": 0,
+      "preview_build": "READY",
+      "production_build": "READY",
+      "actual_submit_from_user_not_yet_proven": true
+    }
   },
   "tests": {
     "node": 22,
@@ -266,8 +278,8 @@
     "hmg_edge_sha256": "fffb3cd4242a6fcdb778e2acb7d0041a4531b218d0ff1bdf86a1f3ad86df2f51",
     "prod_read_edge_version": 38,
     "prod_read_edge_sha256": "dfe8931f811967b80b1245f28631156f814fe6c3de0fb62ca55b105d02599093",
-    "official_panel_deployment": "dpl_GivFdo3yd4grWedeD2b8k2w8dE1e",
-    "official_panel_source_commit": "b95cd04c8a0720406f0ba80ed366712fe002e315",
+    "official_panel_deployment": "dpl_Uwa113ogFA62MuvC97JX6maAZqMz",
+    "official_panel_source_commit": "6e991ad5a9fa6ecd4b544a1e762ebed8ca3828d6",
     "official_panel_previous_deployment": "dpl_HE1XmDS5Bz9UHd2dhKS5JLoGjvdc"
   },
   "preservation": {
