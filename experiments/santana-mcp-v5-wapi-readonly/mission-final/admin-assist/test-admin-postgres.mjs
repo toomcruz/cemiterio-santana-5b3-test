@@ -87,3 +87,11 @@ test('audit failure fails closed and rate quota is enforced before release',asyn
  await db.exec("update synthetic_quota set allowed=true;alter table sana_mcp_admin_audit add constraint synthetic_audit_failure check(operation='never')");
  try{assert.equal((await handler(req({mode:'pending',date:'2026-10-18'}))).status,503);}finally{await db.exec('alter table sana_mcp_admin_audit drop constraint synthetic_audit_failure');}
 });
+test('context includes actual accepted Sana messages, excludes unsent drafts from the timeline, and reports truncated content',async()=>{
+ await db.query("insert into sana_outbox values($1,$2,'ACTUAL SANA ANSWER','SENT','2026-10-18T21:00:00Z','2026-10-18T21:00:05Z')",['40000000-0000-4000-8000-000000000001',A]);
+ await db.query("insert into sana_outbox values($1,$2,'UNSENT OUTBOX DRAFT','PENDING','2026-10-18T21:01:00Z',null)",['40000000-0000-4000-8000-000000000002',A]);
+ let d=await(await handler(req({mode:'context',conversation_id:A}))).json();
+ const sent=d.sections.messages.items.find(m=>m.sender_role==='sana');assert.equal(sent.inbound_text,'ACTUAL SANA ANSWER');assert.equal(sent.accepted_by_api,true);assert.equal(sent.delivery_confirmed,false);assert.doesNotMatch(JSON.stringify(d.sections.messages),/UNSENT OUTBOX DRAFT/);
+ await db.query("update sana_inbox_messages set inbound_text=$1 where message_key='a'",['x'.repeat(6001)]);
+ d=await(await handler(req({mode:'context',conversation_id:A}))).json();assert.equal(d.content_truncated,true);assert.equal(d.context_complete,false);
+});

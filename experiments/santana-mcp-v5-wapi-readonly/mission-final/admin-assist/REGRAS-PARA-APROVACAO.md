@@ -1,8 +1,8 @@
-# Publicação inicial proposta — aguarda sua autorização
+# Propostas internas — não são normas oficiais aprovadas
 
 Manifesto SHA-256: `4c64c2f408ad4bdd3f1e76c8dd35e12eec4d23a6ed4c2cf6e9a85d663e0bb02b`.
 
-Somente estas três orientações conservadoras seriam publicadas para atendimento assistido. As outras 77 regras ficam sem publicação; as 16 pendentes não são promovidas.
+Por determinação expressa de 18/10/2026, estas três orientações permanecem como propostas internas conservadoras, sujeitas à validação da Administração. Não foram publicadas como regras oficiais. As outras 77 regras ficam sem publicação; as 16 pendentes não fundamentam procedimentos.
 
 **AUTHORITY** — escopo: *
 

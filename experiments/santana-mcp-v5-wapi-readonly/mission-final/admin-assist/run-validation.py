@@ -5,7 +5,7 @@ ROOT=Path(__file__).resolve().parent
 def main():
     logs=ROOT/'validation';logs.mkdir(exist_ok=True)
     commands=[('build',[sys.executable,str(ROOT/'build-candidate.py')]),
-      ('node',['node','--test','--test-concurrency=1','--test-reporter=tap',str(ROOT/'test-admin-core.mjs'),str(ROOT/'test-read-media.mjs'),str(ROOT/'test-admin-postgres.mjs')]),
+      ('node',['node','--experimental-strip-types','--test','--test-concurrency=1','--test-reporter=tap',str(ROOT/'test-admin-core.mjs'),str(ROOT/'test-read-media.mjs'),str(ROOT/'test-admin-postgres.mjs'),str(ROOT/'test-contact-compat.mjs')]),
       ('python',[sys.executable,'-m','unittest','discover','-s',str(ROOT),'-p','test_*.py']),
       ('send-regression',['node','--experimental-strip-types','--test','--test-reporter=tap',str(ROOT.parent/'supervised-send/test-adapter.mjs'),str(ROOT.parent/'supervised-send/test-binding.mjs'),str(ROOT.parent/'supervised-send/test-media-attachments.mjs')])]
     result={'at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'environment':'isolated_synthetic','status':'PASS','real_messages_sent':0,'production_writes':0,'real_message_access_expanded':False,'services_changed':0,'suites':[]}

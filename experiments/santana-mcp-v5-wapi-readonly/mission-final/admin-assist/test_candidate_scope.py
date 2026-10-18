@@ -3,7 +3,7 @@ from pathlib import Path
 R=Path(__file__).resolve().parent
 class Scope(unittest.TestCase):
     def test_manifest_is_exact_and_contains_only_fourteen_overlay_files(self):
-        manifest=json.loads((R/'candidate-manifest.json').read_text());self.assertEqual(len(manifest['files']),14)
+        manifest=json.loads((R/'candidate-manifest.json').read_text());self.assertEqual(len(manifest['files']),15)
         for name,digest in manifest['files'].items():self.assertEqual(hashlib.sha256((R/'candidate'/name).read_bytes()).hexdigest(),digest)
         self.assertTrue(manifest['production_approval_required']);self.assertFalse(manifest['real_message_access_expanded'])
     def test_existing_outbound_transport_and_automation_are_not_in_overlay(self):

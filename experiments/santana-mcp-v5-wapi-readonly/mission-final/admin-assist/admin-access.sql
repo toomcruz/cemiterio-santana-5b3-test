@@ -169,13 +169,25 @@ begin
    if section not in ('all','messages','cases','documents','notes') or section='all' and t_before is not null then raise exception 'MCP_ADMIN_INVALID_REQUEST';end if;
    if section in ('all','messages') then
     select coalesce(jsonb_agg(x order by x->>'created_at' desc,x->>'message_key' desc),'[]') into rows from (
+     select x from (
      select jsonb_build_object('message_key',m.message_key,'created_at',m.created_at,'sender_role',m.sender_role,
       'delivery_state',m.delivery_state,'inbound_text',left(m.inbound_text,6000),'generated_response',left(m.response_text,6000),
+      'text_truncated',coalesce(length(m.inbound_text)>6000,false),'generated_response_truncated',coalesce(length(m.response_text)>6000,false),
       'generated_response_is_not_send_proof',true,
       'attachments',(select coalesce(jsonb_agg(jsonb_build_object('artifact_id',a->>'artifact_id','file_name',a->>'file_name',
        'mime_type',a->>'mime_type','type',a->>'type','size_bytes',a->'size_bytes','media_status',a->>'media_status')),'[]') from jsonb_array_elements(m.attachments)a)) x
      from public.sana_inbox_messages m where m.conversation_id=cid and not m.hidden and not m.no_send
-      and (t_before is null or (m.created_at,m.message_key)<(t_before,k_before)) order by m.created_at desc,m.message_key desc limit lim+1
+      and (t_before is null or (m.created_at,m.message_key)<(t_before,k_before))
+     union all
+     select jsonb_build_object('message_key','sana-outbox:'||o.outbox_id::text,'created_at',o.created_at,'sender_role','sana',
+      'delivery_state',o.delivery_state,'inbound_text',left(o.response_text,6000),'text_truncated',coalesce(length(o.response_text)>6000,false),
+      'generated_response',null,'generated_response_is_not_send_proof',true,'accepted_by_api',true,
+      'delivery_confirmed',o.delivery_state in ('DELIVERED','READ'),'attachments','[]'::jsonb) x
+     from public.sana_outbox o where p_mode='context' and o.conversation_id=cid and o.delivery_state in ('SENT','DELIVERED','READ')
+      and not exists(select 1 from public.sana_operator_deliveries d where d.outbox_id=o.outbox_id and d.no_send)
+      and not exists(select 1 from public.sana_message_audit a where a.outbox_id=o.outbox_id and a.no_send)
+      and (t_before is null or (o.created_at,'sana-outbox:'||o.outbox_id::text)<(t_before,k_before))
+     ) history order by x->>'created_at' desc,x->>'message_key' desc limit lim+1
     )s;result=result||jsonb_build_object('messages',rows);cnt=cnt+least(lim,jsonb_array_length(rows));
    end if;
    if section in ('all','cases') then

@@ -1,0 +1,34 @@
+{
+  "status": "READ_DEPLOYED_HOST_TOOL_REFRESH_PENDING",
+  "prod_edge_version": 42,
+  "homolog_edge_version": 14,
+  "mcp_deployment": "dpl_8dfbsPTvZ6eDzsmmXBEN3Pnjf2Am",
+  "panel_deployment": "dpl_9dNM9kTUwfnudfBb7oqMbmXzRNcg",
+  "panel_commit": "58a242926cbae6213e079f18234cad8eb87e0f59",
+  "read_expires_at": "2026-10-25T22:25:34.804768Z",
+  "official_rule_publications": 0,
+  "live_send_grants": 0,
+  "new_write_grant_installed": false,
+  "real_messages_sent": 0,
+  "individual_oauth_proven": true,
+  "pending_coverage": {
+    "date": "2026-10-18",
+    "timezone": "America/Sao_Paulo",
+    "pages": 1,
+    "scanned": 3,
+    "items": 1,
+    "states": {
+      "sem_resposta": 1
+    },
+    "complete": true,
+    "authentication": "individual OAuth proven separately through current ChatGPT connection; scoped RPC integration test used management connection",
+    "tools_visible_in_current_chat": false
+  },
+  "history_coverage": {
+    "pages": 3,
+    "total_messages": 59,
+    "complete": true
+  },
+  "read_only_source": "sana_administrative_read",
+  "host_catalog_pending_refresh": true
+}

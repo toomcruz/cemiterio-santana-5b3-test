@@ -9,7 +9,7 @@ def sha(b):return hashlib.sha256(b).hexdigest()
 def build():
     out=ROOT/'candidate';out.mkdir(exist_ok=True)
     for d in ('prod-edge','homolog-edge','homolog-mcp/api','homolog-mcp/whatsapp-santana-mcp','panel/lib/sana','panel/app/api/runtime/sana-media'):(out/d).mkdir(parents=True,exist_ok=True)
-    for source,target in [('admin-core.mjs','prod-edge/mcp-admin-core.mjs'),('identity-core.mjs','prod-edge/mcp-admin-identity.mjs'),('mcp-admin-assist.ts','prod-edge/mcp-admin-assist.ts'),('mcp-read-media.mjs','panel/lib/sana/mcp-read-media.mjs'),('admin_assist_tools.py','homolog-mcp/whatsapp-santana-mcp/admin_assist_tools.py'),('attachment_worker.py','homolog-mcp/whatsapp-santana-mcp/attachment_worker.py'),('requirements.txt','homolog-mcp/requirements.txt')]:
+    for source,target in [('admin-core.mjs','prod-edge/mcp-admin-core.mjs'),('identity-core.mjs','prod-edge/mcp-admin-identity.mjs'),('mcp-admin-assist.ts','prod-edge/mcp-admin-assist.ts'),('mcp-read-media.mjs','panel/lib/sana/mcp-read-media.mjs'),('admin_assist_tools.py','homolog-mcp/whatsapp-santana-mcp/admin_assist_tools.py'),('attachment_worker.py','homolog-mcp/whatsapp-santana-mcp/attachment_worker.py'),('requirements.txt','homolog-mcp/requirements.txt'),('prepare-contact-compat.ts','homolog-edge/send-intents.ts')]:
         shutil.copyfile(ROOT/source,out/target)
     catalog=json.loads((ROOT/'baseline-rules.v2.json').read_text());catalog['sha256']=sha((ROOT/'baseline-rules.v2.json').read_bytes())
     (out/'prod-edge/mcp-rule-catalog.json').write_text(json.dumps(catalog,ensure_ascii=False,indent=2)+'\n')

@@ -58,6 +58,13 @@ jobs:
                   if result.returncode:
                       for log in (testroot/'validation').glob('*.log'):print(log.name,log.read_text()[-5000:])
                       raise SystemExit('ADMIN_ASSIST_TESTS_FAILED')
+                  writer=testroot.parent/'admin-supervised-send/run-validation.py'
+                  if writer.exists():
+                      result=subprocess.run([testpython,str(writer)],env=env,capture_output=True,text=True,timeout=90)
+                      print(result.stdout)
+                      if result.returncode:
+                          for log in (writer.parent/'validation').glob('*.log'):print(log.name,log.read_text()[-5000:])
+                          raise SystemExit('ADMIN_SUPERVISED_TESTS_FAILED')
               print(json.dumps({'status':'ADMIN_ASSIST_SYNTHETIC_PASS','environment':'isolated_synthetic','service_pids_unchanged':before==pids(),'real_messages_sent':0,'production_writes':0,'services_changed_by_test':0}))
               raise SystemExit(0)
           if os.environ.get('ACTION')=='root_inventory_stage':

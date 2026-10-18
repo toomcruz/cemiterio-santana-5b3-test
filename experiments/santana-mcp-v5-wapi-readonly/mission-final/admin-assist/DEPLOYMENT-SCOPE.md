@@ -1,3 +1,5 @@
+> Escopo original de revisão. A autorização posterior de 18/10/2026 aprovou a leitura, mas NÃO a publicação das três propostas como normas oficiais. Veja DEPLOYMENT-RESULT.md para o estado executado.
+
 # Escopo para autorização — supervisão e atendimento assistido
 
 Estado: candidato implementado e validado em ambiente sintético; não instalado em produção e sem ampliação de leitura real.
