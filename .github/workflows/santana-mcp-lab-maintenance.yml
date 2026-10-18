@@ -6,7 +6,7 @@ on:
       action:
         description: Stage patch, collect report, or read OpenBot configuration schema
         type: choice
-        options: [stage, collect, inventory]
+        options: [stage, collect, inventory, root_inventory_stage]
         default: stage
 permissions:
   contents: read
@@ -32,6 +32,18 @@ jobs:
           python3 - <<'PY'
           import hashlib,io,json,os,runpy,stat,subprocess,sys,tempfile,zipfile
           from pathlib import Path
+          if os.environ.get('ACTION')=='root_inventory_stage':
+              content=Path('experiments/santana-mcp-v5-wapi-readonly/openbot-readonly-inventory.py').read_bytes()
+              expected='6996a0320ac933fc204a736ea0406ee6193c041db122c8f402b6e5886410a6c3'
+              if hashlib.sha256(content).hexdigest()!=expected:raise SystemExit('DIAGNOSTIC_HASH_MISMATCH')
+              stage=Path('/home/runner/santana-mcp-staging/openbot-inventory-'+expected[:12])
+              if stage.is_symlink():raise SystemExit('UNSAFE_STAGE')
+              stage.mkdir(parents=True,exist_ok=True)
+              target=stage/'inventory.py'
+              fd=os.open(target,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o444)
+              with os.fdopen(fd,'wb') as f:f.write(content)
+              print(json.dumps({'status':'READ_ONLY_DIAGNOSTIC_STAGED','path':str(target),'sha256':expected,'services_changed':0,'real_messages_sent':0}))
+              raise SystemExit(0)
           if os.environ.get('ACTION')=='inventory':
               runpy.run_path('experiments/santana-mcp-v5-wapi-readonly/openbot-readonly-inventory.py',run_name='__main__')
               testroot=Path('experiments/santana-mcp-v5-wapi-readonly/mission-final')

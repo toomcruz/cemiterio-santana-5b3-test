@@ -9,9 +9,8 @@ for unit in ('openbot.service', 'openbot-tunnel.service', 'santana-mcp-lab.servi
 binary = shutil.which('openbot')
 report['openbot_cli_found'] = bool(binary)
 if binary:
-    r = subprocess.run([binary, '--version'], capture_output=True, text=True, timeout=10)
-    match = re.search(r'\b\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?\b', r.stdout + r.stderr)
-    report['openbot_version'] = match.group(0) if match else 'unavailable'
+    # Do not launch the GUI from a privileged diagnostic.
+    report['openbot_version'] = 'not_probed_no_gui_launch'
 
 # Read only established configuration roots. Values, account names, endpoints,
 # environment variables, prompts, chat history and session bodies are excluded.
@@ -51,11 +50,20 @@ for root in roots:
             entry['files'].append(item)
         database=root/'openbot.db'
         if os.access(database,os.R_OK):
-            connection=sqlite3.connect('file:'+str(database)+'?mode=ro',uri=True,timeout=2)
+            connection=sqlite3.connect('file:'+str(database)+'?mode=ro&immutable=1',uri=True,timeout=2)
             try:
                 # Schema only: never read agent messages, sessions or secret values.
                 tables=connection.execute("select name from sqlite_master where type='table' and (lower(name) like '%mcp%' or lower(name) like '%setting%' or lower(name) like '%agent%') limit 20").fetchall()
-                entry['database_schema']=[{'table':name,'columns':[row[1] for row in connection.execute('pragma table_info('+json.dumps(name)+')').fetchall()]} for (name,) in tables]
+                entry['database_snapshot']='immutable_base_schema_only'
+                entry['database_schema']=[]
+                for (name,) in tables:
+                    quoted='"'+name.replace('"','""')+'"'
+                    columns=[row[1] for row in connection.execute('pragma table_info('+quoted+')').fetchall()]
+                    metadata={'table':name,'columns':columns}
+                    if 'mcp' in name.lower():
+                        metadata['row_count']=connection.execute('select count(*) from '+quoted).fetchone()[0]
+                        metadata['has_agent_binding_column']=any('agent' in c.lower() for c in columns)
+                    entry['database_schema'].append(metadata)
             finally:connection.close()
     except OSError: entry['files']=[]
     report['configurations'].append(entry)
