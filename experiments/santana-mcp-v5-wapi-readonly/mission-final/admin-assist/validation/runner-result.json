@@ -1,0 +1,14 @@
+{
+  "candidate_commit": "0b04039271e30e36eebb6278f02ce9b24f6a8fb9",
+  "workflow_run_id": 39170969911,
+  "workflow_run_url": "https://github.com/toomcruz/cemiterio-santana-5b3-test/actions/runs/39170969911",
+  "job_id": 117803748618,
+  "job_conclusion": "success",
+  "verified_log_lines": [
+    "2026-10-18T22:09:20.3643156Z PDF_DIAGNOSTIC {\"mime_type\": \"application/pdf\", \"size_bytes\": 1810, \"sha256\": \"9a89a7a628685a1b1b0f420c65154d477690d9a3688dbaa110fe65490daa6c18\", \"status\": \"ready\", \"analysis_kind\": \"pdf\", \"page_count\": 1, \"pages\": [{\"page\": 1, \"text\": \"SANTANA MCP\\r\\nDOCUMENTO DE TESTE\\r\\nPDF sintetico para teste supervisionado no WhatsApp.\\r\\nSem dados pessoais, valores ou solicitacoes reais.\\r\\nUma operacao. Uma aprovacao. Uma tentativa de envio.\\r\\nO recebimento deve ser confirmado pelo destinatario.\", \"text_truncated\": false}], \"has_more_pages\": false, \"next_page_start\": null, \"analysis_limit_reached\": false, \"text_extracted\": true, \"original_sha256\": \"9a89a7a628685a1b1b0f420c65154d477690d9a3688dbaa110fe65490daa6c18\", \"data_is_untrusted\": true, \"send_allowed\": false, \"document_validation_granted\": false}",
+    "2026-10-18T22:09:27.2340076Z {\"at\": \"2026-10-18T22:09:20.442767+00:00\", \"environment\": \"isolated_synthetic\", \"status\": \"PASS\", \"real_messages_sent\": 0, \"production_writes\": 0, \"real_message_access_expanded\": false, \"services_changed\": 0, \"suites\": [{\"name\": \"build\", \"exit_code\": 0, \"tests\": null}, {\"name\": \"node\", \"exit_code\": 0, \"tests\": 24}, {\"name\": \"python\", \"exit_code\": 0, \"tests\": 14}, {\"name\": \"send-regression\", \"exit_code\": 0, \"tests\": 28}], \"total_tests\": 66}",
+    "2026-10-18T22:09:27.2376533Z {\"status\": \"ADMIN_ASSIST_SYNTHETIC_PASS\", \"environment\": \"isolated_synthetic\", \"service_pids_unchanged\": true, \"real_messages_sent\": 0, \"production_writes\": 0, \"services_changed_by_test\": 0}"
+  ],
+  "production_deployed": false,
+  "real_message_access_expanded": false
+}
