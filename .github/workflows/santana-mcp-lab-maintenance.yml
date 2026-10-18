@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: Stage audited patch or collect root report
+        description: Stage patch, collect report, or read OpenBot configuration schema
         type: choice
-        options: [stage, collect]
+        options: [stage, collect, inventory]
         default: stage
 permissions:
   contents: read
@@ -32,6 +32,9 @@ jobs:
           python3 - <<'PY'
           import hashlib,io,json,os,runpy,stat,subprocess,sys,tempfile,zipfile
           from pathlib import Path
+          if os.environ.get('ACTION')=='inventory':
+              runpy.run_path('experiments/santana-mcp-v5-wapi-readonly/openbot-readonly-inventory.py',run_name='__main__')
+              raise SystemExit(0)
           expected='6e423557f105cff3983c1f1a1741d2ec2f96eb4da352b43bb058d168204d57b9'
           base=Path('/home/runner/santana-mcp-staging/63a85c509957532a/WhatsApp-Santana-MCP-v5-Consolidado.zip')
           base_hash='63a85c509957532a8091f0ad13b5a5423a0dfeb19a007310bac1f0943f27b6ee'
