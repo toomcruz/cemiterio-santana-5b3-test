@@ -1,0 +1,58 @@
+{
+  "status": "ready",
+  "intent_id": "1f45f9e1-915f-479b-b791-67b436e72b7c",
+  "payload": {
+    "text": "Teste supervisionado de documento PDF da integração WhatsApp Santana com o ChatGPT.",
+    "recipient": {
+      "name": "Wellington",
+      "phone_mask": "+••••••5497"
+    },
+    "attachment": {
+      "name": "Santana-Teste-Documento.pdf",
+      "sha256": "9a89a7a628685a1b1b0f420c65154d477690d9a3688dbaa110fe65490daa6c18",
+      "mime_type": "application/pdf",
+      "size_bytes": 1810
+    },
+    "conversation_id": "789ea855-4e5e-5767-aae8-1316129c2ddc",
+    "expected_revision": 186
+  },
+  "payload_sha256": "dfc37c70c7923af45e2e676697da3d88d0aef2beccec736c8901da61938797e3",
+  "state": "sent",
+  "expires_at": "2026-10-18T21:25:41.041+00:00",
+  "real_dispatch_enabled": false,
+  "coordinator_verified": false,
+  "external_request_attempted": true,
+  "specific_chat_authorization": {
+    "approved": true,
+    "at": "2026-10-18T20:58:49Z",
+    "scope": "one_document_attempt_exact_prepared_pdf_and_caption_to_personal_5497"
+  },
+  "independent_human_review_pending": false,
+  "production_operator_consent_pending": false,
+  "real_media_provider_attempts": 1,
+  "permission_live_enabled": false,
+  "permission_window_expires_at": "2026-10-18T21:25:41.041Z",
+  "approval_url": "https://santana-mcp-homolog-consent.vercel.app/revisar-envio?documento=20261018#1f45f9e1-915f-479b-b791-67b436e72b7c",
+  "accepted_by_api": true,
+  "delivery_confirmed": false,
+  "retry_allowed": false,
+  "provider_message_id": "3EB0DBB9C8819F75D72A944F3999FF38",
+  "authorized_at": "2026-10-18T21:01:36.200857Z",
+  "claimed_at": "2026-10-18T21:02:19.437829Z",
+  "settled_at": "2026-10-18T21:02:22.678613Z",
+  "attachment_id": "37d0cba1-3db5-4ad7-8716-51bd38b8ce9d",
+  "audit_events": [
+    "prod_operator_authorized_one_attempt",
+    "official_claim_created",
+    "settled"
+  ],
+  "human_pause": true,
+  "conversation_revision_after": 188,
+  "recipient_receipt_confirmation": {
+    "confirmed": true,
+    "source": "user_chat",
+    "at": "2026-10-18T21:02:57Z"
+  },
+  "provider_delivery_confirmed": false,
+  "recipient_file_open_confirmation": null
+}
