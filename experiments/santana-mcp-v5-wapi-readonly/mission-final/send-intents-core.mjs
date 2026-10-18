@@ -43,7 +43,7 @@ export function createIntentHandler({authenticate,contact,save,get,approve,audit
     if(row.state!=='prepared')return json(409,{status:'already_reviewed'});
     const changed=await approve(row.id,actor.sub,actor.session_id,row.payload_sha256);
     if(!changed)return json(409,{status:'approval_conflict'});
-    await audit(actor,row.id,'human_review');
+    // approve() persists both the review and its audit atomically.
     return json(200,{status:'ready',state:'human_reviewed_dispatch_blocked',intent_id:row.id,real_dispatch_enabled:false,external_request_attempted:false});
    }
    await audit(actor,row.id,b.action);

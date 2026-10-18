@@ -27,7 +27,8 @@ export function sendIntent(request:Request,admin:any,verifier:any,issuer:string)
   },
   get:async(id:string,owner:string)=>{const r=await admin.from('homolog_mcp_send_intents').select('*').eq('id',id).eq('owner_id',owner).maybeSingle();if(r.error)throw Error('persistence');return r.data;},
   approve:async(id:string,owner:string,session:string,sha:string)=>{
-   const r=await admin.from('homolog_mcp_send_intents').update({state:'human_reviewed_dispatch_blocked',reviewed_by:owner,review_session_id:session,reviewed_at:new Date().toISOString()}).eq('id',id).eq('owner_id',owner).eq('payload_sha256',sha).eq('state','prepared').gt('expires_at',new Date().toISOString()).select('id');if(r.error)throw Error('persistence');return r.data?.length===1;
+   const r=await admin.rpc('sana_mcp_review_intent_atomic',{p_owner:owner,p_intent:id,p_session:session,p_digest:sha});
+   if(r.error)throw Error('review_persistence');return r.data===true;
   },
   audit:async(actor:any,intent:string,operation:string)=>{const r=await admin.from('homolog_mcp_send_audit').insert({owner_id:actor.sub,intent_id:intent,operation,session_id:actor.human?actor.session_id:null});if(r.error)throw Error('audit');},
  })(request);
