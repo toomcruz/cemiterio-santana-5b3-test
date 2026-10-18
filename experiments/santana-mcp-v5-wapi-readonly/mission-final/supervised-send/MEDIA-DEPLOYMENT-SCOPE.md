@@ -6,7 +6,7 @@ Estado: candidato testado; implantação em produção e qualquer novo envio NÃ
 
 1. No banco SANTANA-SANA-PROD existente: acrescentar `attachment_id` com chave estrangeira à tabela `sana_mcp_send_operations`; substituir apenas a restrição de texto por vínculo entre anexo e operação; acrescentar a função privada `attachment_matches`; atualizar somente a RPC MCP `sana_mcp_coordinated_send`. Script exato: `media-upgrade.sql`.
 2. Na Edge Function existente `sana-panel-preview-login`: substituir somente o módulo MCP `mcp-supervised-send.ts` pelo candidato `edge-operations.ts` e incluir seu auxiliar `media-attachments.mjs`. A entrada e todos os módulos do atendimento permanecem iguais.
-3. No projeto oficial Vercel existente: atualizar `lib/sana/official-adapter.mjs`, incluir `lib/sana/media-attachments.mjs`, atualizar somente a prévia de anexo em `app/mcp-authorize/page.tsx` e ajustar o prazo interno exclusivamente das ações MCP na rota `app/api/runtime/sana-control/route.ts`. Base de produção conhecida: `6e991ad5a9fa6ecd4b544a1e762ebed8ca3828d6`.
+3. No projeto oficial Vercel existente: atualizar `lib/sana/official-adapter.mjs` e `lib/sana/edge-operations.mjs`, incluir `lib/sana/media-attachments.mjs`, atualizar somente a prévia de anexo em `app/mcp-authorize/page.tsx` e ajustar o prazo interno exclusivamente das ações MCP na rota `app/api/runtime/sana-control/route.ts`. Base de produção conhecida: `6e991ad5a9fa6ecd4b544a1e762ebed8ca3828d6`.
 
 Sem novas tabelas, buckets, projetos, plugins, serviços ou credenciais. O emissor `manual-whatsapp.ts`, `sana_manual_whatsapp`, `sana_control_transition`, as barreiras de concorrência, Sana, n8n, webhooks, Boss Bridge, LAB e túneis não serão alterados.
 
@@ -23,7 +23,7 @@ Sem novas tabelas, buckets, projetos, plugins, serviços ou credenciais. O emiss
 
 ## Verificação já realizada
 
-27 testes Node e 2 testes Python passaram localmente. O fluxo completo de identidade/revisão/armazenamento/emissor foi simulado com os arquivos de teste reais. A qualificação PostgreSQL passou em HOMOLOG usando apenas tabelas/funções temporárias e rollback; nenhuma alteração permanente nem transporte real.
+27 testes Node e 2 testes Python passaram localmente e no runner existente da VPS (run `39161272624`, job `117774932888`, conclusão `success`). O fluxo completo de identidade/revisão/armazenamento/emissor foi simulado com os arquivos de teste reais. A qualificação PostgreSQL passou em HOMOLOG usando apenas tabelas/funções temporárias e rollback; nenhuma alteração permanente nem transporte real.
 
 A compilação do Painel e as verificações da implantação serão executadas na aplicação existente antes de liberar seu uso. Não há comprovação de envio real de imagem ou PDF ainda.
 

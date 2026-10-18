@@ -339,7 +339,7 @@
   "repository": {
     "pr": "https://github.com/toomcruz/cemiterio-santana-5b3-test/pull/57",
     "branch": "codex/santana-mcp-lab-maintenance",
-    "latest_commit": "011d13dfad72a976bf36576e1b5fc6d68d370711",
+    "latest_commit": "bae84721dbcca60ec588c9d939e4b095b7622fd0",
     "official_deployment_branch": "codex/santana-mcp-supervised-send"
   },
   "report_library_file_id": "libfile_7aac830c56408191ab9ea30e587108d0",
@@ -401,7 +401,7 @@
   ],
   "media_candidate": {
     "status": "MEDIA_CANDIDATE_TESTED_PRODUCTION_APPROVAL_PENDING",
-    "checked_at": "2026-10-18T19:57:38.187277+00:00",
+    "checked_at": "2026-10-18T20:01:52.646911+00:00",
     "node_tests": 27,
     "python_tests": 2,
     "local_tests_passed": true,
@@ -447,8 +447,37 @@
       "test-media-attachments.mjs": "27098ca6908243f1960c563f10a2e76ce3be8a234bf984c27aa67b357ff89611",
       "build-media-qualification.py": "f6c5f4f820a04ac04fba197c4ca5e966bd989cf935ed81116406f6ff0745f6b2",
       "qualify-media.sql": "c74af330118e45514ab4cadf54b4e2c895f45c2e00b61a7a734f8ea6df503d43",
-      "MEDIA-DEPLOYMENT-SCOPE.md": "647a6bb8166bebc267822c5c4a970e64e6d26a1833d1a79d1bd19938bdf2032e",
+      "MEDIA-DEPLOYMENT-SCOPE.md": "3bc35d0dd82b8742c7878977e091b84b3276705b3ddf4c4d3a4ef159c80f9fc6",
       "media-fixtures/fixtures.json": "1dc14a8b9e5ecf27f3cc2b58e5e8b21e9035aa93725bb4680fedb07073270d4c"
+    },
+    "runner": {
+      "run_id": 39161272624,
+      "job_id": 117774932888,
+      "url": "https://github.com/toomcruz/cemiterio-santana-5b3-test/actions/runs/39161272624",
+      "tested_source_commit": "bae84721dbcca60ec588c9d939e4b095b7622fd0",
+      "status": "success",
+      "node_tests": 27,
+      "python_tests": 2,
+      "production_writes": 0,
+      "real_messages_sent": 0,
+      "services_changed": 0
+    },
+    "production_preservation_verified": {
+      "human_pause": true,
+      "live_gate_open": false,
+      "single_text_sent": 1,
+      "media_column_installed": false,
+      "attachment_primary_or_unique_key": true
+    },
+    "preview_files": {
+      "png": {
+        "path": "media-fixtures/Santana-Teste-Imagem.png",
+        "library_file_id": "libfile_249fc942ce1c8191b3b2828eb1daaaf9"
+      },
+      "pdf": {
+        "path": "media-fixtures/Santana-Teste-Documento.pdf",
+        "library_file_id": "libfile_d62575f22c88819191bcaf6761ec8c87"
+      }
     }
   }
 }
