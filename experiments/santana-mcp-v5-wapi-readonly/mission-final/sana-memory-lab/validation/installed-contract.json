@@ -1,0 +1,48 @@
+{
+  "runtime_entry_files": [],
+  "files": [
+    {
+      "path": "/opt/OpenBot/app/resources/app.asar:/out/main/index.js",
+      "bytes_scanned": 12448543,
+      "complete": true,
+      "sha256": "de5d209f6544cf230dc051d466532ef99822992213efb970b0beb4ae65520048",
+      "markers": {
+        "agent-tasks-v1": false,
+        "/v1/agent-tasks/start": false,
+        "/v1/agent-tasks/send": false,
+        "/v1/agent-tasks/read": false,
+        "/deliveries/": false
+      }
+    },
+    {
+      "path": "/opt/OpenBot/app/resources/app.asar:/package.json",
+      "bytes_scanned": 4417,
+      "complete": true,
+      "sha256": "adda4c714e06489fbbc4d87c4522c47f199808a381bb7fd1ed326dcb73500563",
+      "markers": {
+        "agent-tasks-v1": false,
+        "/v1/agent-tasks/start": false,
+        "/v1/agent-tasks/send": false,
+        "/v1/agent-tasks/read": false,
+        "/deliveries/": false
+      },
+      "name": "openbot",
+      "version": "0.43.0"
+    },
+    {
+      "path": "/opt/OpenBot/hosted/openbot-hosted-server",
+      "bytes_scanned": 7709,
+      "complete": true,
+      "sha256": "4b7cf5bf0752dfad20d0cea6aa905da2ce41220dac75348bbfa62624ab57ec3e",
+      "markers": {
+        "agent-tasks-v1": false,
+        "/v1/agent-tasks/start": false,
+        "/v1/agent-tasks/send": false,
+        "/v1/agent-tasks/read": false,
+        "/deliveries/": false
+      }
+    }
+  ],
+  "changes": 0,
+  "private_config_reads": 0
+}

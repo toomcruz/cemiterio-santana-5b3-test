@@ -1,0 +1,18 @@
+{
+  "task_id": "d6d8d76dbb344a0a9d70e22acaeee342",
+  "run_id": "1acc093e-de6c-40a5-9c13-1aa004c38e7e",
+  "delivery_id": "8e77a49f-53a0-443b-9667-439e83cf57f2",
+  "openbot_status": "succeeded",
+  "bridge_state": "failed",
+  "result_available": false,
+  "error": "RESULT_MISSING",
+  "reconciliation_tool": {
+    "isError": true,
+    "error_code": "INVALID_ARGUMENT",
+    "error": "'run_id'"
+  },
+  "attempts": 1,
+  "automatic_resends": 0,
+  "whatsapp_sends": 0,
+  "production_writes": 0
+}
