@@ -32,7 +32,7 @@ jobs:
           python3 - <<'PY'
           import hashlib,io,json,os,runpy,stat,subprocess,sys,tempfile,zipfile
           from pathlib import Path
-          expected='2011a720e421d8f6f6632e2ec061ed685530c5cc56c15d36148385d153d7ab12'
+          expected='fc8d1707695d2cc979e6ea49c23ac1f23898819ffcb2315e30518ddeae9a530e'
           base=Path('/home/runner/santana-mcp-staging/63a85c509957532a/WhatsApp-Santana-MCP-v5-Consolidado.zip')
           base_hash='63a85c509957532a8091f0ad13b5a5423a0dfeb19a007310bac1f0943f27b6ee'
           if os.environ.get('ACTION')=='collect':

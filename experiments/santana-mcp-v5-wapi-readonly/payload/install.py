@@ -181,7 +181,9 @@ def main():
     changes=stage_transaction(source,target['root'],backup,entries)
     unit=target['unit'];plan={'unit':unit,'target':str(target['root']),'files':changes,'ledger_policy':'NEVER_RESTORE_OR_DELETE'}
     (backup/'plan.json').write_text(json.dumps(plan,indent=2));os.chmod(backup/'plan.json',0o600)
-    unit_source=command(['systemctl','cat',unit]);(backup/'unit-before.txt').write_text(unit_source);os.chmod(backup/'unit-before.txt',0o600)
+    # Unit configuration is never changed here; do not copy inline credentials.
+    (backup/'unit-policy.json').write_text(json.dumps({'unit':unit,'configuration_changed':False}))
+    os.chmod(backup/'unit-policy.json',0o600)
     command(['systemctl','stop',unit])
     try:
         audit=Path(target['env'].get('SANTANA_AUDIT_DB','./state/whatsapp_santana_mcp.sqlite3'))
