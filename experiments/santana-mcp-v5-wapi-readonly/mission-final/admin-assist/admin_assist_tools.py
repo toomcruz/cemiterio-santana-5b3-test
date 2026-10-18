@@ -27,9 +27,13 @@ def render_attachment(data,args):
     # Standalone CPython builds may keep libffi beside libpython. Use only the
     # interpreter's configured library directory; never inherit caller env.
     clean_env={'PATH':os.defpath}
+    # Relocated CPython's compiled LIBDIR can point at a nonexistent build host.
+    library_dirs=[Path(sys.base_prefix)/'lib']
     libdir=sysconfig.get_config_var('LIBDIR')
-    if sys.platform.startswith('linux') and libdir and Path(libdir).is_absolute() and Path(libdir).is_dir():
-        clean_env['LD_LIBRARY_PATH']=str(Path(libdir).resolve())
+    if libdir:library_dirs.append(Path(libdir))
+    trusted_dirs=list(dict.fromkeys(str(p.resolve()) for p in library_dirs if p.is_absolute() and p.is_dir()))
+    if sys.platform.startswith('linux') and trusted_dirs:
+        clean_env['LD_LIBRARY_PATH']=os.pathsep.join(trusted_dirs)
     result=subprocess.run([sys.executable,'-I','-c','import sys,json,runpy;sys.path[:0]=json.loads(sys.argv[1]);runpy.run_path(sys.argv[2],run_name="__main__")',json.dumps(sorted(set(paths))),str(worker)],input=json.dumps(body),text=True,capture_output=True,timeout=10,env=clean_env)
     if result.returncode or len(result.stdout)>2100000:raise RuntimeError('Análise limitada pelo orçamento de recursos.')
     value=json.loads(result.stdout)

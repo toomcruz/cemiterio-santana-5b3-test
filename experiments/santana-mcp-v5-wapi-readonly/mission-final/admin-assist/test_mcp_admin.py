@@ -68,6 +68,8 @@ class AdminMCP(unittest.TestCase):
             run.return_value.returncode=0;run.return_value.stdout=json.dumps({'status':'ready','images':[]})
             result=render_attachment({**payload(b'abc','image/png'),'token':'MUST_NOT_REACH_RENDERER','provider':{'mediaKey':'MUST_NOT_REACH_RENDERER'}},{})
             kwargs=run.call_args.kwargs;self.assertNotIn('MUST_NOT_REACH_RENDERER',kwargs['input']);self.assertLessEqual(set(kwargs['env']),{'PATH','LD_LIBRARY_PATH'});self.assertEqual(kwargs['timeout'],10)
-            if 'LD_LIBRARY_PATH' in kwargs['env']:self.assertEqual(kwargs['env']['LD_LIBRARY_PATH'],str(Path(sysconfig.get_config_var('LIBDIR')).resolve()))
+            if 'LD_LIBRARY_PATH' in kwargs['env']:
+                expected={str(p.resolve()) for p in (Path(sys.base_prefix)/'lib',Path(sysconfig.get_config_var('LIBDIR'))) if p.is_absolute() and p.is_dir()}
+                self.assertEqual(set(kwargs['env']['LD_LIBRARY_PATH'].split(os.pathsep)),expected)
             self.assertNotIn('MUST_NOT_REACH_RENDERER',json.dumps(result))
 if __name__=='__main__':unittest.main()

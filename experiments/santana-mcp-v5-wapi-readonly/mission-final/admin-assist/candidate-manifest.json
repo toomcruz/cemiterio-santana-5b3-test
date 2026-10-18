@@ -18,7 +18,7 @@
     "homolog-edge/index.ts": "e50c4fdf4e39738aaf932c257f2e40e94fe3fa6e241868328fb84aa54080ce9f",
     "homolog-mcp/api/mcp.py": "ad4d96263c77816d21cb544c6721100535f8dcab3ecb47c2280bab453ab318fe",
     "homolog-mcp/requirements.txt": "4dc7d8b537fee681ff816a566a74323f85ef1a10b26d340c9c32869ea14d544a",
-    "homolog-mcp/whatsapp-santana-mcp/admin_assist_tools.py": "813320782fba630304904cb5c3d1d2a2925ec0b629cb3924cacb3ec5d77df2a0",
+    "homolog-mcp/whatsapp-santana-mcp/admin_assist_tools.py": "e3884a182e933b6f31070b15aabc1d04449d4623b9a0ecd0bddfaf09f2229e5b",
     "homolog-mcp/whatsapp-santana-mcp/attachment_worker.py": "487779966d65da18d9a8267d6b54cbd9f13e916b068c42c128fe9598dee2ba9e",
     "homolog-mcp/whatsapp-santana-mcp/sana_read_provider.py": "e3f2e2a33f03edcb211200dde47c49ec8c6c0aed2d500d420509f90bfda8becd",
     "homolog-mcp/whatsapp-santana-mcp/server.py": "9e8f52c895122c5496dccbfcbdd358f95785feb86f19f6c8c24a90701ea0d1d5",
