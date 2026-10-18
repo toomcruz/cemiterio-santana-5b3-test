@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Cache-Control" content="no-store">
+  <title>Consentimento — MCP Santana HOMOLOG</title>
+  <style>
+    :root{color-scheme:light;--ink:#172421;--muted:#63736d;--line:#dbe4df;--green:#176b50;--pale:#f2f7f4;--red:#a73737}
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,#e8f2ed,#f7f8f4 52%,#e9efed);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);min-height:100vh;display:grid;place-items:center;padding:24px}
+    main{width:min(100%,520px);background:#fff;border:1px solid var(--line);border-radius:20px;padding:clamp(24px,6vw,40px);box-shadow:0 20px 70px #12382a18}
+    .eyebrow{font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:750}h1{font-size:1.65rem;line-height:1.2;margin:.6rem 0}p{color:var(--muted);margin:.5rem 0 1.2rem}.notice{background:var(--pale);border:1px solid var(--line);padding:14px 16px;border-radius:12px;margin:18px 0}.notice strong{color:var(--ink)}label{display:block;font-weight:650;font-size:.9rem;margin:16px 0 6px}input{width:100%;border:1px solid #b8c8c0;border-radius:10px;padding:12px;font:inherit;color:var(--ink)}input:focus{outline:3px solid #176b5030;border-color:var(--green)}button{border:0;border-radius:10px;padding:12px 16px;font:inherit;font-weight:700;cursor:pointer;width:100%;margin-top:12px}.primary{background:var(--green);color:#fff}.secondary{background:#fff;color:var(--ink);border:1px solid var(--line)}button:disabled{opacity:.55;cursor:wait}.error{color:var(--red);min-height:1.4em;font-size:.92rem}.details{border-top:1px solid var(--line);margin-top:20px;padding-top:16px}.details dt{font-size:.78rem;color:var(--muted);margin-top:10px}.details dd{margin:2px 0 0;overflow-wrap:anywhere;font-weight:600}.actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}.actions button{margin:0}.small{font-size:.8rem;margin-top:22px} [hidden]{display:none!important}
+  </style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">Cemitério Santana · HOMOLOG</div>
+  <h1>Entrar e revisar acesso</h1>
+  <p>Esta página autoriza somente o cliente de teste do MCP Santana. Ela não permite cadastro público.</p>
+  <div class="notice"><strong>Acesso individual e restrito.</strong><br>O operador pode ler apenas as conversas concedidas no servidor. A fonte de cada consulta identifica dados sintéticos ou histórico real autorizado. Nenhum envio real está habilitado.</div>
+  <form id="login">
+    <label for="email">E-mail do operador de homologação</label>
+    <input id="email" type="email" autocomplete="username" required>
+    <label for="password">Senha</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+    <button id="loginButton" class="primary" type="submit">Entrar e revisar solicitação</button>
+  </form>
+  <section id="consent" hidden>
+    <div class="details">
+      <h2>Autorizar este acesso?</h2>
+      <dl><dt>Aplicativo</dt><dd id="clientName"></dd><dt>Permissões solicitadas</dt><dd id="scope"></dd><dt>Retorno cadastrado</dt><dd id="redirectUri"></dd></dl>
+    </div>
+    <div class="actions"><button id="deny" class="secondary" type="button">Negar</button><button id="approve" class="primary" type="button">Aprovar</button></div>
+  </section>
+  <p id="status" class="error" role="status" aria-live="polite"></p>
+  <p class="small">Os tokens não são exibidos nem gravados por esta página. O cliente MCP recebe apenas os tokens emitidos pelo Supabase Auth após a aprovação.</p>
+</main>
+<script>
+if (new URLSearchParams(location.hash.slice(1)).get('type') === 'recovery') {
+  location.replace('/oauth/reset-password' + location.hash);
+}
+</script>
+<script type="module">
+  import { createClient } from "https://esm.sh/@supabase/supabase-js@2.118.0";
+
+  const PROJECT_URL = "https://xdccjulfqcqefykunwtg.supabase.co";
+  const PUBLISHABLE_KEY = "sb_publishable_doiDzLKISweiTWKlFYFG6w_0PZjP1vw";
+  const EXPECTED_CLIENT_ID = "ccb5e1fc-2a61-4296-943a-a85c103e9313";
+  const EXPECTED_CLIENT_NAME = "WhatsApp Santana MCP — HOMOLOG ChatGPT Test";
+  const EXPECTED_REDIRECTS = new Set(["https://chatgpt.com/connector_platform_oauth_redirect", "https://chatgpt.com/connector/oauth/v8LS7qwzHf-Q"]);
+  function allowedCallback(value){ try { const u=new URL(value); return !u.username && !u.password && EXPECTED_REDIRECTS.has(u.origin+u.pathname); } catch { return false; } }
+  const authId = new URL(location.href).searchParams.get("authorization_id");
+  const supabase = createClient(PROJECT_URL, PUBLISHABLE_KEY, {auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+  const $ = id => document.getElementById(id);
+  let authorizationId = authId;
+
+  function fail(message){ $("status").textContent = message; }
+  function show(value){ return typeof value === "string" ? value : ""; }
+  function getClientId(details){ return details?.client_id ?? details?.client?.client_id ?? details?.client?.id ?? ""; }
+  function getClientName(details){ return details?.client_name ?? details?.client?.name ?? details?.client?.client_name ?? "Cliente OAuth"; }
+  function getRedirect(details){ return details?.redirect_uri ?? details?.redirect_url ?? details?.redirectUri ?? ""; }
+  function getScope(details){ return details?.scope ?? ""; }
+
+  async function showAuthorization(){
+    if(!authorizationId) throw new Error("Solicitação OAuth ausente ou inválida.");
+    const {data,error}=await supabase.auth.oauth.getAuthorizationDetails(authorizationId);
+    if(error) throw error;
+    if(data && !("authorization_id" in data) && data.redirect_url){ if(!allowedCallback(data.redirect_url)) throw new Error("Retorno OAuth inválido."); location.replace(data.redirect_url); return; }
+    if(!data) throw new Error("Cliente OAuth não autorizado para esta tela.");
+    const clientId=getClientId(data);
+    const clientName=getClientName(data);
+    if((clientId && clientId!==EXPECTED_CLIENT_ID) || (!clientId && clientName!==EXPECTED_CLIENT_NAME)) throw new Error("Cliente OAuth não autorizado para esta tela.");
+    const redirect=getRedirect(data);
+    if(!EXPECTED_REDIRECTS.has(redirect)) throw new Error("Endereço de retorno não corresponde ao cliente de teste cadastrado.");
+    $("clientName").textContent=show(clientName);
+    $("scope").textContent=show(getScope(data)) || "A solicitação não informou escopos.";
+    $("redirectUri").textContent=redirect;
+    $("login").hidden=true; $("consent").hidden=false;
+  }
+
+  $("login").addEventListener("submit",async event=>{
+    event.preventDefault(); $("loginButton").disabled=true; fail("");
+    try{
+      const {error}=await supabase.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});
+      if(error) throw error;
+      $("password").value="";
+      await showAuthorization();
+    }catch(error){ fail(error?.message?.includes("invalid") ? "Não foi possível autenticar este operador." : "Não foi possível carregar a solicitação. Verifique o login e tente novamente."); }
+    finally{$("loginButton").disabled=false;}
+  });
+
+  async function decide(approve){
+    $("approve").disabled=true; $("deny").disabled=true; fail("");
+    try{
+      const result=approve
+        ? await supabase.auth.oauth.approveAuthorization(authorizationId)
+        : await supabase.auth.oauth.denyAuthorization(authorizationId);
+      if(result.error) throw result.error;
+      const target=result.data?.redirect_url;
+      if(typeof target!=="string" || !allowedCallback(target)) throw new Error("Resposta OAuth inválida.");
+      location.replace(target);
+    }catch(error){ fail("A decisão não foi concluída. A solicitação continua sem aprovação."); $("approve").disabled=false; $("deny").disabled=false; }
+  }
+  $("approve").addEventListener("click",()=>decide(true));
+  $("deny").addEventListener("click",()=>decide(false));
+  if(!authorizationId){$("login").hidden=true;fail("Solicitação OAuth ausente. Volte ao ChatGPT e inicie a conexão novamente.");}
+</script>
+</body>
+</html>

@@ -34,6 +34,12 @@ jobs:
           from pathlib import Path
           if os.environ.get('ACTION')=='inventory':
               runpy.run_path('experiments/santana-mcp-v5-wapi-readonly/openbot-readonly-inventory.py',run_name='__main__')
+              testroot=Path('experiments/santana-mcp-v5-wapi-readonly/mission-final')
+              commands=[['node','--experimental-strip-types','--test',str(testroot/'test-production-read.mjs'),str(testroot/'test-send-intents.mjs'),str(testroot/'test-official-channel.mjs')],[sys.executable,str(testroot/'test_mcp_content_delta.py')]]
+              for command in commands:
+                  result=subprocess.run(command,capture_output=True,text=True,timeout=60)
+                  print(json.dumps({'suite':Path(command[0]).name,'exit_code':result.returncode,'log_tail':(result.stdout+result.stderr)[-4000:]}))
+                  if result.returncode:raise SystemExit('INTEGRATION_TESTS_FAILED')
               raise SystemExit(0)
           expected='6e423557f105cff3983c1f1a1741d2ec2f96eb4da352b43bb058d168204d57b9'
           base=Path('/home/runner/santana-mcp-staging/63a85c509957532a/WhatsApp-Santana-MCP-v5-Consolidado.zip')

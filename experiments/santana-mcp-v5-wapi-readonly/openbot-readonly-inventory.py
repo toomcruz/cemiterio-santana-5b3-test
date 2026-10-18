@@ -1,10 +1,10 @@
 """Bounded runner inventory. Never emits configuration values or changes services."""
-import json, os, re, shutil, stat, subprocess
+import json, os, re, shutil, stat, subprocess, sqlite3
 from pathlib import Path
 
 report = {'uid': os.getuid(), 'services': {}, 'configurations': [], 'real_messages_sent': 0, 'services_changed': 0}
 for unit in ('openbot.service', 'openbot-tunnel.service', 'santana-mcp-lab.service', 'santana-mcp-lab-tunnel.service'):
-    r = subprocess.run(['systemctl', 'show', unit, '-p', 'ActiveState', '-p', 'MainPID'], capture_output=True, text=True, timeout=5)
+    r = subprocess.run(['systemctl', 'show', unit, '-p', 'ActiveState', '-p', 'MainPID', '-p', 'User', '-p', 'WorkingDirectory'], capture_output=True, text=True, timeout=5)
     report['services'][unit] = dict(line.split('=', 1) for line in r.stdout.splitlines() if '=' in line)
 binary = shutil.which('openbot')
 report['openbot_cli_found'] = bool(binary)
@@ -15,7 +15,7 @@ if binary:
 
 # Read only established configuration roots. Values, account names, endpoints,
 # environment variables, prompts, chat history and session bodies are excluded.
-roots = [Path('/root/.openbot'), Path('/home/runner/.openbot'), Path('/home/openbot/.openbot')]
+roots = [Path('/var/lib/openbot/.config/OpenBot'), Path('/root/.openbot'), Path('/home/runner/.openbot'), Path('/home/openbot/.openbot')]
 def key_paths(value, prefix='', depth=0):
     if depth > 7: return []
     out = []
@@ -33,6 +33,11 @@ def key_paths(value, prefix='', depth=0):
 for root in roots:
     entry={'root':str(root),'accessible':os.access(root,os.R_OK|os.X_OK)}
     try:
+        root.lstat()
+        entry['exists']=True
+    except PermissionError:entry['stat']='permission_denied'
+    except FileNotFoundError:entry['exists']=False
+    try:
         candidates=list(root.glob('*.json'))[:10]+list(root.glob('agents/*/agent/*.json'))[:20]
         entry['files']=[]
         for p in candidates:
@@ -44,6 +49,14 @@ for root in roots:
                 item['readable']=True
             except (OSError,ValueError): item['readable']=False
             entry['files'].append(item)
+        database=root/'openbot.db'
+        if os.access(database,os.R_OK):
+            connection=sqlite3.connect('file:'+str(database)+'?mode=ro',uri=True,timeout=2)
+            try:
+                # Schema only: never read agent messages, sessions or secret values.
+                tables=connection.execute("select name from sqlite_master where type='table' and (lower(name) like '%mcp%' or lower(name) like '%setting%' or lower(name) like '%agent%') limit 20").fetchall()
+                entry['database_schema']=[{'table':name,'columns':[row[1] for row in connection.execute('pragma table_info('+json.dumps(name)+')').fetchall()]} for (name,) in tables]
+            finally:connection.close()
     except OSError: entry['files']=[]
     report['configurations'].append(entry)
 report['isolation_proven']=False

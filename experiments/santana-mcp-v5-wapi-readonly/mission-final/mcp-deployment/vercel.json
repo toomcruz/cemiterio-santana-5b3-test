@@ -1,0 +1,56 @@
+{
+  "cleanUrls": true,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://esm.sh; connect-src 'self' https://xdccjulfqcqefykunwtg.supabase.co https://esm.sh; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; frame-src blob:"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/mcp",
+      "destination": "/api/mcp"
+    },
+    {
+      "source": "/.well-known/oauth-protected-resource",
+      "destination": "/api/oauth-protected-resource"
+    },
+    {
+      "source": "/.well-known/oauth-protected-resource/mcp",
+      "destination": "/api/oauth-protected-resource"
+    },
+    {
+      "source": "/oauth/consent",
+      "destination": "/"
+    },
+    {
+      "source": "/oauth/reset-password",
+      "destination": "/reset-password"
+    },
+    {
+      "source": "/revisar-envio",
+      "destination": "/revisar-envio.html"
+    }
+  ]
+}
