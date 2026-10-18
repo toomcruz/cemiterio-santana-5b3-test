@@ -1,7 +1,7 @@
-python3 -I - <<'SANA_MEMORY_LAB'
-import hashlib,os
-fd=os.open('/home/runner/santana-mcp-staging/sana-memory-dbbfe50433c1/apply-lab.py',os.O_RDONLY|os.O_NOFOLLOW)
-with os.fdopen(fd,'rb') as f: code=f.read(524289)
-if len(code)>524288 or hashlib.sha256(code).hexdigest()!='dbbfe50433c183b2e4462266b20bb8ee062c3bd731ea0ebbc7fd15dfb91a9fa0': raise SystemExit('PAREI: integridade divergente; nada executado.')
-exec(compile(code,'sana_memory_lab_verificado','exec'),{'__name__':'__main__'})
-SANA_MEMORY_LAB
+SUPERADO — NÃO EXECUTAR NOVAMENTE.
+
+O diagnóstico root confirmou NATIVE_RESULT_NOT_PROVEN_NO_CHANGE.
+O turno antigo não possui mensagens assistant; o GET oficial também não possui resposta.
+O retorno direto da Sana já foi comprovado pela ponte existente, sem instalação.
+A API agent-tasks-v1 da referência é do desenvolvimento 0.44 e não é exposta pela Team API oficial v0.43 instalada.
+Nenhum novo comando root é necessário agora. Consulte STATUS.md.

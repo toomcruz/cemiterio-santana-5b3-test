@@ -1,6 +1,7 @@
 from pathlib import Path
 import json,hashlib
 ROOT=Path(__file__).resolve().parent
+if (ROOT/'DEPLOYMENT-RETIRED.json').exists(): raise SystemExit('ROOT_PATCH_RETIRED: consulta STATUS.md; nada gerado ou alterado.')
 patch={n:(ROOT/'bridge-patch'/n).read_text() for n in ('server.py','agent_messages.py','result_adapter.py')}
 patch.update({'sana_memory_lab/'+n:(ROOT/'candidate'/n).read_text() for n in ('session_router.py','team_transport.py','reconciliation.py')})
 preflight={n:(ROOT/'bridge-patch'/n).read_text() for n in ('server.py','agent_messages.py','result_adapter.py','events.py','task_queue.py')}

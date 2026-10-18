@@ -1,21 +1,29 @@
-# Resultado do trabalho LAB
+# Estado confirmado após o diagnóstico root
 
-O candidato está preparado e validado, mas não foi instalado na ponte ativa.
+O instalador terminou com NATIVE_RESULT_NOT_PROVEN_NO_CHANGE. Nenhum código ativo foi alterado.
 
-- ZIP íntegro, manifesto 7/7 e 18 testes originais aprovados.
-- 63 testes do candidato/regressão aprovados localmente e no runner da VPS.
-- Evidência VPS: https://github.com/toomcruz/cemiterio-santana-5b3-test/actions/runs/39175137689
-- Todos os PIDs monitorados preservados; nenhum envio WhatsApp, ativação automática ou alteração de produção.
-- Falha real reproduzida: OpenBot succeeded, ponte RESULT_MISSING; reconciliação retorna INVALID_ARGUMENT: 'run_id'. Uma única tentativa, sem reenvio.
-- A correção usa GET oficial da entrega exata e inclui run_id na resposta da reconciliação. Ainda precisa de prova autenticada na VPS; não está declarada como correção real concluída.
-- Bundle desktop identificado como 0.43.0. A inspeção estática não comprovou agent-tasks-v1 no runtime ativo; ausência de strings não é prova de ausência do recurso. O contrato oficial foi auditado, incluindo diferença entre start (task) e send (recibo).
-- Memória candidata tem TTL 300s por atendimento e agente, deduplicação persistente, serialização de turnos e bloqueio de resultado desconhecido. Acesso restrito a identificadores LAB sintéticos.
-- Três turnos reais, correção real de contexto, dois contatos reais fictícios no OpenBot, expiração real de cinco minutos e recuperação real de falhas ainda NÃO foram executados. Aprovações desses cenários até aqui são offline.
+## Retorno real comprovado
+A Sana respondeu diretamente, pelo MCP instalado, SANA_LAB_RETORNO_OK_20261018. Request d96364dad5e94ceeaada53536e3eb748, delivery 4b72400d-cb80-4290-b023-3e78077887d6: succeeded, result_available=true, uma tentativa. Isso não é um envio WhatsApp e não prova isolamento entre atendimentos.
 
-## Intervenção indispensável atual
+## Execução antiga
+O join exato confirma run 1acc093e-de6c-40a5-9c13-1aa004c38e7e → delivery 8e77a49f-53a0-443b-9667-439e83cf57f2 → turn 01a15138-27ba-77b0-a443-3f3446df1828. Status succeeded/completed, uma mensagem user/routine, zero mensagens assistant. O endpoint oficial também não tem answer. Não existe resposta disponível para recuperar por esse caminho. A causa da ausência de geração não foi comprovada; não atribuir automaticamente a modo silencioso. O run não foi reenviado.
 
-Runner UID 1001 sem sudo e sem escrita em /opt/openbot-bridge. Executar uma vez o comando de APLICAR-LAB-ROOT.txt como root, já preparado na VPS. O instalador prova a leitura da execução sintética existente antes de qualquer aplicação; se não comprovar, não altera nada. Se comprovar, cria backup privado, aplica o patch e reinicia somente openbot-bridge.service; preserva o OpenBot e túneis. Memória fica desativada, sem credenciais Team API novas ou globais.
+O defeito adicional de reconciliação ('run_id') existe e está corrigido apenas no candidato. Não confundir essa correção com geração de uma resposta inexistente.
 
-SHA-256 do payload: dbbfe50433c183b2e4462266b20bb8ee062c3bd731ea0ebbc7fd15dfb91a9fa0.
+## Compatibilidade real
+A instalação auditada contém o bundle 0.43.0, que também é a release estável mais recente consultada. Na fonte oficial v0.43.0, o backend possui startTask/readTask/closeTask para uso local, mas a Team API não contém agent-tasks-v1 nem /v1/agent-tasks ou routeAgentTasks. As pastas de protocolos e rotas da release também não têm esse contrato.
 
-Depois será necessário comprovar sessão Team API autorizada e isolamento de ferramentas, workspace e memórias persistentes. Só então executar a bateria real com contatos fictícios. A Sana ainda NÃO está tecnicamente validada para continuidade de atendimento via WhatsApp.
+A referência inicial fbe6082f706565aa4b0594758ce931344958e187 pertence ao desenvolvimento 0.44.0. A auditoria inicial não havia separado essa referência da release instalada. A comparação agora confirma que o adaptador candidato não pode pressupor a API remota na 0.43. Não é um problema resolvido apenas por root ou novo login.
+
+Fontes:
+- https://github.com/nightly-labs/openbot/releases/tag/v0.43.0
+- https://github.com/nightly-labs/openbot/blob/v0.43.0/src/main/team-api-server.ts
+- https://github.com/nightly-labs/openbot/blob/fbe6082f706565aa4b0594758ce931344958e187/package.json
+- https://github.com/nightly-labs/openbot/blob/fbe6082f706565aa4b0594758ce931344958e187/packages/contracts/src/team-protocol/agent-tasks-v1.ts
+
+## Aplicação anterior retirada
+Não executar novamente APLICAR-LAB-ROOT.txt nem reinstalar o payload anterior. O gerador e o staging desse payload estão bloqueados. A cópia histórica é preservada para auditoria. Nenhuma nova execução root é solicitada agora.
+
+Os 18 testes originais e 63 testes do candidato/regressões permanecem evidência offline; não provam sessões reais. A memória continua isolada e desativada. Faltam um contrato remoto oficial disponível e autorizado na versão executada e a prova de segregação de ferramentas, workspace e memórias persistentes. Não instalar build de desenvolvimento nem alterar o OpenBot para contornar esse bloqueio dentro desta etapa.
+
+Nenhum envio WhatsApp, alteração de produção, concessão, login, novo serviço ou ativação automática da Sana.

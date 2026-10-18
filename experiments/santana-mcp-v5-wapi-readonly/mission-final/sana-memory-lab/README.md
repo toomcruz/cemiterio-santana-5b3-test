@@ -1,3 +1,5 @@
+> SUPERADO APÓS O DIAGNÓSTICO ROOT: consulte STATUS.md. Não aplicar o payload anterior. O retorno direto da Sana foi comprovado; a API de tasks da referência é do desenvolvimento 0.44 e não é exposta pela Team API v0.43.
+
 # Sana: memória por atendimento e retorno de respostas — LAB
 
 Estado: candidato validado offline; ainda não aplicado à ponte ativa. Não pronto para munícipes reais ou ativação automática.

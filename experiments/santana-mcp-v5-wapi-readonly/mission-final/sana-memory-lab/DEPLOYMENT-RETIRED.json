@@ -1,0 +1,6 @@
+{
+  "retired_payload_sha256": "dbbfe50433c183b2e4462266b20bb8ee062c3bd731ea0ebbc7fd15dfb91a9fa0",
+  "reason": "The exact completed routine turn has zero assistant messages; the official delivery also returns no answer. The old marker preflight cannot establish a recoverable result. The installed 0.43 Team API does not expose agent-tasks-v1.",
+  "reexecute": false,
+  "install_allowed": false
+}

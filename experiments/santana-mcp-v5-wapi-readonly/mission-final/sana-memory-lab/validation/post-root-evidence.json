@@ -1,0 +1,80 @@
+{
+  "status": "ROOT_INSTALL_ABORT_CONFIRMED_AND_DIRECT_SANA_REPLY_PROVEN",
+  "root_probe": "validation/root-native-probe.json",
+  "old_execution": {
+    "uid": 994,
+    "run": {
+      "run_id": "1acc093e-de6c-40a5-9c13-1aa004c38e7e",
+      "routine_id": "5d9c7243-6db3-4a5e-9526-b96849da1a13",
+      "agent_id": "agent-285e17aa-ddc6-4866-8408-ce39b59bed3c",
+      "status": "succeeded",
+      "delivery_id": "8e77a49f-53a0-443b-9667-439e83cf57f2",
+      "turn_id": "01a15138-27ba-77b0-a443-3f3446df1828",
+      "thread_id": "openbot-thread-agent-285e17aa-ddc6-4866-8408-ce39b59bed3c"
+    },
+    "messages": [
+      {
+        "author": "user",
+        "status": "completed",
+        "item_type": "routine",
+        "json_keys": [
+          "id",
+          "author",
+          "source",
+          "text",
+          "attachments",
+          "replyToMessageId",
+          "delivery",
+          "routine",
+          "createdAt",
+          "status",
+          "itemType",
+          "reactions",
+          "reaction",
+          "turnId"
+        ],
+        "text_characters": 1805
+      }
+    ],
+    "assistant_message_count": 0,
+    "replayed": false
+  },
+  "direct_sana": {
+    "request_id": "d96364dad5e94ceeaada53536e3eb748",
+    "agent_id": "agent-463cb080-75d4-4371-b3d5-552fc9a435e5",
+    "message_id": "b148f39b-1526-4b0b-84af-b225312a5bdc",
+    "delivery_ids": [
+      "4b72400d-cb80-4290-b023-3e78077887d6"
+    ],
+    "state": "succeeded",
+    "result_available": true,
+    "result": "SANA_LAB_RETORNO_OK_20261018",
+    "attempts": 1
+  },
+  "compatibility": {
+    "installed_desktop_bundle_version": "0.43.0",
+    "latest_stable_release": "v0.43.0",
+    "release_url": "https://github.com/nightly-labs/openbot/releases/tag/v0.43.0",
+    "release_published": "2026-10-17T12:09:42Z",
+    "reference_development_commit": "fbe6082f706565aa4b0594758ce931344958e187",
+    "reference_development_package_version": "0.44.0",
+    "stable_team_server_inspection": {
+      "release": "v0.43.0",
+      "agent_tasks_v1": false,
+      "agent_tasks_routes": false,
+      "routeAgentTasks": false,
+      "bytes": 86196
+    },
+    "stable_protocol_task_files": [],
+    "stable_team_task_route_files": [],
+    "local_backend_has_task_methods": true,
+    "note": "Local backend task methods do not expose the optional Team API contract. Do not infer permission from the Local Scripts token or OS root."
+  },
+  "production_writes": 0,
+  "whatsapp_sends": 0,
+  "sana_activated": false,
+  "session_memory": {
+    "live_verified": false,
+    "reason": "agent-tasks-v1 is absent from the audited stable 0.43 Team API; authenticated client and cross-task privacy are also unproven."
+  }
+}

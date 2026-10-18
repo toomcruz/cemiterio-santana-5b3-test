@@ -1,0 +1,16 @@
+{
+  "status": "NATIVE_RESULT_NOT_PROVEN_NO_CHANGE",
+  "proof": {
+    "run_id": "1acc093e-de6c-40a5-9c13-1aa004c38e7e",
+    "result_available": false,
+    "source": "openbot_local_scripts_delivery",
+    "reason": "RESULT_MISSING",
+    "marker_verified": false,
+    "result_sha256": null,
+    "result_characters": 0,
+    "dispatch_attempts_added": 0
+  },
+  "whatsapp_sends": 0,
+  "production_writes": 0,
+  "sana_activated": false
+}

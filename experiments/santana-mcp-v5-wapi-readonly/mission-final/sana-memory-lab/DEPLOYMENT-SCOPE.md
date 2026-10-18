@@ -1,3 +1,5 @@
+> SUPERADO APÓS O DIAGNÓSTICO ROOT: consulte STATUS.md. Não aplicar o payload anterior. O retorno direto da Sana foi comprovado; a API de tasks da referência é do desenvolvimento 0.44 e não é exposta pela Team API v0.43.
+
 # Escopo exato da ação root — somente LAB da ponte existente
 
 A autorização do usuário cobre execução LAB com backup. A intervenção é necessária por permissão do sistema operacional, não por nova aprovação de produto.
