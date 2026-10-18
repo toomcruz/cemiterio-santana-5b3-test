@@ -46,7 +46,7 @@ jobs:
               raise SystemExit(0)
           if os.environ.get('ACTION')=='supervised':
               testroot=Path('experiments/santana-mcp-v5-wapi-readonly/mission-final/supervised-send')
-              commands=[['node','--experimental-strip-types','--test',str(testroot/'test-adapter.mjs'),str(testroot/'test-binding.mjs')],[sys.executable,str(testroot/'test_mcp_gate.py')]]
+              commands=[['node','--experimental-strip-types','--test',str(testroot/'test-adapter.mjs'),str(testroot/'test-binding.mjs'),str(testroot/'test-media-attachments.mjs')],[sys.executable,str(testroot/'test_mcp_gate.py')]]
               for command in commands:
                   result=subprocess.run(command,capture_output=True,text=True,timeout=60)
                   print(json.dumps({'suite':Path(command[0]).name,'exit_code':result.returncode,'log_tail':(result.stdout+result.stderr)[-5000:]}))

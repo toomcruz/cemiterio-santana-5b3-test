@@ -19,7 +19,7 @@ async function forward(request: NextRequest, body: Record<string, unknown>) {
   if (token.length < 32) return json({ error: "RUNTIME_BINDING_UNAVAILABLE" }, 503);
   const invoke = async (payload: object) => {
     const response = await fetch(EDGE, {
-      method: "POST", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(12000),
+      method: "POST", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(['operator_mcp_authorize','operator_mcp_prepare'].includes(String((payload as Record<string,unknown>).action))?30000:12000),
       headers: { "Content-Type": "application/json", "X-Sana-Prod-Token": token, Authorization: authorization, ...(request.headers.get("x-santana-human-review") ? {"X-Santana-Human-Review":request.headers.get("x-santana-human-review")!}: {}) },
       body: JSON.stringify(payload),
     });

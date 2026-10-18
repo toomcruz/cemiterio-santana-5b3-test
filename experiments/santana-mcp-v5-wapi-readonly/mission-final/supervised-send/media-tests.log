@@ -1,0 +1,35 @@
+✔ full authorization -> exact official sender -> provider acceptance -> status; no delivery assertion (8.239454ms)
+✔ HOMOLOG OAuth cannot act as PROD operator or independent human (0.801138ms)
+✔ specific authorization and an existing operator session are mandatory (1.78801ms)
+✔ changed digest, attachment or expired review cannot authorize (1.49753ms)
+✔ stale revision and prior concurrent claims stop before any provider call (1.725308ms)
+✔ two simultaneous invocations cause one provider request (1.445102ms)
+✔ timeout or malformed success settles unknown and repeat never resends (3.497034ms)
+✔ caller cannot substitute text, operator or phone; missing backend permission blocks (0.901276ms)
+✔ image/png: exact approved attachment and caption use one official request under concurrent calls (3.496353ms)
+✔ image/png: ambiguous media result is never resent (1.098448ms)
+✔ application/pdf: exact approved attachment and caption use one official request under concurrent calls (1.334198ms)
+✔ application/pdf: ambiguous media result is never resent (0.623234ms)
+✔ existing HMG proof -> PROD operator gate -> coordinator -> existing official emitter, fully simulated (18.422969ms)
+✔ revoked HMG, revoked PROD and wrong identity binding never reach provider (3.013247ms)
+✔ fresh login of the same reviewer preserves exact review only while original session remains active (4.903088ms)
+✔ Santana-Teste-Documento.pdf: complete HMG human proof -> private canonical attachment -> PROD consent -> official emitter, simulated (13.42446ms)
+✔ Santana-Teste-Imagem.png: complete HMG human proof -> private canonical attachment -> PROD consent -> official emitter, simulated (15.29221ms)
+✔ corrupt upload or closed live permission cannot authorize media or reach provider (17.766537ms)
+✔ Santana-Teste-Documento.pdf: exact bytes staged once and signed only after immutable manifest verification (10.418264ms)
+✔ Santana-Teste-Documento.pdf: changed bytes during upload cannot become verified or signed (2.217136ms)
+✔ Santana-Teste-Documento.pdf: replacing stored bytes or swapping operator/action after approval blocks before signing (12.078164ms)
+✔ Santana-Teste-Imagem.png: exact bytes staged once and signed only after immutable manifest verification (11.187945ms)
+✔ Santana-Teste-Imagem.png: changed bytes during upload cannot become verified or signed (11.053115ms)
+✔ Santana-Teste-Imagem.png: replacing stored bytes or swapping operator/action after approval blocks before signing (28.411706ms)
+✔ wrong reviewed hash, bytes, type, length or extra metadata cannot stage (9.245465ms)
+✔ storage unavailability never overwrites objects or starts implicit retry (9.605929ms)
+✔ each media class needs its own explicit consent; file metadata is exact (4.225665ms)
+ℹ tests 27
+ℹ suites 0
+ℹ pass 27
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 217.33727

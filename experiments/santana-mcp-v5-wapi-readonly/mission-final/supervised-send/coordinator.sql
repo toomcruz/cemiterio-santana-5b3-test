@@ -1,4 +1,4 @@
--- Candidate only. NOT APPLIED TO PROD. Text-only first rollout.
+-- Candidate extension for exact reviewed PNG/JPEG/PDF; NOT APPLIED TO PROD.
 begin;
 create schema if not exists sana_mcp_private;
 revoke all on schema sana_mcp_private from public,anon,authenticated;
@@ -23,12 +23,13 @@ create table public.sana_mcp_send_operations (
  operation_id uuid primary key, subject_id uuid not null, client_id uuid not null,
  operator_id uuid not null, operator_session_id uuid not null,
  conversation_id uuid not null references public.sana_conversations(conversation_id),
+ attachment_id uuid references public.sana_operator_attachments(artifact_id),
  payload jsonb not null, payload_sha256 text not null check(payload_sha256 ~ '^[a-f0-9]{64}$'),
  recipient_e164 text not null, expected_revision integer not null,
  state text not null check(state in ('authorized','dispatching','sent','failed','unknown','test')),
  expires_at timestamptz not null, authorized_at timestamptz not null default clock_timestamp(),
  claimed_at timestamptz, settled_at timestamptz, provider_message_id text,
- check(payload->'attachment' is not distinct from 'null'::jsonb),
+ constraint sana_mcp_send_operations_attachment_binding check((attachment_id is null and payload->'attachment'='null'::jsonb) or (attachment_id is not null and jsonb_typeof(payload->'attachment')='object')),
  check(payload->>'conversation_id'=conversation_id::text)
 );
 create unique index sana_mcp_one_dispatch on public.sana_mcp_send_operations(conversation_id)
@@ -45,6 +46,16 @@ grant select on public.sana_mcp_send_permissions to service_role;
 grant select,insert,update on public.sana_mcp_send_operations to service_role;
 grant insert,select on public.sana_mcp_send_events to service_role;
 grant usage,select on sequence public.sana_mcp_send_events_id_seq to service_role;
+
+create function sana_mcp_private.attachment_matches(m jsonb,aid uuid,actor uuid,cid uuid,op uuid) returns boolean
+language sql security invoker set search_path=pg_catalog,public as $$
+ select exists(select 1 from public.sana_operator_attachments a where a.artifact_id=aid and a.actor_id=actor
+  and a.conversation_id=cid and a.action_id=op and a.verified_at is not null and a.created_at>clock_timestamp()-interval '2 hours'
+  and a.mime_type in ('image/png','image/jpeg','application/pdf') and a.size_bytes between 16 and 524288
+  and m=jsonb_build_object('name',a.file_name,'mime_type',a.mime_type,'size_bytes',a.size_bytes,'sha256',a.sha256));
+$$;
+revoke all on function sana_mcp_private.attachment_matches(jsonb,uuid,uuid,uuid,uuid) from public,anon,authenticated;
+grant execute on function sana_mcp_private.attachment_matches(jsonb,uuid,uuid,uuid,uuid) to service_role;
 
 create function public.sana_mcp_coordinated_send(p jsonb) returns jsonb
 language plpgsql security invoker set search_path=pg_catalog,public as $$
@@ -74,7 +85,7 @@ begin
    and 'atendimentos'=any(permissions)) then raise exception 'MCP_PROD_OPERATOR_REVOKED';end if;
  if kind='status' then
   return jsonb_build_object('status','ready','state',o.state,'operation_id',op,'payload_sha256',o.payload_sha256,
-   'accepted_by_api',o.state='sent','delivery_confirmed',false);
+   'accepted_by_api',o.state='sent','delivery_confirmed',false,'attachment_id',o.attachment_id);
  end if;
  if kind='settle' then
   if o.state<>'dispatching' then return jsonb_build_object('status','duplicate','delivery_state',o.state);end if;
@@ -88,7 +99,7 @@ begin
  end if;
  if kind='authorize' and o.operation_id is not null then
   if o.operator_id is distinct from (p->>'operator_id')::uuid or o.payload is distinct from p->'payload'
-   or o.payload_sha256 is distinct from p->>'payload_sha256' then raise exception 'MCP_APPROVAL_CONFLICT';end if;
+   or o.payload_sha256 is distinct from p->>'payload_sha256' or o.attachment_id is distinct from (p->>'attachment_id')::uuid then raise exception 'MCP_APPROVAL_CONFLICT';end if;
   return jsonb_build_object('status','duplicate','operation_id',op,'state',o.state);
  end if;
  if kind='prepare' and o.state<>'authorized' then
@@ -100,24 +111,26 @@ begin
   and conversation_id=cid and is_active and expires_at>clock_timestamp()) then raise exception 'MCP_BINDING_REVOKED';end if;
  if kind='authorize' then
   if not sana_mcp_private.session_active(actor,(p->>'operator_session_id')::uuid) then raise exception 'MCP_PROD_SESSION_REQUIRED';end if;
-  if p->'payload'->'attachment' is distinct from 'null'::jsonb or p->'payload'->>'conversation_id' is distinct from cid::text
+  if (p->'payload'->'attachment' is distinct from 'null'::jsonb and not sana_mcp_private.attachment_matches(p->'payload'->'attachment',(p->>'attachment_id')::uuid,actor,cid,op))
+   or (p->'payload'->'attachment'='null'::jsonb and p->>'attachment_id' is not null) or p->'payload'->>'conversation_id' is distinct from cid::text
    or p->'payload'->>'text' is null or length(p->'payload'->>'text') not between 1 and 3000
    or p->'payload'->>'text'<>btrim(p->'payload'->>'text')
    or p->>'payload_sha256' !~ '^[a-f0-9]{64}$' or p->>'payload_sha256' is null
-   or p->>'explicit_authorization' is distinct from 'one_real_text_attempt'
+   or p->>'explicit_authorization' is distinct from (case when p->'payload'->'attachment'='null'::jsonb then 'one_real_text_attempt' when p->'payload'->'attachment'->>'mime_type'='application/pdf' then 'one_real_document_attempt' else 'one_real_image_attempt' end)
    or c.revision is distinct from (p->'payload'->>'expected_revision')::integer
    or (p->>'expires_at')::timestamptz is null or (p->>'expires_at')::timestamptz<=clock_timestamp()
    or (p->>'expires_at')::timestamptz>clock_timestamp()+interval '10 minutes'
   then raise exception 'MCP_APPROVAL_INVALID_OR_STALE';end if;
   insert into public.sana_mcp_send_operations(operation_id,subject_id,client_id,operator_id,operator_session_id,
-   conversation_id,payload,payload_sha256,recipient_e164,expected_revision,state,expires_at)
-  values(op,sub,cli,actor,(p->>'operator_session_id')::uuid,cid,p->'payload',p->>'payload_sha256',c.contact_key,c.revision,'authorized',(p->>'expires_at')::timestamptz);
+   conversation_id,attachment_id,payload,payload_sha256,recipient_e164,expected_revision,state,expires_at)
+  values(op,sub,cli,actor,(p->>'operator_session_id')::uuid,cid,(p->>'attachment_id')::uuid,p->'payload',p->>'payload_sha256',c.contact_key,c.revision,'authorized',(p->>'expires_at')::timestamptz);
   insert into public.sana_mcp_send_events(operation_id,event) values(op,'prod_operator_authorized_one_attempt');
   return jsonb_build_object('status','authorized','operation_id',op,'payload_sha256',p->>'payload_sha256');
  end if;
  if o.expires_at<=clock_timestamp() or not sana_mcp_private.session_active(actor,o.operator_session_id) then raise exception 'MCP_AUTHORIZATION_EXPIRED';end if;
  if p->>'payload_sha256' is distinct from o.payload_sha256 or c.contact_key is distinct from o.recipient_e164
    or c.revision<>o.expected_revision then raise exception 'MCP_RECIPIENT_CONTENT_OR_REVISION_CHANGED';end if;
+ if o.payload->'attachment' is distinct from 'null'::jsonb and not sana_mcp_private.attachment_matches(o.payload->'attachment',o.attachment_id,actor,cid,op) then raise exception 'MCP_ATTACHMENT_BINDING_CHANGED';end if;
  if exists(select 1 from public.sana_outbox where conversation_id=cid and delivery_state in ('PENDING','CLAIMED','UNKNOWN'))
   or exists(select 1 from public.sana_inbox_messages where conversation_id=cid and delivery_state in ('dispatching','unknown'))
   or exists(select 1 from public.sana_mcp_send_operations where conversation_id=cid and state in ('dispatching','unknown'))
@@ -126,10 +139,10 @@ begin
  if control->>'status'<>'committed' then raise exception 'MCP_HUMAN_CONTROL_FAILED';end if;
  update public.sana_mcp_send_operations set state='dispatching',claimed_at=clock_timestamp() where operation_id=op;
  r=public.sana_manual_whatsapp(jsonb_build_object('operation','prepare','actor_id',actor,'conversation_id',cid,'action_id',op,
-  'expected_revision',(control->>'revision')::integer,'text',o.payload->>'text'));
+  'expected_revision',(control->>'revision')::integer,'text',o.payload->>'text','attachment_id',o.attachment_id));
  if r->>'status'<>'prepared' then raise exception 'MCP_OFFICIAL_PREPARE_FAILED';end if;
  if r->>'recipient_e164' is distinct from o.recipient_e164 or r->>'text' is distinct from o.payload->>'text'
-  or r->>'no_send' not in ('true','false') then raise exception 'MCP_OFFICIAL_RECEIPT_CHANGED';end if;
+  or r->>'attachment_id' is distinct from o.attachment_id::text or r->>'no_send' not in ('true','false') then raise exception 'MCP_OFFICIAL_RECEIPT_CHANGED';end if;
  if (r->>'no_send')::boolean then update public.sana_mcp_send_operations set state='test',settled_at=clock_timestamp() where operation_id=op;end if;
  insert into public.sana_mcp_send_events(operation_id,event) values(op,'official_claim_created');
  return r;

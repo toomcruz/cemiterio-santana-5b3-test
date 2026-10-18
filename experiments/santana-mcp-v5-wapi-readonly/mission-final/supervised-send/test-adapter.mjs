@@ -14,13 +14,13 @@ function setup(options={}){
    events.push(p.operation);
    if(p.operation==='authorize'){operation={...p,state:'authorized'};return{status:'authorized',operation_id:p.operation_id};}
    if(!operation||operation.subject_id!==p.subject_id)throw Error('NO_AUTHORIZATION');
-   if(p.operation==='status')return{state:operation.state,delivery_confirmed:false};
+   if(p.operation==='status')return{state:operation.state,delivery_confirmed:false,attachment_id:options.mediaId};
    if(p.operation==='prepare'){
     if(options.busy)throw Error('MCP_CONCURRENT_OR_AMBIGUOUS_DELIVERY');
     if(options.stale)throw Error('MCP_RECIPIENT_CONTENT_OR_REVISION_CHANGED');
     if(operation.state!=='authorized')return{status:'duplicate',delivery_state:operation.state==='dispatching'?'unknown':operation.state};
     operation.state='dispatching';
-    return {status:'prepared',delivery_state:'dispatching',no_send:false,claim_token:CLAIM,recipient_e164:'+12025550200',text:operation.payload.text};
+    return {status:'prepared',delivery_state:'dispatching',no_send:false,claim_token:CLAIM,recipient_e164:'+12025550200',text:operation.payload.text,...(options.mediaId?{attachment_id:options.mediaId,attachment:{artifact_id:options.mediaId,url:'https://sfoygvjtnwqvudrbgoom.supabase.co/storage/v1/object/sign/sana-operator-attachments/'+ID+'/'+CID+'/'+ID+(proof.payload.attachment.mime_type==='application/pdf'?'.pdf':'.png')+'?token=synthetic-only',file_name:proof.payload.attachment.name,mime_type:proof.payload.attachment.mime_type,extension:proof.payload.attachment.mime_type==='application/pdf'?'pdf':'png'}}:{})};
    }
    if(p.operation==='settle'){operation.state=p.outcome;return{status:'committed',delivery_state:p.outcome};}
    throw Error('INVALID_RPC');
@@ -55,3 +55,19 @@ test('timeout or malformed success settles unknown and repeat never resends',asy
 test('caller cannot substitute text, operator or phone; missing backend permission blocks',async()=>{
  const s=setup();assert.equal((await s.call('send',{text:'changed'})).status,400);assert.equal((await s.call('send',{operator_id:ID})).status,400);assert.equal((await s.call('send')).status,409);assert.equal(s.count(),0);
 });
+
+for(const [mime,name,kind,endpoint] of [['image/png','synthetic.png','one_real_image_attempt','send-image'],['application/pdf','synthetic.pdf','one_real_document_attempt','send-document']]){
+ test(`${mime}: exact approved attachment and caption use one official request under concurrent calls`,async()=>{
+  const s=setup({mediaId:CLAIM,proof:{payload:{conversation_id:CID,recipient:{name:'Synthetic',phone_mask:'***0200'},expected_revision:7,text:'Synthetic media caption',attachment:{name,mime_type:mime,size_bytes:32,sha256:'b'.repeat(64)}}}});
+  assert.equal((await s.call('authorize')).status,409); // text-only authorization cannot authorize media.
+  assert.equal((await s.call('authorize',{explicit_authorization:kind})).status,200);
+  const results=await Promise.all([s.call('send'),s.call('send')]);assert.equal(s.count(),1);
+  assert.match(s.requests[0].url,new RegExp(endpoint));assert.equal(s.requests[0].body.caption,'Synthetic media caption');assert.equal(s.requests[0].body.phone,'12025550200');
+  assert.ok((await Promise.all(results.map(r=>r.json()))).some(r=>r.delivery_state==='sent'));
+  await s.call('send');assert.equal(s.count(),1);
+ });
+ test(`${mime}: ambiguous media result is never resent`,async()=>{
+  const s=setup({mediaId:CLAIM,timeout:true,proof:{payload:{conversation_id:CID,recipient:{name:'Synthetic',phone_mask:'***0200'},expected_revision:7,text:'Synthetic media caption',attachment:{name,mime_type:mime,size_bytes:32,sha256:'b'.repeat(64)}}}});
+  await s.call('authorize',{explicit_authorization:kind});assert.equal((await(await s.call('send')).json()).delivery_state,'unknown');await s.call('send');assert.equal(s.count(),1);
+ });
+}

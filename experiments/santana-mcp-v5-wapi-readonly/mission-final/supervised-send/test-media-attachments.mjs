@@ -1,0 +1,26 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
+import {stageApprovedMedia,officialMediaReceipt,reviewedBytes,attemptKind,validMedia} from './media-attachments.mjs';
+const ACTOR='10000000-0000-4000-8000-000000000001',CID='10000000-0000-4000-8000-000000000002',OP='10000000-0000-4000-8000-000000000003',ART='10000000-0000-4000-8000-000000000004';
+const fixtures=JSON.parse(readFileSync(new URL('./media-fixtures/fixtures.json',import.meta.url),'utf8'));
+function setup(name,options={}){
+ const f=fixtures[name],a={name,mime_type:f.mime_type,size_bytes:f.size_bytes,sha256:f.sha256},proof={payload:{conversation_id:CID,attachment:a},attachment_base64:f.content_base64};
+ const extension=a.mime_type==='application/pdf'?'pdf':'png';let row=null,object=null,uploads=0,signs=0,stages=0;
+ const bucket={download:async()=>object?{data:new Blob([object],{type:options.wrongStoredMime?'image/jpeg':a.mime_type})}:{error:{statusCode:options.unavailable?503:404}},upload:async(path,bytes,config)=>{uploads++;assert.equal(config.upsert,false);assert.equal(config.contentType,a.mime_type);if(options.uploadFailure)return{error:{statusCode:503}};assert.equal(path,row.storage_path);assert.equal(object,null);object=options.changed?Uint8Array.from(bytes,x=>x^1):bytes;return{};},createSignedUrl:async path=>{signs++;return{data:{signedUrl:'https://sfoygvjtnwqvudrbgoom.supabase.co/storage/v1/object/sign/sana-operator-attachments/'+path+'?token=synthetic-only'}};}};
+ const service={rpc:async(name,p)=>{assert.equal(name,'sana_stage_operator_attachment');stages++;row??={artifact_id:ART,actor_id:ACTOR,conversation_id:CID,action_id:OP,created_at:new Date().toISOString(),verified_at:null,file_name:p.p_name,mime_type:p.p_mime,size_bytes:p.p_size,sha256:p.p_hash,storage_path:`${ACTOR}/${CID}/${OP}.${extension}`};return{data:{status:'ready',artifact_id:ART,storage_path:row.storage_path}};},storage:{from:name=>{assert.equal(name,'sana-operator-attachments');return bucket;}},from:table=>{assert.equal(table,'sana_operator_attachments');const filters=[];let change;const q={select:()=>q,eq:(key,v)=>{filters.push([key,v]);return q;},update:v=>{change=v;return q;},maybeSingle:async()=>{if(!row||!filters.every(([key,v])=>row[key]===v))return{data:null};if(change)Object.assign(row,change);return{data:row};}};return q;}};
+ const operation={operation_id:OP,operator_id:ACTOR,conversation_id:CID,attachment_id:ART,payload:proof.payload};
+ return{service,proof,operation,a,counts:()=>({uploads,signs,stages}),mutate:fn=>fn(row),replace:bytes=>{object=bytes;}};
+}
+for(const name of Object.keys(fixtures)){
+ test(name+': exact bytes staged once and signed only after immutable manifest verification',async()=>{
+  const s=setup(name);assert.equal(await stageApprovedMedia(s.service,s.proof,ACTOR,OP),ART);await stageApprovedMedia(s.service,s.proof,ACTOR,OP);assert.equal(s.counts().uploads,1);
+  const r=await officialMediaReceipt(s.service,s.operation);assert.equal(r.artifact_id,ART);assert.equal(r.file_name,name);assert.equal(s.counts().signs,1);
+ });
+ test(name+': changed bytes during upload cannot become verified or signed',async()=>{const s=setup(name,{changed:true});await assert.rejects(stageApprovedMedia(s.service,s.proof,ACTOR,OP),/CONTENT_MISMATCH/);assert.equal(s.counts().signs,0);});
+ test(name+': replacing stored bytes or swapping operator/action after approval blocks before signing',async()=>{
+  for(const field of ['sha256','actor_id','action_id','file_name','storage_path']){const s=setup(name);await stageApprovedMedia(s.service,s.proof,ACTOR,OP);s.mutate(r=>{r[field]='changed';});await assert.rejects(officialMediaReceipt(s.service,s.operation),/BINDING_CHANGED|NOT_READY/);assert.equal(s.counts().signs,0);}
+  const s=setup(name);await stageApprovedMedia(s.service,s.proof,ACTOR,OP);s.replace(new Uint8Array(s.a.size_bytes));await assert.rejects(officialMediaReceipt(s.service,s.operation),/CONTENT_MISMATCH/);assert.equal(s.counts().signs,0);
+ });
+}
+test('wrong reviewed hash, bytes, type, length or extra metadata cannot stage',async()=>{for(const modify of [s=>s.proof.payload.attachment.sha256='0'.repeat(64),s=>s.proof.attachment_base64='bad!',s=>s.proof.payload.attachment.mime_type='image/svg+xml',s=>s.proof.payload.attachment.size_bytes++,s=>s.proof.payload.attachment.url='https://evil.invalid']){const s=setup('Santana-Teste-Imagem.png');modify(s);await assert.rejects(stageApprovedMedia(s.service,s.proof,ACTOR,OP));assert.equal(s.counts().stages,0);assert.equal(s.counts().uploads,0);}});
+test('storage unavailability never overwrites objects or starts implicit retry',async()=>{for(const options of [{unavailable:true},{uploadFailure:true}]){const s=setup('Santana-Teste-Imagem.png',options);await assert.rejects(stageApprovedMedia(s.service,s.proof,ACTOR,OP));assert.ok(s.counts().uploads<=1);assert.equal(s.counts().signs,0);}});
+test('each media class needs its own explicit consent; file metadata is exact',async()=>{assert.equal(attemptKind(null),'one_real_text_attempt');for(const name of Object.keys(fixtures)){const s=setup(name);assert.equal(validMedia(s.a),true);await reviewedBytes(s.proof);assert.equal(attemptKind(s.a),s.a.mime_type==='application/pdf'?'one_real_document_attempt':'one_real_image_attempt');}});

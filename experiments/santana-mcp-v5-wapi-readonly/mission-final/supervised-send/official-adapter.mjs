@@ -1,5 +1,6 @@
 // Candidate adapter for the EXISTING official sender. No provider transport here.
 import {sendManualWhatsApp} from '../official-channel-manual.ts';
+import {attemptKind,validMedia} from './media-attachments.mjs';
 const CLIENT='ccb5e1fc-2a61-4296-943a-a85c103e9313';
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const exact=(v,keys)=>v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).every(k=>keys.includes(k));
@@ -16,14 +17,14 @@ export function createSupervisedOfficialHandler({prodIdentity,homologIdentity,re
    if(b.action==='authorize'){
     const actor=bearer?await prodIdentity(bearer):null;
     if(!actor?.active||!actor.session_active||!UUID.test(actor.id||'')||!UUID.test(actor.session_id||''))return json(403,{error:'PROD_OPERATOR_SESSION_REQUIRED'});
-    if(b.explicit_authorization!=='one_real_text_attempt')return json(403,{error:'SPECIFIC_REAL_SEND_AUTHORIZATION_REQUIRED'});
+    if(!['one_real_text_attempt','one_real_image_attempt','one_real_document_attempt'].includes(b.explicit_authorization))return json(403,{error:'SPECIFIC_REAL_SEND_AUTHORIZATION_REQUIRED'});
     const humanToken=request.headers.get('x-santana-human-review')||'';
     const human=await homologIdentity(humanToken,{human:true,operation_id:b.operation_id});
     if(!human?.session_active||human.client_id||!human.password_amr||!Number.isFinite(human.auth_time)||human.auth_time<now()/1000-600||human.auth_time>now()/1000+30)return json(403,{error:'INDEPENDENT_HUMAN_SESSION_REQUIRED'});
     const proof=await reviewProof(humanToken,b.operation_id,{human:true});
     if(!proof||proof.owner_id!==human.id||proof.reviewed_by!==human.id||!UUID.test(proof.review_session_id||'')||proof.review_session_active!==true||proof.state!=='human_reviewed_dispatch_blocked')return json(403,{error:'HUMAN_REVIEW_NOT_PROVEN'});
     const p=proof.payload;
-    if(proof.payload_sha256!==b.payload_sha256||!p||p.attachment!==null||typeof p.text!=='string'||p.text!==p.text.trim()||!p.text||!Number.isSafeInteger(p.expected_revision)||!UUID.test(p.conversation_id||'')||!Number.isFinite(Date.parse(proof.expires_at))||Date.parse(proof.expires_at)<=now())return json(409,{error:'REVIEW_CHANGED_EXPIRED_OR_UNSUPPORTED'});
+    if(proof.payload_sha256!==b.payload_sha256||!p||(p.attachment!==null&&!validMedia(p.attachment))||b.explicit_authorization!==attemptKind(p.attachment)||typeof p.text!=='string'||p.text!==p.text.trim()||!p.text||!Number.isSafeInteger(p.expected_revision)||!UUID.test(p.conversation_id||'')||!Number.isFinite(Date.parse(proof.expires_at))||Date.parse(proof.expires_at)<=now())return json(409,{error:'REVIEW_CHANGED_EXPIRED_OR_UNSUPPORTED'});
     const receipt=await rpc({operation:'authorize',operation_id:b.operation_id,subject_id:human.id,client_id:CLIENT,operator_id:actor.id,operator_session_id:actor.session_id,
      conversation_id:p.conversation_id,payload:p,payload_sha256:proof.payload_sha256,expires_at:new Date(Math.min(Date.parse(proof.expires_at),now()+600000)).toISOString(),explicit_authorization:b.explicit_authorization});
     return json(200,{...receipt,real_attempt_executed:false});
@@ -34,7 +35,7 @@ export function createSupervisedOfficialHandler({prodIdentity,homologIdentity,re
    if(b.action==='status')return json(200,await rpc({operation:'status',...identity}));
    if(!/^[a-f0-9]{64}$/.test(b.payload_sha256||''))return json(400,{error:'EXACT_CONTENT_DIGEST_REQUIRED'});
    const proof=await reviewProof(bearer,b.operation_id,{human:false});
-   if(!proof||proof.owner_id!==actor.id||proof.state!=='human_reviewed_dispatch_blocked'||proof.review_session_active!==true||proof.payload_sha256!==b.payload_sha256||Date.parse(proof.expires_at)<=now()||!Number.isFinite(Date.parse(proof.expires_at))||proof.payload?.attachment!==null)return json(403,{error:'REVIEW_NOT_CURRENT'});
+   if(!proof||proof.owner_id!==actor.id||proof.state!=='human_reviewed_dispatch_blocked'||proof.review_session_active!==true||proof.payload_sha256!==b.payload_sha256||Date.parse(proof.expires_at)<=now()||!Number.isFinite(Date.parse(proof.expires_at))||(proof.payload?.attachment!==null&&!validMedia(proof.payload?.attachment)))return json(403,{error:'REVIEW_NOT_CURRENT'});
    // The database owns the canonical operator, full recipient, revision and
    // single-use operation. Neither caller-provided text nor actor_id is accepted.
    const invoke=async body=>{
@@ -44,7 +45,14 @@ export function createSupervisedOfficialHandler({prodIdentity,homologIdentity,re
     return {response:new Response('{}',{status:200}),data};
    };
    const p=proof.payload;
-   const result=await sendManualWhatsApp({conversation_id:p.conversation_id,action_id:b.operation_id,expected_revision:p.expected_revision,text:p.text},invoke,officialConfig,transport);
+   let attachmentId;
+   if(p.attachment!==null){
+    const status=await rpc({operation:'status',...identity});
+    if(status.state!=='authorized')return json(200,{status:'recorded',operation_id:b.operation_id,delivery_state:status.state==='dispatching'?'unknown':status.state,accepted_by_api:status.state==='sent',delivery_confirmed:false,retry_allowed:false});
+    if(!UUID.test(status.attachment_id||''))return json(409,{error:'MCP_ATTACHMENT_BINDING_CHANGED',retry_allowed:false});
+    attachmentId=status.attachment_id;
+   }
+   const result=await sendManualWhatsApp({conversation_id:p.conversation_id,action_id:b.operation_id,expected_revision:p.expected_revision,text:p.text,...(attachmentId?{attachment_id:attachmentId}:{})},invoke,officialConfig,transport);
    return json(result.status,{...result.body,operation_id:b.operation_id,accepted_by_api:result.body.delivery_state==='sent',delivery_confirmed:false});
   }catch(error){
    // Never repeat a call after an ambiguous network/database outcome.

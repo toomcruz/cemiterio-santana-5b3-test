@@ -12,7 +12,7 @@ export default function AuthorizeMcp(){
   if(!supabase)throw Error('A conexão do Painel está indisponível.');
   const session=await boundedSession(supabase.auth.getSession());const token=session.data.session?.access_token;
   if(!token)throw Error('Entre no Painel oficial em outra aba e volte a esta tela.');
-  const r=await fetch('/api/runtime/sana-control',{method:'POST',cache:'no-store',signal:AbortSignal.timeout(20000),headers:{authorization:'Bearer '+token,'x-santana-human-review':secret.current,'content-type':'application/json'},body:JSON.stringify({action,operation_id:operation.current,...extra})});
+  const r=await fetch('/api/runtime/sana-control',{method:'POST',cache:'no-store',signal:AbortSignal.timeout(action==='mcp_authorize'?35000:20000),headers:{authorization:'Bearer '+token,'x-santana-human-review':secret.current,'content-type':'application/json'},body:JSON.stringify({action,operation_id:operation.current,...extra})});
   const d=await r.json();if(!r.ok)throw Error(d.error||'Operação indisponível');return d;
  };
  useEffect(()=>{
@@ -30,7 +30,7 @@ export default function AuthorizeMcp(){
   if(consent.current?.checked!==true){setStatus('Marque a caixa para autorizar este destinatário e conteúdo.');return;}
   submitting.current=true;setBusy(true);setStatus('Registrando sua autorização no Painel…');
   try{
-   const d=await call('mcp_authorize',{payload_sha256:preview.payload_sha256,explicit_authorization:'one_real_text_attempt'});
+   const d=await call('mcp_authorize',{payload_sha256:preview.payload_sha256,explicit_authorization:preview.payload.attachment===null?'one_real_text_attempt':preview.payload.attachment.mime_type==='application/pdf'?'one_real_document_attempt':'one_real_image_attempt'});
    if(d.status!=='authorized'&&!(d.status==='duplicate'&&d.state==='authorized'))throw Error('Autorização não confirmada. Volte ao ChatGPT para consultar esta operação.');
    setStatus('Autorização registrada. Volte ao ChatGPT para executar a única tentativa autorizada. Nenhuma mensagem foi enviada por esta tela.');setComplete(true);setPreview(null);secret.current='';
   }catch(error){setStatus(error instanceof Error&&error.name!=='TimeoutError'?error.message:'Não foi possível confirmar o registro no prazo. Volte ao ChatGPT para conferir esta operação antes de tentar novamente.');}
@@ -39,9 +39,10 @@ export default function AuthorizeMcp(){
  return <main style={{maxWidth:680,margin:'40px auto',padding:28,fontFamily:'system-ui',background:'#fff',border:'1px solid #dbe4df',borderRadius:12,color:'#172421'}}>
   <h1 style={{fontSize:26,fontWeight:650,marginBottom:16}}>Autorizar uma mensagem do ChatGPT</h1>
   <p role="status" aria-live="polite" style={{padding:16,background:complete?'#e5f4ec':'#f1f5f3',borderRadius:8,marginBottom:20}}>{status}</p>
-  {preview&&<><p><strong>{preview.payload.recipient.name} · {preview.payload.recipient.phone_mask}</strong></p><p style={{margin:'12px 0',fontSize:14,overflowWrap:'anywhere'}}>Operação: {preview.operation_id}</p><pre style={{whiteSpace:'pre-wrap',padding:16,background:'#f5f7f6',lineHeight:1.6,borderRadius:8}}>{preview.payload.text}</pre><p style={{margin:'16px 0'}}>Sem anexos. Validade: {new Date(preview.expires_at).toLocaleString('pt-BR')}.</p>
+  {preview&&<><p><strong>{preview.payload.recipient.name} · {preview.payload.recipient.phone_mask}</strong></p><p style={{margin:'12px 0',fontSize:14,overflowWrap:'anywhere'}}>Operação: {preview.operation_id}</p><pre style={{whiteSpace:'pre-wrap',padding:16,background:'#f5f7f6',lineHeight:1.6,borderRadius:8}}>{preview.payload.text}</pre><p style={{margin:'16px 0'}}>{preview.payload.attachment?<><strong>Anexo: {preview.payload.attachment.name}</strong><br/>{preview.payload.attachment.mime_type} · {preview.payload.attachment.size_bytes} bytes</>:'Sem anexos.'} Validade: {new Date(preview.expires_at).toLocaleString('pt-BR')}.</p>
+   {preview.payload.attachment&&preview.attachment_base64&&<><p style={{fontSize:13,overflowWrap:'anywhere'}}>SHA-256 do anexo: {preview.payload.attachment.sha256}</p>{preview.payload.attachment.mime_type==='application/pdf'?<iframe title={preview.payload.attachment.name} sandbox="" src={'data:application/pdf;base64,'+preview.attachment_base64} style={{width:'100%',height:380,border:'1px solid #dbe4df'}}/>:<img alt={preview.payload.attachment.name} src={'data:'+preview.payload.attachment.mime_type+';base64,'+preview.attachment_base64} style={{maxWidth:'100%',height:'auto'}}/>}</>}
    <form onSubmit={authorize} aria-busy={busy}>
-    <label style={{display:'flex',alignItems:'flex-start',gap:12,padding:'16px 0',cursor:'pointer'}}><input ref={consent} name="singleAttempt" type="checkbox" required disabled={busy} style={{width:20,height:20,flexShrink:0,marginTop:2,accentColor:'#176b50'}}/><span>Autorizo uma única tentativa real para esse destinatário e conteúdo.</span></label>
+    <label style={{display:'flex',alignItems:'flex-start',gap:12,padding:'16px 0',cursor:'pointer'}}><input ref={consent} name="singleAttempt" type="checkbox" required disabled={busy} style={{width:20,height:20,flexShrink:0,marginTop:2,accentColor:'#176b50'}}/><span>Autorizo uma única tentativa real para esse destinatário, texto e anexo mostrado.</span></label>
     <button type="submit" disabled={busy} style={{display:'block',width:'100%',minHeight:48,padding:'14px 20px',border:'1px solid #176b50',borderRadius:8,background:'#176b50',color:'#fff',fontSize:17,fontWeight:650,cursor:busy?'wait':'pointer',opacity:busy?0.7:1}}>{busy?'Registrando autorização…':'Confirmar autorização'}</button>
     <p style={{fontSize:14,lineHeight:1.5,marginTop:12}}>Este botão registra sua autorização. A execução será feita pelo ChatGPT; esta tela não envia a mensagem.</p>
    </form></>}
