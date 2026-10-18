@@ -59,5 +59,5 @@ if __name__=='__main__':
         result=analyze(json.loads(content))
     except Exception as error:
         code=str(error) if isinstance(error,ValueError) and str(error) in {'ATTACHMENT_INTEGRITY','PAGE_RANGE','IMAGE_TOO_LARGE','MIME_MISMATCH','PDF_UNAVAILABLE_OR_PROTECTED','RENDER_TOO_LARGE','ATTACHMENT_TOO_LARGE','PDF_DIMENSIONS'} else 'ATTACHMENT_ANALYSIS_UNAVAILABLE'
-        result={'status':'analysis_unavailable','reason':code,'images':[]}
+        result={'status':'analysis_unavailable','reason':code,'failure_type':type(error).__name__,'images':[]}
     print(json.dumps(result,ensure_ascii=False))

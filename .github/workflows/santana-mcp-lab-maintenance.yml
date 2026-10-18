@@ -44,12 +44,16 @@ jobs:
               before=pids()
               with tempfile.TemporaryDirectory(prefix='santana-admin-synthetic-') as td:
                   tmp=Path(td);npm=tmp/'npm';pydeps=tmp/'python'
-                  commands=[['npm','install','--ignore-scripts','--no-audit','--no-fund','--package-lock=false','--prefix',str(npm),'@electric-sql/pglite@0.3.14'],[sys.executable,'-m','pip','install','--disable-pip-version-check','--no-input','--only-binary=:all:','--target',str(pydeps),'-r',str(testroot/'requirements.txt')]]
+                  subprocess.run([sys.executable,'-m','venv',str(pydeps)],check=True,timeout=30)
+                  testpython=str(pydeps/'bin/python')
+                  commands=[['npm','install','--ignore-scripts','--no-audit','--no-fund','--package-lock=false','--prefix',str(npm),'@electric-sql/pglite@0.3.14'],[testpython,'-m','pip','install','--disable-pip-version-check','--no-input','--only-binary=:all:','-r',str(testroot/'requirements.txt')]]
                   for cmd in commands:
                       result=subprocess.run(cmd,capture_output=True,text=True,timeout=90)
                       if result.returncode:print((result.stdout+result.stderr)[-2500:]);raise SystemExit('ISOLATED_TEST_DEPENDENCY_FAILED')
-                  env={**os.environ,'PYTHONPATH':str(pydeps),'PYTHONDONTWRITEBYTECODE':'1','SANTANA_PGLITE_MODULE':str(npm/'node_modules/@electric-sql/pglite/dist/index.js')}
-                  result=subprocess.run([sys.executable,str(testroot/'run-validation.py')],env=env,capture_output=True,text=True,timeout=120)
+                  env={**os.environ,'PYTHONDONTWRITEBYTECODE':'1','SANTANA_PGLITE_MODULE':str(npm/'node_modules/@electric-sql/pglite/dist/index.js')}
+                  diagnostic="import sys,runpy,json,base64;from pathlib import Path;sys.path.insert(0,sys.argv[1]);import admin_assist_tools as a;f=json.loads(Path(sys.argv[2]).read_text())['Santana-Teste-Documento.pdf'];r=a.render_attachment(f,{});print('PDF_DIAGNOSTIC',json.dumps(r['structuredContent']));runpy.run_path(str(Path(sys.argv[1])/'attachment_worker.py'))['analyze'](f) if r['structuredContent']['status']!='ready' else None"
+                  subprocess.run([testpython,'-c',diagnostic,str(testroot),str(testroot.parent/'supervised-send/media-fixtures/fixtures.json')],env=env,check=True,timeout=15)
+                  result=subprocess.run([testpython,str(testroot/'run-validation.py')],env=env,capture_output=True,text=True,timeout=120)
                   print(result.stdout)
                   if result.returncode:
                       for log in (testroot/'validation').glob('*.log'):print(log.name,log.read_text()[-5000:])

@@ -9,6 +9,11 @@ from admin_assist_tools import MODES,render_attachment
 def server(enabled=True):
     with patch.dict(os.environ,SANTANA_ADMIN_ASSIST_ENABLED='true' if enabled else 'false'):
         spec=importlib.util.spec_from_file_location('isolated_admin_mcp',CANDIDATE/'server.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
+def fixture(name):
+    value=json.loads((ROOT.parent/'supervised-send/media-fixtures/fixtures.json').read_text())[name]
+    data=base64.b64decode(value['content_base64'],validate=True)
+    assert hashlib.sha256(data).hexdigest()==value['sha256'] and len(data)==value['size_bytes']
+    return data
 def payload(data,mime):return {'status':'ready','conversation_id':'20000000-0000-4000-8000-000000000001','artifact_id':'synthetic','mime_type':mime,'size_bytes':len(data),'sha256':hashlib.sha256(data).hexdigest(),'content_base64':base64.b64encode(data).decode()}
 def message(name,args):return {'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':name,'arguments':args}}
 class AdminMCP(unittest.TestCase):
@@ -38,16 +43,16 @@ class AdminMCP(unittest.TestCase):
             with self.assertRaises(m.MCPError) as caught:m.dispatch(message('listar_pendencias',{}),('chatgpt','read'),'synthetic')
             self.assertEqual(caught.exception.code,-32001);self.assertEqual(call.call_count,1)
     def test_received_image_is_returned_as_image_content_without_provider_urls_or_keys(self):
-        p=ROOT.parent/'supervised-send/media-fixtures/Santana-Teste-Imagem.png';r=render_attachment(payload(p.read_bytes(),'image/png'),{})
-        self.assertEqual(r['structuredContent']['status'],'ready');self.assertEqual(r['content'][1]['type'],'image');self.assertNotIn('content_base64',r['structuredContent']);self.assertFalse(r['structuredContent']['document_validation_granted'])
+        r=render_attachment(payload(fixture('Santana-Teste-Imagem.png'),'image/png'),{})
+        self.assertEqual(r['structuredContent']['status'],'ready',r['structuredContent']);self.assertEqual(r['content'][1]['type'],'image');self.assertNotIn('content_base64',r['structuredContent']);self.assertFalse(r['structuredContent']['document_validation_granted'])
     def test_real_pdf_engine_extracts_text_and_renders_page(self):
-        p=ROOT.parent/'supervised-send/media-fixtures/Santana-Teste-Documento.pdf';r=render_attachment(payload(p.read_bytes(),'application/pdf'),{})
-        self.assertEqual(r['structuredContent']['status'],'ready');self.assertTrue(r['structuredContent']['text_extracted']);self.assertEqual(r['structuredContent']['page_count'],1);self.assertEqual(r['content'][1]['type'],'image')
+        r=render_attachment(payload(fixture('Santana-Teste-Documento.pdf'),'application/pdf'),{})
+        self.assertEqual(r['structuredContent']['status'],'ready',r['structuredContent']);self.assertTrue(r['structuredContent']['text_extracted']);self.assertEqual(r['structuredContent']['page_count'],1);self.assertEqual(r['content'][1]['type'],'image')
     def test_scanned_pdf_is_visually_available_even_without_text_layer(self):
         from PIL import Image,ImageDraw
         image=Image.new('RGB',(450,300),'white');ImageDraw.Draw(image).text((20,20),'SYNTHETIC SCANNED DOCUMENT',fill='black');out=io.BytesIO();image.save(out,format='PDF')
         r=render_attachment(payload(out.getvalue(),'application/pdf'),{})
-        self.assertEqual(r['structuredContent']['status'],'ready');self.assertFalse(r['structuredContent']['text_extracted']);self.assertEqual(r['content'][1]['type'],'image')
+        self.assertEqual(r['structuredContent']['status'],'ready',r['structuredContent']);self.assertFalse(r['structuredContent']['text_extracted']);self.assertEqual(r['content'][1]['type'],'image')
     def test_multipage_pdf_is_paginated_and_does_not_claim_complete_analysis(self):
         import pypdfium2 as pdfium
         doc=pdfium.PdfDocument.new()

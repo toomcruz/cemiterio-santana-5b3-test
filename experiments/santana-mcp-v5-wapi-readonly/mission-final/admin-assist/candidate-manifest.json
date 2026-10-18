@@ -19,7 +19,7 @@
     "homolog-mcp/api/mcp.py": "ad4d96263c77816d21cb544c6721100535f8dcab3ecb47c2280bab453ab318fe",
     "homolog-mcp/requirements.txt": "4dc7d8b537fee681ff816a566a74323f85ef1a10b26d340c9c32869ea14d544a",
     "homolog-mcp/whatsapp-santana-mcp/admin_assist_tools.py": "594d505a4ba8109df4095cb069369dd73a00616afa6751969ba04a1ee707c74d",
-    "homolog-mcp/whatsapp-santana-mcp/attachment_worker.py": "7740ca6b0ebe638fb80342b17715ba8eb803cc2cc9239bf4fc5e03a94a82954e",
+    "homolog-mcp/whatsapp-santana-mcp/attachment_worker.py": "487779966d65da18d9a8267d6b54cbd9f13e916b068c42c128fe9598dee2ba9e",
     "homolog-mcp/whatsapp-santana-mcp/sana_read_provider.py": "e3f2e2a33f03edcb211200dde47c49ec8c6c0aed2d500d420509f90bfda8becd",
     "homolog-mcp/whatsapp-santana-mcp/server.py": "9e8f52c895122c5496dccbfcbdd358f95785feb86f19f6c8c24a90701ea0d1d5",
     "panel/app/api/runtime/sana-media/route.ts": "201fb43cffb70691ca91d2eb66e3b20c598253b06fcaabc417380315b25831fd",
