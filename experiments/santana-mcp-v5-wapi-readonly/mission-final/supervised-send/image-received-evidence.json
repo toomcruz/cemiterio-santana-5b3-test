@@ -21,7 +21,7 @@
   "expires_at": "2026-10-18T21:06:37.964+00:00",
   "real_dispatch_enabled": false,
   "coordinator_verified": false,
-  "external_request_attempted": false,
+  "external_request_attempted": true,
   "specific_chat_authorization": {
     "approved": true,
     "scope": "one_image_attempt_exact_prepared_png_and_caption_to_personal_5497"
