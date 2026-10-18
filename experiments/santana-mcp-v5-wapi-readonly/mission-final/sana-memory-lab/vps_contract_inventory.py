@@ -37,3 +37,31 @@ for p in (Path('/opt/OpenBot/app/resources/app.asar'),Path('/opt/OpenBot/hosted/
    report['files'].append(describe(str(p),b,p.stat().st_size<=len(b)))
   except OSError:report['files'].append({'path':str(p),'readable':False})
 print(json.dumps(report))
+# The hosted service may run another public source tree than the desktop ASAR.
+import os,re,subprocess
+pid=subprocess.run(['systemctl','show','openbot.service','-p','MainPID','--value'],capture_output=True,text=True,timeout=5).stdout.strip()
+parents={}
+for line in subprocess.run(['ps','-eo','pid=,ppid='],capture_output=True,text=True,timeout=5).stdout.splitlines():
+ try:a,b=map(int,line.split());parents.setdefault(b,[]).append(a)
+ except ValueError:pass
+queue=[int(pid)] if pid.isdigit() and pid!='0' else [];seen=set();entries=[]
+while queue and len(seen)<20:
+ current=queue.pop(0)
+ if current in seen:continue
+ seen.add(current);queue+=parents.get(current,[])
+ try:
+  for value in Path('/proc',str(current),'cmdline').read_bytes().split(b'\0'):
+   path=value.decode(errors='ignore')
+   if path.startswith('/opt/') and re.fullmatch(r'/[A-Za-z0-9_./-]+\.(?:js|mjs|cjs)',path):entries.append(path)
+ except OSError:pass
+for name in sorted(set(entries))[:4]:
+ p=Path(name)
+ try:
+  with p.open('rb') as f:b=f.read(32000000)
+  report['files'].append(describe(name,b,p.stat().st_size<=len(b)))
+  for ancestor in list(p.parents)[:4]:
+   package=ancestor/'package.json'
+   if package.is_file():
+    data=json.loads(package.read_text());report['files'].append({'path':str(package),'name':data.get('name'),'version':data.get('version')});break
+ except (ValueError,OSError):pass
+print('RUNTIME_CONTRACT '+json.dumps({'runtime_entry_files':entries,'files':report['files'],'changes':0,'private_config_reads':0}))
