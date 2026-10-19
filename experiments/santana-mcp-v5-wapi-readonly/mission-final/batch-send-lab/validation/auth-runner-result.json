@@ -1,0 +1,51 @@
+{
+  "workflow_run": 39230724415,
+  "commit": "b5c88c4d27ae680ced95feee3ee09a67978fbbcd",
+  "tests": {
+    "status": "PASS",
+    "suites": [
+      {
+        "suite": "python_auth_and_affected_regressions",
+        "tests": 46,
+        "exit_code": 0,
+        "sha256": "6f9ac55ea6079ab7391c79ff106fa02101b0c2c906dce624f1772d30d28e4c19"
+      },
+      {
+        "suite": "review_auth",
+        "tests": 7,
+        "exit_code": 0,
+        "sha256": "c5e3c3d61ac6413d852648b45cd222c7547a0e30723ae28980a9a03e629cb56b"
+      },
+      {
+        "suite": "receipt_sql",
+        "tests": 6,
+        "exit_code": 0,
+        "sha256": "10ce97c112f776fae50be1dfd7760b634da20a3be9b562aecce6f5c8a71895b1"
+      }
+    ],
+    "tests": 59,
+    "seconds": 37.193,
+    "previous_73_tests_preserved": true,
+    "production_changes": 0,
+    "real_messages_sent": 0,
+    "agent_calls": 0
+  },
+  "installation": {
+    "status": "STAGED_ROOT_REQUIRED",
+    "path": "/home/runner/santana-mcp-staging/batch-auth-68d574565d95/install-lab.py",
+    "sha256": "68d574565d9595fb8db7558ff103a7a3216ee207cd31fb899b646bc910ab4834",
+    "uid": 1001,
+    "sudo_without_password": false,
+    "services_changed": 0,
+    "production_changes": 0,
+    "real_messages_sent": 0,
+    "santana-mcp-lab.service": [
+      "2289363",
+      "active"
+    ],
+    "santana-mcp-lab-tunnel.service": [
+      "1219382",
+      "active"
+    ]
+  }
+}

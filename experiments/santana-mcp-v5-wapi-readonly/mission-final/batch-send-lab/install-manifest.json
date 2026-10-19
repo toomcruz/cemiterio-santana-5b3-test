@@ -1,6 +1,6 @@
 {
-  "sha256": "68d574565d9595fb8db7558ff103a7a3216ee207cd31fb899b646bc910ab4834",
-  "bytes": 60644,
+  "sha256": "f98ee7272d8023aa36fec727d9d2b071a3de716940c8b47b853a6036fb6d9650",
+  "bytes": 60718,
   "server_sha256": "4c2b376f9850d0249e5d849c708ffac523c9d808baeaf78351fd75fb4267260b",
   "files": {
     "batch_send.py": "153b40631ad52023a8a193780c2b399f5c2dade7c03f2d4c8779890b118bbcd6",
@@ -9,7 +9,7 @@
     "launcher.py": "2478a6546668f439a25b2855e381f2f31e98ee0a6a967dbbe999e3a2eea3f0e9",
     "review.html": "2cd151aa43d9a18daf65b6f0d6f98ad17136ce712c99f81ac8401f0183c99e83",
     "widget.html": "d856887e6f77eec526bace6c9f278dabc2136ed79a4e32219cb4de967a431f2b",
-    "real-widget.html": "5ab024abc7b8d7f42cce321fec45b7e8f91c69689b4a50e22a7e10359d7028b3"
+    "real-widget.html": "f9f491e42e1c8f3a2cccdc4b74d46291beb7047cee6cb84399738fd9e1e65823"
   },
   "only_unit": "santana-mcp-lab.service",
   "root_required": true,

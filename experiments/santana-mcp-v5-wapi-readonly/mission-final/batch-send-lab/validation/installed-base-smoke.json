@@ -1,0 +1,1 @@
+{"status":"PASS","source":"reconstructed_from_verified_installed_bundle_and_patch","server_sha256":"4c2b376f9850d0249e5d849c708ffac523c9d808baeaf78351fd75fb4267260b","bundle_sha256":"63a85c509957532a8091f0ad13b5a5423a0dfeb19a007310bac1f0943f27b6ee","mcp_tools":12,"prepare_fixture":"PASS","private_ui_metadata":"PASS","active_service_changed":false,"real_messages_sent":0}
