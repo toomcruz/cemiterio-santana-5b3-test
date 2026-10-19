@@ -1,0 +1,12 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lote Santana LAB</title>
+<style>body{font:15px/1.5 system-ui;color:#17382f}article{padding:12px;border-bottom:1px solid #dbe4df}pre{white-space:pre-wrap}button{padding:12px;background:#176b50;color:white;border:0;border-radius:8px}</style>
+<h2>Prévia do lote · LAB</h2><p id="status">Aguardando o resultado da ferramenta.</p><section id="items"></section><button id="review" hidden>Revisar e confirmar lote</button>
+<script>
+const $=id=>document.getElementById(id);let result,hostOrigin,serial=0;
+function render(v){if(!v||v.source!=='isolated_synthetic_batch_lab')return;result=v;$('items').replaceChildren();$('status').textContent=`${v.total} destinatário(s) fictício(s). Envio real bloqueado.`;for(const p of v.preview){const a=document.createElement('article'),title=document.createElement('strong'),text=document.createElement('pre');title.textContent=p.name+' · +'+p.phone;text.textContent=p.text;a.append(title,text);if(p.attachment){const m=document.createElement('p');m.textContent=p.attachment.name+' · '+p.attachment.mime_type;a.append(m);}$('items').append(a);}$('review').hidden=!v.approval_url;}
+window.addEventListener('message',event=>{if(event.source!==window.parent||!event.data||event.data.jsonrpc!=='2.0')return;if(!hostOrigin)hostOrigin=event.origin;if(event.origin!==hostOrigin)return;const m=event.data;if(m.method==='ui/notifications/tool-result')render(m.params?.structuredContent);if(m.id===1&&m.result)window.parent.postMessage({jsonrpc:'2.0',method:'ui/notifications/initialized',params:{}},hostOrigin);});
+// A UI click is not a backend human identity. Open the protected, session-bound
+// review route instead of exposing approve() as a model-callable MCP tool.
+$('review').onclick=()=>{if(result?.approval_url&&hostOrigin)window.parent.postMessage({jsonrpc:'2.0',id:++serial+1,method:'ui/open-link',params:{url:result.approval_url}},hostOrigin);};
+window.parent.postMessage({jsonrpc:'2.0',id:1,method:'ui/initialize',params:{appInfo:{name:'santana-batch-lab',version:'0.1.0'},appCapabilities:{},protocolVersion:'2026-01-26'}},'*');
+</script></html>

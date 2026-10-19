@@ -1,0 +1,166 @@
+TAP version 13
+# Subtest: all 50 LAB child operations preserve destination, body and idempotency through the existing official handler
+ok 1 - all 50 LAB child operations preserve destination, body and idempotency through the existing official handler
+  ---
+  duration_ms: 54.983229
+  type: 'test'
+  ...
+# Subtest: existing official adapter preserves unknown results without another transport call
+ok 2 - existing official adapter preserves unknown results without another transport call
+  ---
+  duration_ms: 0.769688
+  type: 'test'
+  ...
+# Subtest: existing administrative classifier distinguishes pending, failed, unknown and accepted; generated text is not send evidence
+ok 3 - existing administrative classifier distinguishes pending, failed, unknown and accepted; generated text is not send evidence
+  ---
+  duration_ms: 0.292443
+  type: 'test'
+  ...
+# Subtest: one review covers each immutable LAB manifest; tracking and timing cover the complete lot
+ok 4 - one review covers each immutable LAB manifest; tracking and timing cover the complete lot
+  ---
+  duration_ms: 0.165915
+  type: 'test'
+  ...
+# Subtest: full authorization -> exact official sender -> provider acceptance -> status; no delivery assertion
+ok 5 - full authorization -> exact official sender -> provider acceptance -> status; no delivery assertion
+  ---
+  duration_ms: 20.065129
+  type: 'test'
+  ...
+# Subtest: HOMOLOG OAuth cannot act as PROD operator or independent human
+ok 6 - HOMOLOG OAuth cannot act as PROD operator or independent human
+  ---
+  duration_ms: 0.590223
+  type: 'test'
+  ...
+# Subtest: specific authorization and an existing operator session are mandatory
+ok 7 - specific authorization and an existing operator session are mandatory
+  ---
+  duration_ms: 0.943105
+  type: 'test'
+  ...
+# Subtest: changed digest, attachment or expired review cannot authorize
+ok 8 - changed digest, attachment or expired review cannot authorize
+  ---
+  duration_ms: 1.234506
+  type: 'test'
+  ...
+# Subtest: stale revision and prior concurrent claims stop before any provider call
+ok 9 - stale revision and prior concurrent claims stop before any provider call
+  ---
+  duration_ms: 1.450075
+  type: 'test'
+  ...
+# Subtest: two simultaneous invocations cause one provider request
+ok 10 - two simultaneous invocations cause one provider request
+  ---
+  duration_ms: 0.917257
+  type: 'test'
+  ...
+# Subtest: timeout or malformed success settles unknown and repeat never resends
+ok 11 - timeout or malformed success settles unknown and repeat never resends
+  ---
+  duration_ms: 1.548601
+  type: 'test'
+  ...
+# Subtest: caller cannot substitute text, operator or phone; missing backend permission blocks
+ok 12 - caller cannot substitute text, operator or phone; missing backend permission blocks
+  ---
+  duration_ms: 0.725664
+  type: 'test'
+  ...
+# Subtest: image/png: exact approved attachment and caption use one official request under concurrent calls
+ok 13 - image/png: exact approved attachment and caption use one official request under concurrent calls
+  ---
+  duration_ms: 1.726314
+  type: 'test'
+  ...
+# Subtest: image/png: ambiguous media result is never resent
+ok 14 - image/png: ambiguous media result is never resent
+  ---
+  duration_ms: 1.924117
+  type: 'test'
+  ...
+# Subtest: application/pdf: exact approved attachment and caption use one official request under concurrent calls
+ok 15 - application/pdf: exact approved attachment and caption use one official request under concurrent calls
+  ---
+  duration_ms: 1.342917
+  type: 'test'
+  ...
+# Subtest: application/pdf: ambiguous media result is never resent
+ok 16 - application/pdf: ambiguous media result is never resent
+  ---
+  duration_ms: 0.657623
+  type: 'test'
+  ...
+# Subtest: Santana-Teste-Documento.pdf: exact bytes staged once and signed only after immutable manifest verification
+ok 17 - Santana-Teste-Documento.pdf: exact bytes staged once and signed only after immutable manifest verification
+  ---
+  duration_ms: 7.804758
+  type: 'test'
+  ...
+# Subtest: Santana-Teste-Documento.pdf: changed bytes during upload cannot become verified or signed
+ok 18 - Santana-Teste-Documento.pdf: changed bytes during upload cannot become verified or signed
+  ---
+  duration_ms: 1.609852
+  type: 'test'
+  ...
+# Subtest: Santana-Teste-Documento.pdf: replacing stored bytes or swapping operator/action after approval blocks before signing
+ok 19 - Santana-Teste-Documento.pdf: replacing stored bytes or swapping operator/action after approval blocks before signing
+  ---
+  duration_ms: 4.734435
+  type: 'test'
+  ...
+# Subtest: Santana-Teste-Imagem.png: exact bytes staged once and signed only after immutable manifest verification
+ok 20 - Santana-Teste-Imagem.png: exact bytes staged once and signed only after immutable manifest verification
+  ---
+  duration_ms: 7.316756
+  type: 'test'
+  ...
+# Subtest: Santana-Teste-Imagem.png: changed bytes during upload cannot become verified or signed
+ok 21 - Santana-Teste-Imagem.png: changed bytes during upload cannot become verified or signed
+  ---
+  duration_ms: 5.323177
+  type: 'test'
+  ...
+# Subtest: Santana-Teste-Imagem.png: replacing stored bytes or swapping operator/action after approval blocks before signing
+ok 22 - Santana-Teste-Imagem.png: replacing stored bytes or swapping operator/action after approval blocks before signing
+  ---
+  duration_ms: 18.557448
+  type: 'test'
+  ...
+# Subtest: wrong reviewed hash, bytes, type, length or extra metadata cannot stage
+ok 23 - wrong reviewed hash, bytes, type, length or extra metadata cannot stage
+  ---
+  duration_ms: 5.236999
+  type: 'test'
+  ...
+# Subtest: storage unavailability never overwrites objects or starts implicit retry
+ok 24 - storage unavailability never overwrites objects or starts implicit retry
+  ---
+  duration_ms: 5.32541
+  type: 'test'
+  ...
+# Subtest: each media class needs its own explicit consent; file metadata is exact
+ok 25 - each media class needs its own explicit consent; file metadata is exact
+  ---
+  duration_ms: 3.086347
+  type: 'test'
+  ...
+# Subtest: lost private upload acknowledgement is reconciled by exact bytes without repeating a write
+ok 26 - lost private upload acknowledgement is reconciled by exact bytes without repeating a write
+  ---
+  duration_ms: 5.557653
+  type: 'test'
+  ...
+1..26
+# tests 26
+# suites 0
+# pass 26
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 567.611373

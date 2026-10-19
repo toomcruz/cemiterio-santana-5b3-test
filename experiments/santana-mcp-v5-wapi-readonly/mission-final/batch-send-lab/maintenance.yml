@@ -1,0 +1,166 @@
+name: Santana MCP LAB controlled maintenance
+run-name: Santana W-API v5 patch staging and verification
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Stage patch, collect report, or read OpenBot configuration schema
+        type: choice
+        options: [stage, collect, inventory, root_inventory_stage, supervised, admin_assist, memory_inventory, memory_validate, batch_validate]
+        default: stage
+permissions:
+  contents: read
+concurrency:
+  group: santana-mcp-lab-maintenance
+  cancel-in-progress: false
+jobs:
+  preflight:
+    if: github.event_name == 'workflow_dispatch' && github.repository == 'toomcruz/cemiterio-santana-5b3-test'
+    runs-on: [self-hosted, Linux, X64, hermes, omniroute-local]
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: experiments/santana-mcp-v5-wapi-readonly
+      - uses: actions/setup-python@v5
+        if: inputs.action == 'admin_assist' || inputs.action == 'memory_validate' || inputs.action == 'batch_validate'
+        with:
+          python-version: '3.12'
+      - name: Stage or collect without changing running services
+        env:
+          ACTION: ${{ inputs.action }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,io,json,os,runpy,stat,subprocess,sys,tempfile,zipfile
+          from pathlib import Path
+          if os.environ.get('ACTION')=='batch_validate':
+              root=Path('experiments/santana-mcp-v5-wapi-readonly/mission-final/batch-send-lab')
+              with tempfile.TemporaryDirectory(prefix='santana-batch-sql-deps-') as td:
+                  result=subprocess.run(['npm','install','--ignore-scripts','--no-audit','--no-fund','--package-lock=false','--prefix',td,'@electric-sql/pglite@0.3.14'],capture_output=True,text=True,timeout=90)
+                  if result.returncode:raise SystemExit('ISOLATED_SQL_DEPENDENCY_FAILED')
+                  clean={k:os.environ[k] for k in ('PATH','LANG','LC_ALL','LD_LIBRARY_PATH') if k in os.environ}
+                  clean['SANTANA_PGLITE_MODULE']=str(Path(td)/'node_modules/@electric-sql/pglite/dist/index.js')
+                  result=subprocess.run([sys.executable,str(root/'run_validation.py'),'--runner'],env=clean,capture_output=True,text=True,timeout=120)
+                  print(result.stdout)
+                  if result.returncode:print(result.stderr[-4000:]);raise SystemExit('BATCH_VALIDATION_FAILED')
+              raise SystemExit(0)
+          if os.environ.get('ACTION')=='memory_validate':
+              sys.path.insert(0,'experiments/santana-mcp-v5-wapi-readonly/mission-final/sana-memory-lab')
+              import run_validation
+              run_validation.main(stage=True)
+              raise SystemExit(0)
+          if os.environ.get('ACTION')=='memory_inventory':
+              runpy.run_path('experiments/santana-mcp-v5-wapi-readonly/mission-final/sana-memory-lab/vps_contract_inventory.py',run_name='__main__')
+              raise SystemExit(0)
+          if os.environ.get('ACTION')=='admin_assist':
+              testroot=Path('experiments/santana-mcp-v5-wapi-readonly/mission-final/admin-assist')
+              units=('santana-mcp-lab.service','santana-mcp-lab-tunnel.service','openbot.service','openbot-tunnel.service','docker.service')
+              def pids():
+                  return {u:subprocess.run(['systemctl','show',u,'-p','MainPID','--value'],capture_output=True,text=True,timeout=5).stdout.strip() for u in units}
+              before=pids()
+              with tempfile.TemporaryDirectory(prefix='santana-admin-synthetic-') as td:
+                  tmp=Path(td);npm=tmp/'npm';pydeps=tmp/'python'
+                  subprocess.run([sys.executable,'-m','venv',str(pydeps)],check=True,timeout=30)
+                  testpython=str(pydeps/'bin/python')
+                  commands=[['npm','install','--ignore-scripts','--no-audit','--no-fund','--package-lock=false','--prefix',str(npm),'@electric-sql/pglite@0.3.14'],[testpython,'-m','pip','install','--disable-pip-version-check','--no-input','--only-binary=:all:','-r',str(testroot/'requirements.txt')]]
+                  for cmd in commands:
+                      result=subprocess.run(cmd,capture_output=True,text=True,timeout=90)
+                      if result.returncode:print((result.stdout+result.stderr)[-2500:]);raise SystemExit('ISOLATED_TEST_DEPENDENCY_FAILED')
+                  env={**os.environ,'PYTHONDONTWRITEBYTECODE':'1','SANTANA_PGLITE_MODULE':str(npm/'node_modules/@electric-sql/pglite/dist/index.js')}
+                  diagnostic="import sys,runpy,json,base64;from pathlib import Path;sys.path.insert(0,sys.argv[1]);import admin_assist_tools as a;f=json.loads(Path(sys.argv[2]).read_text())['Santana-Teste-Documento.pdf'];r=a.render_attachment(f,{});print('PDF_DIAGNOSTIC',json.dumps(r['structuredContent']));runpy.run_path(str(Path(sys.argv[1])/'attachment_worker.py'))['analyze'](f) if r['structuredContent']['status']!='ready' else None"
+                  subprocess.run([testpython,'-c',diagnostic,str(testroot),str(testroot.parent/'supervised-send/media-fixtures/fixtures.json')],env=env,check=True,timeout=15)
+                  result=subprocess.run([testpython,str(testroot/'run-validation.py')],env=env,capture_output=True,text=True,timeout=120)
+                  print(result.stdout)
+                  if result.returncode:
+                      for log in (testroot/'validation').glob('*.log'):print(log.name,log.read_text()[-5000:])
+                      raise SystemExit('ADMIN_ASSIST_TESTS_FAILED')
+                  writer=testroot.parent/'admin-supervised-send/run-validation.py'
+                  if writer.exists():
+                      result=subprocess.run([testpython,str(writer)],env=env,capture_output=True,text=True,timeout=90)
+                      print(result.stdout)
+                      if result.returncode:
+                          for log in (writer.parent/'validation').glob('*.log'):print(log.name,log.read_text()[-5000:])
+                          raise SystemExit('ADMIN_SUPERVISED_TESTS_FAILED')
+              print(json.dumps({'status':'ADMIN_ASSIST_SYNTHETIC_PASS','environment':'isolated_synthetic','service_pids_unchanged':before==pids(),'real_messages_sent':0,'production_writes':0,'services_changed_by_test':0}))
+              raise SystemExit(0)
+          if os.environ.get('ACTION')=='root_inventory_stage':
+              content=Path('experiments/santana-mcp-v5-wapi-readonly/openbot-readonly-inventory.py').read_bytes()
+              expected='6996a0320ac933fc204a736ea0406ee6193c041db122c8f402b6e5886410a6c3'
+              if hashlib.sha256(content).hexdigest()!=expected:raise SystemExit('DIAGNOSTIC_HASH_MISMATCH')
+              stage=Path('/home/runner/santana-mcp-staging/openbot-inventory-'+expected[:12])
+              if stage.is_symlink():raise SystemExit('UNSAFE_STAGE')
+              stage.mkdir(parents=True,exist_ok=True)
+              target=stage/'inventory.py'
+              fd=os.open(target,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o444)
+              with os.fdopen(fd,'wb') as f:f.write(content)
+              print(json.dumps({'status':'READ_ONLY_DIAGNOSTIC_STAGED','path':str(target),'sha256':expected,'services_changed':0,'real_messages_sent':0}))
+              raise SystemExit(0)
+          if os.environ.get('ACTION')=='supervised':
+              testroot=Path('experiments/santana-mcp-v5-wapi-readonly/mission-final/supervised-send')
+              commands=[['node','--experimental-strip-types','--test',str(testroot/'test-adapter.mjs'),str(testroot/'test-binding.mjs'),str(testroot/'test-media-attachments.mjs')],[sys.executable,str(testroot/'test_mcp_gate.py')]]
+              for command in commands:
+                  result=subprocess.run(command,capture_output=True,text=True,timeout=60)
+                  print(json.dumps({'suite':Path(command[0]).name,'exit_code':result.returncode,'log_tail':(result.stdout+result.stderr)[-5000:]}))
+                  if result.returncode:raise SystemExit('SUPERVISED_TESTS_FAILED')
+              print(json.dumps({'status':'SUPERVISED_SYNTHETIC_PASS','real_messages_sent':0,'production_writes':0,'services_changed':0}))
+              raise SystemExit(0)
+          if os.environ.get('ACTION')=='inventory':
+              runpy.run_path('experiments/santana-mcp-v5-wapi-readonly/openbot-readonly-inventory.py',run_name='__main__')
+              testroot=Path('experiments/santana-mcp-v5-wapi-readonly/mission-final')
+              commands=[['node','--experimental-strip-types','--test',str(testroot/'test-production-read.mjs'),str(testroot/'test-send-intents.mjs'),str(testroot/'test-official-channel.mjs')],[sys.executable,str(testroot/'test_mcp_content_delta.py')]]
+              for command in commands:
+                  result=subprocess.run(command,capture_output=True,text=True,timeout=60)
+                  print(json.dumps({'suite':Path(command[0]).name,'exit_code':result.returncode,'log_tail':(result.stdout+result.stderr)[-4000:]}))
+                  if result.returncode:raise SystemExit('INTEGRATION_TESTS_FAILED')
+              raise SystemExit(0)
+          expected='6e423557f105cff3983c1f1a1741d2ec2f96eb4da352b43bb058d168204d57b9'
+          base=Path('/home/runner/santana-mcp-staging/63a85c509957532a/WhatsApp-Santana-MCP-v5-Consolidado.zip')
+          base_hash='63a85c509957532a8091f0ad13b5a5423a0dfeb19a007310bac1f0943f27b6ee'
+          if os.environ.get('ACTION')=='collect':
+              matches=sorted(base.parent.glob('wapi-root-result-*.json'))[-1:]
+              result={'root_report_found':False}
+              if matches:
+                  p=matches[0];info=p.lstat()
+                  if stat.S_ISREG(info.st_mode) and info.st_uid==0 and not info.st_mode&0o022 and info.st_size<1048576:
+                      result={'root_report_found':True,'result':json.loads(p.read_text())}
+              print(json.dumps(result,ensure_ascii=False,indent=2))
+              raise SystemExit(0)
+          payload=Path('experiments/santana-mcp-v5-wapi-readonly/root-payload.py')
+          content=payload.read_bytes()
+          if hashlib.sha256(content).hexdigest()!=expected:raise SystemExit('PAYLOAD_HASH_MISMATCH')
+          scope=runpy.run_path(str(payload),run_name='santana_stage')
+          blob=base.read_bytes()
+          if hashlib.sha256(blob).hexdigest()!=base_hash:raise SystemExit('BASE_HASH_MISMATCH')
+          units=('santana-mcp-lab.service','santana-mcp-lab-tunnel.service','openbot-tunnel.service','docker.service')
+          def pids():
+              return {u:subprocess.run(['systemctl','show',u,'-p','MainPID','--value'],capture_output=True,text=True,timeout=5).stdout.strip() for u in units}
+          before=pids()
+          with tempfile.TemporaryDirectory(prefix='santana-wapi-patch-test-') as td:
+              dest=Path(td)
+              with zipfile.ZipFile(io.BytesIO(blob)) as z: validator=z.read('whatsapp-santana-mcp/archive_safety.py')
+              ns={};exec(compile(validator,'verified_archive','exec'),ns);ns['extract_verified'](blob,base_hash,dest)
+              root=dest/'whatsapp-santana-mcp'
+              for name,value in scope['PATCHES'].items():
+                  p=root/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(value)
+              clean={k:os.environ[k] for k in ('PATH','HOME','LANG') if k in os.environ}
+              r=subprocess.run([sys.executable,'run_tests.py','--output',str(dest/'evidence')],cwd=root,env=clean,capture_output=True,text=True,timeout=120)
+              result=json.loads(r.stdout)
+              if r.returncode or result['status']!='PASS':raise SystemExit('PATCH_TESTS_FAILED')
+              log=(dest/'evidence/python.log').read_text()
+              import re
+              count=re.search(r'Ran ([0-9]+) tests',log)
+              result['python_tests']=int(count[1]) if count else None
+          stage=Path('/home/runner/santana-mcp-staging/wapi-readonly-'+expected[:12]);stage.mkdir(parents=True,exist_ok=True)
+          target=stage/'root-payload.py'
+          if target.is_symlink():raise SystemExit('UNSAFE_STAGE')
+          target.write_bytes(content);target.chmod(0o644)
+          after=pids()
+          report={'status':'STAGED_NOT_INSTALLED','payload_sha256':expected,'payload_path':str(target),'tests':result,'service_pids_unchanged':before==after,'real_wapi_calls':0,'real_messages_sent':0,'production_writes':0}
+          (stage/'stage-evidence.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
+          print(json.dumps(report,ensure_ascii=False,indent=2))
+          PY
+
+

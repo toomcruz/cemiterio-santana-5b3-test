@@ -1,0 +1,35 @@
+{
+  "status": "LAB_ONLY_NOT_DEPLOYED_TO_ACTIVE_PLUGIN",
+  "production_approval_required": true,
+  "real_dispatch_enabled": false,
+  "base_commit": "2fba33131e4526271443344d18451e6a91214d53",
+  "files": {
+    "demo.py": "7180cd464a6307dfc81057145e6d9c26055ec4be34632c32cd1b7d8f46efb14b",
+    "mcp_extension.py": "4186f243665fddebcb3b5fd69bc4fc682e9d846e07dff2876c7f753f2023eb6f",
+    "maintenance.yml": "067a9c5baef50648166b24c8c5813aa887334fe5be6a9d99e8e7c103cf649b50",
+    "test_batch.py": "a514c7f8796667f8941c5fa7b18ec37fdd39c5b753796854aab433b84a582742",
+    "network_guard.cjs": "cce0d8fa35f6ec090cea5f0b4deae92d0fd3c31308ecda64117f5c1c786e7ae0",
+    "widget.html": "d856887e6f77eec526bace6c9f278dabc2136ed79a4e32219cb4de967a431f2b",
+    "test_official_integration.mjs": "e103d21204c0be6147a14fb7c8429943715ca44ce657bb131c62bed2d5ffcb13",
+    "README.md": "0104caf9c9b9245103088efffe879219dfe50a4c6917678c0b8db232e06d31ac",
+    "DEPLOYMENT-SCOPE.md": "4e0c570515e27c6f2b8c89fdfa97599812e8f0477b62941dcbb7077c61689b78",
+    "test_http.py": "64732e4511eeffa43a55a288f5763155ae79da4fe3b173725dc8289dc10176c6",
+    "run_validation.py": "16c3db4ee17cc71429d2c47534033893c1a325d3de61fa8edcc511ed66d1c914",
+    "batch_send.py": "864ef369c074186419d6e9aff251433ff662525f37a50122a8c2a98abd5d5ecc",
+    "review.html": "2cd151aa43d9a18daf65b6f0d6f98ad17136ce712c99f81ac8401f0183c99e83",
+    "backup/server.py": "9e8f52c895122c5496dccbfcbdd358f95785feb86f19f6c8c24a90701ea0d1d5",
+    "backup/send_provider.py": "5053f438ebfcf71c17b629b1246f3f9f92f588d4a0db0e9f38c60389aab1414c",
+    "backup/official-adapter.mjs": "5a3af90627ddd67855415cf88f7f4ba168acfb0d13cca2868be3604e152eafda",
+    "backup/maintenance.yml": "0bf8a8896652e7bdce222e2becc5e626b5d45cd01a9403c86f8ef36b54415eb1",
+    "backup/panel-authorization-page.tsx": "4c9b527bcad91ead07d5502027d958783ad8e6bfed544d157792125829610602",
+    "backup/revisar-envio.html": "699ffebcc0d86a0661422a7d8640f72feeb8cf843c702436e5c1d11f08da872f",
+    "backup/audit_store.py": "a244ea514a3eb6d9fec97c07e5a515dcd618adf08b10cb87588f3305f31b2e4c"
+  },
+  "existing_components": [
+    "v5 AuditStore",
+    "official-adapter.mjs",
+    "sendManualWhatsApp",
+    "administrative classifyDelivery"
+  ],
+  "new_services": 0
+}

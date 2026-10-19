@@ -1,0 +1,45 @@
+test_all_tools_reject_actor_and_content_substitution (test_batch.BatchTests.test_all_tools_reject_actor_and_content_substitution) ... ok
+test_ambiguous_suffix_never_guesses (test_batch.BatchTests.test_ambiguous_suffix_never_guesses) ... ok
+test_bad_attachment_or_cross_batch_nonce_never_authorizes (test_batch.BatchTests.test_bad_attachment_or_cross_batch_nonce_never_authorizes) ... ok
+test_batches_2_10_50_are_individual_rate_limited_and_audited (test_batch.BatchTests.test_batches_2_10_50_are_individual_rate_limited_and_audited) ... ok
+test_concurrent_execute_makes_one_call (test_batch.BatchTests.test_concurrent_execute_makes_one_call) ... ok
+test_crash_after_claim_recovers_by_status_not_execute (test_batch.BatchTests.test_crash_after_claim_recovers_by_status_not_execute) ... ok
+test_does_not_accept_arbitrary_live_transport (test_batch.BatchTests.test_does_not_accept_arbitrary_live_transport) ... ok
+test_duplicate_target_aliases_blocked (test_batch.BatchTests.test_duplicate_target_aliases_blocked) ... ok
+test_failed_one_does_not_retry_or_hide_other_results (test_batch.BatchTests.test_failed_one_does_not_retry_or_hide_other_results) ... ok
+test_global_dedup_across_batches_and_legacy_v5_ledger (test_batch.BatchTests.test_global_dedup_across_batches_and_legacy_v5_ledger) ... ok
+test_human_pause_busy_or_unknown_never_bypassed (test_batch.BatchTests.test_human_pause_busy_or_unknown_never_bypassed) ... ok
+test_idempotency_reuses_one_operation_and_conflicts_on_edit (test_batch.BatchTests.test_idempotency_reuses_one_operation_and_conflicts_on_edit) ... ok
+test_identity_operator_and_agent_boundaries (test_batch.BatchTests.test_identity_operator_and_agent_boundaries) ... ok
+test_image_and_pdf_bind_exact_bytes_name_mime_and_digest (test_batch.BatchTests.test_image_and_pdf_bind_exact_bytes_name_mime_and_digest) ... ok
+test_legacy_tool_operation_is_seen_by_batch_global_dedup (test_batch.BatchTests.test_legacy_tool_operation_is_seen_by_batch_global_dedup) ... ok
+test_malformed_receipt_is_unknown_and_no_automatic_retry (test_batch.BatchTests.test_malformed_receipt_is_unknown_and_no_automatic_retry) ... ok
+test_manifest_edit_after_review_is_rejected (test_batch.BatchTests.test_manifest_edit_after_review_is_rejected) ... ok
+test_no_approval_tool_is_model_callable (test_batch.BatchTests.test_no_approval_tool_is_model_callable) ... ok
+test_nonce_is_single_use_and_expired_review_cannot_authorize (test_batch.BatchTests.test_nonce_is_single_use_and_expired_review_cannot_authorize) ... ok
+test_oauth_cannot_be_human_review (test_batch.BatchTests.test_oauth_cannot_be_human_review) ... ok
+test_opt_out_and_missing_communication_authorization (test_batch.BatchTests.test_opt_out_and_missing_communication_authorization) ... ok
+test_personalized_pending_contexts_remain_separate (test_batch.BatchTests.test_personalized_pending_contexts_remain_separate) ... ok
+test_rate_limit_is_global_and_persistent (test_batch.BatchTests.test_rate_limit_is_global_and_persistent) ... ok
+test_read_does_not_confer_write_scope (test_batch.BatchTests.test_read_does_not_confer_write_scope) ... ok
+test_recipient_mutation_cannot_redirect_approved_message (test_batch.BatchTests.test_recipient_mutation_cannot_redirect_approved_message) ... ok
+test_rejects_more_than_50_and_personalization_outside_scope (test_batch.BatchTests.test_rejects_more_than_50_and_personalization_outside_scope) ... ok
+test_review_expiration_nonce_session_hash_and_replay (test_batch.BatchTests.test_review_expiration_nonce_session_hash_and_replay) ... ok
+test_revision_and_recent_inbound_invalidate_approval (test_batch.BatchTests.test_revision_and_recent_inbound_invalidate_approval) ... ok
+test_revocation_after_preparation_or_approval (test_batch.BatchTests.test_revocation_after_preparation_or_approval) ... ok
+test_revoked_oauth_or_human_session_stops_dispatch (test_batch.BatchTests.test_revoked_oauth_or_human_session_stops_dispatch) ... ok
+test_simultaneous_controllers_share_durable_claim (test_batch.BatchTests.test_simultaneous_controllers_share_durable_claim) ... ok
+test_single_suffix_resolution_and_one_review (test_batch.BatchTests.test_single_suffix_resolution_and_one_review) ... ok
+test_unauthorized_number_is_not_registered_implicitly (test_batch.BatchTests.test_unauthorized_number_is_not_registered_implicitly) ... ok
+test_unknown_pauses_lot_and_reconciliation_never_sends (test_batch.BatchTests.test_unknown_pauses_lot_and_reconciliation_never_sends) ... ok
+test_new_tools_and_old_reads_coexist (test_http.HTTPTests.test_new_tools_and_old_reads_coexist) ... ok
+test_oauth_bearer_or_cross_origin_cannot_impersonate_browser_session (test_http.HTTPTests.test_oauth_bearer_or_cross_origin_cannot_impersonate_browser_session) ... ok
+test_openbot_sees_no_batch_tools_and_cannot_call_them (test_http.HTTPTests.test_openbot_sees_no_batch_tools_and_cannot_call_them) ... ok
+test_protected_review_single_click_then_mcp_execution (test_http.HTTPTests.test_protected_review_single_click_then_mcp_execution) ... ok
+test_resource_widget_is_available_without_approval_authority (test_http.HTTPTests.test_resource_widget_is_available_without_approval_authority) ... ok
+test_review_page_is_no_store_no_frame_and_has_no_credentials (test_http.HTTPTests.test_review_page_is_no_store_no_frame_and_has_no_credentials) ... ok
+
+----------------------------------------------------------------------
+Ran 40 tests in 1.005s
+
+OK

@@ -1,0 +1,63 @@
+{
+  "source": "isolated_synthetic_batch_lab",
+  "demos": [
+    {
+      "recipients": 1,
+      "human_approvals": 1,
+      "individual_attempts": 1,
+      "counts": {
+        "accepted_by_api": 1
+      },
+      "distinct_operations": 1,
+      "minimum_spacing_seconds": 0,
+      "all_results_tracked": true,
+      "delivery_confirmed": false,
+      "transport": "simulated_existing_official_contract",
+      "real_messages_sent": 0
+    },
+    {
+      "recipients": 2,
+      "human_approvals": 1,
+      "individual_attempts": 2,
+      "counts": {
+        "accepted_by_api": 2
+      },
+      "distinct_operations": 2,
+      "minimum_spacing_seconds": 2.0,
+      "all_results_tracked": true,
+      "delivery_confirmed": false,
+      "transport": "simulated_existing_official_contract",
+      "real_messages_sent": 0
+    },
+    {
+      "recipients": 10,
+      "human_approvals": 1,
+      "individual_attempts": 10,
+      "counts": {
+        "accepted_by_api": 10
+      },
+      "distinct_operations": 10,
+      "minimum_spacing_seconds": 2.0,
+      "all_results_tracked": true,
+      "delivery_confirmed": false,
+      "transport": "simulated_existing_official_contract",
+      "real_messages_sent": 0
+    },
+    {
+      "recipients": 50,
+      "human_approvals": 1,
+      "individual_attempts": 50,
+      "counts": {
+        "accepted_by_api": 50
+      },
+      "distinct_operations": 50,
+      "minimum_spacing_seconds": 2.0,
+      "all_results_tracked": true,
+      "delivery_confirmed": false,
+      "transport": "simulated_existing_official_contract",
+      "real_messages_sent": 0
+    }
+  ],
+  "production_writes": 0,
+  "real_messages_sent": 0
+}

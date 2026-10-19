@@ -1,0 +1,95 @@
+{
+  "status": "PASS",
+  "at": "2026-10-19T09:06:59.049234+00:00",
+  "environment": "isolated_synthetic",
+  "suites": [
+    {
+      "suite": "python",
+      "tests": 40,
+      "exit_code": 0,
+      "seconds": 1.108,
+      "log_sha256": "e918817405c47731646f8f00cdcb71b473d4ad6e5dcf505242e870fb5db4b38f"
+    },
+    {
+      "suite": "official-regression",
+      "tests": 26,
+      "exit_code": 0,
+      "seconds": 0.607,
+      "log_sha256": "80af06cef3a4a553ede4b90e2a704cc02c43f6c068604ff3e49a5800b919bc21"
+    }
+  ],
+  "total_tests": 66,
+  "seconds": 1.878,
+  "max_child_rss_kib": 70292,
+  "demos": [
+    {
+      "recipients": 1,
+      "human_approvals": 1,
+      "individual_attempts": 1,
+      "counts": {
+        "accepted_by_api": 1
+      },
+      "distinct_operations": 1,
+      "minimum_spacing_seconds": 0,
+      "all_results_tracked": true,
+      "delivery_confirmed": false,
+      "transport": "simulated_existing_official_contract",
+      "real_messages_sent": 0
+    },
+    {
+      "recipients": 2,
+      "human_approvals": 1,
+      "individual_attempts": 2,
+      "counts": {
+        "accepted_by_api": 2
+      },
+      "distinct_operations": 2,
+      "minimum_spacing_seconds": 2.0,
+      "all_results_tracked": true,
+      "delivery_confirmed": false,
+      "transport": "simulated_existing_official_contract",
+      "real_messages_sent": 0
+    },
+    {
+      "recipients": 10,
+      "human_approvals": 1,
+      "individual_attempts": 10,
+      "counts": {
+        "accepted_by_api": 10
+      },
+      "distinct_operations": 10,
+      "minimum_spacing_seconds": 2.0,
+      "all_results_tracked": true,
+      "delivery_confirmed": false,
+      "transport": "simulated_existing_official_contract",
+      "real_messages_sent": 0
+    },
+    {
+      "recipients": 50,
+      "human_approvals": 1,
+      "individual_attempts": 50,
+      "counts": {
+        "accepted_by_api": 50
+      },
+      "distinct_operations": 50,
+      "minimum_spacing_seconds": 2.0,
+      "all_results_tracked": true,
+      "delivery_confirmed": false,
+      "transport": "simulated_existing_official_contract",
+      "real_messages_sent": 0
+    }
+  ],
+  "real_messages_sent": 0,
+  "production_writes": 0,
+  "services_changed": 0,
+  "sana_activated": false,
+  "existing_runner_used": false,
+  "service_states_before": null,
+  "service_states_after": null,
+  "service_states_unchanged": null,
+  "installation_metadata": [],
+  "host_chatgpt_new_tools_tested": false,
+  "independent_real_operator_session_tested": false,
+  "official_panel_batch_records_written": false,
+  "deployment_state": "ISOLATED_LAB_EXTENSION_NOT_INSTALLED_IN_ACTIVE_PLUGIN"
+}
