@@ -1,0 +1,95 @@
+{
+  "recorded_at": "2026-10-19T17:18:23.738Z",
+  "installation": {
+    "origin": "operator_root_report",
+    "report": {
+      "status": "LAB_PREVIEW_COMPAT_FIXED",
+      "whatsapp_sends": 0,
+      "production_changes": 0,
+      "permissions_changed": false,
+      "auth_grants_changed": false,
+      "services_restarted": 0,
+      "backup": "/root/santana-mcp-backups/preview-compat-20261019T171318Z-1792429998042793004",
+      "source": "fixture",
+      "real_send_enabled": false,
+      "lab_pid": "1269467",
+      "lab_pid_unchanged": true,
+      "lab_tunnel_pid_unchanged": true,
+      "only_file": "real-widget.html",
+      "image_source": "verified_data_uri",
+      "per_component_csp": true,
+      "external_review_link": false
+    }
+  },
+  "browser_verification": {
+    "same_plugin_catalog_refreshed": true,
+    "component_meta_csp_present": true,
+    "script_csp_hash": "u/dPi+nAzc0/zVssTYTXDVoMWYB2SP2R8XoBViTt31A=",
+    "pdf": {
+      "batch_id": "ba93726f-4a89-4209-800a-b99e0d58aaf8",
+      "recipient_articles": 10,
+      "page_images": 1,
+      "image_complete": true,
+      "natural_width": 905,
+      "natural_height": 1280,
+      "src_scheme": "data",
+      "expired_review_blocked": true
+    },
+    "image": {
+      "batch_id": "1932c016-9023-46c4-9b00-1f596d62607a",
+      "image_complete": true,
+      "natural_width": 1000,
+      "natural_height": 600,
+      "src_scheme": "data",
+      "all_content_loaded": true,
+      "personal_login_visible": true
+    },
+    "auth_attempts_by_agent": 0,
+    "human_approval_by_agent": false
+  },
+  "expired_pdf_batch": {
+    "batch_id": "ba93726f-4a89-4209-800a-b99e0d58aaf8",
+    "attempts_per_recipient": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "homolog_receipt_count": 0,
+    "read_only_receipt_lookup": true
+  },
+  "renewed_pdf_batch": {
+    "batch_id": "cb10476f-351a-4e96-bb97-3188467320c0",
+    "manifest_sha256": "6dd84350fa5435dae807958334217d5c34c33d5dce465aa8e1f1799d76de6fab",
+    "total": 10,
+    "state": "prepared",
+    "expires_at": 1792430833.033918,
+    "counts": {
+      "prepared": 10
+    },
+    "real_dispatch_enabled": false,
+    "review": "AWAITING_INDEPENDENT_OPERATOR",
+    "all_content_loaded": true,
+    "page_image_complete": true,
+    "page_width": 905,
+    "page_height": 1280,
+    "native_personal_login_visible": true,
+    "safe_chat_url": "https://chatgpt.com/c/6ad62390-de5c-83ea-a31b-051ef021f5bc"
+  },
+  "real_whatsapp_sends": 0,
+  "production_changes": 0,
+  "sana_openbot_boss_n8n_changes": 0,
+  "supabase_changes": 0,
+  "remaining": [
+    "Independent operator review of renewed synthetic batch",
+    "Execute and reconcile approved synthetic items; never real WhatsApp",
+    "Production batch bridge/grants require separate implementation/validation/approval"
+  ],
+  "screenshot": "preview-browser-ready.jpg"
+}

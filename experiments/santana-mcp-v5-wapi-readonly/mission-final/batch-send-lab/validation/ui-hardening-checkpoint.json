@@ -1,6 +1,6 @@
 {
   "recorded_at": "2026-10-19T16:34:46.882Z",
-  "status": "HARDENING_INSTALLED_NATIVE_VERIFIED_ONE_FILE_PREVIEW_COMPAT_FIX_STAGED",
+  "status": "LAB_INSTALLED_LIVE_PDF_AND_IMAGE_VERIFIED_OPERATOR_REVIEW_PENDING",
   "plugin": {
     "id": "plugin_asdk_app_6ad3b0cbf1108191bc5ce4546eb8a4c8",
     "version": "1.0.2",
@@ -69,10 +69,9 @@
   "sana_openbot_boss_n8n_operations": 0,
   "supabase_changes": 0,
   "remaining": [
-    "Apply one HTML image-source correction under root; no service restart or grant changes",
-    "Refresh same plugin resources and validate image/PDF decode in live ChatGPT",
-    "Independent operator review and simulated execution of a larger batch",
-    "Production batch integration and any real sends require separate implementation/validation/approval"
+    "Independent operator review of renewed synthetic batch",
+    "Execute and reconcile approved synthetic items; never real WhatsApp",
+    "Production batch bridge/grants require separate implementation/validation/approval"
   ],
   "fixture_correction": {
     "reason": "Binary PDF exists locally but only canonical fixtures.json is in repository",
@@ -151,54 +150,57 @@
   },
   "installed": true,
   "preview_compatibility": {
-    "recorded_at": "2026-10-19T17:01:02.602Z",
-    "workflow_run_id": 39290019091,
-    "job_id": 118187932878,
-    "source_commit": "6e421ac2f007b46e04c4ac7ac4b1cd44dbe3322d",
-    "validation": {
-      "status": "PASS",
-      "tests": 11,
-      "suites": [
-        {
-          "suite": "widget_preview",
-          "tests": 8,
-          "exit_code": 0,
-          "seconds": 1.106,
-          "log_sha256": "d92e54ef1fe3f018884deccaf65a46d0ac272fb2d0c86766b8cca64831dd1559"
-        },
-        {
-          "suite": "one_file_install",
-          "tests": 3,
-          "exit_code": 0,
-          "seconds": 3.788,
-          "log_sha256": "f95a30f1041d85ed1ac7e11b396daaecd04ca192c3c1e6d21ffa7021a4d1e224"
-        }
-      ],
-      "real_whatsapp_sends": 0,
-      "production_changes": 0
+    "recorded_at": "2026-10-19T17:18:23.738Z",
+    "installation": {
+      "origin": "operator_root_report",
+      "report": {
+        "status": "LAB_PREVIEW_COMPAT_FIXED",
+        "whatsapp_sends": 0,
+        "production_changes": 0,
+        "permissions_changed": false,
+        "auth_grants_changed": false,
+        "services_restarted": 0,
+        "backup": "/root/santana-mcp-backups/preview-compat-20261019T171318Z-1792429998042793004",
+        "source": "fixture",
+        "real_send_enabled": false,
+        "lab_pid": "1269467",
+        "lab_pid_unchanged": true,
+        "lab_tunnel_pid_unchanged": true,
+        "only_file": "real-widget.html",
+        "image_source": "verified_data_uri",
+        "per_component_csp": true,
+        "external_review_link": false
+      }
     },
-    "staged": {
-      "sha256": "faf2b4b94ef800a0e64d4d1e872bb0cc71871015fcfe643069836ca2b1535ce8",
-      "bytes": 20238,
-      "only_file": "real-widget.html",
-      "only_environment": "existing MCP LAB",
-      "services_restarted": 0,
-      "production_changes": 0,
-      "real_whatsapp_sends": 0,
-      "old_widget_sha256": "a6aefb8656d9fdd834b16ad4b3558c7c7d1f6a079cee2708b029ab1dfe00c2d9",
-      "new_widget_sha256": "49b9a1da9e047d56075e7ee8d065d2d71a060785f29611c0044de3765c7cf6d8",
-      "path": "/home/runner/santana-mcp-staging/batch-preview-fix-faf2b4b94ef8/apply-preview.py",
-      "status": "STAGED_ROOT_REQUIRED",
-      "uid": 1001,
-      "sudo_without_password": false
+    "browser_verification": {
+      "same_plugin_catalog_refreshed": true,
+      "component_meta_csp_present": true,
+      "script_csp_hash": "u/dPi+nAzc0/zVssTYTXDVoMWYB2SP2R8XoBViTt31A=",
+      "pdf": {
+        "batch_id": "ba93726f-4a89-4209-800a-b99e0d58aaf8",
+        "recipient_articles": 10,
+        "page_images": 1,
+        "image_complete": true,
+        "natural_width": 905,
+        "natural_height": 1280,
+        "src_scheme": "data",
+        "expired_review_blocked": true
+      },
+      "image": {
+        "batch_id": "1932c016-9023-46c4-9b00-1f596d62607a",
+        "image_complete": true,
+        "natural_width": 1000,
+        "natural_height": 600,
+        "src_scheme": "data",
+        "all_content_loaded": true,
+        "personal_login_visible": true
+      },
+      "auth_attempts_by_agent": 0,
+      "human_approval_by_agent": false
     },
-    "installed": false,
-    "live_new_image_preview": "PENDING_ONE_FILE_ROOT_APPLICATION",
-    "batch_prepared": {
-      "id": "ba93726f-4a89-4209-800a-b99e0d58aaf8",
-      "state": "prepared",
-      "total": 10,
-      "attempts": [
+    "expired_pdf_batch": {
+      "batch_id": "ba93726f-4a89-4209-800a-b99e0d58aaf8",
+      "attempts_per_recipient": [
         0,
         0,
         0,
@@ -210,14 +212,29 @@
         0,
         0
       ],
+      "homolog_receipt_count": 0,
+      "read_only_receipt_lookup": true
+    },
+    "renewed_pdf_batch": {
+      "batch_id": "cb10476f-351a-4e96-bb97-3188467320c0",
+      "manifest_sha256": "6dd84350fa5435dae807958334217d5c34c33d5dce465aa8e1f1799d76de6fab",
+      "total": 10,
+      "state": "prepared",
+      "expires_at": 1792430833.033918,
       "counts": {
         "prepared": 10
-      }
+      },
+      "real_dispatch_enabled": false,
+      "review": "AWAITING_INDEPENDENT_OPERATOR"
     },
-    "human_approval_attempts": 0,
-    "login_attempts": 0,
-    "production_changes": 0,
     "real_whatsapp_sends": 0,
-    "screenshot": "preview-browser-block.jpg"
+    "production_changes": 0,
+    "sana_openbot_boss_n8n_changes": 0,
+    "supabase_changes": 0,
+    "remaining": [
+      "Independent operator review of renewed synthetic batch",
+      "Execute and reconcile approved synthetic items; never real WhatsApp",
+      "Production batch bridge/grants require separate implementation/validation/approval"
+    ]
   }
 }

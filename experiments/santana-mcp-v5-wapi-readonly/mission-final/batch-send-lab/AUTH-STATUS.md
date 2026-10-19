@@ -106,3 +106,7 @@ Workflow 39287494403, job 118178703376: 13 verificações Python (incluindo 6 re
 ## Serviço atualizado e ajuste de imagem preparado
 
 O relatório root LAB_UI_HARDENING_INSTALLED foi confirmado pela conexão ativa. A atualização do catálogo na interface recarregou o recurso e o lote concluído ficou sem opção de nova revisão. O PDF de um novo lote de dez permaneceu bloqueado pela CSP herdada, que não permite img blob:. Correção isolada para data URI, permitida na mesma política, aprovada em 11 verificações locais e no runner (workflow 39290019091). Patch de um HTML preparado, sem reinício de serviço e sem mudanças de concessões. Aplicação root e prova visual corrigida pendentes. Não houve tentativa de login, aprovação humana ou envio real neste turno.
+
+## Prévia corrigida comprovada na interface real
+
+O operador retornou LAB_PREVIEW_COMPAT_FIXED, sem reinício, com PID 1269467 e túnel inalterados. Após atualizar o catálogo existente, o componente real exibiu PDF (905 x 1280) e imagem PNG (1000 x 600) usando data URI sob a CSP preservada. O lote PDF expirado tinha zero tentativas e zero recibos HOMOLOG; foi preparada nova revisão de dez respostas sintéticas. Nenhum login, aprovação ou envio real foi executado pelo agente. Referência atual: validation/preview-live-verified.json. Não há nova alteração de código pendente para essa prévia; falta a revisão independente e simulação autorizada do lote maior.
