@@ -1,0 +1,74 @@
+{
+  "status": "BLOCKED_ON_AUTHENTICATED_TEAM_MEMBER_CLIENT",
+  "at": "2026-10-19T20:50:00Z",
+  "installed_bundle": {
+    "version": "0.44.3",
+    "public_source_tag": "v0.44.3",
+    "main_bundle_sha256": "00dd6a78f98428db125a8b5b9f54db0462dea6c8d63eeed3d084ff512e384b7d",
+    "package_sha256": "04f49a412bd374ad43aae78d4c95b4d6b79a7ba6c88e115d3011bacc3b3933df",
+    "contract_markers_present": [
+      "agent-tasks-v1",
+      "/v1/agent-tasks/start",
+      "/v1/agent-tasks/send",
+      "/v1/agent-tasks/read"
+    ],
+    "authenticated_runtime_tasks_api_verified": false
+  },
+  "inventory": {
+    "workflow_run_id": 39322214052,
+    "job_id": 118298876785,
+    "runner": "hermes-santana-lab",
+    "private_config_reads": 0
+  },
+  "bridge": {
+    "online": true,
+    "version": "0.4.2-direct-agent-messages-candidate",
+    "single_sana_listed": true,
+    "local_scripts_online": true
+  },
+  "technical_diagnostic": {
+    "target": "Boss",
+    "purpose": "read-only version, resource, and already-configured Team client inventory",
+    "request_id": "b80ab86d660f42798a200cc154008085",
+    "state": "succeeded",
+    "result_available": true,
+    "dispatch_attempts": 1,
+    "openbot_process_pid": 1638448,
+    "configured_authenticated_team_client_identified": false
+  },
+  "resources": {
+    "scope": "openbot.service cgroup including descendants",
+    "memory_current_bytes": 1274269696,
+    "memory_peak_bytes": 1670291456,
+    "vps_mem_available_kib": 4377968,
+    "cpu_usage_accumulated_usec": 595991219,
+    "cpu_percentage_sample": null,
+    "six_turn_load_test_performed": false
+  },
+  "official_contract": {
+    "task_thread_and_provider_session_independent": true,
+    "agent_identity_workspace_and_permanent_memories_shared": true,
+    "native_five_minute_idle_ttl_proven": false,
+    "task_start_returns_task_not_message_receipt": true,
+    "task_send_returns_delivery_receipt": true,
+    "local_scripts_token_is_not_team_member_session": true
+  },
+  "tests": {
+    "two_fictitious_tasks_created": 0,
+    "sana_messages_sent": 0,
+    "three_turns_each": "NOT_RUN_AUTHORIZATION_CLIENT_MISSING",
+    "cross_contact_isolation": "NOT_PROVEN_LIVE",
+    "five_minute_expiry": "NOT_PROVEN_LIVE",
+    "automatic_retries": 0
+  },
+  "preservation": {
+    "bridge_code_changed": false,
+    "agent_configuration_changed": false,
+    "service_changes": 0,
+    "whatsapp_mcp_changes": 0,
+    "production_changes": 0,
+    "whatsapp_messages_sent": 0,
+    "wapi_integration_performed": false
+  },
+  "next_step": "Use a protected, already signed-in OpenBot member interface/client that negotiates agent-tasks-v1. Do not extract a member token from another profile or repurpose the Local Scripts credential. Browser fallback requires user approval."
+}
