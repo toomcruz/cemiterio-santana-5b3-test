@@ -1,14 +1,22 @@
 """Read-only, bounded LAB diagnostics. Never emits raw journals or environment."""
-import json, os, re, stat, subprocess
+import json, os, re, shlex, stat, subprocess
 from pathlib import Path
 from urllib.request import urlopen
 from urllib.error import HTTPError, URLError
 
 UNIT='santana-mcp-lab.service'
 def main():
-    props=['ActiveState','SubState','MainPID','ExecMainStatus','ExecMainCode','NRestarts','Result','User','Group','ProtectSystem','ProtectHome','ReadOnlyPaths','ReadWritePaths','InaccessiblePaths','RootDirectory','MemoryMax','DropInPaths']
+    props=['ActiveState','SubState','MainPID','ExecMainStatus','ExecMainCode','NRestarts','Result','User','Group','ProtectSystem','ProtectHome','ReadOnlyPaths','ReadWritePaths','InaccessiblePaths','RootDirectory','MemoryMax','DropInPaths','StateDirectory','RuntimeDirectory','PrivateTmp']
     p=subprocess.run(['systemctl','show',UNIT,*[a for v in props for a in ('-p',v)]],capture_output=True,text=True,timeout=10)
     out={'status':'LAB_READ_ONLY_DIAGNOSTIC','uid':os.getuid(),'properties':dict(s.split('=',1) for s in p.stdout.splitlines() if '=' in s),'real_messages_sent':0,'services_changed':0,'production_changes':0}
+    # D-Bus may expose unit-inline environment; keep all values in RAM and emit
+    # only the audit-storage classification and the validated loopback port.
+    p=subprocess.run(['systemctl','show',UNIT,'-p','Environment','--value'],capture_output=True,text=True,timeout=5)
+    values=dict(s.split('=',1) for s in shlex.split(p.stdout) if '=' in s)
+    audit=values.get('SANTANA_AUDIT_DB')
+    out['audit_storage']={'configured_inline':audit is not None,'kind':'memory' if audit==':memory:' else 'persistent' if audit else 'not_visible'}
+    if audit and audit!=':memory:' and re.fullmatch(r'[a-zA-Z0-9_./-]{1,300}',audit):out['audit_storage']['path']=audit
+    if values.get('MCP_PORT','').isdigit():out['configured_port']=int(values['MCP_PORT'])
     try:
         with urlopen('http://127.0.0.1:8770/mcp',timeout=3) as r:out['loopback_get_status']=r.status
     except HTTPError as e:out['loopback_get_status']=e.code
