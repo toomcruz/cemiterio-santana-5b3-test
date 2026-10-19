@@ -1,0 +1,5 @@
+{
+  "import": "import {singleReviewOperation} from './single-review-edge.ts';\n",
+  "anchor": "  if (['operator_mcp_identity','operator_mcp_preview','operator_mcp_authorize','operator_mcp_prepare','operator_mcp_settle','operator_mcp_status'].includes(action)) return mcpOfficialOperation(request,body,service);",
+  "insert_before": "  if (['operator_mcp_review_stage','operator_mcp_review_status','operator_mcp_review_list','operator_mcp_review_preview','operator_mcp_review_approve','operator_mcp_review_prepare','operator_mcp_review_settle','operator_mcp_review_receipt'].includes(action)) return singleReviewOperation(request,body,service);\n"
+}

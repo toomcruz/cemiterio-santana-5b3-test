@@ -1,0 +1,13 @@
+✔ multiple full previews, one approval button each and no batch approval (116.002412ms)
+✔ ambiguous result locks approval and only offers read-only receipt (55.146255ms)
+✔ preview reader bounds concurrency to two even for twenty responses (30.994006ms)
+✔ valid Panel session opens review without HOMOLOG handoff or password login (50.056041ms)
+✔ expired session asks for login on the same page; failed login clears password and never retries (66.764922ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 648.605229

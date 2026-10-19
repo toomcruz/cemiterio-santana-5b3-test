@@ -1,0 +1,4 @@
+__pycache__/
+candidate/**/__pycache__/
+test-runtime/
+screenshots/

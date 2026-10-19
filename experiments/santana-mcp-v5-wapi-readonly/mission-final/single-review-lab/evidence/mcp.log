@@ -1,0 +1,14 @@
+test_approval_or_dispatch_actions_are_not_callable_by_mcp_provider (__main__.MCP.test_approval_or_dispatch_actions_are_not_callable_by_mcp_provider) ... ok
+test_changed_context_during_preparation_does_not_release_a_review (__main__.MCP.test_changed_context_during_preparation_does_not_release_a_review) ... ok
+test_consult_reads_new_official_status_without_homolog_fallback_on_timeout (__main__.MCP.test_consult_reads_new_official_status_without_homolog_fallback_on_timeout) ... ok
+test_context_permission_failure_cannot_prepare_or_release_a_review (__main__.MCP.test_context_permission_failure_cannot_prepare_or_release_a_review) ... ok
+test_network_failure_does_not_send_retry_or_report_success (__main__.MCP.test_network_failure_does_not_send_retry_or_report_success) ... ok
+test_old_operation_not_found_keeps_existing_official_path (__main__.MCP.test_old_operation_not_found_keeps_existing_official_path) ... ok
+test_preparation_returns_one_panel_page_without_homolog_human_link (__main__.MCP.test_preparation_returns_one_panel_page_without_homolog_human_link) ... ok
+test_stage_only_accepts_the_bound_panel_url (__main__.MCP.test_stage_only_accepts_the_bound_panel_url) ... ok
+test_status_unknown_is_read_only_and_never_retried (__main__.MCP.test_status_unknown_is_read_only_and_never_retried) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.029s
+
+OK

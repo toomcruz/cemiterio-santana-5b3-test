@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "source": "live PROD Edge v43 read-only snapshot",
+  "existing_files": 53,
+  "existing_index_exactly_recoverable": true,
+  "changes": [
+    "one new import",
+    "one action branch after existing private caller gate"
+  ],
+  "production_mutations": 0
+}

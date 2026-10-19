@@ -1,0 +1,38 @@
+✔ one PROD session: preview + one click calls the unchanged native text sender once (1270.614214ms)
+✔ image and PDF retain native staging, signed private media and one request per message (96.55376ms)
+✔ OAuth/HOMOLOG session can prepare but cannot approve as a PROD operator (22.465299ms)
+✔ cross-origin, missing auth, arbitrary content and wrong challenge cannot send (27.597304ms)
+✔ double click shares the atomic approval: at most one provider attempt (51.677042ms)
+✔ timeout outcome is recorded without an automatic retry (47.796048ms)
+✔ 500 outcome is recorded without an automatic retry (54.477737ms)
+✔ 400 outcome is recorded without an automatic retry (43.235125ms)
+✔ failure after approval and before prepare never resumes on approval replay (35.578001ms)
+✔ settlement failure after provider acceptance stays unresolved and cannot resend (42.947439ms)
+✔ receipt timeout after a successful send does not downgrade ACK or retry (44.006536ms)
+✔ fresh context blocks stale preview and canonical hash binds the exact destination (27.051159ms)
+✔ recipient replacement without revision change also invalidates the preview (25.077158ms)
+✔ new inbound between approval and native prepare blocks dispatch in the same HTTP request (32.353077ms)
+✔ attachment mutation after preview is rejected before approval or transport (28.117178ms)
+✔ new HOMOLOG preparation proof rejects expired drafts and other clients (22.459253ms)
+✔ human HOMOLOG login is not a substitute for the OAuth draft proof or PROD approval (16.540623ms)
+✔ stage does not approve, pause, create an official message or grant (1170.961302ms)
+✔ same operator session approves once; replay does not dispatch (38.142902ms)
+✔ wrong operator, session, owner, challenge and payload are blocked (33.387284ms)
+✔ challenge expiry, preview refresh and revoked session deny approval (28.777741ms)
+✔ read does not grant write; revoked or expired permissions deny (21.953491ms)
+✔ new incoming message before approval invalidates the preview without revision change (30.873243ms)
+✔ new message after approval is rechecked by the unmodified official coordinator (32.243641ms)
+✔ official human pause, manual record, provider ACK and confirmed delivery are distinct (39.151335ms)
+✔ unknown outcome is not a failure or proof of delivery and never reclaims (31.072407ms)
+✔ two conversations on one screen require independent approvals (27.029374ms)
+✔ pagination covers every draft once without approval or message creation (75.166307ms)
+✔ queue, manual competitor and unknown official operation block a new dispatch (26.206936ms)
+✔ draft immutable conflict and table/function privileges fail closed (18.555682ms)
+ℹ tests 30
+ℹ suites 0
+ℹ pass 30
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2070.452174

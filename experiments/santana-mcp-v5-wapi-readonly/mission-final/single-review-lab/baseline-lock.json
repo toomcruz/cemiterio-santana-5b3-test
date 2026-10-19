@@ -1,0 +1,14 @@
+{
+  "prod_edge": {"project":"sfoygvjtnwqvudrbgoom","slug":"sana-panel-preview-login","version":43,"ezbr_sha256":"5c602e62ebacab97fb19d4c7454910f5f337a491fb3de84805fff684a787bcf9"},
+  "homolog_edge": {"project":"xdccjulfqcqefykunwtg","slug":"sana-mcp-read","version":16,"ezbr_sha256":"19f5eb0281af6ba5f9acba38666afa44d158fbc3f98ccc0e6bbee69399d770c2"},
+  "panel": {"repository":"toomcruz/atendimento-cemiterio-santana","commit":"bbc4e108e703322ee30f5aa6624926829f7b1066","deployment":"dpl_7Ry6eGTkBJwEwqfVtFmVjes9iusN"},
+  "mcp": {"project":"prj_c23HUlwcAwk15rz9j3AAj8yPdbx9","deployment":"dpl_25yLqLJACBQeTWxmhytq1JALr1Tn","server_uid_sha1":"aefe4beafe6f49c83c347c7737c311283cd9f1ff","server_sha256":"4f5388bbcd37431cdc7906d6296390794644db1b899153a324c59774211255a9"},
+  "sha256": {
+    "baseline/send-intents-core.mjs":"2a00629ef23ecd381b1595e98c941301f7ff1cda01477dd1b0a8a0234c47b0ca",
+    "baseline/media-attachments.mjs":"4972b6148e6b6a46e8a94eb795db0fbc8398424b77094973d3ddf91236f72f89",
+    "baseline/prod-mcp-official-operations.ts":"e2a071861eeaff89bfece004cbf73134e924f3f13ccc71b31d76f7cfc020a1ab",
+    "baseline/lib/supabase-browser.ts":"68abe4e1ee84668f02207ce2a48926da358100f8f4f13b78c7c53cf3bfd9d0e4",
+    "baseline/app/api/runtime/sana-control/route.ts":"2ca116d25fb3b4f861b01260c7db51484698a1cb6ca99d48087bf23581619732",
+    "baseline/lib/sana/manual-whatsapp.ts":"c6f689975a3251c9b508d1ddb6b4f7c076aba95ef912cee5d3877fad37caf1b1"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "status": "PASS",
+  "environment": "isolated_local_postgres_wasm_http_fixture_and_jsdom",
+  "at_utc": "2026-10-19T23:05:05.029250+00:00",
+  "tests": 44,
+  "suites": [
+    {
+      "suite": "build-candidate",
+      "exit_code": 0,
+      "seconds": 0.035,
+      "log": "build-candidate.log"
+    },
+    {
+      "suite": "compile-preview",
+      "exit_code": 0,
+      "seconds": 0.277,
+      "log": "compile-preview.log"
+    },
+    {
+      "suite": "typecheck",
+      "exit_code": 0,
+      "seconds": 1.378,
+      "log": "typecheck.log"
+    },
+    {
+      "suite": "sql-and-http",
+      "exit_code": 0,
+      "seconds": 2.127,
+      "log": "sql-and-http.log",
+      "tests": 30
+    },
+    {
+      "suite": "screen-and-session",
+      "exit_code": 0,
+      "seconds": 0.734,
+      "log": "screen-and-session.log",
+      "tests": 5
+    },
+    {
+      "suite": "mcp",
+      "exit_code": 0,
+      "seconds": 0.12,
+      "log": "mcp.log",
+      "tests": 9
+    }
+  ],
+  "manifest_sha256": "2c654bccfb3f2167a68c5e6ec2c7736fb73274262eb6a6d1c17b3cc635514901",
+  "real_whatsapp_sends": 0,
+  "production_mutations_by_this_work": 0,
+  "human_authentication": "existing PROD verifier executed against mocked Auth service; real PROD session not exercised",
+  "transport": "unchanged deployed Panel sender with injected simulated transport; no external provider requests",
+  "database": "PGlite PostgreSQL, isolated in memory; fixture native manual/control functions and last-deployed MCP coordinator SQL",
+  "browser_visual_qa": "blocked: cloud browser URL policy disallowed file protocol; no workaround attempted",
+  "production_readiness": "candidate validated; production approval, fresh backup/preflight and existing-project build required before activation"
+}

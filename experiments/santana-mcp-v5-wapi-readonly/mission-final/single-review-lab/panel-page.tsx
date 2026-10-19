@@ -1,0 +1,20 @@
+"use client";
+import React,{useEffect,useMemo,useRef,useState,type FormEvent} from 'react';
+import {createSupabaseBrowserClient} from '@/lib/supabase-browser';
+import {SANTANA_PANEL_URL,SANTANA_PANEL_PUBLISHABLE_KEY} from '@/lib/santana-panel-config';
+import {ReviewScreen} from '@/lib/sana/single-review-screen';
+async function bounded<T>(p:Promise<T>):Promise<T>{let timer:any;try{return await Promise.race([p,new Promise<never>((_,no)=>{timer=setTimeout(()=>no(Error('MCP_PROD_SESSION_REQUIRED')),10000);})]);}finally{clearTimeout(timer);}}
+export default function PanelMcpReview(){
+ const client=useMemo(()=>createSupabaseBrowserClient(SANTANA_PANEL_URL,SANTANA_PANEL_PUBLISHABLE_KEY),[]);
+ const [session,setSession]=useState<any>(undefined),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[selected,setSelected]=useState('');const logging=useRef(false),password=useRef<HTMLInputElement>(null);
+ useEffect(()=>{setSelected(new URLSearchParams(location.search).get('operation')||'');let active=true;if(!client){setSession(null);setNotice('Conexão do Painel indisponível.');return;}void bounded(client.auth.getSession()).then(r=>{if(active)setSession(r.data.session);}).catch(()=>{if(active)setSession(null);});const {data}=client.auth.onAuthStateChange((_event,value)=>{if(active)setSession(value);});return()=>{active=false;data.subscription.unsubscribe();};},[client]);
+ const call=async(action:string,body:Record<string,unknown>={})=>{
+  if(!client)throw Error('MCP_PROD_SESSION_REQUIRED');const r=await bounded(client.auth.getSession());const token=r.data.session?.access_token;if(!token){setSession(null);throw Error('MCP_PROD_SESSION_REQUIRED');}
+  const response=await fetch('/api/runtime/sana-control',{method:'POST',redirect:'error',cache:'no-store',signal:AbortSignal.timeout(action==='approve_send'?55000:20000),headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify({action:'mcp_review_'+action,...body})});
+  const d=await response.json();if(!response.ok){if(response.status===401||d.error==='MCP_PROD_SESSION_REQUIRED')setSession(null);throw Error(d.error||'MCP_PANEL_OPERATION_UNCONFIRMED');}return d;
+ };
+ const login=async(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();if(!client||logging.current)return;logging.current=true;setBusy(true);setNotice('');const form=new FormData(e.currentTarget);try{const r=await bounded(client.auth.signInWithPassword({email:String(form.get('email')||''),password:String(form.get('password')||'')}));if(r.error){setNotice('Login não confirmado. Confira os dados ou use a recuperação no Painel. Nenhuma tentativa será repetida automaticamente.');}else setSession(r.data.session);}catch{setNotice('Não foi possível confirmar o login. Tente novamente somente após conferir sua sessão.');}finally{if(password.current)password.current.value='';form.delete('password');logging.current=false;setBusy(false);}};
+ if(session===undefined)return <main style={{maxWidth:680,margin:'48px auto',padding:24,fontFamily:'system-ui'}} role="status">Conferindo sua sessão do Painel…</main>;
+ if(!session)return <main style={{maxWidth:440,margin:'48px auto',padding:24,fontFamily:'system-ui',color:'#193c2b'}}><h1>Entre no Painel Santana</h1><p>Use sua conta individual. A revisão continua nesta mesma tela.</p>{notice&&<p role="status">{notice}</p>}<form onSubmit={login}><label style={{display:'block',marginBottom:16}}>E-mail<input name="email" type="email" autoComplete="username" required style={{display:'block',width:'100%',padding:12,marginTop:6}}/></label><label style={{display:'block',marginBottom:20}}>Senha<input ref={password} name="password" type="password" autoComplete="current-password" required style={{display:'block',width:'100%',padding:12,marginTop:6}}/></label><button disabled={busy||!client} type="submit" style={{width:'100%',padding:14,background:'#1b6549',color:'white',border:0,borderRadius:6,fontSize:16}}>{busy?'Conferindo…':'Entrar e continuar revisão'}</button></form><p><a href="/">Abrir o Painel para recuperar acesso</a></p></main>;
+ return <ReviewScreen key={session.user.id} call={call} selected={selected}/>;
+}
