@@ -1,0 +1,77 @@
+{
+  "recorded_at": "2026-10-19T16:43:50.280Z",
+  "workflow_run_id": 39287494403,
+  "job_id": 118178703376,
+  "source_commit": "e1e0f4704becba4ef5e29eeaeca233e943ff1c55",
+  "previous_failure_confirmed": "FileNotFoundError for local-only PDF in three tests; canonical fixture fix verified on runner",
+  "validation": {
+    "status": "PASS",
+    "tests": 23,
+    "new_checks": 17,
+    "affected_auth_regressions": 6,
+    "suites": [
+      {
+        "suite": "python_ui_and_auth_regressions",
+        "tests": 13,
+        "exit_code": 0,
+        "seconds": 2.904,
+        "sha256": "13489395cb7ab261e56ed7deec9a6015001b23e9660d480df76a12fdb6fe4d4a"
+      },
+      {
+        "suite": "widget_ui",
+        "tests": 7,
+        "exit_code": 0,
+        "seconds": 1.098,
+        "sha256": "5d7b770eb98b3021dba57d4a7c60ae2c5559b5775fc8720edf8df46739969b61"
+      },
+      {
+        "suite": "install_transaction",
+        "tests": 3,
+        "exit_code": 0,
+        "seconds": 20.899,
+        "sha256": "55f0332e1faba52b7f18c4832454de76c7e107f650687c621e3b7e9fa73ed85c"
+      }
+    ],
+    "real_whatsapp_sends": 0,
+    "production_changes": 0
+  },
+  "staged": {
+    "sha256": "1b42cdb706816494b8fc80563fbb5aef966a1c995e2b3e44555040cb167f4d5a",
+    "bytes": 54535,
+    "dependency_sha256": "48dc47fcbd571f0c227c4326be2cd76832b7f1e64dce3995d99ba350e43796bf",
+    "expected_files": {
+      "real_review.py": "47e7ffa91150eb2835f6e25dfca5de4f9a07753df2c1fafa2570eb54981bbfab",
+      "mcp_extension.py": "ec7f35c1e88e20c1d77f2e38287c5507ee8b5f6b36f4ff53d108c62fb201ae1f",
+      "real-widget.html": "f9f491e42e1c8f3a2cccdc4b74d46291beb7047cee6cb84399738fd9e1e65823"
+    },
+    "new_files": {
+      "mcp_extension.py": "de070fa1168ce26533c9fcc53237efa9a82c53ec98ed0bf3e03c6fac7ef67e93",
+      "real_review.py": "57ae1512ec0c998c32c2f711cc61f166f2fea376b76781c29c92b7be678acc33",
+      "real-widget.html": "a6aefb8656d9fdd834b16ad4b3558c7c7d1f6a079cee2708b029ab1dfe00c2d9",
+      "review_assets.py": "069857f7408064856bd9f727267e6f978bd391074f95804b95222ff712996c7d",
+      "review_media.py": "b2ccb646003e47acaf3f71b58f776fcf90c4e591491aec037ce7916319e89f56",
+      "attachment_worker.py": "487779966d65da18d9a8267d6b54cbd9f13e916b068c42c128fe9598dee2ba9e"
+    },
+    "only_service": "santana-mcp-lab.service",
+    "production_changes": 0,
+    "real_whatsapp_sends": 0,
+    "auth_grants_changed": false,
+    "external_review_link": false,
+    "path": "/home/runner/santana-mcp-staging/batch-ui-hardening-1b42cdb70681/apply-lab.py",
+    "status": "STAGED_ROOT_REQUIRED",
+    "uid": 1001,
+    "sudo_without_password": false,
+    "santana-mcp-lab.service": [
+      "1013288",
+      "active"
+    ],
+    "santana-mcp-lab-tunnel.service": [
+      "1219382",
+      "active"
+    ]
+  },
+  "installed": false,
+  "live_browser_csp": "PENDING_ROOT_INSTALLATION",
+  "real_messages_sent": 0,
+  "production_changes": 0
+}

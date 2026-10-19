@@ -1,0 +1,9 @@
+python3 -I - <<'SANTANA_LAB'
+import hashlib,os
+p="/home/runner/santana-mcp-staging/batch-ui-hardening-1b42cdb70681/apply-lab.py"
+fd=os.open(p,os.O_RDONLY|os.O_NOFOLLOW)
+with os.fdopen(fd,'rb') as f: code=f.read(524289)
+if len(code)>524288 or hashlib.sha256(code).hexdigest()!="1b42cdb706816494b8fc80563fbb5aef966a1c995e2b3e44555040cb167f4d5a":
+    raise SystemExit('PAREI: integridade divergente; nada executado.')
+exec(compile(code,'santana_lab_verificado','exec'),{'__name__':'__main__'})
+SANTANA_LAB
