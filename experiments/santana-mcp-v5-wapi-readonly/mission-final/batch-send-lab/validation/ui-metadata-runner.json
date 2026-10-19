@@ -1,0 +1,41 @@
+{
+  "workflow_run": 39262685083,
+  "commit": "6f22710f45cccb92e8a34d76c3e99e13bea21670",
+  "results": [
+    {
+      "ui_metadata_validation": {
+        "status": "PASS",
+        "tests": 3,
+        "seconds": 16.613,
+        "log_sha256": "19bdd39ee206772f270621792dd6f553ec756c6564d53a6c85f3387b074ff02b",
+        "systemd": "simulated",
+        "processes_and_sqlite": "real_synthetic",
+        "production_changes": 0,
+        "real_messages_sent": 0
+      }
+    },
+    {
+      "status": "STAGED_ROOT_REQUIRED",
+      "path": "/home/runner/santana-mcp-staging/batch-ui-fix-3bde3eb674b3/fix-ui-metadata.py",
+      "sha256": "3bde3eb674b3bdf160265ba6c4c88cd9e71f8c0faf8810360926d8721899ef0a",
+      "uid": 1001,
+      "sudo_without_password": false,
+      "services_changed": 0,
+      "production_changes": 0,
+      "real_messages_sent": 0,
+      "santana-mcp-lab.service": [
+        "972291",
+        "active"
+      ],
+      "santana-mcp-lab-tunnel.service": [
+        "1219382",
+        "active"
+      ]
+    }
+  ],
+  "active_lab_pid": 972291,
+  "new_tools_in_chatgpt_catalog": false,
+  "chatgpt_refresh_error": "Estas ferramentas privadas não podem renderizar seus widgets: registrar_revisao_lote",
+  "existing_chatgpt_read_source": "fixture",
+  "applied_to_running_lab": false
+}

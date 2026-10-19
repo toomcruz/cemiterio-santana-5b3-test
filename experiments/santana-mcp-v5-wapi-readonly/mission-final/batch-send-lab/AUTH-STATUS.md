@@ -1,3 +1,5 @@
+> Estado atual: extensão instalada no LAB em 19/10, PID 972291, 12 ferramentas no servidor e envio real bloqueado. Uma leitura fictícia pelo plugin ativo foi confirmada. A sincronização das novas ferramentas no ChatGPT está bloqueada pela declaração visual indevida de uma ferramenta privada; correção mínima preparada e testada, aguardando root. Revisão humana ponta a ponta permanece pendente.
+
 # Retomada — revisão individual real do LAB
 
 HOMOLOG atualizado em 19/10/2026, exclusivamente para simulação. `sana-mcp-read` v15 preserva os cinco arquivos anteriores e acrescenta a rota `lab-review` e dois módulos. Nenhuma alteração em Supabase PROD, Painel, W-API, Sana, n8n, OpenBot ou ponte Boss.
@@ -48,3 +50,15 @@ O instalador agora aguarda o launcher efetivamente executado e a porta loopback 
 Workflow 39256614821, commit b926d640891ff99fdfefdf81fbdbecbf27842529: 8 testes aprovados, sem skips, em 26,305 segundos. Processos, SQLite e leituras /proc são reais com dados sintéticos; systemd é simulado. Inclui reprodução do erro pré-exec e rejeição de alteração real da auditoria. A verificação local teve 6 aprovados e 2 ignorados por restrição de leitura de /proc no runtime local; a evidência válida dos dois casos vem do runner.
 
 Payload conferido e disponível em /home/runner/santana-mcp-staging/batch-auth-a9cca6b9732d/install-lab.py, SHA-256 a9cca6b9732d06b36dc647206b4fab33b9b5ea43e93b432421f4139ec603e02c. Runner sem sudo. LAB ativo (PID 911654), túnel com PID 1219382. Instalação root e revisão humana no ChatGPT seguem pendentes.
+
+## Instalação confirmada e compatibilidade do catálogo
+
+O operador executou o payload a9cca6b9732d e retornou LAB_EXTENSION_INSTALLED, preflight na namespace PASS, 12 ferramentas, fixture, real_send_enabled=false, whatsapp_sends=0, production_changes=0 e túnel inalterado. O runner confirma LAB PID 972291 e túnel PID 1219382 ativos. Uma chamada pelo próprio plugin ChatGPT listar_conversas retornou source=fixture e conversation-demo-01.
+
+Em Configurações do plugin LAB existente, Atualizar ferramentas retornou: Estas ferramentas privadas não podem renderizar seus widgets: registrar_revisao_lote. Não houve recriação do plugin nem ampliação de permissões. O catálogo do ChatGPT continua com as seis ferramentas anteriores.
+
+Correção: substituir somente registrar_revisao_lote._meta.ui por {visibility:[app]}, retirando resourceUri da ferramenta interna. Os métodos públicos de preparação continuam associados ao componente visual. Autenticação, recibos, concessões, textos, anexos e transporte permanecem inalterados. Referência primária: https://github.com/openai/openai-apps-sdk-examples/blob/main/mcp_app_basics_node/src/server.ts, exemplo call_server_tool__roll_dice.
+
+Workflow 39262685083, commit 6f22710f45cccb92e8a34d76c3e99e13bea21670: três testes focados aprovados localmente e no runner (16,613 segundos no runner): descritor privado sem renderização, aplicação mínima/idempotente em LAB já instalado e restauração da fonte anterior quando a checagem HTTP falha. Processos e SQLite reais sintéticos, systemd simulado. Nenhum envio ou serviço real foi alterado nesses testes.
+
+Patch guardado disponível em /home/runner/santana-mcp-staging/batch-ui-fix-3bde3eb674b3/fix-ui-metadata.py, SHA-256 3bde3eb674b3bdf160265ba6c4c88cd9e71f8c0faf8810360926d8721899ef0a. Confere a fonte instalada (0fad711f...), faz backup, altera somente mcp_extension.py para ec7f35c1..., reinicia apenas o LAB e verifica o catálogo. Runner UID 1001 sem sudo; aplicação root ainda pendente.
