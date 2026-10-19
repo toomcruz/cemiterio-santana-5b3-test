@@ -1,0 +1,41 @@
+{
+  "recorded_at": "2026-10-19T18:21:28.260Z",
+  "scope": "existing individually authorized PROD read only; no content copied into this evidence",
+  "prior_failure": {
+    "public_http_status": 400,
+    "jsonrpc_error": -32000,
+    "underlying_original_cause": "Not established; same authorized files subsequently succeeded without deployment"
+  },
+  "live_checks": {
+    "authorized_image": {
+      "status": "ready",
+      "source": "sana_authorized_attachment",
+      "mime": "image/jpeg",
+      "bytes": 472599,
+      "decoded_as_image": true
+    },
+    "authorized_pdf": {
+      "status": "ready",
+      "source": "sana_authorized_attachment",
+      "mime": "application/pdf",
+      "bytes": 132876,
+      "pages": 1,
+      "text_extracted": true,
+      "has_more_pages": false
+    },
+    "cross_conversation_artifact": {
+      "blocked": true,
+      "image_content_returned": false,
+      "public_error_is_opaque": true
+    }
+  },
+  "production_code_changes": 0,
+  "grants_changed": 0,
+  "whatsapp_sends": 0,
+  "credentials_exposed": 0,
+  "notes": [
+    "A successful later read is not evidence that the previous transient failure's root cause was fixed.",
+    "Candidate preserves the same media helpers; exposes only fixed safe error codes and keeps deny/unavailable/timeout/size distinct.",
+    "No citizen messages, document text, images, provider references or credentials are saved in this evidence."
+  ]
+}

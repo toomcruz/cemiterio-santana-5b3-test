@@ -20,8 +20,15 @@ export async function administrativeMcpRead(req:Request,service:any){
   if(r.data?.status!=='ready')throw Error('MCP_ADMIN_SOURCE_UNAVAILABLE');return r.data.data;
  };
  return createAdminHandler({authenticate:actor,read,catalog:CATALOG,legacy:(r:Request)=>legacyRead(r,service),readAttachment:async(token:string,args:any)=>{
-  const r=await fetch(MEDIA,{method:'POST',redirect:'error',cache:'no-store',signal:AbortSignal.timeout(26000),headers:{authorization:'Bearer '+token,'content-type':'application/json','x-santana-mcp-read':'1'},body:JSON.stringify({conversation_id:args.conversation_id,message_key:args.message_key,artifact_id:args.artifact_id})});
-  if(!r.ok||!r.body)throw Error('MCP_ADMIN_ATTACHMENT_UNAVAILABLE');
+  let r:Response;
+  try{r=await fetch(MEDIA,{method:'POST',redirect:'error',cache:'no-store',signal:AbortSignal.timeout(26000),headers:{authorization:'Bearer '+token,'content-type':'application/json','x-santana-mcp-read':'1'},body:JSON.stringify({conversation_id:args.conversation_id,message_key:args.message_key,artifact_id:args.artifact_id})});}
+  catch(error){throw Error((error as Error)?.name==='TimeoutError'||(error as Error)?.name==='AbortError'?'MCP_ADMIN_ATTACHMENT_TIMEOUT':'MCP_ADMIN_MEDIA_UNAVAILABLE');}
+  if(!r.ok){
+   const safeCodes=new Set(['MCP_ADMIN_ATTACHMENT_DENIED','MCP_ADMIN_ATTACHMENT_UNAVAILABLE','MCP_ADMIN_ATTACHMENT_TIMEOUT','MCP_ADMIN_ATTACHMENT_TOO_LARGE','MCP_ADMIN_MEDIA_TYPE_UNSUPPORTED','MCP_ADMIN_MEDIA_UNAVAILABLE','MCP_ADMIN_SOURCE_UNAVAILABLE','MCP_ADMIN_RATE_LIMITED']);
+   const body=await r.text();let code;try{code=body.length<2048?JSON.parse(body).status:null;}catch{}
+   throw Error(safeCodes.has(code)?code:'MCP_ADMIN_MEDIA_UNAVAILABLE');
+  }
+  if(!r.body)throw Error('MCP_ADMIN_ATTACHMENT_UNAVAILABLE');
   const reader=r.body.getReader();let size=0;const chunks:Uint8Array[]=[];
   try{for(;;){const n=await reader.read();if(n.done)break;size+=n.value.length;if(size>2097152)throw Error('MCP_ADMIN_ATTACHMENT_TOO_LARGE');chunks.push(n.value);}}finally{await reader.cancel();}
   const bytes=new Uint8Array(size);let at=0;for(const c of chunks){bytes.set(c,at);at+=c.length;}

@@ -6,7 +6,7 @@ on:
       action:
         description: Stage patch, collect report, or read OpenBot configuration schema
         type: choice
-        options: [stage, collect, inventory, root_inventory_stage, supervised, admin_assist, memory_inventory, memory_validate, batch_validate, batch_auth_validate, batch_install, batch_diagnose, batch_ui_fix, batch_ui_hardening, batch_preview_fix]
+        options: [stage, collect, inventory, root_inventory_stage, supervised, admin_assist, memory_inventory, memory_validate, batch_validate, batch_auth_validate, batch_install, batch_diagnose, batch_ui_fix, batch_ui_hardening, batch_preview_fix, daily_operations]
         default: stage
 permissions:
   contents: read
@@ -40,7 +40,7 @@ jobs:
           persist-credentials: false
           sparse-checkout: experiments/santana-mcp-v5-wapi-readonly
       - uses: actions/setup-python@v5
-        if: inputs.action == 'admin_assist' || inputs.action == 'memory_validate' || inputs.action == 'batch_validate' || inputs.action == 'batch_auth_validate' || inputs.action == 'batch_install' || inputs.action == 'batch_ui_fix' || inputs.action == 'batch_ui_hardening' || inputs.action == 'batch_preview_fix'
+        if: inputs.action == 'daily_operations' || inputs.action == 'admin_assist' || inputs.action == 'memory_validate' || inputs.action == 'batch_validate' || inputs.action == 'batch_auth_validate' || inputs.action == 'batch_install' || inputs.action == 'batch_ui_fix' || inputs.action == 'batch_ui_hardening' || inputs.action == 'batch_preview_fix'
         with:
           python-version: '3.12'
       - name: Stage or collect without changing running services
@@ -52,6 +52,9 @@ jobs:
           python3 - <<'PY'
           import hashlib,io,json,os,runpy,stat,subprocess,sys,tempfile,zipfile
           from pathlib import Path
+          if os.environ.get('ACTION')=='daily_operations':
+              runpy.run_path('experiments/santana-mcp-v5-wapi-readonly/mission-final/admin-assist/run_daily_on_vps.py',run_name='__main__')
+              raise SystemExit(0)
           if os.environ.get('ACTION')=='batch_preview_fix':
               r=subprocess.run([sys.executable,'experiments/santana-mcp-v5-wapi-readonly/mission-final/batch-send-lab/stage_preview_fix.py'],capture_output=True,text=True,timeout=70)
               print(r.stdout)
@@ -213,5 +216,3 @@ jobs:
           (stage/'stage-evidence.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
           print(json.dumps(report,ensure_ascii=False,indent=2))
           PY
-
-

@@ -48,6 +48,18 @@ def call_admin(provider,name,args,access_token):
     if name not in MODES or not isinstance(args,dict):raise ValueError('Ferramenta administrativa inválida.')
     schema=next(t['inputSchema'] for t in TOOLS if t['name']==name)
     if set(args)-set(schema['properties']) or not set(schema['required'])<=set(args):raise ValueError('Argumentos administrativos inválidos.')
-    data=provider._call({'mode':MODES[name],**args},access_token)
-    if name=='ler_anexo_autorizado':return render_attachment(data,args)
+    try:data=provider._call({'mode':MODES[name],**args},access_token)
+    except Exception as error:
+        if getattr(error,'safe_admin_error',False) is not True:raise
+        code=error.code
+        safe={'status':'denied' if error.http_status==403 else 'unavailable','error_code':code,
+              'http_status':error.http_status,'retry_allowed':error.http_status==429,
+              'automatic_retry':False,'send_allowed':False}
+        if error.retry_after is not None:safe['retry_after_seconds']=error.retry_after
+        return {'content':[{'type':'text','text':json.dumps(safe,ensure_ascii=False)}],'structuredContent':safe,'isError':True}
+    if name=='ler_anexo_autorizado':
+        try:return render_attachment(data,args)
+        except (RuntimeError,OSError,subprocess.SubprocessError,ValueError,KeyError):
+            safe={'status':'unavailable','error_code':'MCP_ADMIN_RENDER_UNAVAILABLE','retry_allowed':False,'automatic_retry':False,'send_allowed':False}
+            return {'content':[{'type':'text','text':json.dumps(safe)}],'structuredContent':safe,'isError':True}
     return {'content':[{'type':'text','text':json.dumps(data,ensure_ascii=False)}],'structuredContent':data}

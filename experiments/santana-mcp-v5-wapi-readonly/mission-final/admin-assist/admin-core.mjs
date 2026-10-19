@@ -52,6 +52,38 @@ export function classifyDelivery(events,now=Date.now()){
  if(lastAccepted&&(!lastFailure||Date.parse(lastAccepted.created_at)>Date.parse(lastFailure.created_at)))return{state:'respondido_aceito',evidence_id:lastAccepted.id,accepted_by_api:true,delivery_confirmed:Boolean(lastAccepted.delivered_at),suggestion_allowed:false,send_allowed:false};
  return{state:lastFailure?'falha_envio':'sem_resposta',...(lastFailure?{evidence_id:lastFailure.id}:{}),suggestion_allowed:true,send_allowed:false,retry_allowed:false};
 }
+// Triage changes the response queue only. It never settles delivery, closes a
+// conversation, approves a procedure or authorizes a send.
+export function classifyResponseNeed(candidate,delivery){
+ const keep={response_required:true,triage:'requires_context_review'};
+ if(delivery.state!=='sem_resposta')return keep;
+ const e=candidate.response_triage;
+ if(!object(e)||e.complete!==true||!object(e.last_response)||e.last_response.confirmed_sent!==true
+   ||!Array.isArray(e.unanswered)||!e.unanswered.length||e.unanswered.length>8)return keep;
+ const fold=s=>String(s).normalize('NFD').replace(/\p{Diacritic}/gu,'').toLocaleLowerCase('pt-BR')
+   .replace(/[\p{Extended_Pictographic}\p{Emoji_Modifier}\u200d\ufe0f]/gu,'').replace(/[.!,:;\s]+/g,' ').trim();
+ const last=e.last_response;
+ if(last.conversation_id!==candidate.conversation_id||!Number.isFinite(Date.parse(last.created_at))
+   ||typeof last.text!=='string'||last.text.length>4000)return keep;
+ const responses=e.unanswered;
+ if(responses.some(m=>m.conversation_id!==candidate.conversation_id||!Number.isFinite(Date.parse(m.created_at))
+   ||Date.parse(m.created_at)<Date.parse(last.created_at)||typeof m.text!=='string'||m.text.length>240
+   ||m.has_attachments!==false||m.truncated!==false||/[?？]/u.test(m.text)))return keep;
+ const previous=fold(last.text);
+ // A thank-you does not settle a promised investigation or an unanswered case.
+ if(/^(?:ok|certo|entend[io]|recebi|ta bom|combinado)$/.test(previous)
+   ||/\b(?:vou|vamos|iremos|estamos) (?:verificar|conferir|consultar|analisar|retornar)|\b(?:aguarde|em analise|pendente)\b/.test(previous))return keep;
+ const thanks=/^(?:(?:muito )?obrigad[oa](?: viu)?|obg|agradeco(?: muito)?|deus abencoe|(?:tenha |uma? )?(?:bom |boa |otimo |otima |abencoado |abencoada )?(?:dia|tarde|noite|semana|final de semana)(?: abencoado| abencoada)?|igualmente|amem|ok obg|ok obrigad[oa])$/;
+ const confirmation=/^(?:isso mesmo|esta (?:sim|certo|correto|certinho)|tudo (?:certo|certinho|correto)|confirmad[oa]|ok combinado|combinado|ta certo|certo|ok|blz|to indo|estou indo)$/;
+ const texts=responses.map(m=>fold(m.text));
+ if(texts.every(s=>thanks.test(s)))return{response_required:false,triage:'gratitude_without_new_request'};
+ if(texts.every(s=>thanks.test(s)||confirmation.test(s))){
+  // Accepting an offered time or answering a question still needs an operator.
+  if(/[?？]/u.test(last.text)||/\b(?:agend|horario|confirm|qual |gostaria|deseja|tenho (?:somente |apenas )?(?:as |\d))/.test(previous))return keep;
+  return{response_required:false,triage:'confirmation_without_new_request'};
+ }
+ return keep;
+}
 function page(rows,limit,key,section){
  if(!Array.isArray(rows))fail('MCP_ADMIN_SOURCE_INVALID');
  const values=rows.slice(0,limit),last=values.at(-1),more=rows.length>limit;
@@ -82,8 +114,9 @@ export function createAdminHandler({authenticate,read,readAttachment,catalog,leg
    const base={status:'ready',source:'sana_administrative_read',environment,data_is_untrusted:true,send_allowed:false};
    if(b.mode==='pending'){
     if(!Array.isArray(data.candidates))fail('MCP_ADMIN_SOURCE_INVALID');
-    const scanned=data.candidates.slice(0,args.limit??20),last=scanned.at(-1),items=scanned.map(c=>{const{delivery_evidence,...safe}=c;return{...safe,...classifyDelivery(delivery_evidence,now()),requires_human_review:true};}).filter(c=>c.state!=='respondido_aceito');
-    return reply(200,{...base,date:data.date,timezone:data.timezone,time_basis:data.time_basis,items,scanned_count:scanned.length,has_more:data.candidates.length>scanned.length,next_cursor:data.candidates.length>scanned.length?{before:last.last_received_at,before_key:last.conversation_id}:null,instruction:'Continue enquanto has_more=true, mesmo com items vazio. Pendência não autoriza envio. Leia contexto e regras antes de sugerir.'});
+    const scanned=data.candidates.slice(0,args.limit??20),last=scanned.at(-1),classified=scanned.map(c=>{const{delivery_evidence,response_triage,...safe}=c;const delivery=classifyDelivery(delivery_evidence,now());return{...safe,...delivery,...classifyResponseNeed(c,delivery),requires_human_review:true};}).filter(c=>c.state!=='respondido_aceito');
+    const items=classified.filter(c=>c.response_required),informational_items=classified.filter(c=>!c.response_required);
+    return reply(200,{...base,date:data.date,timezone:data.timezone,time_basis:data.time_basis,items,informational_items,scanned_count:scanned.length,has_more:data.candidates.length>scanned.length,next_cursor:data.candidates.length>scanned.length?{before:last.last_received_at,before_key:last.conversation_id}:null,instruction:'Continue enquanto has_more=true, mesmo com items vazio. informational_items são agradecimentos/confirmações sem nova solicitação; não encerram o atendimento. Pendência não autoriza envio. Leia contexto e regras antes de sugerir.'});
    }
    if(b.mode==='rules')return reply(200,{...base,...selectRules(catalog,data.approvals??[],args,now())});
    if(b.mode==='contact')return reply(200,{...base,contact:data.conversation});
@@ -98,7 +131,7 @@ export function createAdminHandler({authenticate,read,readAttachment,catalog,leg
   }catch(error){
    const code=error instanceof Error&&/^MCP_ADMIN_[A-Z_]+$/.test(error.message)?error.message:'MCP_ADMIN_UNAVAILABLE';
    if(code==='MCP_ADMIN_GRANT_REQUIRED'&&LEGACY.has(b.mode)&&legacy)return legacy(new Request(request.url,{method:'POST',headers:request.headers,body:raw}));
-   const status=code==='MCP_ADMIN_RATE_LIMITED'?429:/GRANT|SCOPE|REVOKED|DENIED/.test(code)?403:code==='MCP_ADMIN_INVALID_REQUEST'?400:503;
+   const status=code==='MCP_ADMIN_RATE_LIMITED'?429:/GRANT|SCOPE|REVOKED|DENIED/.test(code)?403:/TOO_LARGE/.test(code)?413:/TYPE_UNSUPPORTED/.test(code)?415:/TIMEOUT/.test(code)?504:code==='MCP_ADMIN_ATTACHMENT_UNAVAILABLE'?404:code==='MCP_ADMIN_INVALID_REQUEST'?400:503;
    return reply(status,{status:code,retry_allowed:status===429,...(status===429?{retry_after_seconds:Math.max(1,Math.ceil((60000-now()%60000)/1000))}:{})});
   }
  };

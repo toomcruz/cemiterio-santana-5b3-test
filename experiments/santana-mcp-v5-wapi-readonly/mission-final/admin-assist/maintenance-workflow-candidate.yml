@@ -6,7 +6,7 @@ on:
       action:
         description: Stage patch, collect report, or read OpenBot configuration schema
         type: choice
-        options: [stage, collect, inventory, root_inventory_stage, supervised, admin_assist]
+        options: [stage, collect, inventory, root_inventory_stage, supervised, admin_assist, memory_inventory, memory_validate, batch_validate, batch_auth_validate, batch_install, batch_diagnose, batch_ui_fix, batch_ui_hardening, batch_preview_fix, daily_operations]
         default: stage
 permissions:
   contents: read
@@ -19,12 +19,28 @@ jobs:
     runs-on: [self-hosted, Linux, X64, hermes, omniroute-local]
     timeout-minutes: 4
     steps:
+      - name: Collect exact previous synthetic validation failure
+        if: inputs.action == 'batch_ui_hardening'
+        shell: bash
+        run: |
+          python3 -I - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          p=Path('/opt/actions-runner/_work/cemiterio-santana-5b3-test/cemiterio-santana-5b3-test/experiments/santana-mcp-v5-wapi-readonly/mission-final/batch-send-lab/validation/hardening-python_ui_and_auth_regressions.log')
+          try:
+              fd=os.open(p,os.O_RDONLY|os.O_NOFOLLOW)
+              with os.fdopen(fd,'rb') as f: b=f.read(16385)
+          except FileNotFoundError: b=b''
+          if len(b)<=16384 and hashlib.sha256(b).hexdigest()=='642ae9c2930d066ae0063465e18f1bfc6f3890aa537aa65627e8dcabfef423d6':
+              print(json.dumps({'previous_synthetic_validation_log':b.decode()}))
+          else: print('PREVIOUS_SYNTHETIC_LOG_NOT_AVAILABLE_AT_EXPECTED_HASH')
+          PY
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
           sparse-checkout: experiments/santana-mcp-v5-wapi-readonly
       - uses: actions/setup-python@v5
-        if: inputs.action == 'admin_assist'
+        if: inputs.action == 'daily_operations' || inputs.action == 'admin_assist' || inputs.action == 'memory_validate' || inputs.action == 'batch_validate' || inputs.action == 'batch_auth_validate' || inputs.action == 'batch_install' || inputs.action == 'batch_ui_fix' || inputs.action == 'batch_ui_hardening' || inputs.action == 'batch_preview_fix'
         with:
           python-version: '3.12'
       - name: Stage or collect without changing running services
@@ -36,6 +52,63 @@ jobs:
           python3 - <<'PY'
           import hashlib,io,json,os,runpy,stat,subprocess,sys,tempfile,zipfile
           from pathlib import Path
+          if os.environ.get('ACTION')=='daily_operations':
+              runpy.run_path('experiments/santana-mcp-v5-wapi-readonly/mission-final/admin-assist/run_daily_on_vps.py',run_name='__main__')
+              raise SystemExit(0)
+          if os.environ.get('ACTION')=='batch_preview_fix':
+              r=subprocess.run([sys.executable,'experiments/santana-mcp-v5-wapi-readonly/mission-final/batch-send-lab/stage_preview_fix.py'],capture_output=True,text=True,timeout=70)
+              print(r.stdout)
+              if r.returncode:print(r.stderr[-2000:]);raise SystemExit('PREVIEW_FIX_STAGE_FAILED')
+              raise SystemExit(0)
+          if os.environ.get('ACTION')=='batch_ui_hardening':
+              r=subprocess.run([sys.executable,'experiments/santana-mcp-v5-wapi-readonly/mission-final/batch-send-lab/stage_ui_hardening.py'],capture_output=True,text=True,timeout=160)
+              print(r.stdout)
+              if r.returncode:print(r.stderr[-2500:]);raise SystemExit('UI_HARDENING_STAGE_FAILED')
+              raise SystemExit(0)
+          if os.environ.get('ACTION')=='batch_ui_fix':
+              r=subprocess.run([sys.executable,'experiments/santana-mcp-v5-wapi-readonly/mission-final/batch-send-lab/stage_ui_fix.py'],capture_output=True,text=True,timeout=110)
+              print(r.stdout)
+              if r.returncode:raise SystemExit('UI_FIX_STAGE_FAILED')
+              raise SystemExit(0)
+          if os.environ.get('ACTION')=='batch_diagnose':
+              runpy.run_path('experiments/santana-mcp-v5-wapi-readonly/mission-final/batch-send-lab/diagnose_lab.py',run_name='__main__')
+              raise SystemExit(0)
+          if os.environ.get('ACTION') in ('batch_auth_validate','batch_install'):
+              root=Path('experiments/santana-mcp-v5-wapi-readonly/mission-final/batch-send-lab')
+              if os.environ.get('ACTION')=='batch_auth_validate':
+                  with tempfile.TemporaryDirectory(prefix='santana-lab-auth-sql-') as td:
+                      r=subprocess.run(['npm','install','--ignore-scripts','--no-audit','--no-fund','--package-lock=false','--prefix',td,'@electric-sql/pglite@0.3.14'],capture_output=True,text=True,timeout=90)
+                      if r.returncode:raise SystemExit('AUTH_SQL_DEPENDENCY_FAILED')
+                      clean={k:os.environ[k] for k in ('PATH','LANG','LC_ALL','LD_LIBRARY_PATH') if k in os.environ}
+                      clean['SANTANA_PGLITE_MODULE']=str(Path(td)/'node_modules/@electric-sql/pglite/dist/index.js')
+                      r=subprocess.run([sys.executable,str(root/'run_auth_validation.py')],env=clean,capture_output=True,text=True,timeout=120)
+                      print(r.stdout)
+                      if r.returncode:print(r.stderr[-3000:]);raise SystemExit('AUTH_VALIDATION_FAILED')
+              args=[sys.executable,str(root/'stage_install.py')]
+              if os.environ.get('ACTION')=='batch_install':args.extend(['--validate-recovery','--apply-if-authorized'])
+              r=subprocess.run(args,capture_output=True,text=True,timeout=95)
+              print(r.stdout)
+              if r.returncode:print(r.stderr[-3000:]);raise SystemExit('LAB_STAGE_FAILED')
+              raise SystemExit(0)
+          if os.environ.get('ACTION')=='batch_validate':
+              root=Path('experiments/santana-mcp-v5-wapi-readonly/mission-final/batch-send-lab')
+              with tempfile.TemporaryDirectory(prefix='santana-batch-sql-deps-') as td:
+                  result=subprocess.run(['npm','install','--ignore-scripts','--no-audit','--no-fund','--package-lock=false','--prefix',td,'@electric-sql/pglite@0.3.14'],capture_output=True,text=True,timeout=90)
+                  if result.returncode:raise SystemExit('ISOLATED_SQL_DEPENDENCY_FAILED')
+                  clean={k:os.environ[k] for k in ('PATH','LANG','LC_ALL','LD_LIBRARY_PATH') if k in os.environ}
+                  clean['SANTANA_PGLITE_MODULE']=str(Path(td)/'node_modules/@electric-sql/pglite/dist/index.js')
+                  result=subprocess.run([sys.executable,str(root/'run_validation.py'),'--runner'],env=clean,capture_output=True,text=True,timeout=120)
+                  print(result.stdout)
+                  if result.returncode:print(result.stderr[-4000:]);raise SystemExit('BATCH_VALIDATION_FAILED')
+              raise SystemExit(0)
+          if os.environ.get('ACTION')=='memory_validate':
+              sys.path.insert(0,'experiments/santana-mcp-v5-wapi-readonly/mission-final/sana-memory-lab')
+              import run_validation
+              run_validation.main(stage=True)
+              raise SystemExit(0)
+          if os.environ.get('ACTION')=='memory_inventory':
+              runpy.run_path('experiments/santana-mcp-v5-wapi-readonly/mission-final/sana-memory-lab/vps_contract_inventory.py',run_name='__main__')
+              raise SystemExit(0)
           if os.environ.get('ACTION')=='admin_assist':
               testroot=Path('experiments/santana-mcp-v5-wapi-readonly/mission-final/admin-assist')
               units=('santana-mcp-lab.service','santana-mcp-lab-tunnel.service','openbot.service','openbot-tunnel.service','docker.service')
@@ -143,4 +216,3 @@ jobs:
           (stage/'stage-evidence.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
           print(json.dumps(report,ensure_ascii=False,indent=2))
           PY
-

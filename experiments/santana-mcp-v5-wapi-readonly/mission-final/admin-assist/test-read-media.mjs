@@ -16,14 +16,27 @@ test('native media helpers run only after scope validation, then file audit comm
  assert.doesNotMatch(JSON.stringify([...r.headers]),/synthetic-provider-key|synthetic-internal-caller|phone|mediaKey/);
 });
 test('denied scope never calls provider; arbitrary URLs and identity fields are refused',async()=>{
- const{d,calls}=setup({denied:true});assert.equal((await mcpReadMedia(req(),d)).status,503);assert.equal(calls.includes('download'),false);
+ const{d,calls}=setup({denied:true});assert.equal((await mcpReadMedia(req(),d)).status,403);assert.equal(calls.includes('download'),false);
  assert.equal((await mcpReadMedia(req({...body,url:'https://evil.invalid'}),setup().d)).status,400);
  assert.equal((await mcpReadMedia(req({...body,operator_id:'forged'}),setup().d)).status,400);
 });
 test('provider SSRF/redirect targets, revoked scope at release and hash mismatch fail closed',async()=>{
- for(const opts of[{evil:true},{revoked:true},{badSha:true}]){const{d,calls}=setup(opts);const r=await mcpReadMedia(req(),d);assert.equal(r.status,503);assert.doesNotMatch(await r.text(),/private|synthetic-provider-key/);if(opts.evil)assert.equal(calls.some(c=>typeof c==='object'&&c.url.includes('127.0.0.1')),false);}
+ for(const opts of[{evil:true},{revoked:true},{badSha:true}]){const{d,calls}=setup(opts);const r=await mcpReadMedia(req(),d);assert.equal(r.status,403);assert.doesNotMatch(await r.text(),/private|synthetic-provider-key/);if(opts.evil)assert.equal(calls.some(c=>typeof c==='object'&&c.url.includes('127.0.0.1')),false);}
 });
 test('this media extension is disabled in preview and rejects browser-origin requests',async()=>{
  const s=setup();s.d.environment='preview';assert.equal((await mcpReadMedia(req(),s.d)).status,403);assert.equal(s.calls.length,0);
  const request=req();request.headers.set('origin','https://evil.invalid');assert.equal((await mcpReadMedia(request,setup().d)).status,403);
+});
+test('null native download is unavailable, not an invalid URL or an authorization failure',async()=>{
+ const{d,calls}=setup();d.downloadMedia=async()=>null;const r=await mcpReadMedia(req(),d);assert.equal(r.status,404);assert.equal((await r.json()).status,'MCP_ADMIN_ATTACHMENT_UNAVAILABLE');assert.equal(calls.filter(c=>typeof c==='object'&&c.url.includes('/media/file/')).length,0);
+});
+test('native timeout and size budgets return distinct safe codes with no retry or credentials',async()=>{
+ for(const [error,status,code] of [[new DOMException('secret-upstream','TimeoutError'),504,'MCP_ADMIN_ATTACHMENT_TIMEOUT'],[Error('PDF_TOO_LARGE'),413,'MCP_ADMIN_ATTACHMENT_TOO_LARGE']]){
+  const {d}=setup();d.downloadMedia=async()=>{throw error;};const r=await mcpReadMedia(req(),d);assert.equal(r.status,status);const body=await r.text();assert.ok(body.includes(code));assert.doesNotMatch(body,/secret-upstream|synthetic-provider-key|mediaKey/);
+ }
+});
+test('configuration is normalized consistently with the existing native media route',async()=>{
+ const{d}=setup();d.token+='\n';d.instance+=' ';d.caller+=' ';let seen;
+ d.downloadMedia=async(ref,instance,token)=>{seen={instance,token};return 'https://api.w-api.app/media/file/synthetic';};
+ assert.equal((await mcpReadMedia(req(),d)).status,200);assert.deepEqual(seen,{instance:'synthetic-instance',token:'synthetic-provider-key'});
 });
