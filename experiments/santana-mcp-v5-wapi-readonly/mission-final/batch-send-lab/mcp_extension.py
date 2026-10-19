@@ -37,7 +37,7 @@ def call(controller,actor,name,args):
         return controller.step(actor,args["batch_id"])
     return controller.reconcile(actor,args["batch_id"])
 
-def install(server,controller,resolve_actor,base_url):
+def install(server,controller,resolve_actor,base_url,real_review=None):
     """Mount in an isolated import of the v5 server; no file/service replacement."""
     if server.DATA_SOURCE!="fixture" or controller.directory.environment!=SOURCE or not base_url.startswith(("http://127.0.0.1:","https://")):
         raise Blocked("LAB_FIXTURE_MOUNT_ONLY")
@@ -58,20 +58,35 @@ def install(server,controller,resolve_actor,base_url):
             response=original(request,identity,access_token)
             if client=="chatgpt":
                 response["result"]["tools"].extend(TOOLS)
+                if real_review:
+                    t=tool('registrar_revisao_lote','Registra somente um recibo de revisão humana já autenticada no HOMOLOG. Não recebe senha/JWT e não envia.',{'batch_id':{'type':'string','format':'uuid'},'receipt_id':{'type':'string','format':'uuid'}},['batch_id','receipt_id'],True)
+                    t['_meta']['ui']['visibility']=['app']
+                    response['result']['tools'].append(t)
             return response
         if method=="resources/list" and client=="chatgpt":
             return {"jsonrpc":"2.0","id":request_id,"result":{"resources":[{"uri":RESOURCE,"name":"Revisão de lote Santana LAB","mimeType":"text/html;profile=mcp-app"}]}}
         if method=="resources/read" and client=="chatgpt" and params.get("uri")==RESOURCE:
-            return {"jsonrpc":"2.0","id":request_id,"result":{"contents":[{"uri":RESOURCE,"mimeType":"text/html;profile=mcp-app","text":(ROOT/"widget.html").read_text(),"_meta":{"ui":{"csp":{"connectDomains":[],"resourceDomains":[]}}}}]}}
-        if method=="tools/call" and params.get("name") in {t["name"] for t in TOOLS}:
+            domains=['https://xdccjulfqcqefykunwtg.supabase.co'] if real_review else []
+            ui={'csp':{'connectDomains':domains,'resourceDomains':[]}}
+            if real_review:
+                ui['domain']='https://santana-mcp-homolog-consent.vercel.app'
+                ui['csp']['frameDomains']=['https://santana-mcp-homolog-consent.vercel.app']
+            return {"jsonrpc":"2.0","id":request_id,"result":{"contents":[{"uri":RESOURCE,"mimeType":"text/html;profile=mcp-app","text":(ROOT/("real-widget.html" if real_review else "widget.html")).read_text(),"_meta":{"ui":ui}}]}}
+        if method=="tools/call" and params.get("name") in {t["name"] for t in TOOLS}|({'registrar_revisao_lote'} if real_review else set()):
             if client!="chatgpt":
                 raise server.MCPError(-32003,"AGENT_SCOPE_DENIED")
             try:
                 actor=resolve_actor(identity,access_token)
-                value=call(controller,actor,params["name"],params.get("arguments") or {})
+                args=params.get('arguments') or {}
+                if params['name']=='registrar_revisao_lote':
+                    if not isinstance(args,dict) or set(args)!={'batch_id','receipt_id'}:raise Blocked('INVALID_TOOL_ARGUMENTS')
+                    value=real_review.register(actor,args['batch_id'],args['receipt_id'])
+                else:value=call(controller,actor,params["name"],args)
                 if "approval_url" in value:
                     value["approval_url"]=base_url+value["approval_url"]
                 result={"content":[{"type":"text","text":json.dumps(value,ensure_ascii=False)}],"structuredContent":value}
+                if real_review and 'batch_id' in value and 'preview' in value:
+                    result['_meta']={'lab_review':real_review.metadata(actor,value['batch_id'])}
                 return {"jsonrpc":"2.0","id":request_id,"result":result}
             except Blocked as error:
                 return {"jsonrpc":"2.0","id":request_id,"result":{"isError":True,"content":[{"type":"text","text":str(error)}]}}

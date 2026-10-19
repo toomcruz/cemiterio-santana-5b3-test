@@ -137,6 +137,10 @@ class BatchController:
                 raise
 
     def actor(self, actor, kind="oauth"):
+        # Existing private LAB client can prepare only fixtures. Real operator
+        # identity is independently verified at review/claim, not inferred here.
+        if kind=='oauth' and isinstance(actor,Actor) and actor.kind=='lab_client':
+            kind='lab_client'
         if not isinstance(actor, Actor) or actor.kind!=kind or actor.expires_at<=self.now() or not self.verify_session(actor):
             raise Blocked("INDIVIDUAL_SESSION_REQUIRED")
         if actor.client!="chatgpt-lab" or not actor.subject or not actor.operator:
@@ -323,6 +327,8 @@ class BatchController:
     def step(self, actor, batch_id):
         """One scheduled child at a time. Never sleeps, loops, retries or spawns workers."""
         self.actor(actor)
+        guard=getattr(self,'review_guard',None)
+        if guard is not None:guard(actor,batch_id)
         operation=None
         with self.transaction():
             row=self.row(actor,batch_id)

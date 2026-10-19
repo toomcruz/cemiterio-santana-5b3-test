@@ -6,7 +6,7 @@ on:
       action:
         description: Stage patch, collect report, or read OpenBot configuration schema
         type: choice
-        options: [stage, collect, inventory, root_inventory_stage, supervised, admin_assist, memory_inventory, memory_validate, batch_validate]
+        options: [stage, collect, inventory, root_inventory_stage, supervised, admin_assist, memory_inventory, memory_validate, batch_validate, batch_auth_validate, batch_install]
         default: stage
 permissions:
   contents: read
@@ -24,7 +24,7 @@ jobs:
           persist-credentials: false
           sparse-checkout: experiments/santana-mcp-v5-wapi-readonly
       - uses: actions/setup-python@v5
-        if: inputs.action == 'admin_assist' || inputs.action == 'memory_validate' || inputs.action == 'batch_validate'
+        if: inputs.action == 'admin_assist' || inputs.action == 'memory_validate' || inputs.action == 'batch_validate' || inputs.action == 'batch_auth_validate' || inputs.action == 'batch_install'
         with:
           python-version: '3.12'
       - name: Stage or collect without changing running services
@@ -36,6 +36,23 @@ jobs:
           python3 - <<'PY'
           import hashlib,io,json,os,runpy,stat,subprocess,sys,tempfile,zipfile
           from pathlib import Path
+          if os.environ.get('ACTION') in ('batch_auth_validate','batch_install'):
+              root=Path('experiments/santana-mcp-v5-wapi-readonly/mission-final/batch-send-lab')
+              if os.environ.get('ACTION')=='batch_auth_validate':
+                  with tempfile.TemporaryDirectory(prefix='santana-lab-auth-sql-') as td:
+                      r=subprocess.run(['npm','install','--ignore-scripts','--no-audit','--no-fund','--package-lock=false','--prefix',td,'@electric-sql/pglite@0.3.14'],capture_output=True,text=True,timeout=90)
+                      if r.returncode:raise SystemExit('AUTH_SQL_DEPENDENCY_FAILED')
+                      clean={k:os.environ[k] for k in ('PATH','LANG','LC_ALL','LD_LIBRARY_PATH') if k in os.environ}
+                      clean['SANTANA_PGLITE_MODULE']=str(Path(td)/'node_modules/@electric-sql/pglite/dist/index.js')
+                      r=subprocess.run([sys.executable,str(root/'run_auth_validation.py')],env=clean,capture_output=True,text=True,timeout=120)
+                      print(r.stdout)
+                      if r.returncode:print(r.stderr[-3000:]);raise SystemExit('AUTH_VALIDATION_FAILED')
+              args=[sys.executable,str(root/'stage_install.py')]
+              if os.environ.get('ACTION')=='batch_install':args.append('--apply-if-authorized')
+              r=subprocess.run(args,capture_output=True,text=True,timeout=95)
+              print(r.stdout)
+              if r.returncode:print(r.stderr[-3000:]);raise SystemExit('LAB_STAGE_FAILED')
+              raise SystemExit(0)
           if os.environ.get('ACTION')=='batch_validate':
               root=Path('experiments/santana-mcp-v5-wapi-readonly/mission-final/batch-send-lab')
               with tempfile.TemporaryDirectory(prefix='santana-batch-sql-deps-') as td:
