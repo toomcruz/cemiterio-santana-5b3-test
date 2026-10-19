@@ -1,0 +1,76 @@
+{
+  "first": {
+    "status": "LAB_READ_ONLY_DIAGNOSTIC",
+    "uid": 1001,
+    "properties": {
+      "MainPID": "836778",
+      "Result": "success",
+      "NRestarts": "0",
+      "ExecMainCode": "0",
+      "ExecMainStatus": "0",
+      "MemoryMax": "268435456",
+      "RootDirectory": "",
+      "User": "",
+      "Group": "",
+      "ReadWritePaths": "",
+      "ReadOnlyPaths": "",
+      "InaccessiblePaths": "",
+      "ProtectHome": "read-only",
+      "ProtectSystem": "strict",
+      "ActiveState": "active",
+      "SubState": "running",
+      "DropInPaths": ""
+    },
+    "real_messages_sent": 0,
+    "services_changed": 0,
+    "production_changes": 0,
+    "loopback_get_status": 405,
+    "journal": {
+      "exit_code": 0,
+      "records_observed": 0,
+      "filtered_error_metadata": []
+    },
+    "root_reports": []
+  },
+  "audit_storage_check": {
+    "status": "LAB_READ_ONLY_DIAGNOSTIC",
+    "uid": 1001,
+    "properties": {
+      "MainPID": "836778",
+      "Result": "success",
+      "NRestarts": "0",
+      "ExecMainCode": "0",
+      "ExecMainStatus": "0",
+      "MemoryMax": "268435456",
+      "RootDirectory": "",
+      "User": "",
+      "Group": "",
+      "ReadWritePaths": "",
+      "ReadOnlyPaths": "",
+      "InaccessiblePaths": "",
+      "PrivateTmp": "yes",
+      "ProtectHome": "read-only",
+      "ProtectSystem": "strict",
+      "RuntimeDirectory": "",
+      "StateDirectory": "santana-mcp-lab",
+      "ActiveState": "active",
+      "SubState": "running",
+      "DropInPaths": ""
+    },
+    "real_messages_sent": 0,
+    "services_changed": 0,
+    "production_changes": 0,
+    "audit_storage": {
+      "configured_inline": true,
+      "kind": "persistent",
+      "path": "/var/lib/santana-mcp-lab/audit.sqlite3"
+    },
+    "loopback_get_status": 405,
+    "journal": {
+      "exit_code": 0,
+      "records_observed": 0,
+      "filtered_error_metadata": []
+    },
+    "root_reports": []
+  }
+}

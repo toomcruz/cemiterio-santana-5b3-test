@@ -26,3 +26,15 @@ Runner UID 1001: sem sudo sem senha, sem leitura/escrita no código root do LAB.
 O instalador conferido será aplicado apenas a `santana-mcp-lab.service`, na mesma porta e diretório. Faz backup do código original e do SQLite, acrescenta um launcher por drop-in do serviço, preserva o túnel e restaura o lançamento anterior em caso de falha. Não copia credenciais para arquivos e não habilita transporte real. O arquivo original `server.py` não é substituído. Para reverter, remover somente o drop-in `90-batch-lab.conf`, recarregar systemd e reiniciar apenas o LAB, preservando a auditoria.
 
 Depois da aplicação root: conferir o relatório, atualizar o catálogo do mesmo plugin e pedir ao operador a revisão de um único lote fictício na interface protegida. Até isso ocorrer, as novas ferramentas não estão comprovadas no ChatGPT, a revisão humana real não está comprovada ponta a ponta e a homologação não está concluída. Nenhum envio WhatsApp real integra essa etapa.
+
+## Recuperação da instalação — 19/10/2026
+
+A execução root do instalador f98ee7272d80 retornou INSTALL_FAILED_LAB_RESTORED_NO_PRODUCTION_CHANGE. O runner confirmou depois: LAB ativo, PID 836778, GET loopback 405, drop-in ausente e túnel inalterado (PID 1219382). O erro original não foi preservado pelo instalador anterior e não é legível pelo runner. Sua causa exata ainda não foi identificada.
+
+A hipótese inicial de escrita bloqueada não foi comprovada: a unidade possui StateDirectory=santana-mcp-lab e SANTANA_AUDIT_DB=/var/lib/santana-mcp-lab/audit.sqlite3. Essa configuração permite o estado persistente sob ProtectSystem=strict. Nenhuma permissão de montagem foi ampliada.
+
+O novo instalador faz preflight na namespace de montagem do LAB usando uma cópia temporária da auditoria existente, observa a inicialização por até 15 segundos sem repetir autenticação recusada, usa o ambiente do novo processo e exclui proxies da consulta loopback. Tanto a falha quanto a restauração geram JSON sem segredos. O launcher preserva acquire_runtime_lock e recover_inflight do v5.
+
+Seis testes de instalação/recuperação passaram localmente e no runner (processos Python e SQLite reais com dados sintéticos; systemd simulado): inicialização lenta, esquema incompatível, falha HTTP 401 com rollback, ausência de segredos em erro, exclusão de segundo processo e preservação de resultado desconhecido após reinício. Workflow 39252379679, commit 7d4c5b5c3248452e8efe983815137bedcc008726. Os 73 testes anteriores e as 59 verificações focadas não foram repetidos.
+
+Payload final conferido na VPS: /home/runner/santana-mcp-staging/batch-auth-4d034ccf50fd/install-lab.py, SHA-256 4d034ccf50fd09b2ed79b7b31e974ea0007aa69d590e20c720836e8b765e171a. Runner UID 1001, sudo sem senha indisponível. A nova aplicação root e o fluxo humano no ChatGPT continuam pendentes.
