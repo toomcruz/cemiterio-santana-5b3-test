@@ -16,7 +16,7 @@ function active(){return meta&&manifest&&!previewBlocked&&manifest.expires_at>Da
 function locked(message){previewBlocked=true;$('login').hidden=true;$('approval').hidden=true;$('checked').checked=false;$('status').textContent=message;}
 function showSession(){if(!active())return;if(!valid(token)){token=null;$('login').hidden=false;$('approval').hidden=true;}else{$('login').hidden=true;$('approval').hidden=false;$('logout').hidden=false;}}
 async function bytes(file,expected){if(!file||typeof file.content_base64!=='string')throw Error('ATTACHMENT_PREVIEW_MISSING');const raw=Uint8Array.from(atob(file.content_base64),x=>x.charCodeAt(0));if(raw.length!==expected.size_bytes||await hash(raw)!==expected.sha256)throw Error('ATTACHMENT_CHANGED');return raw;}
-async function image(parent,file,raw,label,sequence){const el=document.createElement('img');el.alt=label;el.title=label;const u=URL.createObjectURL(new Blob([raw],{type:file.mime_type}));urls.push(u);el.src=u;parent.append(el);await el.decode();if(sequence!==generation)throw Error('PREVIEW_SUPERSEDED');if(!el.naturalWidth||!el.naturalHeight)throw Error('ATTACHMENT_PREVIEW_UNAVAILABLE');}
+async function image(parent,file,raw,label,sequence){const el=document.createElement('img');el.alt=label;el.title=label;el.src='data:'+file.mime_type+';base64,'+file.content_base64;parent.append(el);await el.decode();if(sequence!==generation)throw Error('PREVIEW_SUPERSEDED');if(!el.naturalWidth||!el.naturalHeight)throw Error('ATTACHMENT_PREVIEW_UNAVAILABLE');}
 async function render(m){
  if(!m?.canonical_manifest)return;
  const sequence=++generation;locked('Conferindo a integridade da prévia…');meta=null;manifest=null;$('approve').disabled=false;

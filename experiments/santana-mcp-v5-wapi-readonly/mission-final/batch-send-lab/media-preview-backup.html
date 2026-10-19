@@ -1,0 +1,93 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Revisão Santana LAB</title>
+<style>body{font:15px/1.5 system-ui;color:#17382f;padding:12px}article{border-bottom:1px solid #dbe4df;padding:12px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere}input,button{font:inherit;padding:12px;margin:6px 0;box-sizing:border-box}input[type=email],input[type=password],button{width:100%}button{background:#176b50;color:white;border:0;border-radius:8px}button:disabled{opacity:.55}img{max-width:100%;max-height:650px}small{display:block;color:#52675e}[hidden]{display:none!important}</style>
+<h2>Revisão única · Santana LAB</h2><p>Somente contatos fictícios. Nenhum envio real.</p><p id="status" role="status">Aguardando a prévia autenticada do servidor.</p><small id="expiry"></small><section id="items"></section>
+<form id="login" hidden><label>E-mail HOMOLOG<input id="email" type="email" autocomplete="username" required></label><label>Senha HOMOLOG<input id="password" type="password" autocomplete="current-password" required></label><button>Autenticar operador</button></form>
+<form id="approval" hidden><label><input id="checked" type="checkbox" required> Conferi todos os destinatários, textos e anexos. Aprovo exatamente este lote fictício.</label><button id="approve">Confirmar lote</button></form><button id="logout" hidden>Encerrar sessão de revisão</button>
+<script>
+'use strict';
+const $=id=>document.getElementById(id), AUTH_ORIGIN='https://xdccjulfqcqefykunwtg.supabase.co';
+let meta,manifest,origin,serial=1,token=null,busy=false,previewBlocked=true,generation=0,urls=[];
+const pending=new Map();
+function host(method,params){const id=++serial;return new Promise((resolve,reject)=>{pending.set(id,{resolve,reject});window.parent.postMessage({jsonrpc:'2.0',id,method,params},origin);setTimeout(()=>{if(pending.has(id)){pending.delete(id);reject(Error('HOST_RESPONSE_UNKNOWN'));}},15000);});}
+const hash=async b=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',b))).map(x=>x.toString(16).padStart(2,'0')).join('');
+function claims(t){try{return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));}catch{return{};}}
+function valid(t){const c=claims(t),a=c.amr?.find(x=>x.method==='password');return c.exp>Date.now()/1000+30&&a?.timestamp>Date.now()/1000-570&&!c.client_id&&!c.azp;}
+function active(){return meta&&manifest&&!previewBlocked&&manifest.expires_at>Date.now()/1000&&['prepared'].includes(meta.batch_state);}
+function locked(message){previewBlocked=true;$('login').hidden=true;$('approval').hidden=true;$('checked').checked=false;$('status').textContent=message;}
+function showSession(){if(!active())return;if(!valid(token)){token=null;$('login').hidden=false;$('approval').hidden=true;}else{$('login').hidden=true;$('approval').hidden=false;$('logout').hidden=false;}}
+async function bytes(file,expected){if(!file||typeof file.content_base64!=='string')throw Error('ATTACHMENT_PREVIEW_MISSING');const raw=Uint8Array.from(atob(file.content_base64),x=>x.charCodeAt(0));if(raw.length!==expected.size_bytes||await hash(raw)!==expected.sha256)throw Error('ATTACHMENT_CHANGED');return raw;}
+async function image(parent,file,raw,label,sequence){const el=document.createElement('img');el.alt=label;el.title=label;const u=URL.createObjectURL(new Blob([raw],{type:file.mime_type}));urls.push(u);el.src=u;parent.append(el);await el.decode();if(sequence!==generation)throw Error('PREVIEW_SUPERSEDED');if(!el.naturalWidth||!el.naturalHeight)throw Error('ATTACHMENT_PREVIEW_UNAVAILABLE');}
+async function render(m){
+ if(!m?.canonical_manifest)return;
+ const sequence=++generation;locked('Conferindo a integridade da prévia…');meta=null;manifest=null;$('approve').disabled=false;
+ for(const u of urls)URL.revokeObjectURL(u);urls=[];$('items').replaceChildren();
+ if(m.auth_origin!==AUTH_ORIGIN||await hash(new TextEncoder().encode(m.canonical_manifest))!==m.manifest_sha256)throw Error('PREVIEW_INTEGRITY_FAILED');
+ const current=JSON.parse(m.canonical_manifest),shownAttachments=new Set();
+ if(!Array.isArray(current.recipients)||current.recipients.length<1||current.recipients.length>50)throw Error('PREVIEW_SCOPE_DENIED');
+ for(const p of current.recipients){
+  if(sequence!==generation)return;
+  const article=document.createElement('article'),title=document.createElement('strong'),text=document.createElement('pre');
+  title.textContent=p.name+' · +'+p.phone;text.textContent=p.text;article.append(title,text);$('items').append(article);
+  if(!p.attachment)continue;
+  const file=m.media[p.attachment.sha256],raw=await bytes(file,p.attachment),label=document.createElement('p');
+  label.textContent=file.name+' · '+file.mime_type;article.append(label);
+  if(shownAttachments.has(p.attachment.sha256)){const same=document.createElement('small');same.textContent='Mesmo anexo já exibido acima: '+file.name;article.append(same);continue;}
+  if(file.mime_type==='application/pdf'){
+   const preview=m.pdf_previews?.[p.attachment.sha256];
+   if(!preview||preview.status!=='ready'||preview.complete!==true||preview.original_sha256!==p.attachment.sha256||preview.images?.length!==preview.page_count||preview.page_count<1||preview.page_count>8)throw Error('PDF_COMPLETE_PREVIEW_REQUIRED');
+   for(let i=0;i<preview.images.length;i++){
+    const page=preview.images[i];if(page.page!==i+1||page.mime_type!=='image/jpeg')throw Error('PDF_PREVIEW_CHANGED');
+    const caption=document.createElement('small');caption.textContent='Página '+page.page+' de '+preview.page_count;article.append(caption);
+    await image(article,page,await bytes(page,page),file.name+' · página '+page.page,sequence);
+   }
+  }else{
+   if(!['image/png','image/jpeg'].includes(file.mime_type))throw Error('ATTACHMENT_TYPE_DENIED');
+   await image(article,file,raw,file.name,sequence);
+  }
+  shownAttachments.add(p.attachment.sha256);
+ }
+ if(sequence!==generation)return;
+ meta=m;manifest=current;previewBlocked=false;
+ $('expiry').textContent='Validade da operação: '+new Date(current.expires_at*1000).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})+' (Brasília).';
+ if(m.batch_state!=='prepared'){locked(m.batch_state==='completed'?'Lote concluído. Consulte o resultado no ChatGPT. Nenhuma mensagem real foi enviada.':'Esta revisão já foi registrada. Consulte o lote no ChatGPT.');return;}
+ if(!active()){locked('Esta operação expirou. Peça ao ChatGPT uma nova preparação; nenhuma mensagem foi enviada.');return;}
+ try{if(!token&&location.origin==='https://santana-mcp-homolog-consent.vercel.app')token=sessionStorage.getItem('santana-lab-human');}catch{}
+ showSession();$('status').textContent=current.recipients.length+' destinatário(s) fictício(s). Todos os textos e anexos foram carregados. Confira antes de confirmar.';
+}
+function renderError(error){if(error.message!=='PREVIEW_SUPERSEDED')locked(error.message+'. A aprovação permanece bloqueada.');}
+window.addEventListener('message',e=>{
+ if(e.source!==window.parent||e.data?.jsonrpc!=='2.0')return;
+ if(!origin){if(e.data.id!==1||!e.data.result)return;origin=e.origin;}
+ if(e.origin!==origin)return;
+ const m=e.data;if(pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(Error(m.error.message)):p.resolve(m.result);return;}
+ if(m.id===1)window.parent.postMessage({jsonrpc:'2.0',method:'ui/notifications/initialized',params:{}},origin);
+ if(m.method==='ui/notifications/tool-result')render(m.params?._meta?.lab_review).catch(renderError);
+});
+$('login').onsubmit=async e=>{
+ e.preventDefault();if(busy||!active())return;busy=true;
+ try{
+  const r=await fetch(AUTH_ORIGIN+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:meta.public_key,'Content-Type':'application/json'},body:JSON.stringify({email:$('email').value.trim(),password:$('password').value})});
+  $('password').value='';const d=await r.json();if(!r.ok||!valid(d.access_token))throw Error(d.error_code||d.code||d.error||'AUTHENTICATION_FAILED');
+  token=d.access_token;try{if(location.origin==='https://santana-mcp-homolog-consent.vercel.app')sessionStorage.setItem('santana-lab-human',token);}catch{}
+  showSession();$('status').textContent='Sessão pessoal confirmada. Confira e aprove somente este lote.';
+ }catch(x){$('status').textContent=x.message+'. Nenhuma tentativa de login será repetida automaticamente.';}
+ finally{busy=false;$('password').value='';}
+};
+$('approval').onsubmit=async e=>{
+ e.preventDefault();if(busy||!active()||!$('checked').checked||!valid(token))return;busy=true;$('approve').disabled=true;
+ try{
+  const r=await fetch(AUTH_ORIGIN+'/functions/v1/sana-mcp-read/lab-review',{method:'POST',headers:{apikey:meta.public_key,authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({canonical_manifest:meta.canonical_manifest,manifest_sha256:meta.manifest_sha256,challenge_nonce:meta.challenge_nonce,explicit:'approve_exact_synthetic_batch'})});
+  const d=await r.json();if(!r.ok||d.status!=='approved_lab_only')throw Error(d.error||'REVIEW_NOT_CONFIRMED');
+  const result=await host('tools/call',{name:'registrar_revisao_lote',arguments:{batch_id:manifest.batch_id,receipt_id:d.receipt_id}});
+  if(result?.isError)throw Error('RECEIPT_NOT_REGISTERED');
+  meta.batch_state='approved';locked('Revisão autenticada registrada. O ChatGPT pode continuar a simulação deste lote. Nenhuma mensagem real foi enviada.');
+  await host('ui/message',{role:'user',content:[{type:'text',text:'Concluí a revisão autenticada do lote fictício '+manifest.batch_id+'. Consulte seu estado e prossiga somente com a simulação.'}]});
+ }catch(x){locked(x.message+'. Consulte o lote antes de tentar novamente; não há reenvio automático.');}
+ finally{busy=false;}
+};
+$('logout').onclick=()=>{token=null;try{sessionStorage.removeItem('santana-lab-human');}catch{}$('logout').hidden=true;showSession();$('status').textContent='Sessão local de revisão encerrada.';};
+setInterval(()=>{if(manifest&&meta?.batch_state==='prepared'&&manifest.expires_at<=Date.now()/1000)locked('Esta operação expirou. Peça ao ChatGPT uma nova preparação; nenhuma mensagem foi enviada.');else if(active()&&token&&!valid(token)){token=null;showSession();$('status').textContent='A sessão de revisão expirou. Autentique-se novamente; nenhuma tentativa será automática.';}},1000);
+window.addEventListener('securitypolicyviolation',e=>{if(['img-src','frame-src','connect-src','script-src'].some(x=>e.violatedDirective.startsWith(x)))locked('CONTENT_SECURITY_POLICY_BLOCKED. A aprovação permanece bloqueada.');});
+window.parent.postMessage({jsonrpc:'2.0',id:1,method:'ui/initialize',params:{appInfo:{name:'santana-batch-lab',version:'0.1.0'},appCapabilities:{},protocolVersion:'2026-01-26'}},'*');
+if(window.openai?.toolResponseMetadata?.lab_review)render(window.openai.toolResponseMetadata.lab_review).catch(renderError);
+</script></html>
