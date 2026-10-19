@@ -41,8 +41,7 @@ class UIHardeningTests(unittest.TestCase):
             with self.assertRaises(ValueError):protected_html(h)
 
     def pdf(self):
-        raw=(ROOT.parent/'supervised-send/media-fixtures/Santana-Teste-Documento.pdf').read_bytes()
-        return {'content_base64':base64.b64encode(raw).decode(),'size_bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest(),'mime_type':'application/pdf'}
+        return json.loads((ROOT.parent/'supervised-send/media-fixtures/fixtures.json').read_text())['Santana-Teste-Documento.pdf']
 
     def test_real_offline_pdf_renderer_returns_complete_page_and_integrity(self):
         media=self.pdf();value=ReviewMedia().render_pdf(media)

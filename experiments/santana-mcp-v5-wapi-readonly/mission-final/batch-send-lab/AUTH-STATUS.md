@@ -92,3 +92,9 @@ Correção: substituir somente registrar_revisao_lote._meta.ui por {visibility:[
 Workflow 39262685083, commit 6f22710f45cccb92e8a34d76c3e99e13bea21670: três testes focados aprovados localmente e no runner (16,613 segundos no runner): descritor privado sem renderização, aplicação mínima/idempotente em LAB já instalado e restauração da fonte anterior quando a checagem HTTP falha. Processos e SQLite reais sintéticos, systemd simulado. Nenhum envio ou serviço real foi alterado nesses testes.
 
 Patch guardado disponível em /home/runner/santana-mcp-staging/batch-ui-fix-3bde3eb674b3/fix-ui-metadata.py, SHA-256 3bde3eb674b3bdf160265ba6c4c88cd9e71f8c0faf8810360926d8721899ef0a. Confere a fonte instalada (0fad711f...), faz backup, altera somente mcp_extension.py para ec7f35c1..., reinicia apenas o LAB e verifica o catálogo. Runner UID 1001 sem sudo; aplicação root ainda pendente.
+
+## Revisão autenticada e ajuste do componente — atualização atual
+
+A revisão humana real do lote ea6ee32c-9330-4b3a-beee-d5f2f43477b4 foi comprovada pelo backend e suas duas operações concluíram em simulação. Esse fato substitui as pendências históricas acima. A orientação do mesmo plugin foi atualizada para evitar a rota de revisão inexistente.
+
+O ajuste adicional de CSP e prévia de PDF ainda não está instalado. Workflow 39285317093 executou e falhou antes de alterar serviços, na suíte de 13 testes Python. O resultado chegou atrasado durante incidente do GitHub Actions. Foi encontrada uma diferença de fonte: o teste e o gerador usavam um PDF local não versionado. Agora usam o PDF canônico em fixtures.json, com integridade conferida no gerador. Os 13 testes e os 3 de instalação passaram localmente com o PDF solto temporariamente removido. A nova validação na VPS deve confirmar o erro anterior e os testes corrigidos antes de preparar qualquer ação root.

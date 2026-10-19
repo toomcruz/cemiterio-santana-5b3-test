@@ -1,6 +1,6 @@
 {
   "recorded_at": "2026-10-19T16:34:46.882Z",
-  "status": "PLUGIN_GUIDANCE_UPDATED_LAB_UI_PATCH_VALIDATED_LOCALLY_WAITING_RUNNER_QUEUE",
+  "status": "RUNNER_VALIDATION_FAILED_NO_CHANGE_FIXTURE_PATH_FIXED_LOCALLY",
   "plugin": {
     "id": "plugin_asdk_app_6ad3b0cbf1108191bc5ce4546eb8a4c8",
     "version": "1.0.2",
@@ -49,10 +49,16 @@
     "busy": false,
     "run_id": 39285317093,
     "job_id": 118169473838,
-    "run_status": "queued",
-    "runner_checks_ran": false,
-    "current_sudo_check": "NOT_EXECUTED_JOB_NOT_STARTED",
-    "root_action_ready": false
+    "run_status": "completed",
+    "runner_checks_ran": true,
+    "current_sudo_check": "NOT_EXECUTED_VALIDATION_FAILED",
+    "root_action_ready": false,
+    "conclusion": "failure",
+    "failure": {
+      "suite": "python_ui_and_auth_regressions",
+      "tests": 13,
+      "log_sha256": "642ae9c2930d066ae0063465e18f1bfc6f3890aa537aa65627e8dcabfef423d6"
+    }
   },
   "external_incident": {
     "source": "https://www.githubstatus.com/api/v2/summary.json",
@@ -68,10 +74,19 @@
   "sana_openbot_boss_n8n_operations": 0,
   "supabase_changes": 0,
   "remaining": [
-    "Wait for runner task to start and collect actual validation/staging result",
+    "Collect exact previous synthetic failure and validate corrected canonical-fixture source on runner",
     "Use existing admin permissions if available; otherwise one integrity-checked root action after staging",
     "Validate live CSP and image/PDF previews in ChatGPT",
     "Authenticate and simulate larger LAB batches with individual review",
     "Production batch integration, scope/grants and any real sends require separate explicit approval"
-  ]
+  ],
+  "fixture_correction": {
+    "reason": "Binary PDF exists locally but only canonical fixtures.json is in repository",
+    "source": "supervised-send/media-fixtures/fixtures.json",
+    "isolated_local_pdf_removed_during_validation": true,
+    "python_checks": 13,
+    "installer_checks": 3,
+    "result": "PASS"
+  },
+  "updated_at": "2026-10-19T16:40:58.300984+00:00"
 }

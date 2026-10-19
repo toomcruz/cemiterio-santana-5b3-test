@@ -43,7 +43,7 @@ def main():
                 (ROOT/'validation'/('hardening-'+name+'.log')).write_text(log)
                 item={'suite':name,'tests':count,'exit_code':r.returncode,'seconds':round(time.monotonic()-start,3),'sha256':hashlib.sha256(log.encode()).hexdigest()};validation.append(item)
                 if r.returncode or count!=expected or 'skipped=' in log:
-                    print(json.dumps({'status':'LAB_UI_VALIDATION_FAILED','suite':item}));raise SystemExit(1)
+                    print(json.dumps({'status':'LAB_UI_VALIDATION_FAILED','suite':item,'synthetic_test_log_tail':log[-6000:]}));raise SystemExit(1)
         finally:shutil.rmtree(local_deps)
         print(json.dumps({'validation':{'status':'PASS','tests':23,'new_checks':17,'affected_auth_regressions':6,'suites':validation,'real_whatsapp_sends':0,'production_changes':0}}))
     code,manifest=build(dependency_path)

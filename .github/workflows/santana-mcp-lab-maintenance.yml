@@ -19,6 +19,22 @@ jobs:
     runs-on: [self-hosted, Linux, X64, hermes, omniroute-local]
     timeout-minutes: 4
     steps:
+      - name: Collect exact previous synthetic validation failure
+        if: inputs.action == 'batch_ui_hardening'
+        shell: bash
+        run: |
+          python3 -I - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          p=Path('/opt/actions-runner/_work/cemiterio-santana-5b3-test/cemiterio-santana-5b3-test/experiments/santana-mcp-v5-wapi-readonly/mission-final/batch-send-lab/validation/hardening-python_ui_and_auth_regressions.log')
+          try:
+              fd=os.open(p,os.O_RDONLY|os.O_NOFOLLOW)
+              with os.fdopen(fd,'rb') as f: b=f.read(16385)
+          except FileNotFoundError: b=b''
+          if len(b)<=16384 and hashlib.sha256(b).hexdigest()=='642ae9c2930d066ae0063465e18f1bfc6f3890aa537aa65627e8dcabfef423d6':
+              print(json.dumps({'previous_synthetic_validation_log':b.decode()}))
+          else: print('PREVIOUS_SYNTHETIC_LOG_NOT_AVAILABLE_AT_EXPECTED_HASH')
+          PY
       - uses: actions/checkout@v4
         with:
           persist-credentials: false

@@ -18,9 +18,11 @@ def build(dependency_path):
     expected={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in (ROOT/'ui-hardening-backup').iterdir() if p.is_file()}
     assert set(expected)=={'mcp_extension.py','real_review.py','real-widget.html'}
     patches={n:(ROOT/n).read_text() for n in PATCH_NAMES}
-    pdf=ROOT.parent/'supervised-send/media-fixtures/Santana-Teste-Documento.pdf'
+    pdf=json.loads((ROOT.parent/'supervised-send/media-fixtures/fixtures.json').read_text())['Santana-Teste-Documento.pdf']
+    raw=base64.b64decode(pdf['content_base64'],validate=True)
+    if len(raw)!=pdf['size_bytes'] or hashlib.sha256(raw).hexdigest()!=pdf['sha256']:raise ValueError('FIXTURE_INTEGRITY')
     values={'EXPECTED_FILES':expected,'PATCHES':patches,'UNCHANGED_FILES':UNCHANGED,'DEPENDENCY_PATH':str(dependency_path),
-        'DEPENDENCY_SHA':dependency_sha,'FIXTURE_PDF':base64.b64encode(pdf.read_bytes()).decode()}
+        'DEPENDENCY_SHA':dependency_sha,'FIXTURE_PDF':pdf['content_base64']}
     parts.extend(name+'='+repr(value) for name,value in values.items())
     parts.append((ROOT/'root-ui-hardening-template.py').read_text())
     code='\n\n'.join(parts)+'\n';ast.parse(code)
