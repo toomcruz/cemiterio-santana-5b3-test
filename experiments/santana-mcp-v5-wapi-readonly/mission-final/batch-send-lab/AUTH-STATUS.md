@@ -38,3 +38,13 @@ O novo instalador faz preflight na namespace de montagem do LAB usando uma cópi
 Seis testes de instalação/recuperação passaram localmente e no runner (processos Python e SQLite reais com dados sintéticos; systemd simulado): inicialização lenta, esquema incompatível, falha HTTP 401 com rollback, ausência de segredos em erro, exclusão de segundo processo e preservação de resultado desconhecido após reinício. Workflow 39252379679, commit 7d4c5b5c3248452e8efe983815137bedcc008726. Os 73 testes anteriores e as 59 verificações focadas não foram repetidos.
 
 Payload final conferido na VPS: /home/runner/santana-mcp-staging/batch-auth-4d034ccf50fd/install-lab.py, SHA-256 4d034ccf50fd09b2ed79b7b31e974ea0007aa69d590e20c720836e8b765e171a. Runner UID 1001, sudo sem senha indisponível. A nova aplicação root e o fluxo humano no ChatGPT continuam pendentes.
+
+## Checagem de inicialização — segunda execução root
+
+O relatório fornecido pelo operador confirma mount_and_existing_audit_preflight=PASS, falha na fase observe_new_lab_process_catalog com LAB_RUNTIME_CONFIGURATION_CHANGED e lab_restored=true. A checagem anterior podia observar o ambiente transitório publicado antes do execve do launcher. Esse defeito foi reproduzido no runner com um PID real inicialmente sem o ambiente definitivo, retornando o mesmo código. O relatório antigo não contém os valores comparados, portanto a reprodução não prova isoladamente qual variável estava ausente naquela execução.
+
+O instalador agora aguarda o launcher efetivamente executado e a porta loopback pertencente ao mesmo PID antes de ler/verificar seu ambiente. A checagem de banco/porta continua obrigatória; alterações reais provocam rollback e metadados booleanos explicam a divergência, sem expor valores sensíveis. A configuração original também é verificada antes de alterar o serviço. Não foram ampliadas permissões.
+
+Workflow 39256614821, commit b926d640891ff99fdfefdf81fbdbecbf27842529: 8 testes aprovados, sem skips, em 26,305 segundos. Processos, SQLite e leituras /proc são reais com dados sintéticos; systemd é simulado. Inclui reprodução do erro pré-exec e rejeição de alteração real da auditoria. A verificação local teve 6 aprovados e 2 ignorados por restrição de leitura de /proc no runtime local; a evidência válida dos dois casos vem do runner.
+
+Payload conferido e disponível em /home/runner/santana-mcp-staging/batch-auth-a9cca6b9732d/install-lab.py, SHA-256 a9cca6b9732d06b36dc647206b4fab33b9b5ea43e93b432421f4139ec603e02c. Runner sem sudo. LAB ativo (PID 911654), túnel com PID 1219382. Instalação root e revisão humana no ChatGPT seguem pendentes.

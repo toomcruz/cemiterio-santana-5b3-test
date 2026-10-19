@@ -1,0 +1,40 @@
+{
+  "workflow_run": 39256614821,
+  "commit": "b926d640891ff99fdfefdf81fbdbecbf27842529",
+  "results": [
+    {
+      "installer_recovery_validation": {
+        "status": "PASS",
+        "suite": "lab_installer_recovery",
+        "tests": 8,
+        "seconds": 26.305,
+        "log_sha256": "40e91ba8a71f72e37ddc416d3cdc0dc0cd25a89a79ae424951d0674e4158a7e1",
+        "systemd": "simulated",
+        "processes_and_sqlite": "real_synthetic",
+        "production_changes": 0,
+        "agent_calls": 0,
+        "real_messages_sent": 0
+      }
+    },
+    {
+      "status": "STAGED_ROOT_REQUIRED",
+      "path": "/home/runner/santana-mcp-staging/batch-auth-a9cca6b9732d/install-lab.py",
+      "sha256": "a9cca6b9732d06b36dc647206b4fab33b9b5ea43e93b432421f4139ec603e02c",
+      "uid": 1001,
+      "sudo_without_password": false,
+      "services_changed": 0,
+      "production_changes": 0,
+      "real_messages_sent": 0,
+      "santana-mcp-lab.service": [
+        "911654",
+        "active"
+      ],
+      "santana-mcp-lab-tunnel.service": [
+        "1219382",
+        "active"
+      ]
+    }
+  ],
+  "real_kernel_environment_checks": "PASS_NO_SKIPS",
+  "live_service_installation": "PENDING_ROOT"
+}
