@@ -6,7 +6,7 @@ on:
       action:
         description: Stage patch, collect report, or read OpenBot configuration schema
         type: choice
-        options: [stage, collect, inventory, root_inventory_stage, supervised, admin_assist, memory_inventory, memory_validate, batch_validate, batch_auth_validate, batch_install]
+        options: [stage, collect, inventory, root_inventory_stage, supervised, admin_assist, memory_inventory, memory_validate, batch_validate, batch_auth_validate, batch_install, batch_diagnose]
         default: stage
 permissions:
   contents: read
@@ -36,6 +36,9 @@ jobs:
           python3 - <<'PY'
           import hashlib,io,json,os,runpy,stat,subprocess,sys,tempfile,zipfile
           from pathlib import Path
+          if os.environ.get('ACTION')=='batch_diagnose':
+              runpy.run_path('experiments/santana-mcp-v5-wapi-readonly/mission-final/batch-send-lab/diagnose_lab.py',run_name='__main__')
+              raise SystemExit(0)
           if os.environ.get('ACTION') in ('batch_auth_validate','batch_install'):
               root=Path('experiments/santana-mcp-v5-wapi-readonly/mission-final/batch-send-lab')
               if os.environ.get('ACTION')=='batch_auth_validate':
