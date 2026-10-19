@@ -1,6 +1,16 @@
-> Estado atual: extensão instalada no LAB em 19/10, PID 972291, 12 ferramentas no servidor e envio real bloqueado. Uma leitura fictícia pelo plugin ativo foi confirmada. A sincronização das novas ferramentas no ChatGPT está bloqueada pela declaração visual indevida de uma ferramenta privada; correção mínima preparada e testada, aguardando root. Revisão humana ponta a ponta permanece pendente.
+> Estado atual (19/10, 14h UTC): corretivo aplicado pelo operador, LAB PID 1013288 e túnel preservado. Catálogo do mesmo plugin sincronizado: 11 ferramentas visíveis ao modelo e registrar_revisao_lote privada ao componente. Preparação individual e lotes de 2, 10 e 50 contatos fictícios comprovados pela conexão ativa. Componente nativo de revisão renderizado no ChatGPT. Autenticação/revisão humana positiva e processamento posterior ainda pendentes; envio real permanece bloqueado. As seções anteriores abaixo são o histórico de instalação, não bloqueios atuais.
 
 # Retomada — revisão individual real do LAB
+
+## Validação direta no ChatGPT — catálogo corrigido
+
+O relatório root do operador confirmou LAB_UI_METADATA_FIXED, backup ui-metadata-20261019T135940Z-1792418380744701056, 12 ferramentas no servidor, registrar_revisao_lote com visibility=[app] sem renderização e nenhum envio, alteração de produção ou permissão. A atualização do catálogo pela interface do plugin existente foi concluída.
+
+As chamadas prepararam um envio individual, duas respostas personalizadas e comunicados para 10 e 50 contatos fictícios. Os resultados incluem todas as operações, sem paginação omitida, destinatários e IDs únicos, zero tentativas e real_dispatch_enabled=false. Repetir a preparação idempotente de duas respostas preservou exatamente lote, manifesto e IDs. Uma tentativa controlada de simulação antes da revisão retornou LAB_REAL_REVIEW_REQUIRED; nenhuma operação foi despachada.
+
+O teste pela interface ChatGPT consultar_lote mostrou a prévia integral e o formulário HOMOLOG dentro do componente nativo. A entrada protegida automática não reconheceu os seletores do formulário embutido (locator_invalid); não houve tentativa de autenticação. A autenticação e o clique de aprovação devem ser realizados pessoalmente pelo operador. A configuração global preexistente de CSP para aplicativos personalizados está desativada e foi apenas observada, sem alteração; segurança sob CSP aplicada ainda não foi comprovada. O campo legado approval_url aponta a uma rota inexistente do ChatGPT e não foi aberto nem entregue como link de revisão. A interface nativa é o caminho testado nesta etapa.
+
+Evidência sanitizada: validation/chatgpt-native-catalog.json. Não há senha, JWT, nonce ou conteúdo de munícipes reais nesse arquivo. Os testes automáticos já aprovados não foram repetidos nem apresentados como prova de autenticação humana.
 
 HOMOLOG atualizado em 19/10/2026, exclusivamente para simulação. `sana-mcp-read` v15 preserva os cinco arquivos anteriores e acrescenta a rota `lab-review` e dois módulos. Nenhuma alteração em Supabase PROD, Painel, W-API, Sana, n8n, OpenBot ou ponte Boss.
 

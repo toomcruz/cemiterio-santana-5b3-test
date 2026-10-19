@@ -1,0 +1,122 @@
+{
+  "recorded_at": "2026-10-19T14:08:04.124Z",
+  "environment": "MCP LAB active ChatGPT connection; fixture only",
+  "catalog": {
+    "model_visible_tools": 11,
+    "private_app_only_tool": "registrar_revisao_lote",
+    "new_public_tools": [
+      "preparar_envio_simplificado",
+      "preparar_lote",
+      "consultar_lote",
+      "executar_lote_simulado",
+      "reconciliar_lote"
+    ]
+  },
+  "root_report": {
+    "status": "LAB_UI_METADATA_FIXED",
+    "lab_pid": 1013288,
+    "tunnel_unchanged": true,
+    "whatsapp_sends": 0,
+    "production_changes": 0,
+    "permissions_changed": false
+  },
+  "preparations": [
+    {
+      "case": "native_individual_prepare",
+      "source": "isolated_synthetic_batch_lab",
+      "batch_id": "3462ccf8-69a8-42da-bb30-c5884ee74bd2",
+      "manifest_sha256": "83c4b69937d6bd08fd045b0374f241d916a4ee5b6470cd631f8f898d845bf24d",
+      "state": "prepared",
+      "total": 1,
+      "preview_count": 1,
+      "unique_recipients": 1,
+      "unique_operations": 1,
+      "counts": {
+        "prepared": 1
+      },
+      "all_zero_attempts": true,
+      "has_more": false,
+      "real_dispatch_enabled": false,
+      "expires_at": 1792419077.4364028
+    },
+    {
+      "case": "native_batch2",
+      "source": "isolated_synthetic_batch_lab",
+      "batch_id": "2a6a9a27-5661-4247-a8e3-187c1ad69ad6",
+      "manifest_sha256": "5b3d10021d54334a1d8aabbd407ce17a87133dd2d3626553e67f757485580c42",
+      "state": "prepared",
+      "total": 2,
+      "preview_count": 2,
+      "unique_recipients": 2,
+      "unique_operations": 2,
+      "counts": {
+        "prepared": 2
+      },
+      "all_zero_attempts": true,
+      "has_more": false,
+      "real_dispatch_enabled": false,
+      "expires_at": 1792419352.7415762
+    },
+    {
+      "case": "native_batch10",
+      "source": "isolated_synthetic_batch_lab",
+      "batch_id": "8e8180f8-5b39-4cd5-ae6f-4e5fccade738",
+      "manifest_sha256": "177a30cf8860c2723845e998b5402ab752dbada5cac676244b965d14ca5728e3",
+      "state": "prepared",
+      "total": 10,
+      "preview_count": 10,
+      "unique_recipients": 10,
+      "unique_operations": 10,
+      "counts": {
+        "prepared": 10
+      },
+      "all_zero_attempts": true,
+      "has_more": false,
+      "real_dispatch_enabled": false,
+      "expires_at": 1792419382.7218115
+    },
+    {
+      "case": "native_batch50",
+      "source": "isolated_synthetic_batch_lab",
+      "batch_id": "04ac2c17-d241-47b3-831f-96933dd12928",
+      "manifest_sha256": "9794075e036147183e68dd241ceb2b7442c94b24e67dff969529333e7b922a08",
+      "state": "prepared",
+      "total": 50,
+      "preview_count": 50,
+      "unique_recipients": 50,
+      "unique_operations": 50,
+      "counts": {
+        "prepared": 50
+      },
+      "all_zero_attempts": true,
+      "has_more": false,
+      "real_dispatch_enabled": false,
+      "expires_at": 1792419391.643715
+    }
+  ],
+  "idempotency": {
+    "same_batch": true,
+    "same_manifest": true,
+    "same_operations": true,
+    "all_zero_attempts": true
+  },
+  "approval_gate": {
+    "content": [
+      {
+        "type": "text",
+        "text": "LAB_REAL_REVIEW_REQUIRED"
+      }
+    ],
+    "structuredContent": {
+      "error_code": "INVALID_ARGUMENT"
+    },
+    "isError": true
+  },
+  "ui": {
+    "native_widget_rendered": true,
+    "operator_authentication": "PENDING_USER",
+    "human_review_receipt": "NOT_PROVEN",
+    "csp_browser_setting": "EXISTING_DISABLED_NOT_CHANGED",
+    "transport_simulation_after_review": "NOT_EXECUTED"
+  }
+}
