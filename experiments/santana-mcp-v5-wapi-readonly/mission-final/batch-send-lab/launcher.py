@@ -19,5 +19,7 @@ def actor(identity,token):
 Handler=install(server,controller,actor,'https://chatgpt.com',real_review=review)
 from http.server import ThreadingHTTPServer
 if __name__=='__main__':
+    from runtime_guard import acquire_runtime_lock
+    _runtime_lock_fd=acquire_runtime_lock(server.AUDIT)
     httpd=ThreadingHTTPServer(('127.0.0.1',server.PORT),Handler)
     httpd.serve_forever()

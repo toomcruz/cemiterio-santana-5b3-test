@@ -1,9 +1,9 @@
 python3 -I - <<'SANTANA_LAB'
 import hashlib,os
-p='/home/runner/santana-mcp-staging/batch-auth-f98ee7272d80/install-lab.py'
+p='/home/runner/santana-mcp-staging/batch-auth-4d034ccf50fd/install-lab.py'
 fd=os.open(p,os.O_RDONLY|os.O_NOFOLLOW)
 with os.fdopen(fd,'rb') as f: code=f.read(524289)
-if len(code)>524288 or hashlib.sha256(code).hexdigest()!='f98ee7272d8023aa36fec727d9d2b071a3de716940c8b47b853a6036fb6d9650':
+if len(code)>524288 or hashlib.sha256(code).hexdigest()!='4d034ccf50fd09b2ed79b7b31e974ea0007aa69d590e20c720836e8b765e171a':
     raise SystemExit('PAREI: integridade divergente; nada executado.')
 exec(compile(code,'santana_batch_lab_verificado','exec'),{'__name__':'__main__'})
 SANTANA_LAB

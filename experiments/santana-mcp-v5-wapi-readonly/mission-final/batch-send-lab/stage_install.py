@@ -1,8 +1,17 @@
 """Runner staging, safe privilege check and bounded LAB metadata; no agents."""
-import hashlib,json,os,stat,subprocess,sys
+import hashlib,json,os,re,stat,subprocess,sys,time
 from pathlib import Path
 R=Path(__file__).resolve().parent
 def main():
+ if '--validate-recovery' in sys.argv:
+  start=time.monotonic()
+  clean={k:os.environ[k] for k in ('PATH','LANG','LC_ALL','LD_LIBRARY_PATH') if k in os.environ}
+  test=subprocess.run([sys.executable,str(R/'test_install_recovery.py')],env=clean,capture_output=True,text=True,timeout=60)
+  log=test.stdout+test.stderr
+  count=re.search(r'Ran ([0-9]+) tests',log)
+  result={'status':'PASS' if test.returncode==0 and count and int(count[1])==6 else 'FAIL','suite':'lab_installer_recovery','tests':int(count[1]) if count else 0,'seconds':round(time.monotonic()-start,3),'log_sha256':hashlib.sha256(log.encode()).hexdigest(),'systemd':'simulated','processes_and_sqlite':'real_synthetic','production_changes':0,'agent_calls':0,'real_messages_sent':0}
+  print(json.dumps({'installer_recovery_validation':result}))
+  if result['status']!='PASS':raise SystemExit('INSTALLER_RECOVERY_VALIDATION_FAILED')
  subprocess.run([sys.executable,str(R/'build_install.py')],check=True,capture_output=True,text=True,timeout=10)
  code=(R/'install-lab.py').read_bytes();sha=hashlib.sha256(code).hexdigest()
  parent=Path('/home/runner/santana-mcp-staging');target=parent/('batch-auth-'+sha[:12])
