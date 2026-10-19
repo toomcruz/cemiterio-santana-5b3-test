@@ -1,0 +1,48 @@
+{
+  "status": "AWAITING_EXPLICIT_PRODUCTION_APPROVAL",
+  "production_changes": 0,
+  "real_messages_sent": 0,
+  "scope": {
+    "read_grant_expanded": false,
+    "new_grant": "individual_supervised_send_for_current_operator_and_read_scope_only",
+    "per_operation_independent_review": true,
+    "batch_send_enabled": false,
+    "autonomous_send_enabled": false,
+    "expiry": "inherit current administrative read grant; never extend it"
+  },
+  "baseline": {
+    "prod_edge_version": 42,
+    "homolog_edge_version": 15,
+    "panel_deployment": "dpl_9dNM9kTUwfnudfBb7oqMbmXzRNcg",
+    "panel_commit": "58a242926cbae6213e079f18234cad8eb87e0f59",
+    "mcp_deployment": "dpl_8dfbsPTvZ6eDzsmmXBEN3Pnjf2Am",
+    "coordinator_sha256": "10b9b414cb31d2452483caa0cf4f4d4f914b12e5ca1d0331917bad6aa0611406",
+    "admin_read_sha256": "bc2b5f61d2cd236d0078f021be615d0edd35ba9c71d3c13f09a4a8fe94b93cb0",
+    "prod_module_sha256": {
+      "mcp-admin-core.mjs": "5dd54ff9f9e83d6ac77fae6007ec97670bef7ab2f0fa01ecb830ff146d03b4be",
+      "mcp-admin-assist.ts": "d6741a65be5b640cfc6b77dc0de974743311ce434f71ea5169ad7a8b5d9517e0",
+      "mcp-official-operations.ts": "d7e8cf23248407cc33414e2d952f9979b2ec0eaa104773654eca8b6d413a173e"
+    },
+    "homolog_core_sha256": "f9788b775e036ac3178dff30fa71903777f8bd4ea75884e50215d0df82393978",
+    "mcp_raw_sha1": {
+      "server.py": "b4f55e4ec5cef8c21cca405d8667e8a111a426fb",
+      "official_send_provider.py": "f9f007d97d1f14ede1aaa19c78861694cfd0ae9d",
+      "sana_read_provider.py": "becc9f1ad46036f2d1eeac22684f8e0b2068e6a1",
+      "admin_assist_tools.py": "90cde295cead2f6be5293f1486f25c166aad8aa6"
+    }
+  },
+  "files": {
+    "database.sql": "6a6b8bd332039b4c3c06ea74f61be65805cb17fdca9df7200c317101185870e8",
+    "homolog-edge/send-intents-core.mjs": "2a00629ef23ecd381b1595e98c941301f7ff1cda01477dd1b0a8a0234c47b0ca",
+    "mcp/whatsapp-santana-mcp/admin_assist_tools.py": "6e800ae753171fec5e2dd06090237653c11d52628c20bccd7ddbb1e86099a04a",
+    "mcp/whatsapp-santana-mcp/official_send_provider.py": "63463371d21b7e7ef6c166a344d513a9a6ea718b7b78042a1637f628f209451a",
+    "mcp/whatsapp-santana-mcp/sana_read_provider.py": "cedbfe60a1931337cb9aaa498d4ee8690d9f2a566a5ad4fd174f3c8523309691",
+    "mcp/whatsapp-santana-mcp/server.py": "4f5388bbcd37431cdc7906d6296390794644db1b899153a324c59774211255a9",
+    "panel/lib/sana/mcp-read-media.mjs": "71426af160ba1851eb15b78eb8b3f6af67d10b56464368caf9ea9a2cbc37dbe2",
+    "prod-edge/mcp-admin-assist.ts": "913af03a70876fd1715aee6a029d96aeb5c1f0856c89bc37cc37dd0d396a3365",
+    "prod-edge/mcp-admin-core.mjs": "b4bb44947ef8e3e84634ff3946b4ffbe03363503eecf26608b19a753d49f4b8c",
+    "prod-edge/mcp-official-operations.ts": "e2a071861eeaff89bfece004cbf73134e924f3f13ccc71b31d76f7cfc020a1ab"
+  },
+  "release_sha256": "513cbdd33471a92b32ef8edbef914bb8e242d341cfd4bb1defb86429e4ed8cd1",
+  "activation_sha256": "83756d2ce3f887135b76c9f61a1aeb3301da4b7b33be316e8434046cd6659597"
+}

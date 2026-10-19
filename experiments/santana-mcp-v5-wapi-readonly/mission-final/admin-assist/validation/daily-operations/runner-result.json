@@ -1,0 +1,67 @@
+{
+  "recorded_at": "2026-10-19T18:26:54.011Z",
+  "status": "PASS",
+  "source_commit": "d6b6bd6534793fa583e278afaf2ce3b9a7057e14",
+  "workflow_run_id": 39302111099,
+  "job_id": 118229699726,
+  "workflow_url": "https://github.com/toomcruz/cemiterio-santana-5b3-test/actions/runs/39302111099",
+  "runner": "existing VPS runner",
+  "results": {
+    "at": "2026-10-19T18:24:18.237907+00:00",
+    "status": "PASS",
+    "environment": "isolated_synthetic",
+    "production_changes": 0,
+    "write_grants_activated": 0,
+    "real_messages_sent": 0,
+    "suites": [
+      {
+        "name": "build_read",
+        "exit_code": 0,
+        "tests": 0
+      },
+      {
+        "name": "build_individual",
+        "exit_code": 0,
+        "tests": 0
+      },
+      {
+        "name": "build_daily_delta",
+        "exit_code": 0,
+        "tests": 0
+      },
+      {
+        "name": "media_triage",
+        "exit_code": 0,
+        "tests": 24
+      },
+      {
+        "name": "mcp_safe_errors",
+        "exit_code": 0,
+        "tests": 5
+      },
+      {
+        "name": "individual_scope",
+        "exit_code": 0,
+        "tests": 18
+      },
+      {
+        "name": "individual_status",
+        "exit_code": 0,
+        "tests": 3
+      }
+    ],
+    "total_tests": 50
+  },
+  "preservation": {
+    "status": "DAILY_OPERATIONS_SYNTHETIC_PASS",
+    "source_commit": "d6b6bd6534793fa583e278afaf2ce3b9a7057e14",
+    "service_pids_unchanged": true,
+    "production_changes": 0,
+    "real_whatsapp_sends": 0,
+    "new_write_grants": 0,
+    "sana_openbot_boss_n8n_operations": 0
+  },
+  "production_deployment": "NOT_PERFORMED",
+  "write_permission": "NOT_ACTIVATED",
+  "real_whatsapp_sends": 0
+}

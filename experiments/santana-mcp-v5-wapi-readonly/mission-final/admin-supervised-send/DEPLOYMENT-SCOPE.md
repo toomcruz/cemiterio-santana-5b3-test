@@ -1,37 +1,60 @@
-# Única autorização adicional — envio administrativo supervisionado
+# Implantação única — uso diário do MCP Santana
 
-Estado: candidato isolado. Nenhuma permissão administrativa de envio foi criada em PROD e nenhum envio real integra esta etapa.
+Estado: candidato isolado, aguardando aprovação específica. Nenhuma implantação PROD, nova concessão de escrita ou mensagem real foi executada.
 
-## O que seria implantado
+## Evidência real de anexos
 
-1. **No Supabase SANTANA-SANA-PROD existente:** acrescentar a tabela privada com RLS `sana_mcp_supervised_send_access`, separada da concessão de leitura, e duas funções invoker restritas ao serviço: verificação de escopo e marcador das mensagens recentes. Atualizar somente `sana_mcp_coordinated_send` e a projeção de metadados da leitura para vincular esse marcador à operação. Preservar as funções oficiais `sana_control_transition` e `sana_manual_whatsapp` e as barreiras de concorrência já instaladas.
-2. **Na Edge Function PROD existente:** atualizar apenas `mcp-official-operations.ts` para aceitar a nova concessão administrativa após verificar a sessão individual PROD e a revisão independente. O vínculo de leitura sozinho continua insuficiente. Os caminhos antigos de concessão individual são preservados.
-3. **Na Edge Function HOMOLOG existente:** atualizar somente `send-intents-core.mjs` para incluir o marcador das mensagens recentes na prévia e no hash aprovado.
-4. **No MCP existente:** atualizar somente `server.py` e `official_send_provider.py` para que `consultar_envio_preparado` consulte também o estado oficial da operação pela rota `mcp_status` já existente, inclusive após resultado desconhecido. Essa consulta não tenta enviar novamente. Os argumentos e as identidades dos plugins permanecem.
+Em 19/10/2026, a mesma foto e o mesmo PDF que falharam foram lidos pela conexão atual, sem mudança de código ou permissão: JPEG de 472.599 bytes e PDF de 132.876 bytes, uma página com texto extraído. Cruzar o identificador do PDF com a conversa da imagem foi bloqueado, sem retornar conteúdo.
 
-O manifesto identifica exatamente cinco arquivos de implantação. Não há novo emissor, plugin, túnel, projeto, serviço ou conta. A implantação deverá parar se as versões de origem tiverem mudado.
+A causa transitória da falha anterior não foi estabelecida. O defeito de diagnóstico foi comprovado: negação de escopo e outras falhas terminavam no mesmo HTTP 400 / JSON-RPC -32000. O candidato preserva códigos fixos para negação, indisponibilidade, timeout, tamanho, integridade e renderização, sem expor credenciais, URLs do provedor, SQL ou conteúdo. Não faz tentativas automáticas.
 
-## A concessão proposta
+## Dez arquivos do delta
 
-Uma única concessão para o operador PROD `8d76a3eb-4dad-40ac-a7ce-6b5be268ce7f`, vinculado à identidade OAuth e ao cliente ChatGPT existentes, no escopo `panel:santana`. Validade **até 25/10/2026 às 19h25, horário de São Paulo**, limitada também pela vigência da leitura atual.
+| Componente existente | Arquivo | Alteração |
+|---|---|---|
+| Supabase PROD | `database.sql` | Nova tabela privada com RLS `sana_mcp_supervised_send_access`; funções invoker de escopo e marcador recente; função interna restrita `sana_mcp_private.response_triage`. Atualiza somente `sana_mcp_coordinated_send` e `sana_mcp_admin_read`. |
+| Edge PROD | `prod-edge/mcp-admin-core.mjs` | Triagem conservadora e códigos seguros de erro. |
+| Edge PROD | `prod-edge/mcp-admin-assist.ts` | Preserva os códigos da rota de anexos e distingue timeout. |
+| Edge PROD | `prod-edge/mcp-official-operations.ts` | Aceita a concessão individual separada após verificar identidade PROD e revisão independente. |
+| Painel oficial | `panel/lib/sana/mcp-read-media.mjs` | Reutiliza os mesmos helpers; normaliza configuração, trata download nulo e distingue falhas. Não altera a interface ou emissor. |
+| Edge HOMOLOG | `homolog-edge/send-intents-core.mjs` | Vincula o marcador recente à prévia e ao hash aprovado. Preserva os outros arquivos da versão 15. |
+| MCP existente | `mcp/whatsapp-santana-mcp/server.py` | Acrescenta consulta do estado oficial da operação preparada. |
+| MCP existente | `mcp/whatsapp-santana-mcp/official_send_provider.py` | Acrescenta somente consulta de estado, preservando o transporte. |
+| MCP existente | `mcp/whatsapp-santana-mcp/sana_read_provider.py` | Encaminha somente códigos administrativos fixos e seguros. |
+| MCP existente | `mcp/whatsapp-santana-mcp/admin_assist_tools.py` | Devolve falhas estruturadas sem repetir consultas automaticamente. |
 
-Permite atender individualmente as conversas operacionais que continuarem autorizadas ao seu perfil administrativo, sem cadastrar permissões técnicas por contato. Não permite abrir contatos arbitrários, disparos em massa ou acesso do OpenBot. Perfil, concessão de leitura, concessão de escrita e vigência são reavaliados no backend; qualquer revogação bloqueia novas execuções.
+A ativação separada usa `deployment-delta/activate-after-approval.sql`, protegida pelo hash exato do manifesto. Os testes não a executam contra produção.
 
-## Cada envio continuará exigindo
+## Única concessão nova
 
-- Uma operação única, prévia integral de destinatário, texto e anexos, revisão protegida existente e confirmação específica por operação. A aprovação no chat sozinha não substitui a prova autenticada do backend.
-- Conferência da revisão e das mensagens recentes na autorização e imediatamente antes da reserva oficial de envio. Mensagem nova invalida a aprovação, mesmo sem mudança de revisão.
-- Pausa humana pelo controle oficial somente na conversa selecionada, ausência de envio concorrente, idempotência e registro no histórico oficial. Uma operação em andamento ou com resultado desconhecido não será reenviada.
-- Texto, imagem ou PDF dentro dos limites já validados. Aceite pela W-API não será apresentado como entrega confirmada.
+Envio **individual supervisionado**, separado da leitura, para o operador PROD `8d76a3eb-4dad-40ac-a7ce-6b5be268ce7f`, vinculado à identidade OAuth e cliente ChatGPT atuais, no escopo `panel:santana`. Cobre somente conversas que continuarem autorizadas pelo perfil e pela concessão administrativa de leitura; não exige cadastro técnico por telefone.
 
-As sessões válidas continuam sendo reaproveitadas pelas telas existentes. O requisito de autenticação humana recente e as duas etapas protegidas de revisão e autorização atuais são preservados; este candidato não elimina essas verificações.
+Validade herdada da leitura: **25/10/2026 às 19h25, horário de São Paulo**. Sem extensão automática. Não permite contatos arbitrários, OpenBot, lotes ou atendimento automático. A ativação não envia, não pausa conversas nem aprova operações. O modelo não recebe credenciais de escrita nem pode criar concessões.
 
-## Ativação e reversão
+## Proteção por mensagem
 
-Após autorização expressa deste escopo: verificar as versões, aplicar a migração, atualizar os três componentes existentes e ativar a única concessão administrativa. A ativação não envia mensagem nem muda a pausa das conversas. Cada mensagem futura continuará dependendo de aprovação própria.
+Verificar identidade PROD, perfil, escopo, vigência, destinatário, revisão e mensagens recentes antes da aprovação e novamente no coordenador oficial. A prévia vincula destinatário, texto integral, anexos, hash e operação única. Nova mensagem ou mudança de revisão invalida a autorização anterior.
 
-Para revogar, desativar a nova concessão. Para retornar, restaurar o coordenador e os arquivos de origem preservados, mantendo a auditoria. Não remover as barreiras oficiais, o histórico, a leitura administrativa ou as concessões individuais anteriores.
+Cada envio continua exigindo confirmação específica e prova autenticada na interface protegida existente. Chat, leitura e concessão administrativa isoladamente não autorizam o backend a enviar. Sessões válidas são reaproveitadas conforme o fluxo atual.
 
-Depois do piloto, proponho concessões administrativas contínuas e revogáveis, vinculadas às permissões atuais do operador, com sessões que continuam expirando normalmente. A retirada da renovação semanal depende de autorização separada; não será feita nesta implantação.
+Reutiliza `sana_control_transition` e `sana_manual_whatsapp`. Preserva pausa humana, travas oficiais, auditoria, idempotência e bloqueio de resultados desconhecidos. Aceite pela API não é entrega confirmada. Não cria outro emissor W-API.
 
-**Autorização solicitada:** implantar esse delta e ativar essa concessão de envio supervisionado até o término do piloto, sem executar qualquer envio real durante a implantação.
+## Triagem sem encerrar atendimentos
+
+Agradecimentos e confirmações sem nova solicitação vão para `informational_items`, com `response_required=false`, preservando a conversa e o estado original de entrega. Exige resposta efetivamente enviada, histórico da mesma conversa e sequência recente completa. Texto apenas gerado não conta.
+
+Aceites de horário, perguntas, correções, anexos, promessas de retorno pendentes, contexto incompleto, falhas, envios em andamento e resultados desconhecidos continuam visíveis. Mantém paginação mesmo com página apenas informativa. Sessão `closed` não significa atendimento resolvido.
+
+Regras sem publicação oficialmente aprovada continuam indisponíveis. AUTHORITY, LOCATOR e FOLLOWUP_SCOPE não são promovidas a normas por este delta.
+
+## Aplicação e reversão
+
+Verificar hashes e versões de `deployment-delta/manifest.json`, obter backup e interromper se qualquer origem divergir. Aplicar somente esses dez arquivos nos componentes existentes, preservando os demais arquivos das Edge Functions. Ativar a concessão por último, após checks de leitura e catálogo. Não executar envio real durante a implantação.
+
+Revogar desativando somente a nova concessão. Reverter restaurando os arquivos e as duas definições SQL anteriores, preservando auditoria, operações, leitura e concessões individuais antigas.
+
+As evidências sanitizadas estão em `../admin-assist/validation/daily-operations/`. Testes com dados e transporte fictícios, sem repetir infraestrutura ou envios reais já concluídos.
+
+Preservar Sana, OpenBot, Boss Bridge, n8n, W-API, webhooks, plugin, identidade OAuth, túnel e canal oficial. Nenhum projeto ou serviço novo.
+
+**Autorização necessária:** aplicar este delta e ativar somente o envio administrativo individual supervisionado até o vencimento atual. Essa aprovação não autoriza mensagens reais nem lotes.

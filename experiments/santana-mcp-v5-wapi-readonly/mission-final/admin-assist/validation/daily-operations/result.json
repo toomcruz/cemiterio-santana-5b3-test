@@ -1,0 +1,41 @@
+{
+  "at": "2026-10-19T18:17:24.451039+00:00",
+  "status": "PASS",
+  "environment": "isolated_synthetic",
+  "production_changes": 0,
+  "write_grants_activated": 0,
+  "real_messages_sent": 0,
+  "suites": [
+    {
+      "name": "build_read",
+      "exit_code": 0,
+      "tests": 0
+    },
+    {
+      "name": "build_individual",
+      "exit_code": 0,
+      "tests": 0
+    },
+    {
+      "name": "media_triage",
+      "exit_code": 0,
+      "tests": 24
+    },
+    {
+      "name": "mcp_safe_errors",
+      "exit_code": 0,
+      "tests": 5
+    },
+    {
+      "name": "individual_scope",
+      "exit_code": 0,
+      "tests": 17
+    },
+    {
+      "name": "individual_status",
+      "exit_code": 0,
+      "tests": 3
+    }
+  ],
+  "total_tests": 49
+}

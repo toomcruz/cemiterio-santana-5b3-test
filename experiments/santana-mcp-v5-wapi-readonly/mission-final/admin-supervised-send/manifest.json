@@ -5,14 +5,14 @@
   "new_write_grants": 0,
   "baselines": {
     "prod_edge_version": 42,
-    "homolog_edge_version": 14,
+    "homolog_edge_version": 15,
     "mcp_deployment": "dpl_8dfbsPTvZ6eDzsmmXBEN3Pnjf2Am",
     "panel_commit": "58a242926cbae6213e079f18234cad8eb87e0f59",
     "coordinator_sha256": "10b9b414cb31d2452483caa0cf4f4d4f914b12e5ca1d0331917bad6aa0611406",
     "official_edge_sha256": "d7e8cf23248407cc33414e2d952f9979b2ec0eaa104773654eca8b6d413a173e"
   },
   "files": {
-    "database.sql": "f323bbf13909dc5653ab3dc8d75dad29797d19a7c95fa6bc7021151ed3881d1a",
+    "database.sql": "6a6b8bd332039b4c3c06ea74f61be65805cb17fdca9df7200c317101185870e8",
     "mcp-official-operations.ts": "e2a071861eeaff89bfece004cbf73134e924f3f13ccc71b31d76f7cfc020a1ab",
     "official_send_provider.py": "63463371d21b7e7ef6c166a344d513a9a6ea718b7b78042a1637f628f209451a",
     "send-intents-core.mjs": "2a00629ef23ecd381b1595e98c941301f7ff1cda01477dd1b0a8a0234c47b0ca",
