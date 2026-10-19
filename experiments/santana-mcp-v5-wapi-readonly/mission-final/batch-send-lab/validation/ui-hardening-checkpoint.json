@@ -1,0 +1,77 @@
+{
+  "recorded_at": "2026-10-19T16:34:46.882Z",
+  "status": "PLUGIN_GUIDANCE_UPDATED_LAB_UI_PATCH_VALIDATED_LOCALLY_WAITING_RUNNER_QUEUE",
+  "plugin": {
+    "id": "plugin_asdk_app_6ad3b0cbf1108191bc5ce4546eb8a4c8",
+    "version": "1.0.2",
+    "release_id": "pluginrel_6ad642b3d7b4819194cdd94d6ff06131",
+    "identity_and_app_binding_preserved": true,
+    "connection_permissions_changed": false,
+    "guard_against_invalid_review_url_saved_and_readback": true
+  },
+  "local_checks": {
+    "status": "PASS",
+    "total": 23,
+    "new_checks": 17,
+    "affected_auth_regressions": 6,
+    "suites": [
+      {
+        "suite": "python_ui_and_auth_regressions",
+        "tests": 13
+      },
+      {
+        "suite": "widget_ui_dom_unit",
+        "tests": 7
+      },
+      {
+        "suite": "installer_transaction",
+        "tests": 3,
+        "systemd": "simulated",
+        "processes_and_sqlite": "real_synthetic"
+      }
+    ],
+    "browser_csp_enforcement": "PENDING_LIVE_INSTALLATION"
+  },
+  "candidate": {
+    "commit": "4db10dc4a670d049143eec7895ac457b99c9645f",
+    "scope": "existing LAB only",
+    "files_replaced": 3,
+    "files_added": 3,
+    "renderer": "Existing administrative attachment worker, pinned Pillow 12.3.0 and pypdfium2 5.14.0 scoped to LAB",
+    "pdf_page_limit": 8,
+    "real_send_enabled": false,
+    "external_review_url": "Removed from real-review MCP result; use proven native ChatGPT component"
+  },
+  "runner": {
+    "id": 21,
+    "name": "hermes-santana-lab",
+    "status": "online",
+    "busy": false,
+    "run_id": 39285317093,
+    "job_id": 118169473838,
+    "run_status": "queued",
+    "runner_checks_ran": false,
+    "current_sudo_check": "NOT_EXECUTED_JOB_NOT_STARTED",
+    "root_action_ready": false
+  },
+  "external_incident": {
+    "source": "https://www.githubstatus.com/api/v2/summary.json",
+    "incident_id": "8tzbpcnl75jp",
+    "name": "Degraded availability for GitHub Actions, GitHub Pages and Webhooks",
+    "started_at": "2026-10-19T15:49:25.822Z",
+    "last_observed_status": "investigating",
+    "workflow_processing_delays_reported": true,
+    "causation_for_this_run": "Consistent with queue; not independently proven"
+  },
+  "production_changes": 0,
+  "whatsapp_real_sends": 0,
+  "sana_openbot_boss_n8n_operations": 0,
+  "supabase_changes": 0,
+  "remaining": [
+    "Wait for runner task to start and collect actual validation/staging result",
+    "Use existing admin permissions if available; otherwise one integrity-checked root action after staging",
+    "Validate live CSP and image/PDF previews in ChatGPT",
+    "Authenticate and simulate larger LAB batches with individual review",
+    "Production batch integration, scope/grants and any real sends require separate explicit approval"
+  ]
+}

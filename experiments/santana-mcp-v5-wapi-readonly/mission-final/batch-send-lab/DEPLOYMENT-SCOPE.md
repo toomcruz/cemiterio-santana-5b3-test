@@ -1,6 +1,6 @@
 # Escopo de promoção — não autorizado e não aplicado
 
-Este delta está implementado e testável em ambiente sintético. Não é uma habilitação de escrita em produção, nem prova da revisão de um operador real no novo fluxo.
+Este delta tem implantação no LAB e prova positiva da revisão autenticada de um lote fictício de duas respostas. Isso não habilita escrita em produção: a concessão é lab_fixture_simulation_only e o transporte real é impossível no candidato. O ajuste posterior de CSP/PDF/link está validado localmente e aguarda o runner; não foi aplicado ao serviço.
 
 ## Alterações necessárias antes de pedir a liberação final
 
@@ -18,4 +18,4 @@ Sana, OpenBot/Boss Bridge, n8n, W-API, webhooks, concessões e emissores atuais.
 
 Antes de qualquer promoção, apresentar os arquivos/migrações finais e seus hashes, verificar drift das versões ativas e obter autorização específica do usuário. Fazer backup dos componentes alterados. A liberação de um piloto e cada envio real dependem de autorizações posteriores; esta implementação não as presume. Revogação desativa a concessão do lote e novas execuções, preservando auditoria e operações ambíguas.
 
-No LAB não foi alterado nenhum serviço instalado. Para instalar o delta no MCP LAB ativo, é necessário acesso de escrita ao diretório root do serviço e uma integração de sessão humana real: não solicitamos execução de um patch root antes de concluir essa integração. As suítes do runner usam uma cópia isolada e temporária do MCP, encerrada ao final, sem deixar uma segunda operação ativa.
+O LAB já recebeu a extensão e o corretivo de metadados, preservando o túnel e o servidor original. A revisão individual real funcionou e o lote de duas respostas terminou com exatamente uma tentativa simulada por destinatário. O próximo patch é limitado a CSP, prévias e tratamento da interface; não amplia concessões e não cria envio real. Seu estágio pela execução 39285317093 aguarda a fila do GitHub Actions. Antes de pedir qualquer ação root, será necessário coletar o resultado de validação/estágio e a checagem do acesso administrativo existente. As suítes usam cópias isoladas/temporárias, sem deixar outra operação ativa.
