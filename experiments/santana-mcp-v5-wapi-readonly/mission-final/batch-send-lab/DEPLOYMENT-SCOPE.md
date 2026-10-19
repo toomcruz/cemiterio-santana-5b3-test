@@ -1,6 +1,26 @@
-# Escopo de promoção — não autorizado e não aplicado
+# Escopo atual — MCP Santana LAB
 
-Este delta tem implantação no LAB e prova positiva da revisão autenticada de um lote fictício de duas respostas. Isso não habilita escrita em produção: a concessão é lab_fixture_simulation_only e o transporte real é impossível no candidato. O ajuste posterior de CSP/PDF/link passou nas 23 verificações locais e na VPS; está preparado e aguarda aplicação root no LAB, ainda não realizada.
+A extensão existente está instalada, incluindo revisão autenticada, CSP própria e renderização offline do PDF. A conexão ativa confirmou a remoção do link inválido e preservação da auditoria do lote concluído de duas respostas. A concessão continua lab_fixture_simulation_only e não autoriza produção.
+
+## Única correção pendente no LAB
+
+A verificação no ChatGPT encontrou uma incompatibilidade de imagem: a política herdada do contêiner permite data: em img-src e não permite blob:. O PDF foi renderizado na VPS, mas a imagem de sua página ficou com naturalWidth=0, e a aprovação foi bloqueada. Nenhum login ou revisão foi tentado. Evidência: validation/preview-browser-block.jpg.
+
+A correção substitui apenas a criação do endereço da imagem, conservando os bytes e MIME previamente verificados. O mesmo ajuste serve para imagens originais e páginas de PDF. Autenticação, destinatários, textos, anexos, recibos, idempotência e CSP permanecem iguais. O gerador confere que o HTML final tem exatamente essa substituição de uma linha.
+
+Arquivo preparado na VPS: /home/runner/santana-mcp-staging/batch-preview-fix-faf2b4b94ef8/apply-preview.py. SHA-256: faf2b4b94ef800a0e64d4d1e872bb0cc71871015fcfe643069836ca2b1535ce8. Comando: Aplicar-Correcao-Previa-LAB.txt.
+
+A aplicação confere host, fonte, configuração, catálogo e HTML ativo, faz backup, substitui somente real-widget.html de forma atômica e compara o recurso servido com o candidato protegido. Não reinicia serviços nem escreve na auditoria. Falha posterior restaura o HTML anterior. Root é necessário porque o arquivo está em /root e o runner UID 1001 não possui sudo sem senha.
+
+## Evidência e limites atuais
+
+- Instalação root: LAB_UI_HARDENING_INSTALLED, PID 1269467, túnel preservado, PDF offline PASS.
+- Prévia atualizada carregada após atualizar o catálogo do mesmo plugin; operação concluída sem opção de nova revisão.
+- Lote sintético ba93726f-4a89-4209-800a-b99e0d58aaf8: dez respostas personalizadas, PDF sintético, todas com zero tentativas e sem aprovação.
+- Workflow 39290019091, commit 6e421ac2f007b46e04c4ac7ac4b1cd44dbe3322d: oito testes da interface (sete regressões e um da política herdada observada), três de aplicação de arquivo, todos aprovados localmente e na VPS. HTTP loopback e arquivos reais sintéticos; operações privilegiadas simuladas, qualquer chamada de reinício falha o teste.
+- Correção de imagem ainda não aplicada. Renderização corrigida e revisão humana do lote maior continuam pendentes. Nenhuma mensagem real foi enviada.
+
+## Produção — não autorizada nesta etapa
 
 ## Alterações necessárias antes de pedir a liberação final
 
@@ -10,18 +30,8 @@ Este delta tem implantação no LAB e prova positiva da revisão autenticada de 
 4. Reutilizar o agendamento/outbox oficial para o lote, com intervalo global e status por destinatário. Não criar cron/daemon/emissor concorrente. Preservar a pausa e as barreiras de Sana/n8n/Painel. Estado desconhecido interrompe o lote; não faz retry. Confirmar a projeção de cada filho no histórico oficial.
 5. Montar as ferramentas no MCP existente, preservando App, OAuth, URL e túnel, após comprovar os gates anteriores. Atualizar o catálogo da conexão existente e testar a UI no ChatGPT. O protótipo atual é fixture-only e não será promovido por simples mudança de variável.
 
-## O que não será alterado
+## Preservação e promoção
 
-Sana, OpenBot/Boss Bridge, n8n, W-API, webhooks, concessões e emissores atuais. Não há novas contas, plugins, túneis, projetos, serviços, assinatura ou endpoint direto W-API neste delta.
+Não substituir Sana, OpenBot/Boss Bridge, n8n, W-API, Painel, webhooks, túnel, OAuth ou canal oficial. Não criar contas, plugins, bancos, projetos ou serviços.
 
-## Implantação e reversão
-
-Antes de qualquer promoção, apresentar os arquivos/migrações finais e seus hashes, verificar drift das versões ativas e obter autorização específica do usuário. Fazer backup dos componentes alterados. A liberação de um piloto e cada envio real dependem de autorizações posteriores; esta implementação não as presume. Revogação desativa a concessão do lote e novas execuções, preservando auditoria e operações ambíguas.
-
-O LAB já recebeu a extensão e o corretivo de metadados, preservando o túnel e o servidor original. A revisão individual real funcionou e o lote de duas respostas terminou com exatamente uma tentativa simulada por destinatário. O próximo patch é limitado a CSP, prévias e tratamento da interface; não amplia concessões e não cria envio real. A execução corrigida 39287494403 (commit e1e0f4704becba4ef5e29eeaeca233e943ff1c55) aprovou as 23 verificações. A falha anterior foi confirmada como FileNotFoundError de um PDF local não versionado; teste e gerador agora usam o fixture canônico versionado. Runner UID 1001, sudo sem senha indisponível; LAB PID 1013288 e túnel PID 1219382 continuam ativos.
-
-## Única aplicação privilegiada pendente — LAB
-
-Arquivo preparado na VPS: /home/runner/santana-mcp-staging/batch-ui-hardening-1b42cdb70681/apply-lab.py. SHA-256: 1b42cdb706816494b8fc80563fbb5aef966a1c995e2b3e44555040cb167f4d5a. O comando íntegro está em Aplicar-Correcao-LAB.txt.
-
-Substitui três arquivos da extensão, acrescenta três módulos auxiliares e bibliotecas offline restritas ao diretório do LAB. Faz backup e preflight de PDF/protocolo antes de reiniciar somente santana-mcp-lab.service; falha de saúde restaura o código anterior e preserva auditoria/resultados desconhecidos. Confere fonte, configuração e catálogo, preserva túnel e server.py. Não altera concessões, OAuth, Supabase, produção ou envio real. A comprovação da aplicação e a validação do componente no ChatGPT continuam pendentes.
+O protótipo LAB não será promovido apenas mudando uma variável. Antes de qualquer implantação em produção, apresentar arquivos/migrações finais, hashes, escopos e reversão, verificar a fonte ativa e obter autorização específica. A liberação do piloto e cada envio real dependem de autorizações posteriores. Revogação bloqueia novas execuções sem apagar auditoria ou liberar operações ambíguas.

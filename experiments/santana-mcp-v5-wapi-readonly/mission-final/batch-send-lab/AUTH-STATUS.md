@@ -102,3 +102,7 @@ O ajuste adicional de CSP e prévia de PDF ainda não está instalado. Workflow 
 ## Runner corrigido aprovado; aplicação privilegiada pendente
 
 Workflow 39287494403, job 118178703376: 13 verificações Python (incluindo 6 regressões de autenticação), 7 da interface e 3 de instalação/rollback, todas aprovadas sem skips. Total 23, com systemd simulado e processos/SQLite reais sintéticos. O log anterior foi recuperado sob SHA conhecido e confirmou três FileNotFoundError do PDF local. Patch preparado, 54535 bytes, SHA 1b42cdb706816494b8fc80563fbb5aef966a1c995e2b3e44555040cb167f4d5a. Runner UID 1001 sem sudo não pode aplicá-lo. Código da interface ainda não instalado; serviço LAB e túnel seguem nos mesmos PIDs. Nenhum envio real, mudança de produção ou concessão. Evidência: validation/ui-hardening-runner.json.
+
+## Serviço atualizado e ajuste de imagem preparado
+
+O relatório root LAB_UI_HARDENING_INSTALLED foi confirmado pela conexão ativa. A atualização do catálogo na interface recarregou o recurso e o lote concluído ficou sem opção de nova revisão. O PDF de um novo lote de dez permaneceu bloqueado pela CSP herdada, que não permite img blob:. Correção isolada para data URI, permitida na mesma política, aprovada em 11 verificações locais e no runner (workflow 39290019091). Patch de um HTML preparado, sem reinício de serviço e sem mudanças de concessões. Aplicação root e prova visual corrigida pendentes. Não houve tentativa de login, aprovação humana ou envio real neste turno.

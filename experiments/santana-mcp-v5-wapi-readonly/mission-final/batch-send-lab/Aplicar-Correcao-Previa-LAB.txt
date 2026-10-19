@@ -1,0 +1,9 @@
+python3 -I - <<'SANTANA_PREVIA'
+import hashlib,os
+p="/home/runner/santana-mcp-staging/batch-preview-fix-faf2b4b94ef8/apply-preview.py"
+fd=os.open(p,os.O_RDONLY|os.O_NOFOLLOW)
+with os.fdopen(fd,'rb') as f: code=f.read(524289)
+if len(code)>524288 or hashlib.sha256(code).hexdigest()!="faf2b4b94ef800a0e64d4d1e872bb0cc71871015fcfe643069836ca2b1535ce8":
+    raise SystemExit('PAREI: integridade divergente; nada executado.')
+exec(compile(code,'santana_previa_lab_verificada','exec'),{'__name__':'__main__'})
+SANTANA_PREVIA

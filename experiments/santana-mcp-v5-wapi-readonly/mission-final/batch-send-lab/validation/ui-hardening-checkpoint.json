@@ -1,6 +1,6 @@
 {
   "recorded_at": "2026-10-19T16:34:46.882Z",
-  "status": "RUNNER_PASS_PATCH_STAGED_ROOT_REQUIRED",
+  "status": "HARDENING_INSTALLED_NATIVE_VERIFIED_ONE_FILE_PREVIEW_COMPAT_FIX_STAGED",
   "plugin": {
     "id": "plugin_asdk_app_6ad3b0cbf1108191bc5ce4546eb8a4c8",
     "version": "1.0.2",
@@ -69,10 +69,10 @@
   "sana_openbot_boss_n8n_operations": 0,
   "supabase_changes": 0,
   "remaining": [
-    "One integrity-checked root action, already staged on VPS; runner lacks privilege",
-    "Validate live per-component CSP and image/PDF previews in ChatGPT",
-    "Larger authenticated LAB batch checks pending independent human review",
-    "Production batch integration and scope require separate implementation/validation/approval; no real sends now"
+    "Apply one HTML image-source correction under root; no service restart or grant changes",
+    "Refresh same plugin resources and validate image/PDF decode in live ChatGPT",
+    "Independent operator review and simulated execution of a larger batch",
+    "Production batch integration and any real sends require separate implementation/validation/approval"
   ],
   "fixture_correction": {
     "reason": "Binary PDF exists locally but only canonical fixtures.json is in repository",
@@ -148,5 +148,76 @@
       "1219382",
       "active"
     ]
+  },
+  "installed": true,
+  "preview_compatibility": {
+    "recorded_at": "2026-10-19T17:01:02.602Z",
+    "workflow_run_id": 39290019091,
+    "job_id": 118187932878,
+    "source_commit": "6e421ac2f007b46e04c4ac7ac4b1cd44dbe3322d",
+    "validation": {
+      "status": "PASS",
+      "tests": 11,
+      "suites": [
+        {
+          "suite": "widget_preview",
+          "tests": 8,
+          "exit_code": 0,
+          "seconds": 1.106,
+          "log_sha256": "d92e54ef1fe3f018884deccaf65a46d0ac272fb2d0c86766b8cca64831dd1559"
+        },
+        {
+          "suite": "one_file_install",
+          "tests": 3,
+          "exit_code": 0,
+          "seconds": 3.788,
+          "log_sha256": "f95a30f1041d85ed1ac7e11b396daaecd04ca192c3c1e6d21ffa7021a4d1e224"
+        }
+      ],
+      "real_whatsapp_sends": 0,
+      "production_changes": 0
+    },
+    "staged": {
+      "sha256": "faf2b4b94ef800a0e64d4d1e872bb0cc71871015fcfe643069836ca2b1535ce8",
+      "bytes": 20238,
+      "only_file": "real-widget.html",
+      "only_environment": "existing MCP LAB",
+      "services_restarted": 0,
+      "production_changes": 0,
+      "real_whatsapp_sends": 0,
+      "old_widget_sha256": "a6aefb8656d9fdd834b16ad4b3558c7c7d1f6a079cee2708b029ab1dfe00c2d9",
+      "new_widget_sha256": "49b9a1da9e047d56075e7ee8d065d2d71a060785f29611c0044de3765c7cf6d8",
+      "path": "/home/runner/santana-mcp-staging/batch-preview-fix-faf2b4b94ef8/apply-preview.py",
+      "status": "STAGED_ROOT_REQUIRED",
+      "uid": 1001,
+      "sudo_without_password": false
+    },
+    "installed": false,
+    "live_new_image_preview": "PENDING_ONE_FILE_ROOT_APPLICATION",
+    "batch_prepared": {
+      "id": "ba93726f-4a89-4209-800a-b99e0d58aaf8",
+      "state": "prepared",
+      "total": 10,
+      "attempts": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "counts": {
+        "prepared": 10
+      }
+    },
+    "human_approval_attempts": 0,
+    "login_attempts": 0,
+    "production_changes": 0,
+    "real_whatsapp_sends": 0,
+    "screenshot": "preview-browser-block.jpg"
   }
 }
