@@ -1,0 +1,9 @@
+{
+  "sha256": "3bde3eb674b3bdf160265ba6c4c88cd9e71f8c0faf8810360926d8721899ef0a",
+  "bytes": 21686,
+  "old_extension_sha256": "0fad711f210621281b5c39d57c71def4274e7ee6ea856c888e8d728d235f4160",
+  "new_extension_sha256": "ec7f35c1e88e20c1d77f2e38287c5507ee8b5f6b36f4ff53d108c62fb201ae1f",
+  "only_unit": "santana-mcp-lab.service",
+  "only_field": "registrar_revisao_lote._meta.ui",
+  "real_sends": false
+}

@@ -3,6 +3,7 @@ import ast,contextlib,hashlib,importlib.util,io,json,os,secrets,shutil,socket,sq
 from pathlib import Path
 from unittest.mock import patch
 from urllib.error import HTTPError
+from urllib.request import Request,urlopen
 
 ROOT=Path(__file__).resolve().parent
 FILES={n:(ROOT/n).read_text() for n in ['batch_send.py','mcp_extension.py','real_review.py','launcher.py','review.html','widget.html','real-widget.html']}
@@ -67,6 +68,7 @@ class InstallerRecoveryTests(unittest.TestCase):
     def command(self,args,**kw):
         if args==['hostname']:return 'srv1849463'
         if args[0]=='nsenter':return self.command_real(args[4:],**kw)
+        if args[0]=='/usr/bin/python3':return self.command_real(args,**kw)
         if args[:2]==['systemctl','daemon-reload']:return ''
         if args[:2]==['systemctl','restart']:
             self.assertEqual(args[2],self.m.UNIT);self.restarts+=1
@@ -134,5 +136,46 @@ class InstallerRecoveryTests(unittest.TestCase):
         r=self.run_install();self.assertEqual(r['error_code'],'LAB_RUNTIME_CONFIGURATION_CHANGED',r)
         self.assertTrue(r['configuration_checks']['audit_variable_present']);self.assertFalse(r['configuration_checks']['audit_path_matches'])
         self.assertTrue(r['lab_restored']);self.assertEqual(self.restarts,2)
+    def test_private_tool_descriptor_is_app_only_without_render_resource(self):
+        r=self.run_install();self.assertEqual(r['status'],'LAB_EXTENSION_INSTALLED',r)
+        body=json.dumps({'jsonrpc':'2.0','id':1,'method':'tools/list','params':{}}).encode()
+        req=Request(self.m.LAB_URL,data=body,headers={'Authorization':'Bearer '+self.env['CHATGPT_READ_TOKEN'],'Content-Type':'application/json','Accept':'application/json, text/event-stream'})
+        with urlopen(req,timeout=3) as response:v=json.load(response)
+        tools={t['name']:t for t in v['result']['tools']}
+        self.assertEqual(len(tools),12)
+        self.assertEqual(tools['registrar_revisao_lote']['_meta']['ui'],{'visibility':['app']})
+        for n in ('preparar_envio_simplificado','preparar_lote'):
+            self.assertEqual(tools[n]['_meta']['ui']['resourceUri'],'ui://santana/lab-batch-review.html')
+    def ui_fix_module(self):
+        r=self.run_install();self.assertEqual(r['status'],'LAB_EXTENSION_INSTALLED',r)
+        (self.base/'santana_batch_lab'/'mcp_extension.py').write_text((ROOT/'ui-fix-backup/mcp_extension.py').read_text())
+        self.start(True)
+        deadline=time.monotonic()+5
+        while time.monotonic()<deadline and self.m.get_health()!=405:time.sleep(.05)
+        spec=importlib.util.spec_from_file_location('ui_fix_transaction',ROOT/'fix-ui-metadata.py');module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        for name in ('BASE_PATH','AUDIT_PATH','LAB_PORT','LAB_URL','STAGE','SYSTEMD_PATH','BACKUP_PATH'):setattr(module,name,getattr(self.m,name))
+        module.command=self.command
+        if not self.proc_env_available:
+            module.process_env=self.m.process_env;module.process_ready=self.m.process_ready
+        return module
+    def run_ui_fix(self,module):
+        out=io.StringIO()
+        with patch.object(module.os,'geteuid',return_value=0),contextlib.redirect_stdout(out):
+            try:module.main()
+            except SystemExit as e:self.assertEqual(e.code,1)
+        return json.loads(out.getvalue())
+    def test_installed_metadata_patch_is_minimal_and_idempotent(self):
+        module=self.ui_fix_module();r=self.run_ui_fix(module)
+        self.assertEqual(r['status'],'LAB_UI_METADATA_FIXED',r)
+        self.assertEqual(r['private_visibility'],['app']);self.assertFalse(r['private_render_resource'])
+        self.assertTrue(r['lab_tunnel_pid_unchanged']);self.assertEqual(self.restarts,2)
+        again=self.run_ui_fix(module);self.assertEqual(again['status'],'LAB_UI_METADATA_ALREADY_FIXED',again)
+        self.assertEqual(self.restarts,2)
+    def test_installed_metadata_patch_restores_original_on_failed_health(self):
+        module=self.ui_fix_module()
+        module.catalog=lambda env:(_ for _ in ()).throw(HTTPError(module.LAB_URL,401,'fixture-only',{},None))
+        r=self.run_ui_fix(module);self.assertEqual(r['status'],'LAB_UI_FIX_FAILED_RESTORED',r)
+        self.assertTrue(r['lab_restored']);self.assertEqual(r['http_status'],401)
+        self.assertEqual(hashlib.sha256((self.base/'santana_batch_lab'/'mcp_extension.py').read_bytes()).hexdigest(),module.OLD_SHA)
 
 if __name__=='__main__':unittest.main()

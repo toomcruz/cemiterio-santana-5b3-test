@@ -6,7 +6,7 @@ on:
       action:
         description: Stage patch, collect report, or read OpenBot configuration schema
         type: choice
-        options: [stage, collect, inventory, root_inventory_stage, supervised, admin_assist, memory_inventory, memory_validate, batch_validate, batch_auth_validate, batch_install, batch_diagnose]
+        options: [stage, collect, inventory, root_inventory_stage, supervised, admin_assist, memory_inventory, memory_validate, batch_validate, batch_auth_validate, batch_install, batch_diagnose, batch_ui_fix]
         default: stage
 permissions:
   contents: read
@@ -24,7 +24,7 @@ jobs:
           persist-credentials: false
           sparse-checkout: experiments/santana-mcp-v5-wapi-readonly
       - uses: actions/setup-python@v5
-        if: inputs.action == 'admin_assist' || inputs.action == 'memory_validate' || inputs.action == 'batch_validate' || inputs.action == 'batch_auth_validate' || inputs.action == 'batch_install'
+        if: inputs.action == 'admin_assist' || inputs.action == 'memory_validate' || inputs.action == 'batch_validate' || inputs.action == 'batch_auth_validate' || inputs.action == 'batch_install' || inputs.action == 'batch_ui_fix'
         with:
           python-version: '3.12'
       - name: Stage or collect without changing running services
@@ -36,6 +36,11 @@ jobs:
           python3 - <<'PY'
           import hashlib,io,json,os,runpy,stat,subprocess,sys,tempfile,zipfile
           from pathlib import Path
+          if os.environ.get('ACTION')=='batch_ui_fix':
+              r=subprocess.run([sys.executable,'experiments/santana-mcp-v5-wapi-readonly/mission-final/batch-send-lab/stage_ui_fix.py'],capture_output=True,text=True,timeout=110)
+              print(r.stdout)
+              if r.returncode:raise SystemExit('UI_FIX_STAGE_FAILED')
+              raise SystemExit(0)
           if os.environ.get('ACTION')=='batch_diagnose':
               runpy.run_path('experiments/santana-mcp-v5-wapi-readonly/mission-final/batch-send-lab/diagnose_lab.py',run_name='__main__')
               raise SystemExit(0)

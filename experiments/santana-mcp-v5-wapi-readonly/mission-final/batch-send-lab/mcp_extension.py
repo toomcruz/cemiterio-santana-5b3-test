@@ -60,7 +60,7 @@ def install(server,controller,resolve_actor,base_url,real_review=None):
                 response["result"]["tools"].extend(TOOLS)
                 if real_review:
                     t=tool('registrar_revisao_lote','Registra somente um recibo de revisão humana já autenticada no HOMOLOG. Não recebe senha/JWT e não envia.',{'batch_id':{'type':'string','format':'uuid'},'receipt_id':{'type':'string','format':'uuid'}},['batch_id','receipt_id'],True)
-                    t['_meta']['ui']['visibility']=['app']
+                    t['_meta']['ui']={'visibility':['app']}
                     response['result']['tools'].append(t)
             return response
         if method=="resources/list" and client=="chatgpt":
