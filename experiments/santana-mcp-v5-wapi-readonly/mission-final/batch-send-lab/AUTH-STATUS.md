@@ -1,6 +1,14 @@
-> Estado atual (19/10, 14h UTC): corretivo aplicado pelo operador, LAB PID 1013288 e túnel preservado. Catálogo do mesmo plugin sincronizado: 11 ferramentas visíveis ao modelo e registrar_revisao_lote privada ao componente. Preparação individual e lotes de 2, 10 e 50 contatos fictícios comprovados pela conexão ativa. Componente nativo de revisão renderizado no ChatGPT. Autenticação/revisão humana positiva e processamento posterior ainda pendentes; envio real permanece bloqueado. As seções anteriores abaixo são o histórico de instalação, não bloqueios atuais.
+> Estado atual (19/10, 16h03 UTC): revisão humana autenticada confirmada pelo servidor e simulação concluída no lote ea6ee32c-9330-4b3a-beee-d5f2f43477b4. Duas operações accepted_by_api com simulated=true, exatamente uma tentativa por destinatário e zero envios WhatsApp reais. As cinco ferramentas novas estão disponíveis na conexão ativa. Lotes 10/50 têm preparação comprovada; execução com revisão real desses tamanhos, prévias nativas de imagem/PDF, CSP aplicada e link externo funcional ainda não estão comprovados. Produção continua bloqueada. As seções abaixo preservam a cronologia; não representam bloqueios atuais quando superadas por esta nota.
 
 # Retomada — revisão individual real do LAB
+
+## Aprovação humana e processamento confirmados — 19/10, 13h03 São Paulo
+
+A notificação do componente foi tratada apenas como contexto, sem presumir autorização. consultar_lote confirmou state=approved, manifesto 8945de4d7137841094e9c165a7e86708977dfb1dfaa9b9d2bf51469078191db2 e zero tentativas no lote ea6ee32c-9330-4b3a-beee-d5f2f43477b4. O guard instalado RealReview exige prova do recibo HOMOLOG, sessão atual e concessão LAB antes de cada passo. As duas chamadas de executar_lote_simulado retornaram accepted_by_api com simulated=true para os IDs exatos aprovados. reconciliar_lote confirmou um recibo sintético por destinatário; o passo seguinte encerrou o lote com completed sem nova operação. A consulta final confirmou duas tentativas totais, uma por destinatário, retry_allowed=false e real_dispatch_enabled=false.
+
+Essa é evidência positiva da integração entre revisão humana autenticada e processamento simulado pelo ChatGPT. Nenhuma chamada à W-API real, alteração de produção, ampliação de concessão ou credencial nova foi necessária. accepted_by_api neste registro é resultado do transporte sintético, não aceite da W-API real nem entrega em celular. Artefato: validation/chatgpt-authenticated-simulation.json.
+
+O endereço legado approval_url retornado pelo servidor é incorreto e não foi entregue nesta etapa como revisão funcional. A revisão efetiva ocorreu pelo componente nativo; não existe ainda um link externo validado para esse novo fluxo. A observação do navegador em nuvem permaneceu na tela de login anterior, portanto não foi usada como prova de autenticação; a prova é o estado do servidor e os passos protegidos. Segurança sob CSP aplicada, prévias nativas de anexos e processamento autenticado de lotes maiores permanecem pendentes de validação específica, sem repetir testes automáticos já concluídos.
 
 ## Validação direta no ChatGPT — catálogo corrigido
 

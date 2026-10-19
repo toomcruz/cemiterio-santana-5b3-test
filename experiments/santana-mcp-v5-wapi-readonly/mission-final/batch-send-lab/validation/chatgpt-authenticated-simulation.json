@@ -1,0 +1,68 @@
+{
+  "recorded_at": "2026-10-19T16:04:23.242Z",
+  "environment": "Existing MCP LAB via active ChatGPT app",
+  "batch_id": "ea6ee32c-9330-4b3a-beee-d5f2f43477b4",
+  "manifest_sha256": "8945de4d7137841094e9c165a7e86708977dfb1dfaa9b9d2bf51469078191db2",
+  "human_review": {
+    "server_state_before_execution": "approved",
+    "ui_workflow_notification": "Received; not treated as authorization by itself",
+    "backend_verification": "RealReview guard required before each simulated operation",
+    "result": "PASS",
+    "production_write_authorized": false
+  },
+  "simulation": {
+    "state": "completed",
+    "total": 2,
+    "counts": {
+      "accepted_by_api": 2
+    },
+    "items": [
+      {
+        "batch_id": "ea6ee32c-9330-4b3a-beee-d5f2f43477b4",
+        "pos": 0,
+        "operation_id": "6d2105aa-7e5a-4078-9980-ebb01e9e870e",
+        "conversation_id": "00000000-0000-4000-8000-000000000002",
+        "state": "accepted_by_api",
+        "attempts": 1,
+        "receipt": {
+          "delivery_confirmed": false,
+          "operation_id": "6d2105aa-7e5a-4078-9980-ebb01e9e870e",
+          "provider_message_id": "synthetic-6d2105aa-7e5a-4078-9980-ebb01e9e870e",
+          "simulated": true,
+          "state": "accepted_by_api"
+        },
+        "delivery_confirmed": false,
+        "retry_allowed": false
+      },
+      {
+        "batch_id": "ea6ee32c-9330-4b3a-beee-d5f2f43477b4",
+        "pos": 1,
+        "operation_id": "1718999f-7d15-47c0-bfc5-dc6b79b06bad",
+        "conversation_id": "00000000-0000-4000-8000-000000000003",
+        "state": "accepted_by_api",
+        "attempts": 1,
+        "receipt": {
+          "delivery_confirmed": false,
+          "operation_id": "1718999f-7d15-47c0-bfc5-dc6b79b06bad",
+          "provider_message_id": "synthetic-1718999f-7d15-47c0-bfc5-dc6b79b06bad",
+          "simulated": true,
+          "state": "accepted_by_api"
+        },
+        "delivery_confirmed": false,
+        "retry_allowed": false
+      }
+    ],
+    "has_more": false,
+    "real_dispatch_enabled": false,
+    "whatsapp_real_sends": 0,
+    "wapi_calls": 0
+  },
+  "scope_limits": {
+    "positive_authenticated_run_size": 2,
+    "batches_10_and_50": "Preparation verified previously; no new authenticated executions",
+    "native_image_pdf_preview": "Not proven by this run",
+    "external_review_url": "Legacy incorrect chatgpt.com/lab route unresolved; do not share",
+    "browser_csp_enforcement": "Not proven; existing global setting was disabled and unchanged",
+    "production_authorization": "Not granted"
+  }
+}
