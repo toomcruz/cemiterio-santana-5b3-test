@@ -1,0 +1,131 @@
+{
+  "status": "DEPLOYED_INDIVIDUAL_SUPERVISED_SEND_ACTIVE_NO_DISPATCH",
+  "release_sha256": "513cbdd33471a92b32ef8edbef914bb8e242d341cfd4bb1defb86429e4ed8cd1",
+  "deployed_at_utc": "2026-10-19T19:31:20Z",
+  "scope": {
+    "operator": "8d76a3eb-4dad-40ac-a7ce-6b5be268ce7f",
+    "administrative_read_scope_unchanged": true,
+    "individual_supervised_send_only": true,
+    "expires_at": "2026-10-25T22:25:00Z",
+    "timezone": "America/Sao_Paulo",
+    "batch_enabled": false,
+    "autonomous_enabled": false,
+    "per_operation_authenticated_approval_required": true
+  },
+  "components": {
+    "prod_edge": {
+      "previous": 42,
+      "current": 43,
+      "changed_files": 3,
+      "other_files_preserved": 50
+    },
+    "homolog_edge": {
+      "previous": 15,
+      "current": 16,
+      "changed_files": 1,
+      "other_files_preserved": 6
+    },
+    "panel": {
+      "previous": "dpl_9dNM9kTUwfnudfBb7oqMbmXzRNcg",
+      "current": "dpl_7Ry6eGTkBJwEwqfVtFmVjes9iusN",
+      "state": "READY",
+      "base_commit": "58a242926cbae6213e079f18234cad8eb87e0f59",
+      "commit": "bbc4e108e703322ee30f5aa6624926829f7b1066",
+      "changed_files": [
+        "lib/sana/mcp-read-media.mjs"
+      ]
+    },
+    "mcp": {
+      "previous": "dpl_8dfbsPTvZ6eDzsmmXBEN3Pnjf2Am",
+      "current": "dpl_25yLqLJACBQeTWxmhytq1JALr1Tn",
+      "state": "READY",
+      "source_hashes_verified": 20,
+      "changed_files": 4,
+      "other_files_preserved": 16
+    }
+  },
+  "validation": {
+    "prior_isolated_tests": 50,
+    "repeated_full_test_suites": 0,
+    "tools_via_actual_chatgpt_oauth": {
+      "listar_pendencias": {
+        "status": "ready",
+        "environment": "production",
+        "scanned_count": 31,
+        "actionable_items": 15,
+        "informational_items": 3,
+        "has_more": false
+      },
+      "consultar_contexto_atendimento": {
+        "status": "ready",
+        "context_complete": true,
+        "message_watermark": true
+      },
+      "consultar_regras_santana": {
+        "status": "ready",
+        "pages": 2,
+        "approved_rules": 0,
+        "pending_rules": 80,
+        "has_more": false
+      },
+      "ler_anexo_autorizado": {
+        "authorized_jpeg": "PASS",
+        "authorized_pdf": "PASS",
+        "cross_conversation_artifact": "DENIED",
+        "safe_error": "MCP_ADMIN_ATTACHMENT_DENIED",
+        "http_status": 403,
+        "automatic_retry": false
+      }
+    },
+    "administrative_scope_as_service_role": true,
+    "preparation": {
+      "status": "ready",
+      "state": "prepared",
+      "authenticated_oauth": true,
+      "outside_original_test_contact": true,
+      "revision_bound": true,
+      "recent_messages_watermark_bound": true,
+      "independent_review_performed": false,
+      "official_operation_created": false,
+      "external_request_attempted": false,
+      "official_status": {
+        "status": "unavailable",
+        "error": "MCP_OPERATION_NOT_AVAILABLE",
+        "no_send": true
+      }
+    },
+    "grant_privileges": {
+      "service_delete": false,
+      "service_enable": false,
+      "service_extend": false,
+      "service_insert": false,
+      "service_revoke": true,
+      "service_select": true
+    },
+    "activation_audit_rows": 1,
+    "official_control_function_hashes_unchanged": true,
+    "read_grant_unchanged": true,
+    "send_operation_count_before": 4,
+    "send_operation_count_after": 4,
+    "last_claimed_unchanged": true,
+    "final_grant_active": true,
+    "draft_conversation_revision_unchanged": true,
+    "human_pause_preserved": true,
+    "scope_audit_events": 1
+  },
+  "execution_adjustments": {
+    "approved_source_artifact_unchanged": true,
+    "sql_statement_terminators_added": 2,
+    "supabase_default_table_grants_restricted_to_intended_select_and_revoke": true,
+    "send_expiry_capped_to_user_authorized_minute": true
+  },
+  "backups": {
+    "private_archive": "santana-pre-deploy-513cbdd33471.zip",
+    "full_previous_edges": true,
+    "previous_sql_definitions": true,
+    "previous_vercel_deployments_preserved": true
+  },
+  "real_messages_sent": 0,
+  "real_send_attempts": 0,
+  "sana_openbot_boss_n8n_changes": 0
+}
