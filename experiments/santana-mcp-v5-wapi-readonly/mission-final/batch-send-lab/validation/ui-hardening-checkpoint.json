@@ -1,6 +1,6 @@
 {
   "recorded_at": "2026-10-19T16:34:46.882Z",
-  "status": "LAB_INSTALLED_LIVE_PDF_AND_IMAGE_VERIFIED_OPERATOR_REVIEW_PENDING",
+  "status": "LAB_AUTHENTICATED_TEN_RECIPIENT_PDF_SIMULATION_COMPLETED",
   "plugin": {
     "id": "plugin_asdk_app_6ad3b0cbf1108191bc5ce4546eb8a4c8",
     "version": "1.0.2",
@@ -30,7 +30,7 @@
         "processes_and_sqlite": "real_synthetic"
       }
     ],
-    "browser_csp_enforcement": "PENDING_LIVE_INSTALLATION"
+    "browser_csp_enforcement": "PASS_LIVE_CHATGPT_PDF_AND_PNG_PREVIEWS"
   },
   "candidate": {
     "commit": "4db10dc4a670d049143eec7895ac457b99c9645f",
@@ -69,8 +69,6 @@
   "sana_openbot_boss_n8n_operations": 0,
   "supabase_changes": 0,
   "remaining": [
-    "Independent operator review of renewed synthetic batch",
-    "Execute and reconcile approved synthetic items; never real WhatsApp",
     "Production batch bridge/grants require separate implementation/validation/approval"
   ],
   "fixture_correction": {
@@ -81,7 +79,7 @@
     "installer_checks": 3,
     "result": "PASS"
   },
-  "updated_at": "2026-10-19T16:43:51.571260+00:00",
+  "updated_at": "2026-10-19T17:34:03.847Z",
   "runner_validation": {
     "status": "PASS",
     "tests": 23,
@@ -236,5 +234,15 @@
       "Execute and reconcile approved synthetic items; never real WhatsApp",
       "Production batch bridge/grants require separate implementation/validation/approval"
     ]
+  },
+  "authenticated_ten_pdf_simulation": {
+    "evidence": "validation/authenticated-ten-pdf-simulation.json",
+    "batch_id": "af302ca6-09d4-46e2-a81d-b76dc03c2cf3",
+    "state": "completed",
+    "total": 10,
+    "accepted_synthetic": 10,
+    "attempts_per_operation": 1,
+    "unknown": 0,
+    "real_dispatch_enabled": false
   }
 }

@@ -110,3 +110,11 @@ O relatório root LAB_UI_HARDENING_INSTALLED foi confirmado pela conexão ativa.
 ## Prévia corrigida comprovada na interface real
 
 O operador retornou LAB_PREVIEW_COMPAT_FIXED, sem reinício, com PID 1269467 e túnel inalterados. Após atualizar o catálogo existente, o componente real exibiu PDF (905 x 1280) e imagem PNG (1000 x 600) usando data URI sob a CSP preservada. O lote PDF expirado tinha zero tentativas e zero recibos HOMOLOG; foi preparada nova revisão de dez respostas sintéticas. Nenhum login, aprovação ou envio real foi executado pelo agente. Referência atual: validation/preview-live-verified.json. Não há nova alteração de código pendente para essa prévia; falta a revisão independente e simulação autorizada do lote maior.
+
+## Revisão independente e simulação de dez respostas com PDF concluídas
+
+Em 19/10/2026, a conexão ativa confirmou o lote af302ca6-09d4-46e2-a81d-b76dc03c2cf3 em approved, com dez itens aprovados e zero tentativas anteriores. Manifesto 6a2b1702e3b1cdf09928c974139628d9f250ec0a933174f852d0f3e0db38e956. O operador autenticou-se e revisou pessoalmente; a mensagem no chat não foi usada como prova suficiente. O guard existente verificou o recibo HOMOLOG, a sessão e a concessão novamente antes de cada operação fictícia.
+
+Foram processados sequencialmente dez destinatários fictícios com respostas individuais e o PDF sintético já exibido. Resultado final completed, accepted_by_api=10, uma tentativa por operação, retry_allowed=false e nenhum resultado desconhecido. Reconciliação e consulta final confirmaram dez itens sem páginas omitidas. Cada recibo tem simulated=true e delivery_confirmed=false. Não houve chamada W-API, envio WhatsApp, mudança de produção, reinício de serviço ou alteração de permissão nesta execução.
+
+Evidência atual: validation/authenticated-ten-pdf-simulation.json. Esta conclusão substitui as pendências históricas de revisão e execução do lote PDF acima. Os testes locais/runner já concluídos não foram repetidos. O PNG tem prévia real comprovada; não foi feita execução autenticada de imagem nesta extensão. A ponte de lote para produção continua separada, conforme DEPLOYMENT-SCOPE.md, e exige implementação, validação e autorização específicas.

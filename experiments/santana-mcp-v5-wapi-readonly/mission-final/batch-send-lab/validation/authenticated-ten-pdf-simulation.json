@@ -1,0 +1,250 @@
+{
+  "recorded_at": "2026-10-19T17:34:03.847Z",
+  "status": "AUTHENTICATED_TEN_RECIPIENT_PDF_SIMULATION_COMPLETED",
+  "scope": "existing WhatsApp Santana MCP LAB; synthetic contacts and transport only",
+  "batch_id": "af302ca6-09d4-46e2-a81d-b76dc03c2cf3",
+  "manifest_sha256": "6a2b1702e3b1cdf09928c974139628d9f250ec0a933174f852d0f3e0db38e956",
+  "source": "isolated_synthetic_batch_lab",
+  "review_interface": "chatgpt_component",
+  "approval": {
+    "before_state": "approved",
+    "approved_count": 10,
+    "prior_attempts": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "backend_receipt_guard": "Validated by existing RealReview guard before each simulated operation; user statement alone was not authorization",
+    "agent_login_attempts": 0,
+    "agent_review_actions": 0
+  },
+  "attachment": {
+    "name": "Santana-Teste-Documento.pdf",
+    "mime": "application/pdf",
+    "sha256": "9a89a7a628685a1b1b0f420c65154d477690d9a3688dbaa110fe65490daa6c18",
+    "bytes": 1810,
+    "browser_preview_previously_verified": true
+  },
+  "execution": {
+    "state": "completed",
+    "total": 10,
+    "counts": {
+      "accepted_by_api": 10
+    },
+    "has_more": false,
+    "sequential_steps": [
+      {
+        "state": "accepted_by_api",
+        "operation_id": "b20ae2a0-f359-4897-abc6-435b5d2f480a",
+        "simulated": true,
+        "delivery_confirmed": false
+      },
+      {
+        "state": "accepted_by_api",
+        "operation_id": "3efe0344-6944-4e03-9c92-11e873972f61",
+        "simulated": true,
+        "delivery_confirmed": false
+      },
+      {
+        "state": "accepted_by_api",
+        "operation_id": "4a8d69b6-d5e7-4161-ade9-1b6bd9a1c061",
+        "simulated": true,
+        "delivery_confirmed": false
+      },
+      {
+        "state": "accepted_by_api",
+        "operation_id": "c4918f71-1de1-4ede-aa0a-5e6b5d44b3d5",
+        "simulated": true,
+        "delivery_confirmed": false
+      },
+      {
+        "state": "accepted_by_api",
+        "operation_id": "1287b96a-164e-451e-92ff-98d6af7b8ab8",
+        "simulated": true,
+        "delivery_confirmed": false
+      },
+      {
+        "state": "accepted_by_api",
+        "operation_id": "56ce9799-98cc-47fd-ac92-461066262b61",
+        "simulated": true,
+        "delivery_confirmed": false
+      },
+      {
+        "state": "accepted_by_api",
+        "operation_id": "ed36c075-02b7-4c8b-b9ed-6ba8b8109116",
+        "simulated": true,
+        "delivery_confirmed": false
+      },
+      {
+        "state": "accepted_by_api",
+        "operation_id": "b6f29c50-10f4-406a-9919-ad32d5d7ddf0",
+        "simulated": true,
+        "delivery_confirmed": false
+      },
+      {
+        "state": "accepted_by_api",
+        "operation_id": "26dd502b-0459-45bb-ac6a-1293970bbb6c",
+        "simulated": true,
+        "delivery_confirmed": false
+      },
+      {
+        "state": "accepted_by_api",
+        "operation_id": "c382a548-cc1a-4d5b-ac97-9f019f9448d9",
+        "simulated": true,
+        "delivery_confirmed": false
+      }
+    ],
+    "items": [
+      {
+        "operation_id": "b20ae2a0-f359-4897-abc6-435b5d2f480a",
+        "state": "accepted_by_api",
+        "attempts": 1,
+        "retry_allowed": false,
+        "receipt": {
+          "delivery_confirmed": false,
+          "operation_id": "b20ae2a0-f359-4897-abc6-435b5d2f480a",
+          "provider_message_id": "synthetic-b20ae2a0-f359-4897-abc6-435b5d2f480a",
+          "simulated": true,
+          "state": "accepted_by_api"
+        }
+      },
+      {
+        "operation_id": "3efe0344-6944-4e03-9c92-11e873972f61",
+        "state": "accepted_by_api",
+        "attempts": 1,
+        "retry_allowed": false,
+        "receipt": {
+          "delivery_confirmed": false,
+          "operation_id": "3efe0344-6944-4e03-9c92-11e873972f61",
+          "provider_message_id": "synthetic-3efe0344-6944-4e03-9c92-11e873972f61",
+          "simulated": true,
+          "state": "accepted_by_api"
+        }
+      },
+      {
+        "operation_id": "4a8d69b6-d5e7-4161-ade9-1b6bd9a1c061",
+        "state": "accepted_by_api",
+        "attempts": 1,
+        "retry_allowed": false,
+        "receipt": {
+          "delivery_confirmed": false,
+          "operation_id": "4a8d69b6-d5e7-4161-ade9-1b6bd9a1c061",
+          "provider_message_id": "synthetic-4a8d69b6-d5e7-4161-ade9-1b6bd9a1c061",
+          "simulated": true,
+          "state": "accepted_by_api"
+        }
+      },
+      {
+        "operation_id": "c4918f71-1de1-4ede-aa0a-5e6b5d44b3d5",
+        "state": "accepted_by_api",
+        "attempts": 1,
+        "retry_allowed": false,
+        "receipt": {
+          "delivery_confirmed": false,
+          "operation_id": "c4918f71-1de1-4ede-aa0a-5e6b5d44b3d5",
+          "provider_message_id": "synthetic-c4918f71-1de1-4ede-aa0a-5e6b5d44b3d5",
+          "simulated": true,
+          "state": "accepted_by_api"
+        }
+      },
+      {
+        "operation_id": "1287b96a-164e-451e-92ff-98d6af7b8ab8",
+        "state": "accepted_by_api",
+        "attempts": 1,
+        "retry_allowed": false,
+        "receipt": {
+          "delivery_confirmed": false,
+          "operation_id": "1287b96a-164e-451e-92ff-98d6af7b8ab8",
+          "provider_message_id": "synthetic-1287b96a-164e-451e-92ff-98d6af7b8ab8",
+          "simulated": true,
+          "state": "accepted_by_api"
+        }
+      },
+      {
+        "operation_id": "56ce9799-98cc-47fd-ac92-461066262b61",
+        "state": "accepted_by_api",
+        "attempts": 1,
+        "retry_allowed": false,
+        "receipt": {
+          "delivery_confirmed": false,
+          "operation_id": "56ce9799-98cc-47fd-ac92-461066262b61",
+          "provider_message_id": "synthetic-56ce9799-98cc-47fd-ac92-461066262b61",
+          "simulated": true,
+          "state": "accepted_by_api"
+        }
+      },
+      {
+        "operation_id": "ed36c075-02b7-4c8b-b9ed-6ba8b8109116",
+        "state": "accepted_by_api",
+        "attempts": 1,
+        "retry_allowed": false,
+        "receipt": {
+          "delivery_confirmed": false,
+          "operation_id": "ed36c075-02b7-4c8b-b9ed-6ba8b8109116",
+          "provider_message_id": "synthetic-ed36c075-02b7-4c8b-b9ed-6ba8b8109116",
+          "simulated": true,
+          "state": "accepted_by_api"
+        }
+      },
+      {
+        "operation_id": "b6f29c50-10f4-406a-9919-ad32d5d7ddf0",
+        "state": "accepted_by_api",
+        "attempts": 1,
+        "retry_allowed": false,
+        "receipt": {
+          "delivery_confirmed": false,
+          "operation_id": "b6f29c50-10f4-406a-9919-ad32d5d7ddf0",
+          "provider_message_id": "synthetic-b6f29c50-10f4-406a-9919-ad32d5d7ddf0",
+          "simulated": true,
+          "state": "accepted_by_api"
+        }
+      },
+      {
+        "operation_id": "26dd502b-0459-45bb-ac6a-1293970bbb6c",
+        "state": "accepted_by_api",
+        "attempts": 1,
+        "retry_allowed": false,
+        "receipt": {
+          "delivery_confirmed": false,
+          "operation_id": "26dd502b-0459-45bb-ac6a-1293970bbb6c",
+          "provider_message_id": "synthetic-26dd502b-0459-45bb-ac6a-1293970bbb6c",
+          "simulated": true,
+          "state": "accepted_by_api"
+        }
+      },
+      {
+        "operation_id": "c382a548-cc1a-4d5b-ac97-9f019f9448d9",
+        "state": "accepted_by_api",
+        "attempts": 1,
+        "retry_allowed": false,
+        "receipt": {
+          "delivery_confirmed": false,
+          "operation_id": "c382a548-cc1a-4d5b-ac97-9f019f9448d9",
+          "provider_message_id": "synthetic-c382a548-cc1a-4d5b-ac97-9f019f9448d9",
+          "simulated": true,
+          "state": "accepted_by_api"
+        }
+      }
+    ],
+    "reconciled": true
+  },
+  "real_dispatch_enabled": false,
+  "real_whatsapp_sends": 0,
+  "wapi_calls": 0,
+  "production_changes": 0,
+  "service_restarts": 0,
+  "permission_changes": 0,
+  "sana_openbot_boss_n8n_operations": 0,
+  "limitations": [
+    "All accepted_by_api receipts are synthetic; no real W-API acceptance or delivery is asserted.",
+    "Production batch bridge, permissions and official coordination require separate implementation, validation and approval.",
+    "Image preview was verified; no authenticated image dispatch was performed in this extension."
+  ]
+}

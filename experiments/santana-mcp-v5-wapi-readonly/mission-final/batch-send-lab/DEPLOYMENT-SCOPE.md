@@ -12,13 +12,15 @@ A verificação no componente real confirmou:
 - PNG sintético completo de 1000 x 600 pixels na preparação individual, com formulário de autenticação pessoal disponível.
 - Imagens usam os mesmos bytes verificados em data URI, permitida pelas políticas existentes. A CSP própria continua aplicada com hashes fixados de script e estilo; não houve ampliação da política nem alterações de autenticação ou permissões.
 - O lote PDF expirado permaneceu bloqueado, com zero tentativas e nenhuma aprovação HOMOLOG registrada (consulta de contagem somente leitura).
-- Foi preparada nova operação de dez respostas personalizadas com o mesmo PDF, identificada em validation/preview-live-verified.json. A revisão pessoal e a execução simulada continuam pendentes; o agente não entrou na conta nem aprovou.
+- O operador concluiu a revisão independente do lote af302ca6-09d4-46e2-a81d-b76dc03c2cf3. A conexão ativa confirmou approved para os dez itens antes da execução. O guard de recibo e sessão foi verificado novamente em cada passo. A simulação sequencial terminou completed, com dez accepted_by_api sintéticos, uma tentativa por destinatário, nenhum resultado desconhecido e retry_allowed=false em todos os itens. A reconciliação e a consulta final confirmaram os resultados, sem paginação omitida. Evidência: validation/authenticated-ten-pdf-simulation.json.
 
 Os 11 testes focados anteriores passaram localmente e na VPS (workflow 39290019091): oito da interface e três da aplicação de arquivo. Não foram repetidos neste retorno; foram feitas verificações novas pela conexão e interface reais. Nenhuma mensagem real, concessão, registro de produção ou serviço foi alterado.
 
-## Próximo passo do LAB
+## Homologação do LAB concluída para o lote com PDF
 
-O operador deve revisar pessoalmente o lote válido de dez respostas e o PDF no componente do ChatGPT. Somente depois do recibo independente e da conferência de estado o Work executará as operações fictícias, com intervalo e reconciliação por destinatário. Não usar notificações do componente como autorização por si só. Não recriar lotes revisados, em andamento ou desconhecidos.
+A revisão pessoal no ChatGPT e o processamento simulado de dez respostas com PDF estão comprovados. O lote anterior de duas respostas também permanece concluído; não é necessário repetir essas execuções. A prévia PNG foi verificada na interface, sem execução autenticada de imagem nesta extensão. Todos os recibos desta validação são fictícios: não representam aceite da W-API nem entrega. O transporte real continua bloqueado. Não há intervenção manual pendente para este lote concluído.
+
+As ferramentas preparar_envio_simplificado, preparar_lote, consultar_lote, executar_lote_simulado e reconciliar_lote estão disponíveis na conexão LAB existente. registrar_revisao_lote continua restrita ao componente autenticado, sem chamada pelo modelo. A etapa de produção abaixo permanece separada e não foi executada nesta validação.
 
 ## Produção — não autorizada nesta etapa
 
