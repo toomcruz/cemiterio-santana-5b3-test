@@ -30,17 +30,23 @@ class InstallerRecoveryTests(unittest.TestCase):
         self.env={k:os.environ[k] for k in ('PATH','LANG','LD_LIBRARY_PATH') if k in os.environ}
         self.env.update({k:secrets.token_urlsafe(36) for k in ('CHATGPT_READ_TOKEN','OPENBOT_READ_TOKEN')})
         self.env.update(MCP_PORT=str(self.port),SANTANA_DATA_SOURCE='fixture',SANTANA_SEND_ENABLED='false',SANTANA_SEND_MODE='disabled',SANTANA_AUDIT_DB=str(self.audit),PYTHONDONTWRITEBYTECODE='1')
-        self.proc=None;self.restarts=0;self.delay=0;self.addCleanup(self.stop)
+        self.proc=None;self.restarts=0;self.delay=0;self.candidate_env={};self.addCleanup(self.stop)
         spec=importlib.util.spec_from_file_location('installer_recovery',ROOT/'root-install-template.py');self.m=importlib.util.module_from_spec(spec);spec.loader.exec_module(self.m)
         self.m.FILES=FILES;self.m.BASE_PATH=str(self.base);self.m.AUDIT_PATH=str(self.audit);self.m.LAB_PORT=self.port;self.m.LAB_URL=f'http://127.0.0.1:{self.port}/mcp'
         self.m.STAGE=self.work/'stage';self.m.STAGE.mkdir();self.m.SYSTEMD_PATH=self.work/'systemd';self.m.BACKUP_PATH=self.work/'backups';self.m.SYSTEMD_PATH.mkdir()
-        self.m.process_env=lambda pid:dict(self.env)
         self.m.previous_error_metadata=lambda:[]
         self.command_real=self.m.command;self.m.command=self.command
         self.start(False)
         deadline=time.monotonic()+5
         while time.monotonic()<deadline and self.m.get_health()!=405:time.sleep(.05)
         self.assertEqual(self.m.get_health(),405)
+        try:
+            self.m.process_env(str(self.proc.pid));self.proc_env_available=True
+        except (PermissionError,FileNotFoundError):
+            # The local Work runtime can prohibit /proc/.../environ. The VPS
+            # runner must exercise the real read; its validation rejects skips.
+            self.proc_env_available=False;self.m.process_env=lambda pid:dict(self.env)
+            self.m.process_ready=lambda pid,script:self.m.get_health()==405
     def stop(self):
         if self.proc and self.proc.poll() is None:
             self.proc.terminate()
@@ -49,9 +55,15 @@ class InstallerRecoveryTests(unittest.TestCase):
     def start(self,candidate):
         self.stop()
         script=self.base/'santana_batch_lab'/'launcher.py' if candidate else self.base/'server.py'
+        env={**self.env,**(self.candidate_env if candidate else {})}
         args=[sys.executable,str(script)]
-        if candidate and self.delay:args=[sys.executable,'-c','import time,runpy;time.sleep('+str(self.delay)+');runpy.run_path('+repr(str(script))+",run_name='__main__')"]
-        self.proc=subprocess.Popen(args,cwd=self.base,env=self.env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        if candidate and self.delay:
+            # Real PID, initially running an executor with an incomplete env,
+            # then execve the configured service in that SAME PID.
+            code="import os,sys,json,time;v=json.load(sys.stdin);time.sleep("+str(self.delay)+");os.execve(sys.executable,[sys.executable,v['script']],v['env'])"
+            self.proc=subprocess.Popen([sys.executable,'-c',code],cwd=self.base,env={'PATH':self.env['PATH']},stdin=subprocess.PIPE,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,text=True)
+            self.proc.stdin.write(json.dumps({'script':str(script),'env':env}));self.proc.stdin.close()
+        else:self.proc=subprocess.Popen(args,cwd=self.base,env=env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     def command(self,args,**kw):
         if args==['hostname']:return 'srv1849463'
         if args[0]=='nsenter':return self.command_real(args[4:],**kw)
@@ -109,5 +121,18 @@ class InstallerRecoveryTests(unittest.TestCase):
         while time.monotonic()<deadline and self.m.get_health()!=405:time.sleep(.05)
         self.assertEqual(self.m.get_health(),405)
         with sqlite3.connect(self.audit) as db:self.assertEqual(db.execute('SELECT state FROM outbound_approvals WHERE approval_id=?',('synthetic-ambiguous',)).fetchone()[0],'outcome_unknown')
+    def test_legacy_check_reproduces_reported_error_before_exec(self):
+        if not self.proc_env_available:self.skipTest('Real child environ unavailable in this runtime')
+        self.delay=1
+        def legacy(script,seconds=15):return self.m.catalog(self.m.process_env(self.m.property('MainPID')))
+        self.m.await_catalog=legacy
+        r=self.run_install();self.assertEqual(r['error_code'],'LAB_RUNTIME_CONFIGURATION_CHANGED',r)
+        self.assertFalse(r['configuration_checks']['audit_variable_present']);self.assertTrue(r['lab_restored'])
+    def test_genuine_audit_configuration_change_is_still_blocked(self):
+        if not self.proc_env_available:self.skipTest('Real child environ unavailable in this runtime')
+        self.candidate_env={'SANTANA_AUDIT_DB':str(self.work/'other.sqlite3')}
+        r=self.run_install();self.assertEqual(r['error_code'],'LAB_RUNTIME_CONFIGURATION_CHANGED',r)
+        self.assertTrue(r['configuration_checks']['audit_variable_present']);self.assertFalse(r['configuration_checks']['audit_path_matches'])
+        self.assertTrue(r['lab_restored']);self.assertEqual(self.restarts,2)
 
 if __name__=='__main__':unittest.main()

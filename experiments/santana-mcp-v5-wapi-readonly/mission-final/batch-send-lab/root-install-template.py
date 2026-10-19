@@ -22,6 +22,34 @@ def property(name,unit=UNIT):
 def process_env(pid):
     if not str(pid).isdigit() or int(pid)<1:raise RuntimeError('LAB_PROCESS_NOT_RUNNING')
     return dict(x.decode().split('=',1) for x in Path('/proc',str(pid),'environ').read_bytes().split(b'\0') if b'=' in x)
+def process_ready(pid,script):
+    """Require the executed launcher and its own bound loopback socket first."""
+    if not str(pid).isdigit() or int(pid)<1:return False
+    proc=Path('/proc',str(pid))
+    try:
+        argv=proc.joinpath('cmdline').read_bytes().split(b'\0')
+        if os.fsencode(str(script)) not in argv[1:]:return False
+        inodes=set()
+        for fd in proc.joinpath('fd').iterdir():
+            try:link=os.readlink(fd)
+            except FileNotFoundError:continue
+            if link.startswith('socket:[') and link.endswith(']'):inodes.add(link[8:-1])
+        for line in proc.joinpath('net/tcp').read_text().splitlines()[1:]:
+            fields=line.split()
+            if len(fields)>9 and fields[3]=='0A' and fields[1]=='0100007F:'+format(LAB_PORT,'04X') and fields[9] in inodes:return True
+        return False
+    except (FileNotFoundError,ProcessLookupError):return False
+def configuration_checks(env):
+    port=env.get('MCP_PORT',str(LAB_PORT))
+    return {'audit_variable_present':'SANTANA_AUDIT_DB' in env,
+            'audit_path_matches':env.get('SANTANA_AUDIT_DB')==AUDIT_PATH,
+            'port_matches':port.isdigit() and int(port)==LAB_PORT}
+def require_configuration(env):
+    checks=configuration_checks(env)
+    if not all(checks.values()):
+        error=RuntimeError('LAB_RUNTIME_CONFIGURATION_CHANGED')
+        error.configuration_checks=checks
+        raise error
 def safe_error(error):
     # Never emit subprocess arguments, environment, raw stderr or HTTP bodies.
     out={'exception_type':type(error).__name__}
@@ -41,6 +69,7 @@ def safe_error(error):
     elif isinstance(error,OSError) and error.errno is not None:out['errno']=error.errno
     elif isinstance(error,RuntimeError) and re.fullmatch(r'[A-Z0-9_]{3,90}',str(error)):
         out['error_code']=str(error)
+        if hasattr(error,'configuration_checks'):out['configuration_checks']=error.configuration_checks
     return out
 def emit(report):
     if STAGE.is_symlink() or not STAGE.is_dir():raise SystemExit('UNSAFE_REPORT_DIRECTORY')
@@ -55,7 +84,7 @@ def get_health():
     except (OSError,URLError):return None
 def catalog(env):
     if env.get('SANTANA_DATA_SOURCE','fixture')!='fixture' or env.get('SANTANA_SEND_ENABLED','false').lower()=='true' or env.get('SANTANA_SEND_MODE','disabled')!='disabled':raise RuntimeError('LAB_SEND_STATE_UNSAFE')
-    if env.get('SANTANA_AUDIT_DB')!=AUDIT_PATH or int(env.get('MCP_PORT',str(LAB_PORT)))!=LAB_PORT:raise RuntimeError('LAB_RUNTIME_CONFIGURATION_CHANGED')
+    require_configuration(env)
     token=env.get('CHATGPT_READ_TOKEN','')
     if not token:raise RuntimeError('LAB_CLIENT_AUTH_MISSING')
     body=json.dumps({'jsonrpc':'2.0','id':1,'method':'tools/list','params':{}}).encode()
@@ -64,15 +93,20 @@ def catalog(env):
     names=[t['name'] for t in result.get('result',{}).get('tools',[])]
     if not REQUIRED<=set(names):raise RuntimeError('LAB_CATALOG_NOT_PROVEN')
     return names
-def await_catalog(seconds=15):
+def await_catalog(script,seconds=15):
     deadline=time.monotonic()+seconds;error=RuntimeError('LAB_STARTUP_NOT_PROVEN')
     while time.monotonic()<deadline:
-        try:return catalog(process_env(property('MainPID')))
+        try:
+            pid=property('MainPID')
+            # Type=simple may publish MainPID before execve installs the service
+            # environment. Never mistake the executor's environment for drift.
+            if not process_ready(pid,script):raise RuntimeError('LAB_PROCESS_NOT_READY')
+            return catalog(process_env(pid))
         except (HTTPError,URLError,OSError,RuntimeError) as e:
             error=e
             # Authentication/configuration/schema failures are not startup races.
             if isinstance(e,HTTPError) and e.code not in {502,503}:raise
-            if isinstance(e,RuntimeError) and str(e) not in {'LAB_PROCESS_NOT_RUNNING'}:raise
+            if isinstance(e,RuntimeError) and str(e) not in {'LAB_PROCESS_NOT_RUNNING','LAB_PROCESS_NOT_READY'}:raise
         time.sleep(.3)
     raise error
 def previous_error_metadata():
@@ -99,6 +133,7 @@ def main():
         env=process_env(property('MainPID'))
         if env.get('SANTANA_DATA_SOURCE','fixture')!='fixture' or env.get('SANTANA_SEND_ENABLED','false').lower()=='true' or env.get('SANTANA_SEND_MODE','disabled')!='disabled':raise RuntimeError('LAB_SEND_STATE_UNSAFE')
         if env.get('SANTANA_AUDIT_DB')!=AUDIT_PATH or property('StateDirectory')!='santana-mcp-lab':raise RuntimeError('LAB_AUDIT_CONFIGURATION_CHANGED')
+        require_configuration(env)
         target=base/'santana_batch_lab';drop=SYSTEMD_PATH/(UNIT+'.d')/'90-batch-lab.conf'
         if target.exists() or drop.exists():raise RuntimeError('LAB_EXTENSION_ALREADY_PRESENT')
         report['previous_failure_metadata']=previous_error_metadata()
@@ -133,7 +168,7 @@ def main():
         changed=True
         command(['systemctl','daemon-reload']);command(['systemctl','restart',UNIT])
         phase='observe_new_lab_process_catalog'
-        names=await_catalog()
+        names=await_catalog(target/'launcher.py')
         if property('ActiveState')!='active':raise RuntimeError('LAB_UNIT_NOT_ACTIVE')
         report.update(status='LAB_EXTENSION_INSTALLED',tools=names,source='fixture',real_send_enabled=False,real_operator_review='AWAITING_USER_IN_PROTECTED_CHATGPT_UI',lab_pid=property('MainPID'),lab_tunnel_pid_unchanged=tunnel_before==property('MainPID','santana-mcp-lab-tunnel.service'))
         emit(report)
