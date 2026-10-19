@@ -1,0 +1,20 @@
+{
+  "apps": "./.app.json",
+  "interface": {
+    "capabilities": [],
+    "category": "Other",
+    "defaultPrompt": null,
+    "developerName": "App developer",
+    "displayName": "WhatsApp Santana MCP — LAB",
+    "longDescription": "Servidor MCP privado do WhatsApp Santana para consulta de conversas e contatos fictícios. Ambiente de laboratório, sem envio real de mensagens.",
+    "shortDescription": "Servidor MCP privado do WhatsApp Santana para consulta de conversas e contatos fictícios. Ambiente de laboratório, sem envio real de mensagens."
+  },
+  "name": "dev-6ad3b0cbf1108191bc5ce4546eb8a4c8",
+  "version": "1.0.2",
+  "description": "Servidor MCP privado do WhatsApp Santana para consulta de conversas e contatos fictícios. Ambiente de laboratório, sem envio real de mensagens.",
+  "author": {
+    "name": "App developer"
+  },
+  "keywords": [],
+  "skills": "./skills"
+}

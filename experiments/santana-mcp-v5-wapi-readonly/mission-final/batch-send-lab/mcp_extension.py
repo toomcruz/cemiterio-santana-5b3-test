@@ -1,6 +1,7 @@
 """Opt-in extension of the EXISTING v5 dispatcher/HTTP handler, fixture only."""
 import json
 from pathlib import Path
+from review_assets import protected_html
 from http.cookies import SimpleCookie
 from batch_send import Actor, Blocked, SOURCE
 
@@ -70,8 +71,13 @@ def install(server,controller,resolve_actor,base_url,real_review=None):
             ui={'csp':{'connectDomains':domains,'resourceDomains':[]}}
             if real_review:
                 ui['domain']='https://santana-mcp-homolog-consent.vercel.app'
-                ui['csp']['frameDomains']=['https://santana-mcp-homolog-consent.vercel.app']
-            return {"jsonrpc":"2.0","id":request_id,"result":{"contents":[{"uri":RESOURCE,"mimeType":"text/html;profile=mcp-app","text":(ROOT/("real-widget.html" if real_review else "widget.html")).read_text(),"_meta":{"ui":ui}}]}}
+            meta={'ui':ui}
+            if real_review:
+                meta['openai/widgetCSP']={'connect_domains':domains,'resource_domains':[]}
+                meta['openai/widgetDomain']=ui['domain']
+                meta['openai/widgetDescription']='Revisão autenticada de mensagens fictícias do LAB. Use o componente; não há link externo de revisão.'
+            html=(ROOT/("real-widget.html" if real_review else "widget.html")).read_text()
+            return {"jsonrpc":"2.0","id":request_id,"result":{"contents":[{"uri":RESOURCE,"mimeType":"text/html;profile=mcp-app","text":protected_html(html) if real_review else html,"_meta":meta}]}}
         if method=="tools/call" and params.get("name") in {t["name"] for t in TOOLS}|({'registrar_revisao_lote'} if real_review else set()):
             if client!="chatgpt":
                 raise server.MCPError(-32003,"AGENT_SCOPE_DENIED")
@@ -83,7 +89,9 @@ def install(server,controller,resolve_actor,base_url,real_review=None):
                     value=real_review.register(actor,args['batch_id'],args['receipt_id'])
                 else:value=call(controller,actor,params["name"],args)
                 if "approval_url" in value:
-                    value["approval_url"]=base_url+value["approval_url"]
+                    if real_review:
+                        value.pop('approval_url');value['review_interface']='chatgpt_component'
+                    else:value["approval_url"]=base_url+value["approval_url"]
                 result={"content":[{"type":"text","text":json.dumps(value,ensure_ascii=False)}],"structuredContent":value}
                 if real_review and 'batch_id' in value and 'preview' in value:
                     result['_meta']={'lab_review':real_review.metadata(actor,value['batch_id'])}

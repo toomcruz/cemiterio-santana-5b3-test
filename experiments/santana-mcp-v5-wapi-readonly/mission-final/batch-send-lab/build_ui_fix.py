@@ -12,7 +12,7 @@ for node in tree.body:
             extra="    private=next((t for t in result.get('result',{}).get('tools',[]) if t['name']=='registrar_revisao_lote'),{})\n    if private.get('_meta',{}).get('ui')!={'visibility':['app']}:raise RuntimeError('PRIVATE_TOOL_DESCRIPTOR_NOT_PROVEN')\n"
             assert s.count('    return names')==1;s=s.replace('    return names',extra+'    return names')
         parts.append(s)
-old=(R/'ui-fix-backup/mcp_extension.py').read_text();new=(R/'mcp_extension.py').read_text()
+old=(R/'ui-fix-backup/mcp_extension.py').read_text();new=(R/'ui-hardening-backup/mcp_extension.py').read_text()
 assert old.replace("t['_meta']['ui']['visibility']=['app']","t['_meta']['ui']={'visibility':['app']}")==new
 old_sha=hashlib.sha256(old.encode()).hexdigest();new_sha=hashlib.sha256(new.encode()).hexdigest()
 assert old_sha=='0fad711f210621281b5c39d57c71def4274e7ee6ea856c888e8d728d235f4160'

@@ -6,7 +6,7 @@ from urllib.error import HTTPError
 from urllib.request import Request,urlopen
 
 ROOT=Path(__file__).resolve().parent
-FILES={n:(ROOT/n).read_text() for n in ['batch_send.py','mcp_extension.py','real_review.py','launcher.py','review.html','widget.html','real-widget.html']}
+FILES={n:(ROOT/n).read_text() for n in ['batch_send.py','mcp_extension.py','real_review.py','launcher.py','review.html','widget.html','real-widget.html','review_assets.py','review_media.py','attachment_worker.py']}
 
 class InstallerRecoveryTests(unittest.TestCase):
     def setUp(self):

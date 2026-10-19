@@ -4,6 +4,7 @@ import secrets
 import time
 from urllib.request import Request,build_opener,HTTPRedirectHandler
 from batch_send import Actor,Blocked
+from review_media import ReviewMedia
 
 HMG='https://xdccjulfqcqefykunwtg.supabase.co'
 PUBLIC_KEY='sb_publishable_doiDzLKISweiTWKlFYFG6w_0PZjP1vw'
@@ -22,6 +23,7 @@ def read_proof(receipt,nonce,sha):
 class RealReview:
     def __init__(self,controller,transport=read_proof):
         self.controller=controller;self.transport=transport
+        self.media_renderer=ReviewMedia()
         controller.db.execute('CREATE TABLE IF NOT EXISTS lab_real_reviews(batch_id TEXT PRIMARY KEY,nonce TEXT NOT NULL,receipt TEXT)')
 
     def metadata(self,actor,batch_id):
@@ -30,10 +32,15 @@ class RealReview:
             r=e.row(actor,batch_id)
             e.db.execute('INSERT OR IGNORE INTO lab_real_reviews VALUES(?,?,NULL)',(batch_id,secrets.token_urlsafe(32)))
             nonce=e.db.execute('SELECT nonce FROM lab_real_reviews WHERE batch_id=?',(batch_id,)).fetchone()[0]
-            m=json.loads(r['manifest']);media={}
+            m=json.loads(r['manifest']);media={};pdf_sources={}
             for p in m['recipients']:
-                if p['attachment']:media[p['attachment']['sha256']]=e.hydrate_media(p['attachment'])
-            return {'canonical_manifest':r['manifest'],'manifest_sha256':r['sha'],'challenge_nonce':nonce,'media':media,'auth_origin':HMG,'public_key':PUBLIC_KEY}
+                if p['attachment']:
+                    attachment=e.hydrate_media(p['attachment']);media[p['attachment']['sha256']]=attachment
+                    if attachment['mime_type']=='application/pdf':pdf_sources[attachment['sha256']]=attachment
+            result={'canonical_manifest':r['manifest'],'manifest_sha256':r['sha'],'challenge_nonce':nonce,'media':media,'auth_origin':HMG,'public_key':PUBLIC_KEY,'batch_state':r['state']}
+        # Rendering must never keep the ledger transaction/dispatch lock open.
+        result['pdf_previews']={sha:self.media_renderer.render_pdf(f) for sha,f in pdf_sources.items()}
+        return result
 
     def proof(self,batch_id,receipt):
         e=self.controller
