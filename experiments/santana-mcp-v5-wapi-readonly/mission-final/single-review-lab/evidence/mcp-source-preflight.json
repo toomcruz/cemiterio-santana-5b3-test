@@ -1,0 +1,132 @@
+{
+  "status": "PASS",
+  "baseline_files": 20,
+  "unchanged_sources_verified": [
+    {
+      "file": "api/mcp.py",
+      "source_uid_sha1": "c73b2337bcde2a456c9edadfdc3410a75ff6eda8",
+      "source_sha256": "ad4d96263c77816d21cb544c6721100535f8dcab3ecb47c2280bab453ab318fe",
+      "matched": true
+    },
+    {
+      "file": "api/oauth-protected-resource.py",
+      "source_uid_sha1": "059d0ee50c0327db4558cd098352afa84f4f52a1",
+      "source_sha256": "4d59a1fa04380cf765ec89558ffea428187d280524df542687860c956d023d54",
+      "matched": true
+    },
+    {
+      "file": "api/send-intents.py",
+      "source_uid_sha1": "005e237e0dae782b7af816bf7088897b4e80700b",
+      "source_sha256": "edda3abbeeb2ab7ebd4b20b808e4d5426cf5ed7d0ceadb5f4cb2d189d3d936dd",
+      "matched": true
+    },
+    {
+      "file": "index.html",
+      "source_uid_sha1": "18947656d5f9954cba89cbee22d2483b6ebf2944",
+      "source_sha256": "ce3ae74347bd4dc6709fde06c1a069aa23a1e18bb497ca84b400e326ad6c536a",
+      "matched": true
+    },
+    {
+      "file": "recovery-core.mjs",
+      "source_uid_sha1": "a0e430b63cd8622daa32d4e4b79cc6359691eb61",
+      "source_sha256": "798e116282b04fe1a45cd88fff1a4cd92af9e90463b777bb5f00960a782e9062",
+      "matched": true
+    },
+    {
+      "file": "requirements.txt",
+      "source_uid_sha1": "64b68b4175c7007b9ff2f1e57ff6b35a487437de",
+      "source_sha256": "4dc7d8b537fee681ff816a566a74323f85ef1a10b26d340c9c32869ea14d544a",
+      "matched": true
+    },
+    {
+      "file": "reset-password.html",
+      "source_uid_sha1": "a71097e7de9059a4290190492510642ad4ebc469",
+      "source_sha256": "0f5d33f9304531364b6d730de59afb6bd53dd550476621a62cd55197e2012443",
+      "matched": true
+    },
+    {
+      "file": "revisar-envio.html",
+      "source_uid_sha1": "3419ec173c55430bbfa4466d039b8103f13437d5",
+      "source_sha256": "699ffebcc0d86a0661422a7d8640f72feeb8cf843c702436e5c1d11f08da872f",
+      "matched": true
+    },
+    {
+      "file": "vercel.json",
+      "source_uid_sha1": "fed391b143ea9375fb1fcb1dfac33b2b1f8aef5b",
+      "source_sha256": "305fe770f7589e79c9192a86fd9fca14a9cf5b5ec33449e96bf56fc810407c40",
+      "matched": true
+    },
+    {
+      "file": "whatsapp-santana-mcp/admin_assist_tools.py",
+      "source_uid_sha1": "023225cfbefcccc90fdc3097ab1649bde6dbdd0b",
+      "source_sha256": "6e800ae753171fec5e2dd06090237653c11d52628c20bccd7ddbb1e86099a04a",
+      "matched": true
+    },
+    {
+      "file": "whatsapp-santana-mcp/attachment_worker.py",
+      "source_uid_sha1": "0cd5b657f6b30d1aebb0d8fec1a710e42b241184",
+      "source_sha256": "487779966d65da18d9a8267d6b54cbd9f13e916b068c42c128fe9598dee2ba9e",
+      "matched": true
+    },
+    {
+      "file": "whatsapp-santana-mcp/audit_store.py",
+      "source_uid_sha1": "0b7f1f820934a67e853b50693bca79de08c7dc11",
+      "source_sha256": "a244ea514a3eb6d9fec97c07e5a515dcd618adf08b10cb87588f3305f31b2e4c",
+      "matched": true
+    },
+    {
+      "file": "whatsapp-santana-mcp/fixture_provider.py",
+      "source_uid_sha1": "0942b4488b65ab456850150ca1e4eb2ac00ff702",
+      "source_sha256": "a4c3ae958de2a2c5db4c7bf395610920c3b97da8f8e9c8ecfc5ddd7d08da8559",
+      "matched": true
+    },
+    {
+      "file": "whatsapp-santana-mcp/official_send_provider.py",
+      "source_uid_sha1": "c8c6e6c0bf3df5728b82c642251f8e0ef56c9788",
+      "source_sha256": "63463371d21b7e7ef6c166a344d513a9a6ea718b7b78042a1637f628f209451a",
+      "matched": true
+    },
+    {
+      "file": "whatsapp-santana-mcp/operator_approve.py",
+      "source_uid_sha1": "0acb1a5cfb90b24c89528936976eb9a42ac0bc1c",
+      "source_sha256": "99d78ebc9c7ab0f58df35ac2beb0ec2ade33b4561d0c51ad78a33514f6691d52",
+      "matched": true
+    },
+    {
+      "file": "whatsapp-santana-mcp/sana_read_provider.py",
+      "source_uid_sha1": "2058f55a7343499c0774d1e7fc7a844640fe0268",
+      "source_sha256": "cedbfe60a1931337cb9aaa498d4ee8690d9f2a566a5ad4fd174f3c8523309691",
+      "matched": true
+    },
+    {
+      "file": "whatsapp-santana-mcp/security_utils.py",
+      "source_uid_sha1": "94e950bf3948040c59b03343aa650c064402513e",
+      "source_sha256": "8c038cd94509a563c7273047eb006943097a6b2bed61194401288b19b2793531",
+      "matched": true
+    },
+    {
+      "file": "whatsapp-santana-mcp/send_provider.py",
+      "source_uid_sha1": "20d0c21960c9f3c9068618ebed775eafc95e84c1",
+      "source_sha256": "5053f438ebfcf71c17b629b1246f3f9f92f588d4a0db0e9f38c60389aab1414c",
+      "matched": true
+    },
+    {
+      "file": "whatsapp-santana-mcp/server.py",
+      "source_uid_sha1": "aefe4beafe6f49c83c347c7737c311283cd9f1ff",
+      "source_sha256": "4f5388bbcd37431cdc7906d6296390794644db1b899153a324c59774211255a9",
+      "matched": true
+    },
+    {
+      "file": "whatsapp-santana-mcp/wapi_provider.py",
+      "source_uid_sha1": "41d51c2835f7b8562e8f3499c55e94146d2f8e75",
+      "source_sha256": "4d77a1cf217bf5cc65c19cf9ef582a6b781b2a252305fcd41fe821489e035afb",
+      "matched": true
+    }
+  ],
+  "changed_files": [
+    "whatsapp-santana-mcp/server.py"
+  ],
+  "added_files": [
+    "whatsapp-santana-mcp/panel_review_provider.py"
+  ]
+}

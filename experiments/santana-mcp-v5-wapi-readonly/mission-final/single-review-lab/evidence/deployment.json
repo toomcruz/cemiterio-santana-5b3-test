@@ -1,0 +1,105 @@
+{
+  "status": "DEPLOYED_ACTIVE_NO_REAL_SEND",
+  "manifest_sha256": "2c654bccfb3f2167a68c5e6ec2c7736fb73274262eb6a6d1c17b3cc635514901",
+  "recorded_at_utc": "2026-10-20T00:10:32.059Z",
+  "panel": {
+    "project": "prj_4noV4vaUS3JIDs88sBxsK1fjXzb0",
+    "deployment": "dpl_DmnhRmYZDZTv9HxXHZrLfV4XJVah",
+    "commit": "8c8a9e62a361e7f3f1ff19b84a39bf06f63ad09e",
+    "state": "READY",
+    "url": "https://atendimento-cemiterio-santana.vercel.app/mcp-review",
+    "flag": "SANTANA_SINGLE_REVIEW_READY=verified",
+    "browser_observation": "PROD session absent in cloud browser: same-page protected login rendered; no credential entered"
+  },
+  "mcp": {
+    "deployment": "dpl_31CbtSSjhjvv9QzUM9yJgywTDtU3",
+    "state": "READY",
+    "status": "PASS",
+    "unchanged_files": 19,
+    "changed": [
+      "whatsapp-santana-mcp/server.py"
+    ],
+    "added": [
+      "whatsapp-santana-mcp/panel_review_provider.py"
+    ]
+  },
+  "edges": {
+    "prod": {
+      "version": 44,
+      "package_sha256": "fa698ee0722ff01aff9ea4fd7760c3e1f4985ddcb0ad6b762c68145f5d41b1ef"
+    },
+    "homolog": {
+      "version": 17,
+      "package_sha256": "c2c9f1b9567a86aa429b9c3b09a2c7afe392acf1ad27e8a25e73e6164d81a92b"
+    }
+  },
+  "database": {
+    "table": "sana_mcp_panel_reviews",
+    "rls": true,
+    "anon_and_authenticated_direct_read": false,
+    "anon_rpc": false,
+    "native_coordinator_md5": "3de191adb940e6bb68e19d95df6d5e62",
+    "native_manual_md5": "93b59d411d2bb5792fb76973c619115c",
+    "native_control_md5": "2255343c9cd43876d70f7c8c79498ea2",
+    "native_functions_unchanged": true
+  },
+  "validation": {
+    "isolated_tests_passed": 44,
+    "live_prepare": {
+      "status": "ready",
+      "intent_id": "a9be4167-fbf7-4ffa-a91d-67c39dc0ef48",
+      "conversation_id": "789ea855-4e5e-5767-aae8-1316129c2ddc",
+      "phone_mask": "+••••••5497",
+      "revision": 196,
+      "context_source": "sana_administrative_read",
+      "context_complete": false,
+      "review_ready": true,
+      "review_url": "https://atendimento-cemiterio-santana.vercel.app/mcp-review?operation=a9be4167-fbf7-4ffa-a91d-67c39dc0ef48",
+      "panel_review": {
+        "state": "prepared",
+        "payload_sha256": "95995a6d7f7aa08740f7c0e2bb318017ac8f2bd3c9a653d8ae6b0200aab592bf",
+        "approved": false,
+        "no_send": true
+      }
+    },
+    "live_status": {
+      "status": "ready",
+      "state": "prepared",
+      "approved": false,
+      "accepted_by_api": false,
+      "delivery_confirmed": false,
+      "no_send": true,
+      "operation_id": "a9be4167-fbf7-4ffa-a91d-67c39dc0ef48"
+    },
+    "technical_draft": "explicitly expired in PROD and HOMOLOG; audit retained",
+    "test_operation_official_send_records": 0,
+    "test_operation_manual_messages": 0,
+    "test_operation_approvals": 0,
+    "real_whatsapp_sends_by_this_work": 0,
+    "runtime_error_scan": "No error/fatal log groups returned for new Panel/MCP deployments in 15 minute window",
+    "human_review_limit": "New screen has not been approved with a real PROD human session; no approve/send call was made"
+  },
+  "grant": {
+    "changed": false,
+    "expires_at_utc": "2026-10-25T22:25:00Z",
+    "expires_at_sao_paulo": "25/10/2026 19:25"
+  },
+  "rollback": {
+    "panel_deployment": "dpl_7Ry6eGTkBJwEwqfVtFmVjes9iusN",
+    "mcp_deployment": "dpl_25yLqLJACBQeTWxmhytq1JALr1Tn",
+    "edge_backup": "private-backup/Santana-Single-Review-Backup-20261019.zip",
+    "first_action": "Disable single-review flag and redeploy; retain approval/audit/send records"
+  },
+  "preserved": [
+    "Sana",
+    "n8n",
+    "W-API",
+    "webhooks",
+    "OpenBot",
+    "Boss Bridge",
+    "MCP fixture VPS",
+    "plugins",
+    "tunnels",
+    "existing grants"
+  ]
+}

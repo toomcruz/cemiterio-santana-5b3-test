@@ -1,6 +1,6 @@
 # Escopo para aprovação — revisão única no Painel
 
-**Estado: candidato isolado validado, não implantado.** Este documento não é autorização de implantação nem de envio.
+**Estado: escopo aprovado pelo operador e implantado.** Os itens e hashes abaixo registram o escopo autorizado; os resultados estão em [DEPLOYMENT-RESULT.md](DEPLOYMENT-RESULT.md). A aprovação de implantação não autoriza envio de mensagens.
 
 O operador abre a prévia no Painel, usa a sessão individual válida, confere destinatário/texto/anexos e clica **Aprovar e enviar**. O backend registra a aprovação e chama o emissor oficial na mesma solicitação. O ChatGPT consulta o recibo. Outras respostas ficam na mesma tela, com aprovações independentes. Não existe botão para aprovar ou disparar um lote.
 

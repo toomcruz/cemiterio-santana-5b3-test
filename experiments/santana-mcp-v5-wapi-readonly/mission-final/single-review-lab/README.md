@@ -2,7 +2,7 @@
 
 O operador abre uma única tela do Painel, confere cada destinatário, texto e anexo, e usa **Aprovar e enviar**. O mesmo pedido HTTP registra a aprovação e solicita uma única tentativa pelo emissor nativo. O ChatGPT apenas prepara e consulta o recibo. Várias respostas podem ficar abertas, cada uma com sua própria operação e aprovação.
 
-Este diretório contém uma extensão do sistema existente, não outro MCP, serviço ou emissor. Não foi implantado. Nenhuma mensagem real foi enviada neste desenvolvimento.
+Este diretório contém uma extensão do sistema existente, não outro MCP, serviço ou emissor. O delta foi implantado após a aprovação do operador; confira [DEPLOYMENT-RESULT.md](DEPLOYMENT-RESULT.md). Nenhuma mensagem real foi enviada neste trabalho.
 
 ## Vínculos preservados
 
